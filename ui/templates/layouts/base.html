@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{template "title" .}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.10/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+                            400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+                            800: '#3730a3', 900: '#312e81', 950: '#1e1b4b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased">
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50" x-data="{ mobileOpen: false }">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Main Nav -->
+                <div class="flex items-center space-x-8">
+                    <a href="/" class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-bold text-slate-900">VibeCMS</span>
+                    </a>
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Home</a>
+                        <a href="/about" class="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">About</a>
+                    </div>
+                </div>
+                <!-- Right Side -->
+                <div class="hidden md:flex items-center space-x-3">
+                    {{if .User}}
+                        <a href="/admin" class="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Dashboard</a>
+                        <a href="/auth/logout" class="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">Logout</a>
+                    {{else}}
+                        <a href="/auth/login" class="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Login</a>
+                        <a href="/auth/register" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-colors">Register</a>
+                    {{end}}
+                </div>
+                <!-- Mobile Menu Button -->
+                <button @click="mobileOpen = !mobileOpen" class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path x-show="!mobileOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        <path x-show="mobileOpen" x-cloak stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div x-show="mobileOpen" x-cloak x-transition class="md:hidden border-t border-slate-200 bg-white">
+            <div class="px-4 py-3 space-y-1">
+                <a href="/" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Home</a>
+                <a href="/about" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">About</a>
+                <hr class="my-2 border-slate-200">
+                {{if .User}}
+                    <a href="/admin" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Dashboard</a>
+                    <a href="/auth/logout" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Logout</a>
+                {{else}}
+                    <a href="/auth/login" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Login</a>
+                    <a href="/auth/register" class="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:bg-primary-50">Register</a>
+                {{end}}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {{if .FlashMsg}}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4" x-data="{ show: true }" x-show="show" x-transition>
+        <div class="rounded-lg p-4 flex items-center justify-between {{if eq .FlashType "error"}}bg-red-50 text-red-800 border border-red-200{{else}}bg-emerald-50 text-emerald-800 border border-emerald-200{{end}}">
+            <span class="text-sm font-medium">{{.FlashMsg}}</span>
+            <button @click="show = false" class="ml-4 text-current opacity-50 hover:opacity-100">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </button>
+        </div>
+    </div>
+    {{end}}
+
+    <!-- Main Content -->
+    <main class="flex-1">
+        {{template "content" .}}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-2">
+                    <div class="w-6 h-6 bg-primary-600 rounded flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <span class="text-sm font-semibold text-slate-700">VibeCMS</span>
+                </div>
+                <p class="text-sm text-slate-500">&copy; 2026 VibeCMS. All rights reserved.</p>
+                <div class="flex items-center space-x-4">
+                    <a href="/about" class="text-sm text-slate-500 hover:text-primary-600 transition-colors">About</a>
+                    <a href="#" class="text-sm text-slate-500 hover:text-primary-600 transition-colors">Privacy</a>
+                    <a href="#" class="text-sm text-slate-500 hover:text-primary-600 transition-colors">Terms</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

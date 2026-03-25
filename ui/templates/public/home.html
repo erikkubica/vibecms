@@ -1,0 +1,122 @@
+{{define "title"}}VibeCMS - High-Performance AI-Native CMS{{end}}
+
+{{define "content"}}
+<!-- Hero Section -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900">
+    <div class="absolute inset-0 opacity-10">
+        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="hero-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <circle cx="20" cy="20" r="1.5" fill="white"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#hero-pattern)"/>
+        </svg>
+    </div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+        <div class="text-center">
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight">
+                Welcome to <span class="text-primary-200">VibeCMS</span>
+            </h1>
+            <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-primary-100 leading-relaxed">
+                A high-performance, AI-native content management system built for speed, flexibility, and modern web experiences.
+            </p>
+            <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="/auth/register" class="inline-flex items-center px-8 py-3 border border-transparent rounded-lg text-base font-semibold text-primary-700 bg-white hover:bg-primary-50 shadow-lg hover:shadow-xl transition-all">
+                    Get Started
+                    <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                </a>
+                <a href="/about" class="inline-flex items-center px-8 py-3 border border-primary-300 rounded-lg text-base font-semibold text-white hover:bg-white/10 transition-all">
+                    Learn More
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl font-bold text-slate-900">Built for the Modern Web</h2>
+            <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Everything you need to manage content at scale, with performance that never compromises.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Feature: Lightning Fast -->
+            <div class="group relative bg-slate-50 rounded-2xl p-8 hover:bg-white hover:shadow-xl border border-slate-100 hover:border-primary-200 transition-all duration-300">
+                <div class="w-14 h-14 bg-primary-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary-600 transition-colors">
+                    <svg class="w-7 h-7 text-primary-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-slate-900 mb-3">Lightning Fast</h3>
+                <p class="text-slate-600 leading-relaxed">Sub-50ms time to first byte. Built with Go and optimized at every layer for blazing-fast page delivery.</p>
+            </div>
+
+            <!-- Feature: AI-Native -->
+            <div class="group relative bg-slate-50 rounded-2xl p-8 hover:bg-white hover:shadow-xl border border-slate-100 hover:border-primary-200 transition-all duration-300">
+                <div class="w-14 h-14 bg-primary-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary-600 transition-colors">
+                    <svg class="w-7 h-7 text-primary-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-slate-900 mb-3">AI-Native</h3>
+                <p class="text-slate-600 leading-relaxed">Built-in AI content generation powered by OpenAI and Anthropic. Create, optimize, and enhance content effortlessly.</p>
+            </div>
+
+            <!-- Feature: Zero-Rebuild -->
+            <div class="group relative bg-slate-50 rounded-2xl p-8 hover:bg-white hover:shadow-xl border border-slate-100 hover:border-primary-200 transition-all duration-300">
+                <div class="w-14 h-14 bg-primary-100 rounded-xl flex items-center justify-center mb-6 group-hover:bg-primary-600 transition-colors">
+                    <svg class="w-7 h-7 text-primary-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-slate-900 mb-3">Zero-Rebuild</h3>
+                <p class="text-slate-600 leading-relaxed">Extend functionality with Tengo scripts. No recompilation needed &mdash; deploy custom logic on the fly.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recent Content Section -->
+{{if .Nodes}}
+<section class="py-20 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-slate-900">Recent Content</h2>
+            <p class="mt-4 text-lg text-slate-600">Explore the latest published pages and posts.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {{range .Nodes}}
+            <a href="/{{.Slug}}" class="block bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg hover:border-primary-300 transition-all duration-300">
+                <div class="flex items-center space-x-2 mb-3">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{.NodeType}}</span>
+                    <span class="text-xs text-slate-400">{{.LanguageCode}}</span>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900 mb-2">{{.Title}}</h3>
+                <p class="text-sm text-slate-500">{{.Slug}}</p>
+            </a>
+            {{end}}
+        </div>
+    </div>
+</section>
+{{end}}
+
+<!-- CTA Section -->
+<section class="py-20 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl font-bold text-slate-900">Ready to get started?</h2>
+        <p class="mt-4 text-lg text-slate-600">Create your account and start building beautiful, high-performance websites today.</p>
+        <div class="mt-8">
+            <a href="/auth/register" class="inline-flex items-center px-8 py-3 border border-transparent rounded-lg text-base font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow-sm hover:shadow-md transition-all">
+                Create Free Account
+                <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+</section>
+{{end}}

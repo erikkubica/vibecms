@@ -1,0 +1,146 @@
+{{define "content"}}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 class="text-2xl font-bold text-slate-900">Content</h1>
+        <a href="/admin/nodes/new"
+           class="inline-flex items-center px-4 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 shadow-sm transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Page
+        </a>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="flex-1">
+                <input type="text"
+                       name="search"
+                       placeholder="Search pages..."
+                       hx-get="/admin/nodes"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#nodes-table-body"
+                       hx-select="#nodes-table-body"
+                       hx-swap="outerHTML"
+                       hx-include="[name='status_filter'],[name='type_filter']"
+                       class="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+            </div>
+            <select name="status_filter"
+                    hx-get="/admin/nodes"
+                    hx-trigger="change"
+                    hx-target="#nodes-table-body"
+                    hx-select="#nodes-table-body"
+                    hx-swap="outerHTML"
+                    hx-include="[name='search'],[name='type_filter']"
+                    class="px-3.5 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                <option value="">All Statuses</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+            </select>
+            <select name="type_filter"
+                    hx-get="/admin/nodes"
+                    hx-trigger="change"
+                    hx-target="#nodes-table-body"
+                    hx-select="#nodes-table-body"
+                    hx-swap="outerHTML"
+                    hx-include="[name='search'],[name='status_filter']"
+                    class="px-3.5 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                <option value="">All Types</option>
+                <option value="page">Page</option>
+                <option value="post">Post</option>
+                <option value="component">Component</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Nodes Table -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50">
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Title</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Slug</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Updated</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="nodes-table-body" class="divide-y divide-slate-100">
+                    {{range .Nodes}}
+                    <tr id="node-row-{{.ID}}" class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <a href="/admin/nodes/{{.ID}}/edit" class="text-sm font-medium text-slate-900 hover:text-primary-600 transition-colors">{{.Title}}</a>
+                            <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">{{.FullURL}}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            {{if eq .Status "published"}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Published</span>
+                            {{else if eq .Status "draft"}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Draft</span>
+                            {{else if eq .Status "archived"}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">Archived</span>
+                            {{else}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">{{.Status}}</span>
+                            {{end}}
+                        </td>
+                        <td class="px-6 py-4 hidden sm:table-cell">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{{.NodeType}}</span>
+                        </td>
+                        <td class="px-6 py-4 hidden md:table-cell">
+                            <span class="text-sm text-slate-500 font-mono">{{.Slug}}</span>
+                        </td>
+                        <td class="px-6 py-4 hidden lg:table-cell">
+                            <span class="text-sm text-slate-500">{{.UpdatedAt.Format "Jan 02, 2006 15:04"}}</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end space-x-2">
+                                <a href="/admin/nodes/{{.ID}}/edit"
+                                   class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Edit
+                                </a>
+                                <button hx-delete="/admin/api/nodes/{{.ID}}"
+                                        hx-target="#node-row-{{.ID}}"
+                                        hx-swap="outerHTML swap:300ms"
+                                        hx-confirm="Are you sure you want to delete '{{.Title}}'? This action cannot be undone."
+                                        class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="6" class="px-6 py-16 text-center">
+                            <svg class="w-16 h-16 mx-auto text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <p class="mt-4 text-base font-medium text-slate-500">No pages found</p>
+                            <p class="mt-1 text-sm text-slate-400">Get started by creating your first page.</p>
+                            <a href="/admin/nodes/new" class="mt-4 inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 shadow-sm transition-colors">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                New Page
+                            </a>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{{end}}

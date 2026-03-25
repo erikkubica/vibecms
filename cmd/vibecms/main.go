@@ -12,6 +12,7 @@ import (
 	"vibecms/internal/cms"
 	"vibecms/internal/config"
 	"vibecms/internal/db"
+	"vibecms/internal/rendering"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -72,26 +73,22 @@ func main() {
 	// Create services.
 	sessionSvc := auth.NewSessionService(database, cfg.SessionExpiryHours)
 	contentSvc := cms.NewContentService(database)
+	isDev := cfg.AppEnv == "development"
+	renderer := rendering.NewTemplateRenderer("ui/templates", isDev)
 
 	// Create handlers.
 	authHandler := auth.NewAuthHandler(database, sessionSvc)
 	userHandler := auth.NewUserHandler(database)
 	nodeHandler := cms.NewNodeHandler(contentSvc)
 	healthHandler := api.NewHealthHandler(database)
+	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc)
+	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, renderer)
+	adminPageHandler := cms.NewAdminPageHandler(database, renderer)
 
-	// --- Public routes ---
+	// --- Public HTML pages ---
+	pageAuthHandler.RegisterRoutes(app)
 
-	// Root route.
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"name":    "VibeCMS",
-			"version": "0.1.0",
-			"status":  "running",
-			"docs":    "/api/v1/health",
-		})
-	})
-
-	// Auth routes (login is public, logout/me require auth).
+	// --- API Auth routes (login is public, logout/me require auth) ---
 	authHandler.RegisterRoutes(app)
 
 	// Health check (public).
@@ -100,10 +97,17 @@ func main() {
 	// --- Monitoring routes (bearer token) ---
 	app.Get("/api/v1/stats", api.BearerTokenRequired(cfg.MonitorBearerToken), healthHandler.Stats)
 
+	// --- Admin HTML pages (session auth required) ---
+	adminPages := app.Group("/admin", auth.AuthRequired(sessionSvc))
+	adminPageHandler.RegisterRoutes(adminPages)
+
 	// --- Admin API routes (session auth required) ---
 	adminAPI := app.Group("/admin/api", auth.AuthRequired(sessionSvc))
 	userHandler.RegisterRoutes(adminAPI)
 	nodeHandler.RegisterRoutes(adminAPI)
+
+	// --- Public content routes (must be last - catches /:slug) ---
+	publicHandler.RegisterRoutes(app)
 
 	// Start server in a goroutine for graceful shutdown.
 	go func() {

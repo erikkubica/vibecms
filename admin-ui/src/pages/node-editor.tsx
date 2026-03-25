@@ -187,7 +187,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
       </div>
     );
   }
@@ -196,12 +196,12 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
+        <Button variant="ghost" size="icon" asChild className="rounded-lg hover:bg-slate-200">
           <Link to={basePath}>
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 text-slate-600" />
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-slate-900">
           {isEdit ? `Edit ${label}` : `New ${label}`}
         </h1>
       </div>
@@ -209,28 +209,29 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
       <form onSubmit={(e) => handleSave(e)} className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
-          <Card>
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Content</CardTitle>
+              <CardTitle className="text-lg font-semibold text-slate-900">Content</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-6 pt-0">
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title" className="text-sm font-medium text-slate-700">Title</Label>
                 <Input
                   id="title"
                   placeholder={`Enter ${label.toLowerCase()} title`}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
+                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="slug">Slug</Label>
+                  <Label htmlFor="slug" className="text-sm font-medium text-slate-700">Slug</Label>
                   <button
                     type="button"
-                    className="text-xs text-primary-600 hover:underline"
+                    className="text-xs text-indigo-600 hover:underline"
                     onClick={() => setAutoSlug(!autoSlug)}
                   >
                     {autoSlug ? "Edit manually" : "Auto-generate"}
@@ -246,18 +247,19 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
                   }}
                   disabled={autoSlug}
                   required
+                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="blocks">Blocks Data (JSON)</Label>
+                <Label htmlFor="blocks" className="text-sm font-medium text-slate-700">Blocks Data (JSON)</Label>
                 <Textarea
                   id="blocks"
                   placeholder="[]"
                   value={blocksJson}
                   onChange={(e) => setBlocksJson(e.target.value)}
                   rows={16}
-                  className="font-mono text-sm"
+                  className="font-mono text-sm rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
             </CardContent>
@@ -266,15 +268,15 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card>
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle>Settings</CardTitle>
+              <CardTitle className="text-lg font-semibold text-slate-900">Publish</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-6 pt-0">
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label className="text-sm font-medium text-slate-700">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg border-slate-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -286,9 +288,9 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
               </div>
 
               <div className="space-y-2">
-                <Label>Language</Label>
+                <Label className="text-sm font-medium text-slate-700">Language</Label>
                 <Select value={languageCode} onValueChange={setLanguageCode}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg border-slate-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -302,13 +304,14 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="parent-id">Parent ID</Label>
+                <Label htmlFor="parent-id" className="text-sm font-medium text-slate-700">Parent ID</Label>
                 <Input
                   id="parent-id"
                   type="number"
                   placeholder="None"
                   value={parentId}
                   onChange={(e) => setParentId(e.target.value)}
+                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
@@ -317,7 +320,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
               <div className="flex flex-col gap-2">
                 <Button
                   type="submit"
-                  className="w-full bg-primary-600 hover:bg-primary-700"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
                   disabled={saving}
                 >
                   <Save className="mr-2 h-4 w-4" />
@@ -326,8 +329,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
                 {status !== "published" && (
                   <Button
                     type="button"
-                    variant="outline"
-                    className="w-full"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg"
                     disabled={saving}
                     onClick={(e) => handleSave(e, "published")}
                   >
@@ -341,16 +343,16 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
 
           {/* Actions (edit mode only) */}
           {isEdit && (
-            <Card>
+            <Card className="rounded-xl border border-slate-200 shadow-sm">
               <CardHeader>
-                <CardTitle>Actions</CardTitle>
+                <CardTitle className="text-lg font-semibold text-slate-900">Actions</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 p-6 pt-0">
                 {nodeType === "page" && (
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full"
+                    className="w-full bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 rounded-lg font-medium"
                     onClick={handleSetHomepage}
                   >
                     <Home className="mr-2 h-4 w-4" />
@@ -360,7 +362,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full text-red-600 hover:bg-red-50 hover:text-red-700"
+                  className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium"
                   onClick={() => setShowDelete(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -372,8 +374,8 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
 
           {/* Node info (edit mode) */}
           {isEdit && originalNode && (
-            <Card>
-              <CardContent className="space-y-2 pt-6 text-sm text-slate-500">
+            <Card className="rounded-xl border border-slate-200 shadow-sm">
+              <CardContent className="space-y-2 p-6 text-sm text-slate-500">
                 <div className="flex justify-between">
                   <span>Version</span>
                   <span className="font-mono">{originalNode.version}</span>

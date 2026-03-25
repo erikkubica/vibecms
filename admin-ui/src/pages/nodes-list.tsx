@@ -128,8 +128,8 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">{labelPlural}</h1>
-        <Button asChild className="bg-primary-600 hover:bg-primary-700">
+        <h1 className="text-2xl font-bold text-slate-900">{labelPlural}</h1>
+        <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium">
           <Link to={`${basePath}/new`}>
             <Plus className="mr-2 h-4 w-4" />
             New {label}
@@ -138,18 +138,18 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder={`Search ${labelPlural.toLowerCase()}...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
           />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-full rounded-lg border-slate-300 sm:w-40">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -162,11 +162,11 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex h-64 items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
             </div>
           ) : nodes.length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center gap-3 text-slate-400">
@@ -180,7 +180,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
                   : `Create your first ${label.toLowerCase()} to get started`}
               </p>
               {!searchDebounce && status === "all" && (
-                <Button asChild className="mt-2 bg-primary-600 hover:bg-primary-700">
+                <Button asChild className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium">
                   <Link to={`${basePath}/new`}>
                     <Plus className="mr-2 h-4 w-4" />
                     New {label}
@@ -191,47 +191,47 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Slug</TableHead>
-                  <TableHead className="hidden sm:table-cell">
+                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Title</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider md:table-cell">Slug</TableHead>
+                  <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider sm:table-cell">
                     Updated
                   </TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
+                  <TableHead className="w-24 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {nodes.map((node) => (
-                  <TableRow key={node.id}>
-                    <TableCell>
+                  <TableRow key={node.id} className="hover:bg-slate-50">
+                    <TableCell className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-2">
                         <Link
                           to={`${basePath}/${node.id}/edit`}
-                          className="font-medium text-slate-800 hover:text-primary-600"
+                          className="font-medium text-slate-800 hover:text-indigo-600"
                         >
                           {node.title}
                         </Link>
                         {node.is_homepage && (
-                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 gap-1">
+                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 gap-1">
                             <Home className="h-3 w-3" />
                             Home
                           </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge className={statusBadgeClass(node.status)}>
+                    <TableCell className="px-6 py-4 text-sm">
+                      <Badge className={`${statusBadgeClass(node.status)} border-0 font-medium`}>
                         {node.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden text-sm text-slate-500 md:table-cell">
+                    <TableCell className="hidden px-6 py-4 text-sm text-slate-500 md:table-cell">
                       /{node.slug}
                     </TableCell>
-                    <TableCell className="hidden text-sm text-slate-500 sm:table-cell">
+                    <TableCell className="hidden px-6 py-4 text-sm text-slate-500 sm:table-cell">
                       {new Date(node.updated_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
@@ -274,6 +274,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
               size="sm"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg border-slate-300"
             >
               Previous
             </Button>
@@ -282,6 +283,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
               size="sm"
               disabled={page >= meta.total_pages}
               onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg border-slate-300"
             >
               Next
             </Button>

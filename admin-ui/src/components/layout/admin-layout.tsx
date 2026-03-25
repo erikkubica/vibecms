@@ -50,26 +50,36 @@ export default function AdminLayout() {
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar text-white transition-all duration-200 lg:relative lg:z-auto ${sidebarWidth} ${
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-slate-800 text-white transition-all duration-200 lg:relative lg:z-auto ${sidebarWidth} ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-4">
           {!collapsed && (
-            <span className="text-xl font-bold tracking-tight">VibeCMS</span>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600">
+                <span className="text-sm font-bold text-white">V</span>
+              </div>
+              <span className="text-lg font-bold tracking-tight text-white">VibeCMS</span>
+            </div>
+          )}
+          {collapsed && (
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 mx-auto">
+              <span className="text-sm font-bold text-white">V</span>
+            </div>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-sidebar-hover lg:flex hidden"
+            className="text-white hover:bg-slate-700/50 lg:flex hidden"
             onClick={() => setCollapsed(!collapsed)}
           >
             <Menu className="h-5 w-5" />
@@ -77,7 +87,7 @@ export default function AdminLayout() {
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-sidebar-hover lg:hidden"
+            className="text-white hover:bg-slate-700/50 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="h-5 w-5" />
@@ -97,19 +107,19 @@ export default function AdminLayout() {
                 else setSidebarOpen(false);
               }}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   item.disabled
                     ? "cursor-not-allowed text-slate-500"
                     : isActive
-                      ? "bg-sidebar-active text-white"
-                      : "text-slate-300 hover:bg-sidebar-hover hover:text-white"
+                      ? "bg-slate-700/50 text-white"
+                      : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
                 } ${collapsed ? "justify-center" : ""}`
               }
             >
               <item.icon className="h-5 w-5 shrink-0" />
               {!collapsed && <span>{item.label}</span>}
               {!collapsed && item.disabled && (
-                <span className="ml-auto rounded bg-slate-600 px-1.5 py-0.5 text-[10px] text-slate-400">
+                <span className="ml-auto rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
                   Soon
                 </span>
               )}
@@ -121,7 +131,7 @@ export default function AdminLayout() {
         <div className="border-t border-slate-700 p-2">
           <button
             onClick={logout}
-            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-sidebar-hover hover:text-white ${
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700/50 hover:text-white ${
               collapsed ? "justify-center" : ""
             }`}
           >
@@ -134,7 +144,7 @@ export default function AdminLayout() {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center justify-between border-b bg-white px-4 lg:px-6">
+        <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -166,7 +176,7 @@ export default function AdminLayout() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
                   <User className="h-4 w-4" />
                 </div>
                 <span className="hidden text-sm font-medium text-slate-700 sm:inline">
@@ -174,7 +184,7 @@ export default function AdminLayout() {
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 shadow-md">
               <div className="px-2 py-1.5 text-sm">
                 <p className="font-medium">{user?.full_name}</p>
                 <p className="text-slate-500">{user?.email}</p>

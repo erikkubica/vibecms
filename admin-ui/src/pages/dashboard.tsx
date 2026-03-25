@@ -76,7 +76,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
       </div>
     );
   }
@@ -86,8 +86,8 @@ export default function DashboardPage() {
       label: "Total Pages",
       value: stats?.totalPages ?? 0,
       icon: FileText,
-      color: "text-primary-600",
-      bg: "bg-primary-50",
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
     },
     {
       label: "Published",
@@ -114,28 +114,30 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">
-            Welcome back, {user?.full_name || "Admin"}
-          </h1>
-          <p className="text-sm text-slate-500">
-            Here is what is happening with your site.
-          </p>
+      {/* Welcome Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-800 p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">
+              Welcome back, {user?.full_name || "Admin"}
+            </h1>
+            <p className="mt-1 text-sm text-indigo-200">
+              Here is what is happening with your site.
+            </p>
+          </div>
+          <Button asChild className="border border-white/30 bg-white/10 text-white hover:bg-white/20 shadow-sm rounded-lg font-medium">
+            <Link to="/admin/pages/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Page
+            </Link>
+          </Button>
         </div>
-        <Button asChild className="bg-primary-600 hover:bg-primary-700">
-          <Link to="/admin/pages/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Create New Page
-          </Link>
-        </Button>
       </div>
 
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((s) => (
-          <Card key={s.label}>
+          <Card key={s.label} className="rounded-xl border border-slate-200 shadow-sm">
             <CardContent className="flex items-center gap-4 p-6">
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-lg ${s.bg}`}
@@ -143,8 +145,8 @@ export default function DashboardPage() {
                 <s.icon className={`h-6 w-6 ${s.color}`} />
               </div>
               <div>
-                <p className="text-sm text-slate-500">{s.label}</p>
-                <p className="text-2xl font-bold text-slate-800">{s.value}</p>
+                <p className="text-sm font-medium text-slate-500">{s.label}</p>
+                <p className="text-2xl font-bold text-slate-900">{s.value}</p>
               </div>
             </CardContent>
           </Card>
@@ -152,9 +154,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent content */}
-      <Card>
+      <Card className="rounded-xl border border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg">Recent Content</CardTitle>
+          <CardTitle className="text-lg font-semibold text-slate-900">Recent Content</CardTitle>
         </CardHeader>
         <CardContent>
           {recentNodes.length === 0 ? (
@@ -164,33 +166,33 @@ export default function DashboardPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
+                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Title</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentNodes.map((node) => (
-                  <TableRow key={node.id}>
-                    <TableCell>
+                  <TableRow key={node.id} className="hover:bg-slate-50">
+                    <TableCell className="px-6 py-4 text-sm">
                       <Link
                         to={`/admin/${node.node_type === "post" ? "posts" : "pages"}/${node.id}/edit`}
-                        className="font-medium text-primary-600 hover:underline"
+                        className="font-medium text-indigo-600 hover:text-indigo-700 hover:underline"
                       >
                         {node.title}
                       </Link>
                     </TableCell>
-                    <TableCell className="capitalize text-slate-500">
+                    <TableCell className="px-6 py-4 text-sm capitalize text-slate-500">
                       {node.node_type}
                     </TableCell>
-                    <TableCell>
-                      <Badge className={statusBadgeClass(node.status)}>
+                    <TableCell className="px-6 py-4 text-sm">
+                      <Badge className={`${statusBadgeClass(node.status)} border-0 font-medium`}>
                         {node.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-500">
+                    <TableCell className="px-6 py-4 text-sm text-slate-500">
                       {new Date(node.updated_at).toLocaleDateString()}
                     </TableCell>
                   </TableRow>

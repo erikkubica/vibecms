@@ -1,0 +1,37 @@
+```yaml
+---
+description: VibeCMS is a high-performance, AI-native Go-based CMS optimized for sub-50ms TTFB, utilizing a block-based JSON editor and a zero-rebuild extension architecture for independent site deployments.
+globs: []
+alwaysApply: true
+---
+
+## Technology Constraints
+- **Language:** Go 1.22.x+
+- **Web Framework:** Fiber 2.52.x (or Echo 4.12.x)
+- **Database:** PostgreSQL 16.x (leveraging JSONB and GIN indexes via GORM 1.25.x)
+- **Templating:** Jet 6.x (main rendering), Templ 0.2.x (Admin UI components)
+- **Scripting:** Tengo 2.16.x (zero-rebuild business logic)
+- **Frontend/Admin UI:** HTMX 1.9.x, Alpine.js 3.13.x, Tailwind CSS 3.4.x
+- **Storage:** S3-compatible (via `aws-sdk-go-v2`) or Local Filesystem
+- **Integrations:** Resend Go SDK 1.7.x, OpenAI/Anthropic API, Ed25519 (standard lib)
+
+## Architecture Patterns
+- **High-Performance "Vibe Loop":** Request -> In-Memory Cache (Router) -> ContentSvc -> Tengo (Optional) -> Jet Engine -> Response.
+- **Single-Binary Deployment:** One binary per one website; zero shared-resource multi-tenancy.
+- **State-Version Tracking:** Automatic idempotent database migrations on startup; halt on failure.
+- **Stateless Extension:** Tengo scripts must be stateless, sandboxed, and have no access to the host filesystem or OS.
+- **Async Processing:** Use Go channels for background tasks (e.g., MailSvc, MediaPipe) to maintain the <50ms TTFB constraint.
+- **Resilient Rendering:** If a template or script fails, the system must perform a "soft-fail" rather than crashing the page request.
+
+## File Organization
+- `/cmd/vibecms/`: Application entry point.
+- `/internal/core/`: Core engine logic (ContentSvc, Router, Auth).
+- `/internal/service/`: Domain-specific services (MailSvc, AISvc, MediaPipe).
+- `/internal/tengo/`: Embedded scripting engine definitions and runtime hooks.
+- `/internal/db/`: GORM models and migration scripts.
+- `/themes/[theme-name]/`: Theme structure:
+    - `/layouts/`: Global wrapper templates (`main.jet`).
+    - `/blocks/`: Block-specific template fragments (`[type].jet`).
+    - `/assets/`: Theme-specific static files.
+- `/storage/`: Media optimization pipeline triggers and local storage fallbacks.
+- `/scripts/`: Example or system-level Tengo scripting hooks (e.g., `before_render.tgo`).

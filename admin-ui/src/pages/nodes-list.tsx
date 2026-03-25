@@ -162,7 +162,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
       </div>
 
       {/* Table */}
-      <Card className="rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <Card className="rounded-xl border border-slate-200 shadow-sm overflow-hidden py-0 gap-0">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex h-64 items-center justify-center">

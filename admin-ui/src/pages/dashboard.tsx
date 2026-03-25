@@ -137,7 +137,7 @@ export default function DashboardPage() {
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((s) => (
-          <Card key={s.label} className="rounded-xl border border-slate-200 shadow-sm">
+          <Card key={s.label} className="rounded-xl border border-slate-200 shadow-sm py-0 gap-0">
             <CardContent className="flex items-center gap-4 p-6">
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-lg ${s.bg}`}
@@ -154,11 +154,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent content */}
-      <Card className="rounded-xl border border-slate-200 shadow-sm">
-        <CardHeader>
+      <Card className="rounded-xl border border-slate-200 shadow-sm py-0 gap-0 overflow-hidden">
+        <CardHeader className="px-6 py-4">
           <CardTitle className="text-lg font-semibold text-slate-900">Recent Content</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {recentNodes.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">
               No content yet. Create your first page to get started.

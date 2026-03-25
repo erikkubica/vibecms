@@ -50,10 +50,10 @@
                 <div class="hidden md:flex items-center space-x-3">
                     {{if .User}}
                         <a href="/admin" class="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Dashboard</a>
-                        <a href="/auth/logout" class="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">Logout</a>
+                        <a href="/logout" class="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">Logout</a>
                     {{else}}
-                        <a href="/auth/login" class="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Login</a>
-                        <a href="/auth/register" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-colors">Register</a>
+                        <a href="/login" class="px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50 transition-colors">Login</a>
+                        <a href="/register" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-colors">Register</a>
                     {{end}}
                 </div>
                 <!-- Mobile Menu Button -->
@@ -73,10 +73,10 @@
                 <hr class="my-2 border-slate-200">
                 {{if .User}}
                     <a href="/admin" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Dashboard</a>
-                    <a href="/auth/logout" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Logout</a>
+                    <a href="/logout" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Logout</a>
                 {{else}}
-                    <a href="/auth/login" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Login</a>
-                    <a href="/auth/register" class="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:bg-primary-50">Register</a>
+                    <a href="/login" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-primary-50">Login</a>
+                    <a href="/register" class="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:bg-primary-50">Register</a>
                 {{end}}
             </div>
         </div>

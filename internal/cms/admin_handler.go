@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"vibecms/internal/auth"
 	"vibecms/internal/models"
@@ -22,6 +23,7 @@ type AdminPageData struct {
 	Nodes    []models.ContentNode
 	Stats    map[string]int64
 	AllNodes []models.ContentNode // for parent dropdown
+	NodeType string              // "page" or "post" — controls which section is active
 }
 
 // AdminPageHandler renders admin HTML pages (not API endpoints).
@@ -42,9 +44,21 @@ func NewAdminPageHandler(db *gorm.DB, renderer *rendering.TemplateRenderer) *Adm
 func (h *AdminPageHandler) RegisterRoutes(app fiber.Router) {
 	app.Get("/", h.RedirectToDashboard)
 	app.Get("/dashboard", h.Dashboard)
-	app.Get("/nodes", h.NodesList)
-	app.Get("/nodes/new", h.NodeNew)
-	app.Get("/nodes/:id/edit", h.NodeEdit)
+
+	// Pages
+	app.Get("/pages", h.listByType("page"))
+	app.Get("/pages/new", h.newByType("page"))
+	app.Get("/pages/:id/edit", h.editByType("page"))
+
+	// Posts
+	app.Get("/posts", h.listByType("post"))
+	app.Get("/posts/new", h.newByType("post"))
+	app.Get("/posts/:id/edit", h.editByType("post"))
+
+	// Legacy redirect
+	app.Get("/nodes", func(c *fiber.Ctx) error {
+		return c.Redirect("/admin/pages", fiber.StatusFound)
+	})
 }
 
 // renderAdmin renders an admin page using the admin layout.
@@ -92,72 +106,110 @@ func (h *AdminPageHandler) Dashboard(c *fiber.Ctx) error {
 	})
 }
 
-// NodesList renders the content nodes list page with optional filtering.
-func (h *AdminPageHandler) NodesList(c *fiber.Ctx) error {
-	user := auth.GetCurrentUser(c)
-
-	query := h.db.Model(&models.ContentNode{}).Order("updated_at DESC")
-
-	// Apply filters from query params.
-	if status := c.Query("status_filter"); status != "" {
-		query = query.Where("status = ?", status)
+// typeLabel returns the display label for a node type.
+func typeLabel(nodeType string) string {
+	switch nodeType {
+	case "post":
+		return "Post"
+	default:
+		return "Page"
 	}
-	if nodeType := c.Query("type_filter"); nodeType != "" {
-		query = query.Where("node_type = ?", nodeType)
-	}
-	if search := c.Query("search"); search != "" {
-		like := "%" + search + "%"
-		query = query.Where("title ILIKE ? OR slug ILIKE ?", like, like)
-	}
-
-	var nodes []models.ContentNode
-	query.Find(&nodes)
-
-	return h.renderAdmin(c, "nodes_list.html", AdminPageData{
-		Title: "Content",
-		User:  user,
-		Nodes: nodes,
-	})
 }
 
-// NodeNew renders the create-new-node form.
-func (h *AdminPageHandler) NodeNew(c *fiber.Ctx) error {
-	user := auth.GetCurrentUser(c)
-
-	var allNodes []models.ContentNode
-	h.db.Select("id", "title").Where("node_type = ?", "page").Order("title ASC").Find(&allNodes)
-
-	return h.renderAdmin(c, "node_edit.html", AdminPageData{
-		Title:    "New Page",
-		User:     user,
-		AllNodes: allNodes,
-	})
+// typeLabelPlural returns the plural display label for a node type.
+func typeLabelPlural(nodeType string) string {
+	switch nodeType {
+	case "post":
+		return "Posts"
+	default:
+		return "Pages"
+	}
 }
 
-// NodeEdit renders the edit form for an existing content node.
-func (h *AdminPageHandler) NodeEdit(c *fiber.Ctx) error {
-	user := auth.GetCurrentUser(c)
+// listByType returns a handler that lists nodes of a specific type.
+func (h *AdminPageHandler) listByType(nodeType string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		user := auth.GetCurrentUser(c)
 
-	id, err := strconv.Atoi(c.Params("id"))
-	if err != nil {
-		return c.Status(http.StatusBadRequest).SendString("Invalid node ID")
-	}
+		query := h.db.Model(&models.ContentNode{}).
+			Where("node_type = ?", nodeType).
+			Order("updated_at DESC")
 
-	var node models.ContentNode
-	if err := h.db.First(&node, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return c.Status(http.StatusNotFound).SendString("Page not found")
+		if status := c.Query("status_filter"); status != "" {
+			query = query.Where("status = ?", status)
 		}
-		return c.Status(http.StatusInternalServerError).SendString("Database error")
+		if search := c.Query("search"); search != "" {
+			like := "%" + search + "%"
+			query = query.Where("title ILIKE ? OR slug ILIKE ?", like, like)
+		}
+
+		var nodes []models.ContentNode
+		query.Find(&nodes)
+
+		return h.renderAdmin(c, "nodes_list.html", AdminPageData{
+			Title:    typeLabelPlural(nodeType),
+			User:     user,
+			Nodes:    nodes,
+			NodeType: nodeType,
+		})
 	}
+}
 
-	var allNodes []models.ContentNode
-	h.db.Select("id", "title").Where("id != ? AND node_type = ?", id, "page").Order("title ASC").Find(&allNodes)
+// newByType returns a handler that renders the new node form for a specific type.
+func (h *AdminPageHandler) newByType(nodeType string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		user := auth.GetCurrentUser(c)
 
-	return h.renderAdmin(c, "node_edit.html", AdminPageData{
-		Title:    "Edit Page",
-		User:     user,
-		Node:     &node,
-		AllNodes: allNodes,
-	})
+		var allNodes []models.ContentNode
+		h.db.Select("id", "title").Where("node_type = ?", nodeType).Order("title ASC").Find(&allNodes)
+
+		return h.renderAdmin(c, "node_edit.html", AdminPageData{
+			Title:    "New " + typeLabel(nodeType),
+			User:     user,
+			AllNodes: allNodes,
+			NodeType: nodeType,
+		})
+	}
+}
+
+// editByType returns a handler that renders the edit form for a node of a specific type.
+func (h *AdminPageHandler) editByType(nodeType string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		user := auth.GetCurrentUser(c)
+
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(http.StatusBadRequest).SendString("Invalid ID")
+		}
+
+		var node models.ContentNode
+		if err := h.db.First(&node, id).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return c.Status(http.StatusNotFound).SendString(typeLabel(nodeType) + " not found")
+			}
+			return c.Status(http.StatusInternalServerError).SendString("Database error")
+		}
+
+		var allNodes []models.ContentNode
+		h.db.Select("id", "title").
+			Where("id != ? AND node_type = ?", id, nodeType).
+			Order("title ASC").Find(&allNodes)
+
+		return h.renderAdmin(c, "node_edit.html", AdminPageData{
+			Title:    "Edit " + typeLabel(nodeType),
+			User:     user,
+			Node:     &node,
+			AllNodes: allNodes,
+			NodeType: nodeType,
+		})
+	}
+}
+
+// NodeTypeFromTitle extracts the node type from the page title for URL building.
+func NodeTypeFromTitle(title string) string {
+	lower := strings.ToLower(title)
+	if strings.Contains(lower, "post") {
+		return "post"
+	}
+	return "page"
 }

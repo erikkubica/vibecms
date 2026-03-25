@@ -111,7 +111,7 @@ func (h *PageAuthHandler) isLoggedIn(c *fiber.Ctx) bool {
 
 func (h *PageAuthHandler) ShowLogin(c *fiber.Ctx) error {
 	if h.isLoggedIn(c) {
-		return c.Redirect("/admin", fiber.StatusFound)
+		return c.Redirect("/admin/dashboard", fiber.StatusFound)
 	}
 	return h.renderTemplate(c, "login.html", pageData{Title: "Sign In"})
 }
@@ -170,13 +170,13 @@ func (h *PageAuthHandler) ProcessLogin(c *fiber.Ctx) error {
 		Value:    token,
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   c.Protocol() == "https",
 		SameSite: "Lax",
 		Expires:  time.Now().Add(h.sessionSvc.sessionExpiry),
 	})
 
 	setFlash(c, "Welcome back!", "success")
-	return c.Redirect("/admin", fiber.StatusFound)
+	return c.Redirect("/admin/dashboard", fiber.StatusFound)
 }
 
 func (h *PageAuthHandler) ProcessRegister(c *fiber.Ctx) error {
@@ -236,13 +236,13 @@ func (h *PageAuthHandler) ProcessRegister(c *fiber.Ctx) error {
 		Value:    token,
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   c.Protocol() == "https",
 		SameSite: "Lax",
 		Expires:  time.Now().Add(h.sessionSvc.sessionExpiry),
 	})
 
 	setFlash(c, "Account created!", "success")
-	return c.Redirect("/admin", fiber.StatusFound)
+	return c.Redirect("/admin/dashboard", fiber.StatusFound)
 }
 
 func (h *PageAuthHandler) ProcessForgotPassword(c *fiber.Ctx) error {
@@ -266,7 +266,7 @@ func (h *PageAuthHandler) Logout(c *fiber.Ctx) error {
 		Value:    "",
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   c.Protocol() == "https",
 		SameSite: "Lax",
 		Expires:  time.Now().Add(-1 * time.Hour),
 	})

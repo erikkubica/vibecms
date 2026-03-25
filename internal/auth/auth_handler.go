@@ -79,7 +79,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		Value:    token,
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   c.Protocol() == "https",
 		SameSite: "Lax",
 		Expires:  time.Now().Add(h.sessionSvc.sessionExpiry),
 	})
@@ -103,7 +103,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		Value:    "",
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   c.Protocol() == "https",
 		SameSite: "Lax",
 		Expires:  time.Now().Add(-1 * time.Hour),
 	})

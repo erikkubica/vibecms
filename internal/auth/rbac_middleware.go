@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"strings"
+
 	"vibecms/internal/api"
 	"vibecms/internal/models"
 
@@ -21,17 +23,26 @@ func AuthRequired(sessionSvc *SessionService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := c.Cookies(CookieName)
 		if token == "" {
-			return api.Error(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Authentication required")
+			return authFail(c, "Authentication required")
 		}
 
 		user, err := sessionSvc.ValidateSession(token)
 		if err != nil {
-			return api.Error(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired session")
+			return authFail(c, "Invalid or expired session")
 		}
 
 		c.Locals(localsUserKey, user)
 		return c.Next()
 	}
+}
+
+// authFail redirects browsers to /login or returns JSON 401 for API requests.
+func authFail(c *fiber.Ctx, msg string) error {
+	accept := c.Get("Accept")
+	if strings.Contains(accept, "text/html") || (!strings.Contains(accept, "application/json") && !strings.HasPrefix(c.Path(), "/admin/api")) {
+		return c.Redirect("/login", fiber.StatusFound)
+	}
+	return api.Error(c, fiber.StatusUnauthorized, "UNAUTHORIZED", msg)
 }
 
 // RoleRequired returns a Fiber middleware that checks whether the authenticated

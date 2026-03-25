@@ -36,10 +36,11 @@ func AuthRequired(sessionSvc *SessionService) fiber.Handler {
 	}
 }
 
-// authFail redirects browsers to /login or returns JSON 401 for API requests.
+// authFail redirects browsers to /login for admin HTML pages, returns JSON 401 for API requests.
 func authFail(c *fiber.Ctx, msg string) error {
-	accept := c.Get("Accept")
-	if strings.Contains(accept, "text/html") || (!strings.Contains(accept, "application/json") && !strings.HasPrefix(c.Path(), "/admin/api")) {
+	path := c.Path()
+	isAdminPage := strings.HasPrefix(path, "/admin") && !strings.HasPrefix(path, "/admin/api")
+	if isAdminPage {
 		return c.Redirect("/login", fiber.StatusFound)
 	}
 	return api.Error(c, fiber.StatusUnauthorized, "UNAUTHORIZED", msg)

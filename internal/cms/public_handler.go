@@ -3,6 +3,7 @@ package cms
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"vibecms/internal/auth"
 	"vibecms/internal/models"
@@ -46,10 +47,31 @@ func (h *PublicHandler) RegisterRoutes(app *fiber.App) {
 	app.Get("/:lang/:slug", h.PageByLangSlug)
 }
 
-// HomePage renders the public homepage with recent published content nodes.
+// HomePage renders the public homepage. If a homepage node is configured in
+// site_settings, that node is rendered. Otherwise, recent published content is shown.
 func (h *PublicHandler) HomePage(c *fiber.Ctx) error {
 	user := h.currentUser(c)
 
+	// Check if a homepage node is configured
+	var setting models.SiteSetting
+	if err := h.db.Where("key = ?", "homepage_node_id").First(&setting).Error; err == nil && setting.Value != nil {
+		if homepageID, err := strconv.Atoi(*setting.Value); err == nil && homepageID > 0 {
+			var node models.ContentNode
+			if err := h.db.Where("id = ? AND status = ?", homepageID, "published").First(&node).Error; err == nil {
+				blocks := parseBlocks(node.BlocksData)
+				data := PageData{
+					Title:  node.Title + " - VibeCMS",
+					User:   user,
+					Node:   &node,
+					Blocks: blocks,
+				}
+				c.Set("Content-Type", "text/html; charset=utf-8")
+				return h.renderer.RenderPage(c, "public/page.html", data)
+			}
+		}
+	}
+
+	// Fallback: show recent published content
 	var nodes []models.ContentNode
 	h.db.Where("status = ? AND deleted_at IS NULL", "published").
 		Order("published_at DESC").

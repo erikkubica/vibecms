@@ -1,6 +1,13 @@
 {{define "content"}}
 <div class="space-y-6">
 
+    <!-- Flash Message -->
+    {{if .FlashMsg}}
+    <div class="rounded-lg px-4 py-3 text-sm font-medium {{if eq .FlashType "success"}}bg-emerald-50 text-emerald-800 border border-emerald-200{{else}}bg-red-50 text-red-800 border border-red-200{{end}}">
+        {{.FlashMsg}}
+    </div>
+    {{end}}
+
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 class="text-2xl font-bold text-slate-900">{{.Title}}</h1>
@@ -62,7 +69,12 @@
                     {{range .Nodes}}
                     <tr id="node-row-{{.ID}}" class="hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4">
-                            <a href="/admin/{{$nodeType}}s/{{.ID}}/edit" class="text-sm font-medium text-slate-900 hover:text-primary-600 transition-colors">{{.Title}}</a>
+                            <div class="flex items-center space-x-2">
+                                <a href="/admin/{{$nodeType}}s/{{.ID}}/edit" class="text-sm font-medium text-slate-900 hover:text-primary-600 transition-colors">{{.Title}}</a>
+                                {{if and (eq $nodeType "page") (eq .ID $.HomepageID)}}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Homepage</span>
+                                {{end}}
+                            </div>
                             <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">{{.FullURL}}</p>
                         </td>
                         <td class="px-6 py-4">
@@ -91,16 +103,17 @@
                                     </svg>
                                     Edit
                                 </a>
-                                <button hx-delete="/admin/api/nodes/{{.ID}}"
-                                        hx-target="#node-row-{{.ID}}"
-                                        hx-swap="outerHTML swap:300ms"
-                                        hx-confirm="Are you sure you want to delete '{{.Title}}'?"
-                                        class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
-                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                    Delete
-                                </button>
+                                <form method="POST" action="/admin/{{$nodeType}}s/{{.ID}}/delete"
+                                      onsubmit="return confirm('Are you sure you want to delete \'{{.Title}}\'?')"
+                                      class="inline">
+                                    <button type="submit"
+                                            class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                        Delete
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>

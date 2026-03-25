@@ -83,7 +83,7 @@ func main() {
 	healthHandler := api.NewHealthHandler(database)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, renderer)
-	adminPageHandler := cms.NewAdminPageHandler(database, renderer)
+	adminPageHandler := cms.NewAdminPageHandler(database, renderer, contentSvc)
 
 	// --- Public HTML pages ---
 	pageAuthHandler.RegisterRoutes(app)

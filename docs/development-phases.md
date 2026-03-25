@@ -9,6 +9,22 @@ This document outlines the sequential construction of VibeCMS, starting from the
 
 ---
 
+## Progress Tracker
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1: Foundation, Auth & Universal Nodes | DONE | Go/Fiber, PostgreSQL, GORM, auth, RBAC, node CRUD API |
+| Phase 2: The "Vibe Loop" Rendering Engine | PARTIAL | Public pages render via html/template (Jet planned). Route cache not yet implemented. |
+| Phase 3: Admin UI & Block Editor | DONE (rewritten) | **Rewritten as React SPA** (Vite + TypeScript + Tailwind v4 + shadcn/ui). Block editor is JSON textarea (visual editor planned). |
+| Phase 4: Zero-Rebuild Extensions & Cron | NOT STARTED | Tengo VM, hooks, cron runner |
+| Phase 5: Media Manager & Communications | NOT STARTED | S3 storage, WebP optimization, mail engine |
+| Phase 6: AI-Native Layer & Advanced SEO | NOT STARTED | AI bridge, sitemap, SEO automation, multi-language |
+| Phase 7: Agency Monitoring & Production | NOT STARTED | License verification, health API (basic version exists), hardening |
+
+**Architecture change:** Admin UI was originally planned as server-rendered HTMX/Alpine.js (Phase 3 spec) but was rewritten as a React SPA for extensibility — plugins can register their own admin UI routes/components.
+
+---
+
 ### Phase 1: Foundation, Auth & Universal Nodes
 - **Goal:** Establish the Go server environment, database connectivity, and the core "Content Node" data model with secure administrative access.
 - **Dependencies:** None. Reference `architecture.md` and `database-schema.md`.

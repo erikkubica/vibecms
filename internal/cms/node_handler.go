@@ -15,11 +15,12 @@ import (
 // NodeHandler provides HTTP handlers for content node CRUD operations.
 type NodeHandler struct {
 	svc *ContentService
+	db  *gorm.DB
 }
 
 // NewNodeHandler creates a new NodeHandler with the given ContentService.
-func NewNodeHandler(svc *ContentService) *NodeHandler {
-	return &NodeHandler{svc: svc}
+func NewNodeHandler(svc *ContentService, db *gorm.DB) *NodeHandler {
+	return &NodeHandler{svc: svc, db: db}
 }
 
 // RegisterRoutes registers all content node routes on the provided router group.
@@ -29,6 +30,26 @@ func (h *NodeHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/nodes", h.Create)
 	router.Patch("/nodes/:id", h.Update)
 	router.Delete("/nodes/:id", h.Delete)
+	router.Post("/nodes/:id/homepage", h.SetHomepage)
+	router.Get("/homepage", h.GetHomepage)
+}
+
+// SetHomepage sets a node as the site homepage.
+func (h *NodeHandler) SetHomepage(c *fiber.Ctx) error {
+	id := c.Params("id")
+	h.db.Exec(
+		`INSERT INTO site_settings (key, value, updated_at) VALUES ('homepage_node_id', ?, NOW())
+		 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`, id,
+	)
+	return api.Success(c, fiber.Map{"message": "Homepage set", "node_id": id})
+}
+
+// GetHomepage returns the current homepage node ID.
+func (h *NodeHandler) GetHomepage(c *fiber.Ctx) error {
+	var value string
+	h.db.Raw("SELECT value FROM site_settings WHERE key = 'homepage_node_id'").Scan(&value)
+	id, _ := strconv.Atoi(value)
+	return api.Success(c, fiber.Map{"homepage_node_id": id})
 }
 
 // List handles GET /nodes with pagination and filtering.

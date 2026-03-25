@@ -79,11 +79,10 @@ func main() {
 	// Create handlers.
 	authHandler := auth.NewAuthHandler(database, sessionSvc)
 	userHandler := auth.NewUserHandler(database)
-	nodeHandler := cms.NewNodeHandler(contentSvc)
+	nodeHandler := cms.NewNodeHandler(contentSvc, database)
 	healthHandler := api.NewHealthHandler(database)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, renderer)
-	adminPageHandler := cms.NewAdminPageHandler(database, renderer, contentSvc)
 
 	// --- Public HTML pages ---
 	pageAuthHandler.RegisterRoutes(app)
@@ -97,14 +96,16 @@ func main() {
 	// --- Monitoring routes (bearer token) ---
 	app.Get("/api/v1/stats", api.BearerTokenRequired(cfg.MonitorBearerToken), healthHandler.Stats)
 
-	// --- Admin HTML pages (session auth required) ---
-	adminPages := app.Group("/admin", auth.AuthRequired(sessionSvc))
-	adminPageHandler.RegisterRoutes(adminPages)
-
 	// --- Admin API routes (session auth required) ---
 	adminAPI := app.Group("/admin/api", auth.AuthRequired(sessionSvc))
 	userHandler.RegisterRoutes(adminAPI)
 	nodeHandler.RegisterRoutes(adminAPI)
+
+	// --- Admin SPA (serve built React app) ---
+	app.Static("/admin/assets", "./admin-ui/dist/assets")
+	app.Get("/admin/*", func(c *fiber.Ctx) error {
+		return c.SendFile("./admin-ui/dist/index.html")
+	})
 
 	// --- Public content routes (must be last - catches /:slug) ---
 	publicHandler.RegisterRoutes(app)

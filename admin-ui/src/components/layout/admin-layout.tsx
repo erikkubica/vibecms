@@ -7,6 +7,9 @@ import {
   Boxes,
   Square,
   LayoutTemplate,
+  PanelTop,
+  Component,
+  ListTree,
   Globe,
   Image,
   Settings,
@@ -67,6 +70,9 @@ const staticNavTop: NavItem[] = [
 ];
 
 const staticNavBottom: NavItem[] = [
+  { to: "/admin/layouts", label: "Layouts", icon: PanelTop },
+  { to: "/admin/layout-blocks", label: "Layout Blocks", icon: Component },
+  { to: "/admin/menus", label: "Menus", icon: ListTree },
   { to: "/admin/block-types", label: "Block Types", icon: Square },
   { to: "/admin/templates", label: "Templates", icon: LayoutTemplate },
   { to: "/admin/languages", label: "Languages", icon: Globe },

@@ -12,6 +12,12 @@ import BlockTypeEditorPage from "@/pages/block-type-editor";
 import TemplatesListPage from "@/pages/templates-list";
 import TemplateEditorPage from "@/pages/template-editor";
 import LanguagesPage from "@/pages/languages";
+import LayoutsListPage from "@/pages/layouts-list";
+import LayoutEditorPage from "@/pages/layout-editor";
+import LayoutBlocksListPage from "@/pages/layout-blocks-list";
+import LayoutBlockEditorPage from "@/pages/layout-block-editor";
+import MenusListPage from "@/pages/menus-list";
+import MenuEditorPage from "@/pages/menu-editor";
 import { AdminLanguageProvider } from "@/hooks/use-admin-language";
 import { Loader2 } from "lucide-react";
 
@@ -92,6 +98,15 @@ function AppRoutes() {
         <Route path="templates" element={<TemplatesListPage />} />
         <Route path="templates/new" element={<TemplateEditorPage />} />
         <Route path="templates/:id/edit" element={<TemplateEditorPage />} />
+        <Route path="layouts" element={<LayoutsListPage />} />
+        <Route path="layouts/new" element={<LayoutEditorPage />} />
+        <Route path="layouts/:id" element={<LayoutEditorPage />} />
+        <Route path="layout-blocks" element={<LayoutBlocksListPage />} />
+        <Route path="layout-blocks/new" element={<LayoutBlockEditorPage />} />
+        <Route path="layout-blocks/:id" element={<LayoutBlockEditorPage />} />
+        <Route path="menus" element={<MenusListPage />} />
+        <Route path="menus/new" element={<MenuEditorPage />} />
+        <Route path="menus/:id" element={<MenuEditorPage />} />
         <Route path="languages" element={<LanguagesPage />} />
         <Route
           path="content/:nodeType"

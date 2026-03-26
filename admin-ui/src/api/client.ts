@@ -409,3 +409,181 @@ export async function updateTemplate(id: number | string, data: Partial<Template
 export async function deleteTemplate(id: number | string): Promise<void> {
   await api<void>(`/admin/api/templates/${id}`, { method: "DELETE" });
 }
+
+// --- Layouts ---
+
+export interface Layout {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  language_code: string;
+  template_code: string;
+  source: string;
+  theme_name: string | null;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getLayouts(params?: { language_code?: string; source?: string }): Promise<Layout[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.language_code) searchParams.set("language_code", params.language_code);
+  if (params?.source) searchParams.set("source", params.source);
+  const qs = searchParams.toString();
+  const res = await api<ApiResponse<Layout[]>>(`/admin/api/layouts${qs ? `?${qs}` : ""}`);
+  return res.data;
+}
+
+export async function getLayout(id: number | string): Promise<Layout> {
+  const res = await api<ApiResponse<Layout>>(`/admin/api/layouts/${id}`);
+  return res.data;
+}
+
+export async function createLayout(data: Partial<Layout>): Promise<Layout> {
+  const res = await api<ApiResponse<Layout>>("/admin/api/layouts", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateLayout(id: number | string, data: Partial<Layout>): Promise<Layout> {
+  const res = await api<ApiResponse<Layout>>(`/admin/api/layouts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteLayout(id: number | string): Promise<void> {
+  await api<void>(`/admin/api/layouts/${id}`, { method: "DELETE" });
+}
+
+export async function detachLayout(id: number | string): Promise<Layout> {
+  const res = await api<ApiResponse<Layout>>(`/admin/api/layouts/${id}/detach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
+// --- Layout Blocks ---
+
+export interface LayoutBlock {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  language_code: string;
+  template_code: string;
+  source: string;
+  theme_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getLayoutBlocks(params?: { language_code?: string; source?: string }): Promise<LayoutBlock[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.language_code) searchParams.set("language_code", params.language_code);
+  if (params?.source) searchParams.set("source", params.source);
+  const qs = searchParams.toString();
+  const res = await api<ApiResponse<LayoutBlock[]>>(`/admin/api/layout-blocks${qs ? `?${qs}` : ""}`);
+  return res.data;
+}
+
+export async function getLayoutBlock(id: number | string): Promise<LayoutBlock> {
+  const res = await api<ApiResponse<LayoutBlock>>(`/admin/api/layout-blocks/${id}`);
+  return res.data;
+}
+
+export async function createLayoutBlock(data: Partial<LayoutBlock>): Promise<LayoutBlock> {
+  const res = await api<ApiResponse<LayoutBlock>>("/admin/api/layout-blocks", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateLayoutBlock(id: number | string, data: Partial<LayoutBlock>): Promise<LayoutBlock> {
+  const res = await api<ApiResponse<LayoutBlock>>(`/admin/api/layout-blocks/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteLayoutBlock(id: number | string): Promise<void> {
+  await api<void>(`/admin/api/layout-blocks/${id}`, { method: "DELETE" });
+}
+
+export async function detachLayoutBlock(id: number | string): Promise<LayoutBlock> {
+  const res = await api<ApiResponse<LayoutBlock>>(`/admin/api/layout-blocks/${id}/detach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
+// --- Menus ---
+
+export interface MenuItem {
+  id?: number;
+  title: string;
+  item_type: "node" | "url" | "anchor";
+  node_id?: number | null;
+  url?: string;
+  target: string;
+  css_class?: string;
+  children?: MenuItem[];
+}
+
+export interface Menu {
+  id: number;
+  slug: string;
+  name: string;
+  language_code: string;
+  version: number;
+  items: MenuItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getMenus(params?: { language_code?: string }): Promise<Menu[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.language_code) searchParams.set("language_code", params.language_code);
+  const qs = searchParams.toString();
+  const res = await api<ApiResponse<Menu[]>>(`/admin/api/menus${qs ? `?${qs}` : ""}`);
+  return res.data;
+}
+
+export async function getMenu(id: number | string): Promise<Menu> {
+  const res = await api<ApiResponse<Menu>>(`/admin/api/menus/${id}`);
+  return res.data;
+}
+
+export async function createMenu(data: Partial<Menu>): Promise<Menu> {
+  const res = await api<ApiResponse<Menu>>("/admin/api/menus", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateMenu(id: number | string, data: Partial<Menu>): Promise<Menu> {
+  const res = await api<ApiResponse<Menu>>(`/admin/api/menus/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteMenu(id: number | string): Promise<void> {
+  await api<void>(`/admin/api/menus/${id}`, { method: "DELETE" });
+}
+
+export async function replaceMenuItems(id: number | string, version: number, items: MenuItem[]): Promise<Menu> {
+  const res = await api<ApiResponse<Menu>>(`/admin/api/menus/${id}/items`, {
+    method: "PUT",
+    body: JSON.stringify({ version, items }),
+  });
+  return res.data;
+}

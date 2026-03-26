@@ -79,19 +79,19 @@ ALTER TABLE block_types ADD COLUMN IF NOT EXISTS block_js TEXT;
 INSERT INTO layouts (slug, name, description, language_code, template_code, source, is_default)
 SELECT 'default', 'Default Layout', 'Default page layout', code,
 '<!DOCTYPE html>
-<html lang="{{.app.currentLang.Code}}">
+<html lang="{{.app.current_lang.Code}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.node.seo.title}}</title>
-    {{range .app.headStyles}}<link rel="stylesheet" href="{{.}}">{{end}}
-    {{range .app.headScripts}}<script src="{{.}}"></script>{{end}}
-    {{.app.blockStyles}}
+    {{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}
+    {{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}
+    {{.app.block_styles}}
 </head>
 <body>
     <main>{{.node.blocks_html}}</main>
-    {{range .app.footScripts}}<script src="{{.}}" defer></script>{{end}}
-    {{.app.blockScripts}}
+    {{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}
+    {{.app.block_scripts}}
 </body>
 </html>',
 'custom', true

@@ -39,20 +39,20 @@ type TemplateData struct {
 	Node NodeData
 }
 
-// ToMap converts TemplateData to a map with lowercase keys for template access.
-// This allows templates to use {{.app.headStyles}} instead of {{.App.HeadStyles}}.
+// ToMap converts TemplateData to a map with snake_case keys for template access.
+// All keys use snake_case for consistency: {{.app.head_styles}}, {{.node.blocks_html}}.
 func (td TemplateData) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		"app": map[string]interface{}{
-			"menus":        td.App.Menus,
-			"settings":     td.App.Settings,
-			"languages":    td.App.Languages,
-			"currentLang":  td.App.CurrentLang,
-			"headStyles":   td.App.HeadStyles,
-			"headScripts":  td.App.HeadScripts,
-			"footScripts":  td.App.FootScripts,
-			"blockStyles":  td.App.BlockStyles,
-			"blockScripts": td.App.BlockScripts,
+			"menus":         td.App.Menus,
+			"settings":      td.App.Settings,
+			"languages":     td.App.Languages,
+			"current_lang":  td.App.CurrentLang,
+			"head_styles":   td.App.HeadStyles,
+			"head_scripts":  td.App.HeadScripts,
+			"foot_scripts":  td.App.FootScripts,
+			"block_styles":  td.App.BlockStyles,
+			"block_scripts": td.App.BlockScripts,
 		},
 		"node": map[string]interface{}{
 			"title":         td.Node.Title,

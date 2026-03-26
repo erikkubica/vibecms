@@ -53,12 +53,12 @@ const TEMPLATE_VARIABLES = [
   "app.menus",
   "app.settings",
   "app.languages",
-  "app.currentLang",
-  "app.headStyles",
-  "app.headScripts",
-  "app.footScripts",
-  "app.blockStyles",
-  "app.blockScripts",
+  "app.current_lang",
+  "app.head_styles",
+  "app.head_scripts",
+  "app.foot_scripts",
+  "app.block_styles",
+  "app.block_scripts",
   "node.title",
   "node.slug",
   "node.full_url",
@@ -391,15 +391,15 @@ export default function LayoutEditorPage() {
                   <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
                   <div className="space-y-2 text-sm">
                     <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.currentLang.Code}}"}</code> <span className="text-slate-500">current language code</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.blockStyles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.blockScripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.Code}}"}</code> <span className="text-slate-500">current language code</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
                   </div>
                   <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
                   <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.headStyles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.headScripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.footScripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
                     <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.Code}}{{end}}'}</code></div>
                   </div>
                 </div>

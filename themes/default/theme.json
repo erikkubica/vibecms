@@ -29,5 +29,11 @@
     { "slug": "faq", "dir": "faq" },
     { "slug": "contact-form", "dir": "contact-form" },
     { "slug": "stats", "dir": "stats" }
+  ],
+  "templates": [
+    { "slug": "homepage", "file": "homepage.json" },
+    { "slug": "about", "file": "about.json" },
+    { "slug": "contact", "file": "contact.json" },
+    { "slug": "landing", "file": "landing.json" }
   ]
 }

@@ -25,7 +25,8 @@ type ThemeManifest struct {
 	Scripts     []ThemeAssetDef   `json:"scripts"`
 	Layouts     []ThemeLayoutDef  `json:"layouts"`
 	Partials    []ThemePartialDef `json:"partials"`
-	Blocks      []ThemeBlockDef   `json:"blocks"`
+	Blocks      []ThemeBlockDef    `json:"blocks"`
+	Templates   []ThemeTemplateDef `json:"templates"`
 }
 
 // ThemeAssetDef defines a CSS or JS asset declared in theme.json.
@@ -56,6 +57,12 @@ type ThemePartialDef struct {
 type ThemeBlockDef struct {
 	Slug string `json:"slug"`
 	Dir  string `json:"dir"`
+}
+
+// ThemeTemplateDef defines a page template declared in theme.json.
+type ThemeTemplateDef struct {
+	Slug string `json:"slug"`
+	File string `json:"file"`
 }
 
 // BlockAsset holds scoped CSS and JS for a block type.

@@ -1,0 +1,103 @@
+{
+  "name": "Landing Page",
+  "description": "A marketing landing page with bold hero, key benefits, testimonials, portfolio gallery, and strong call-to-action",
+  "thumbnail": "",
+  "blocks": [
+    {
+      "type": "hero",
+      "fields": {
+        "heading": "Launch Your Next Big Idea",
+        "subheading": "From concept to live site in days, not months. The fastest way to build professional websites that convert.",
+        "background_image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1920&q=80",
+        "button_text": "Start Building Now",
+        "button_url": "/signup",
+        "alignment": "center"
+      }
+    },
+    {
+      "type": "features-grid",
+      "fields": {
+        "heading": "Why Teams Choose Us",
+        "subheading": "Three pillars that set us apart from every other platform.",
+        "features": [
+          {
+            "icon": "🚀",
+            "title": "Ship Faster",
+            "description": "Pre-built blocks and page templates mean you spend less time building and more time growing. Go from blank page to polished site in hours."
+          },
+          {
+            "icon": "📈",
+            "title": "Convert More",
+            "description": "Optimized for Core Web Vitals out of the box. Faster pages mean higher search rankings, lower bounce rates, and more conversions."
+          },
+          {
+            "icon": "🛡️",
+            "title": "Stay Secure",
+            "description": "Sandboxed scripting, role-based access control, and a minimal attack surface keep your site and your data safe without extra configuration."
+          }
+        ]
+      }
+    },
+    {
+      "type": "testimonials",
+      "fields": {
+        "heading": "What Our Clients Say",
+        "testimonials": [
+          {
+            "quote": "We replaced three different tools with VibeCMS and cut our monthly costs in half. The all-in-one approach just works.",
+            "author_name": "Jordan Ellis",
+            "author_role": "Founder, Nimbus Creative",
+            "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80"
+          },
+          {
+            "quote": "Our page speed scores went from the 40s to consistent 95+ across every page. The performance gains were immediate and dramatic.",
+            "author_name": "Anika Johansson",
+            "author_role": "Head of Digital, Nordic Brands",
+            "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80"
+          }
+        ]
+      }
+    },
+    {
+      "type": "gallery",
+      "fields": {
+        "images": [
+          {
+            "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80",
+            "caption": "Analytics Dashboard"
+          },
+          {
+            "image": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&q=80",
+            "caption": "Developer Experience"
+          },
+          {
+            "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=600&q=80",
+            "caption": "Team Collaboration"
+          },
+          {
+            "image": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=600&q=80",
+            "caption": "Client Presentations"
+          },
+          {
+            "image": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&q=80",
+            "caption": "Modern Workflows"
+          },
+          {
+            "image": "https://images.unsplash.com/photo-1531538606174-e1ac109bab5d?w=600&q=80",
+            "caption": "Content Creation"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cta",
+      "fields": {
+        "heading": "Stop Waiting. Start Building.",
+        "body": "Join the teams that have already made the switch. Get started with a free trial and see the difference in minutes.",
+        "button_text": "Claim Your Free Trial",
+        "button_url": "/signup",
+        "style": "dark"
+      }
+    }
+  ]
+}

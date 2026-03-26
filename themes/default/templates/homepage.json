@@ -1,0 +1,136 @@
+{
+  "name": "Homepage",
+  "description": "A full homepage showcase with hero, features, image-text section, testimonials, stats, and call-to-action",
+  "thumbnail": "",
+  "blocks": [
+    {
+      "type": "hero",
+      "fields": {
+        "heading": "Build Something Amazing",
+        "subheading": "A modern, lightning-fast CMS that gives you complete control over your content. Create beautiful websites with powerful block-based editing and instant page loads.",
+        "background_image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80",
+        "button_text": "Get Started",
+        "button_url": "/get-started",
+        "alignment": "center"
+      }
+    },
+    {
+      "type": "features-grid",
+      "fields": {
+        "heading": "Everything You Need",
+        "subheading": "Powerful features built for teams that demand speed, flexibility, and reliability.",
+        "features": [
+          {
+            "icon": "⚡",
+            "title": "Lightning Fast",
+            "description": "Sub-50ms time to first byte ensures your visitors never wait. Every page loads instantly, keeping bounce rates low and engagement high."
+          },
+          {
+            "icon": "🧱",
+            "title": "Block Editor",
+            "description": "Build pages visually with a rich library of content blocks. Drag, drop, and configure — no coding required."
+          },
+          {
+            "icon": "🎨",
+            "title": "Theme System",
+            "description": "Swap themes instantly without rebuilding. Customize layouts, partials, and styles through a clean manifest-driven architecture."
+          },
+          {
+            "icon": "🔐",
+            "title": "RBAC",
+            "description": "Fine-grained role-based access control lets you manage who can view, edit, and publish content across your entire site."
+          },
+          {
+            "icon": "🌍",
+            "title": "Multi-Language",
+            "description": "Reach a global audience with built-in multi-language support. Manage translations side-by-side for every piece of content."
+          },
+          {
+            "icon": "🔌",
+            "title": "Extensible",
+            "description": "Extend functionality with sandboxed Tengo scripts. Add custom logic without touching core code or restarting the server."
+          }
+        ]
+      }
+    },
+    {
+      "type": "image-text",
+      "fields": {
+        "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+        "heading": "Powerful Content Management",
+        "body": "Take full control of your digital presence with an intuitive admin interface and a flexible block-based content model. Create, preview, and publish pages in minutes — not hours. Our node-based architecture means every piece of content is structured, searchable, and ready for any channel.",
+        "image_position": "left",
+        "button_text": "Learn More",
+        "button_url": "/features"
+      }
+    },
+    {
+      "type": "testimonials",
+      "fields": {
+        "heading": "Trusted by Teams Worldwide",
+        "testimonials": [
+          {
+            "quote": "We migrated 200 pages in a single afternoon. The block editor made restructuring our content painless, and our page load times dropped by 80%.",
+            "author_name": "Sarah Chen",
+            "author_role": "Director of Marketing, Greenleaf Digital",
+            "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80"
+          },
+          {
+            "quote": "The theme system is a game-changer. We manage 30 client sites from a single codebase and can roll out design updates across all of them in minutes.",
+            "author_name": "Marcus Rivera",
+            "author_role": "CTO, Brightwave Agency",
+            "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80"
+          },
+          {
+            "quote": "Finally, a CMS that developers and content editors both love. The Tengo scripting layer lets us add custom features without touching the core.",
+            "author_name": "Priya Patel",
+            "author_role": "Lead Developer, Mosaic Studios",
+            "avatar": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80"
+          }
+        ]
+      }
+    },
+    {
+      "type": "stats",
+      "fields": {
+        "heading": "Built for Performance",
+        "stats": [
+          {
+            "number": "50",
+            "label": "TTFB",
+            "prefix": "<",
+            "suffix": "ms"
+          },
+          {
+            "number": "500",
+            "label": "Sites Powered",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "number": "99.9",
+            "label": "Uptime",
+            "prefix": "",
+            "suffix": "%"
+          },
+          {
+            "number": "10",
+            "label": "Block Types",
+            "prefix": "",
+            "suffix": "+"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cta",
+      "fields": {
+        "heading": "Ready to Get Started?",
+        "body": "Join hundreds of teams building faster, more flexible websites. Start your free trial today — no credit card required.",
+        "button_text": "Start Free Trial",
+        "button_url": "/signup",
+        "style": "accent"
+      }
+    }
+  ]
+}

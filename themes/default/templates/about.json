@@ -1,0 +1,77 @@
+{
+  "name": "About",
+  "description": "An about page with hero, company story, team section, company stats, and call-to-action",
+  "thumbnail": "",
+  "blocks": [
+    {
+      "type": "hero",
+      "fields": {
+        "heading": "About Us",
+        "subheading": "We believe the web should be fast, flexible, and accessible to everyone. Meet the team and mission behind VibeCMS.",
+        "background_image": "",
+        "button_text": "",
+        "button_url": "",
+        "alignment": "center"
+      }
+    },
+    {
+      "type": "rich-text",
+      "fields": {
+        "body": "<h2>Our Story</h2>\n<p>We started with a simple frustration: every CMS on the market forced a trade-off between developer flexibility and editorial simplicity. Monolithic platforms were slow and brittle; headless solutions left content teams stranded without a decent editing experience. We knew there had to be a better way.</p>\n<p>So we built VibeCMS — a single-binary, high-performance content management system that treats speed as a feature, not an afterthought. From day one, we designed around sub-50ms page loads, a block-based editor that anyone can use, and a zero-rebuild extension architecture that lets developers ship new features without downtime.</p>\n<p>Today, VibeCMS powers hundreds of sites for agencies, startups, and enterprises around the world. Our small, focused team remains committed to the same principles we started with: performance without compromise, simplicity without sacrificing power, and a platform that grows with you.</p>"
+      }
+    },
+    {
+      "type": "image-text",
+      "fields": {
+        "image": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80",
+        "heading": "Our Mission",
+        "body": "We exist to give every team — from solo creators to large agencies — the tools to build fast, beautiful websites without fighting their CMS. Our mission is to eliminate the complexity that stands between a great idea and a live page. We do this by combining the performance of a static site with the flexibility of a full content platform.",
+        "image_position": "right",
+        "button_text": "",
+        "button_url": ""
+      }
+    },
+    {
+      "type": "stats",
+      "fields": {
+        "heading": "By the Numbers",
+        "stats": [
+          {
+            "number": "5",
+            "label": "Years in Business",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "number": "350",
+            "label": "Happy Clients",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "number": "1200",
+            "label": "Projects Delivered",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "number": "18",
+            "label": "Team Members",
+            "prefix": "",
+            "suffix": ""
+          }
+        ]
+      }
+    },
+    {
+      "type": "cta",
+      "fields": {
+        "heading": "Want to Work With Us?",
+        "body": "Whether you are looking for a CMS for your next project or want to join our team, we would love to hear from you.",
+        "button_text": "Get in Touch",
+        "button_url": "/contact",
+        "style": "light"
+      }
+    }
+  ]
+}

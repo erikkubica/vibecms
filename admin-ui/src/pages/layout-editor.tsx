@@ -50,17 +50,23 @@ function slugify(text: string): string {
 }
 
 const TEMPLATE_VARIABLES = [
-  "App.Menus",
-  "App.Settings",
-  "App.Languages",
-  "App.CurrentLang",
-  "App.HeadStyles",
-  "App.FootScripts",
-  "Node.Title",
-  "Node.Slug",
-  "Node.BlocksHTML",
-  "Node.Fields",
-  "Node.SEO",
+  "app.menus",
+  "app.settings",
+  "app.languages",
+  "app.currentLang",
+  "app.headStyles",
+  "app.headScripts",
+  "app.footScripts",
+  "app.blockStyles",
+  "app.blockScripts",
+  "node.title",
+  "node.slug",
+  "node.full_url",
+  "node.blocks_html",
+  "node.fields",
+  "node.seo",
+  "node.node_type",
+  "node.language_code",
 ];
 
 export default function LayoutEditorPage() {
@@ -382,61 +388,37 @@ export default function LayoutEditorPage() {
             <CardContent className="border-t border-slate-100 pt-4">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Variables</h3>
+                  <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
                   <div className="space-y-2 text-sm">
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.App.Menus}}"}</code>
-                      <span className="text-slate-500">map of menus by slug</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.App.Settings}}"}</code>
-                      <span className="text-slate-500">site settings</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.App.Languages}}"}</code>
-                      <span className="text-slate-500">available languages</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.App.CurrentLang}}"}</code>
-                      <span className="text-slate-500">current language</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.App.HeadStyles}}"}</code>
-                      <span className="text-slate-500">CSS URLs for &lt;head&gt;</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.App.FootScripts}}"}</code>
-                      <span className="text-slate-500">JS URLs for footer</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.Node.Title}}"}</code>
-                      <span className="text-slate-500">page title</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.Node.Slug}}"}</code>
-                      <span className="text-slate-500">page slug</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.Node.BlocksHTML}}"}</code>
-                      <span className="text-slate-500">rendered content blocks</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.Node.Fields}}"}</code>
-                      <span className="text-slate-500">custom fields</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{.Node.SEO}}"}</code>
-                      <span className="text-slate-500">SEO settings</span>
-                    </div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.currentLang.Code}}"}</code> <span className="text-slate-500">current language code</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.blockStyles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.blockScripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+                  </div>
+                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.headStyles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.headScripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.footScripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.Code}}{{end}}'}</code></div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Functions</h3>
+                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
                   <div className="space-y-2 text-sm">
-                    <div className="flex gap-2">
-                      <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700 whitespace-nowrap">{"{{renderLayoutBlock \"slug\"}}"}</code>
-                      <span className="text-slate-500">render a partial</span>
-                    </div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title (use index for keys)</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
+                  </div>
+                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
                   </div>
                 </div>
               </div>

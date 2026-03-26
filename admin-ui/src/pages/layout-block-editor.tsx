@@ -258,9 +258,73 @@ export default function LayoutBlockEditorPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main form */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main content */}
+        <div className="space-y-6 lg:col-span-2">
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold text-slate-900">Template Code</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                value={templateCode}
+                onChange={(e) => setTemplateCode(e.target.value)}
+                disabled={isTheme}
+                className="w-full h-96 font-mono text-sm bg-slate-950 text-slate-100 rounded-lg p-4 border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-y disabled:opacity-60"
+                placeholder={`{{/* Layout block template */}}\n<header class="site-header">\n  <nav>...</nav>\n</header>`}
+                spellCheck={false}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Template Reference */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold text-slate-900">Template Reference</CardTitle>
+            </CardHeader>
+            <CardContent className="border-t border-slate-100 pt-4">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.Code}}"}</code> <span className="text-slate-500">current language code</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+                  </div>
+                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.Code}}{{end}}'}</code></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
+                  </div>
+                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
+                  <div className="space-y-2 text-sm">
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
+                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base font-semibold text-slate-900">Details</CardTitle>
@@ -318,67 +382,6 @@ export default function LayoutBlockEditorPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-900">Template Code</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <textarea
-                value={templateCode}
-                onChange={(e) => setTemplateCode(e.target.value)}
-                disabled={isTheme}
-                className="w-full h-96 font-mono text-sm bg-slate-950 text-slate-100 rounded-lg p-4 border-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-y disabled:opacity-60"
-                placeholder={`{{/* Layout block template */}}\n<header class="site-header">\n  <nav>\n    {{ yield nav() }}\n  </nav>\n</header>`}
-                spellCheck={false}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Reference panel */}
-        <div className="space-y-6">
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-900">Template Reference</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-600">
-              <p>Layout blocks are reusable partials included in layouts using the Jet template engine.</p>
-              <div>
-                <p className="font-medium text-slate-700 mb-1">Include in a layout:</p>
-                <code className="block bg-slate-100 rounded p-2 text-xs font-mono text-slate-700">
-                  {`{{ include "blocks/<slug>" }}`}
-                </code>
-              </div>
-              <div>
-                <p className="font-medium text-slate-700 mb-1">Variables:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li><code className="bg-slate-100 px-1 rounded">.Site</code> - Site settings</li>
-                  <li><code className="bg-slate-100 px-1 rounded">.Node</code> - Current content node</li>
-                  <li><code className="bg-slate-100 px-1 rounded">.Menus</code> - Navigation menus</li>
-                  <li><code className="bg-slate-100 px-1 rounded">.Language</code> - Current language</li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-medium text-slate-700 mb-1">Common patterns:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Site header / navigation</li>
-                  <li>Footer with links</li>
-                  <li>Sidebar widgets</li>
-                  <li>Breadcrumb trails</li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-medium text-slate-700 mb-1">Jet syntax:</p>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li><code className="bg-slate-100 px-1 rounded">{`{{ .Variable }}`}</code> - Output</li>
-                  <li><code className="bg-slate-100 px-1 rounded">{`{{ if .Cond }}...{{ end }}`}</code> - Conditional</li>
-                  <li><code className="bg-slate-100 px-1 rounded">{`{{ range .Items }}...{{ end }}`}</code> - Loop</li>
-                  <li><code className="bg-slate-100 px-1 rounded">{`{{ yield content() }}`}</code> - Block yield</li>
-                </ul>
               </div>
             </CardContent>
           </Card>

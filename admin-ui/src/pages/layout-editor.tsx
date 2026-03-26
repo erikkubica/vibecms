@@ -273,14 +273,93 @@ export default function LayoutEditorPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
-        {/* Form Fields */}
-        <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-800">Layout Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
+        {/* Main content */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Code Editor */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold text-slate-800">Template Code</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CodeEditor
+                value={templateCode}
+                onChange={setTemplateCode}
+                disabled={isTheme}
+                height="500px"
+                placeholder="Enter your Go html/template code here..."
+                variables={TEMPLATE_VARIABLES}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Reference Panel */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <CardHeader
+              className="cursor-pointer select-none"
+              onClick={() => setRefOpen(!refOpen)}
+            >
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold text-slate-800">
+                  Template Reference
+                </CardTitle>
+                {refOpen ? (
+                  <ChevronUp className="h-4 w-4 text-slate-400" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                )}
+              </div>
+            </CardHeader>
+            {refOpen && (
+              <CardContent className="border-t border-slate-100 pt-4">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
+                    <div className="space-y-2 text-sm">
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.Code}}"}</code> <span className="text-slate-500">current language code</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+                    </div>
+                    <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
+                    <div className="space-y-2 text-sm">
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.Code}}{{end}}'}</code></div>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
+                    <div className="space-y-2 text-sm">
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
+                    </div>
+                    <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
+                    <div className="space-y-2 text-sm">
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
+                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold text-slate-800">Layout Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -304,19 +383,17 @@ export default function LayoutEditorPage() {
                   disabled={isTheme}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="A brief description of this layout..."
-                rows={2}
-                disabled={isTheme}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="A brief description of this layout..."
+                  rows={2}
+                  disabled={isTheme}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="language">Language</Label>
                 <select
@@ -334,7 +411,7 @@ export default function LayoutEditorPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-end space-x-3 pb-1">
+              <div className="flex items-center space-x-3 pt-1">
                 <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
@@ -346,85 +423,9 @@ export default function LayoutEditorPage() {
                   Set as default layout
                 </label>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Code Editor */}
-        <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-800">Template Code</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CodeEditor
-              value={templateCode}
-              onChange={setTemplateCode}
-              disabled={isTheme}
-              height="500px"
-              placeholder="Enter your Go html/template code here..."
-              variables={TEMPLATE_VARIABLES}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Reference Panel */}
-        <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader
-            className="cursor-pointer select-none"
-            onClick={() => setRefOpen(!refOpen)}
-          >
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Template Reference
-              </CardTitle>
-              {refOpen ? (
-                <ChevronUp className="h-4 w-4 text-slate-400" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-slate-400" />
-              )}
-            </div>
-          </CardHeader>
-          {refOpen && (
-            <CardContent className="border-t border-slate-100 pt-4">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.Code}}"}</code> <span className="text-slate-500">current language code</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
-                  </div>
-                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.Code}}{{end}}'}</code></div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title (use index for keys)</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
-                  </div>
-                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
-                  </div>
-                </div>
-              </div>
             </CardContent>
-          )}
-        </Card>
+          </Card>
+        </div>
       </form>
 
       {/* Delete dialog */}

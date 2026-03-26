@@ -208,133 +208,138 @@ export default function MenuEditorPage() {
         </Button>
       </div>
 
-      {/* Menu metadata */}
-      <Card className="rounded-xl border border-slate-200 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-semibold text-slate-800">
-            Menu Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Name
-              </label>
-              <Input
-                value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Main Navigation"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Slug
-              </label>
-              <Input
-                value={slug}
-                onChange={(e) => {
-                  setSlug(e.target.value);
-                  setSlugTouched(true);
-                }}
-                placeholder="main-navigation"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Language
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                value={languageCode}
-                onChange={(e) => setLanguageCode(e.target.value)}
-              >
-                <option value="">Select language</option>
-                {languages.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.flag} {lang.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main content */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Add item buttons */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-600">Add:</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => addItem("url")}
+            >
+              <Globe className="h-3.5 w-3.5" />
+              Custom URL
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => addItem("node")}
+            >
+              <LinkIcon className="h-3.5 w-3.5" />
+              Page Link
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => addItem("anchor")}
+            >
+              <Hash className="h-3.5 w-3.5" />
+              Anchor
+            </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Add item buttons */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-slate-600">Add:</span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => addItem("url")}
-        >
-          <Globe className="h-3.5 w-3.5" />
-          Custom URL
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => addItem("node")}
-        >
-          <LinkIcon className="h-3.5 w-3.5" />
-          Page Link
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => addItem("anchor")}
-        >
-          <Hash className="h-3.5 w-3.5" />
-          Anchor
-        </Button>
-      </div>
+          {/* Menu tree */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold text-slate-800">
+                Menu Items
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MenuTree items={menuItems} onChange={setMenuItems} />
+            </CardContent>
+          </Card>
 
-      {/* Menu tree */}
-      <Card className="rounded-xl border border-slate-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold text-slate-800">
-            Menu Items
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MenuTree items={menuItems} onChange={setMenuItems} />
-        </CardContent>
-      </Card>
-
-      {/* Bottom add buttons */}
-      {menuItems.length > 0 && (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 p-4">
-          <Plus className="h-4 w-4 text-slate-400" />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs"
-            onClick={() => addItem("url")}
-          >
-            Add URL
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs"
-            onClick={() => addItem("node")}
-          >
-            Add Page
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs"
-            onClick={() => addItem("anchor")}
-          >
-            Add Anchor
-          </Button>
+          {/* Bottom add buttons */}
+          {menuItems.length > 0 && (
+            <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 p-4">
+              <Plus className="h-4 w-4 text-slate-400" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                onClick={() => addItem("url")}
+              >
+                Add URL
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                onClick={() => addItem("node")}
+              >
+                Add Page
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                onClick={() => addItem("anchor")}
+              >
+                Add Anchor
+              </Button>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold text-slate-800">
+                Menu Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Name
+                </label>
+                <Input
+                  value={name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="Main Navigation"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Slug
+                </label>
+                <Input
+                  value={slug}
+                  onChange={(e) => {
+                    setSlug(e.target.value);
+                    setSlugTouched(true);
+                  }}
+                  placeholder="main-navigation"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Language
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  value={languageCode}
+                  onChange={(e) => setLanguageCode(e.target.value)}
+                >
+                  <option value="">Select language</option>
+                  {languages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.flag} {lang.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

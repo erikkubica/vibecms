@@ -135,6 +135,11 @@ func (h *PublicHandler) PageByFullURL(c *fiber.Ctx) error {
 	node, found := h.findNodeByURL(path)
 
 	if !found {
+		// Check if path is a language slug (e.g. /de) — serve that language's homepage
+		node, found = h.findLanguageHomepage(path)
+	}
+
+	if !found {
 		// Try alternate forms for hide_prefix languages:
 		// 1. If path looks like /en/slug, try /slug (hide_prefix match)
 		// 2. If path looks like /slug, try /{lang-slug}/slug for each hide_prefix language
@@ -637,6 +642,57 @@ func (h *PublicHandler) hydrateNodeRef(ref map[string]interface{}) map[string]in
 }
 
 // findNodeByURL does a direct full_url lookup.
+// findLanguageHomepage checks if the path is just a language slug (e.g. /de)
+// and returns the homepage translation for that language.
+func (h *PublicHandler) findLanguageHomepage(path string) (*models.ContentNode, bool) {
+	// Path must be /{something} with no further segments
+	segments := strings.Split(strings.Trim(path, "/"), "/")
+	if len(segments) != 1 || segments[0] == "" {
+		return nil, false
+	}
+	langSlug := segments[0]
+
+	// Check if this matches any active language slug
+	var lang models.Language
+	if err := h.db.Where("slug = ? AND is_active = ?", langSlug, true).First(&lang).Error; err != nil {
+		return nil, false
+	}
+
+	// Find the configured homepage
+	var setting models.SiteSetting
+	if err := h.db.Where("key = ?", "homepage_node_id").First(&setting).Error; err != nil || setting.Value == nil {
+		return nil, false
+	}
+	homepageID, err := strconv.Atoi(*setting.Value)
+	if err != nil || homepageID <= 0 {
+		return nil, false
+	}
+
+	var homepage models.ContentNode
+	if err := h.db.First(&homepage, homepageID).Error; err != nil {
+		return nil, false
+	}
+
+	// If homepage language matches, return it directly
+	if homepage.LanguageCode == lang.Code {
+		if homepage.Status == "published" {
+			return &homepage, true
+		}
+		return nil, false
+	}
+
+	// Find translation of homepage in the target language
+	if homepage.TranslationGroupID == nil || *homepage.TranslationGroupID == "" {
+		return nil, false
+	}
+	var translated models.ContentNode
+	if err := h.db.Where("translation_group_id = ? AND language_code = ? AND status = ? AND deleted_at IS NULL",
+		*homepage.TranslationGroupID, lang.Code, "published").First(&translated).Error; err != nil {
+		return nil, false
+	}
+	return &translated, true
+}
+
 func (h *PublicHandler) findNodeByURL(path string) (*models.ContentNode, bool) {
 	var node models.ContentNode
 	if err := h.db.Where("full_url = ? AND status = ? AND deleted_at IS NULL", path, "published").First(&node).Error; err != nil {

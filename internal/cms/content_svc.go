@@ -3,6 +3,7 @@ package cms
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -334,6 +335,15 @@ func buildFullURL(node *models.ContentNode, db *gorm.DB) string {
 		return "/" + langSlug
 	}
 
+	// Special case: if this node is the homepage or a translation of the homepage,
+	// use /{lang} (or / for default language) instead of /{lang}/slug.
+	if isHomepageOrTranslation(node, db) {
+		if langSlug == "" {
+			return "/"
+		}
+		return "/" + langSlug
+	}
+
 	// Build segment chain
 	var segments []string
 
@@ -356,6 +366,36 @@ func buildFullURL(node *models.ContentNode, db *gorm.DB) string {
 	segments = append(segments, node.Slug)
 
 	return "/" + strings.Join(segments, "/")
+}
+
+// isHomepageOrTranslation checks if a node is the configured homepage or a translation of it.
+func isHomepageOrTranslation(node *models.ContentNode, db *gorm.DB) bool {
+	var setting models.SiteSetting
+	if err := db.Where("key = ?", "homepage_node_id").First(&setting).Error; err != nil || setting.Value == nil {
+		return false
+	}
+	homepageID, err := strconv.Atoi(*setting.Value)
+	if err != nil || homepageID <= 0 {
+		return false
+	}
+
+	// Direct match: this IS the homepage
+	if node.ID == homepageID {
+		return true
+	}
+
+	// Translation match: shares translation_group_id with the homepage
+	if node.TranslationGroupID == nil || *node.TranslationGroupID == "" {
+		return false
+	}
+	var homepage models.ContentNode
+	if err := db.Select("translation_group_id").First(&homepage, homepageID).Error; err != nil {
+		return false
+	}
+	if homepage.TranslationGroupID == nil || *homepage.TranslationGroupID == "" {
+		return false
+	}
+	return *node.TranslationGroupID == *homepage.TranslationGroupID
 }
 
 // resolveLanguageSlug returns the URL slug for a language code.

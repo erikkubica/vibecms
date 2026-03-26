@@ -1,0 +1,28 @@
+.vb-stats-container {
+  border: 1px solid var(--color-border);
+}
+
+.vb-stat-number {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.vb-stat-prefix,
+.vb-stat-suffix {
+  font-size: 0.7em;
+  opacity: 0.85;
+}
+
+.vb-stat-item {
+  transition: transform 0.2s ease;
+}
+
+.vb-stat-item:hover {
+  transform: scale(1.05);
+}
+
+@media (max-width: 640px) {
+  .vb-stat-number {
+    font-size: 2rem;
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "slug": "gallery",
+  "label": "Gallery",
+  "icon": "grid",
+  "description": "Responsive image gallery with captions",
+  "field_schema": [
+    {
+      "key": "images",
+      "label": "Images",
+      "type": "repeater",
+      "sub_fields": [
+        { "key": "image", "label": "Image", "type": "image", "required": true },
+        { "key": "caption", "label": "Caption", "type": "text" }
+      ]
+    }
+  ],
+  "test_data": {
+    "images": [
+      { "image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80", "caption": "Modern workspace design" },
+      { "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80", "caption": "Data-driven insights" },
+      { "image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&q=80", "caption": "Collaborative environment" },
+      { "image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&q=80", "caption": "Technology at scale" },
+      { "image": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=600&q=80", "caption": "Creative solutions" },
+      { "image": "https://images.unsplash.com/photo-1531973576160-7125cd663d86?w=600&q=80", "caption": "Team collaboration" }
+    ]
+  }
+}

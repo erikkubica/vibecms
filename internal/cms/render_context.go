@@ -21,6 +21,7 @@ type AppData struct {
 	FootScripts  []string
 	BlockStyles  template.HTML
 	BlockScripts template.HTML
+	ThemeURL     string
 }
 
 // NodeData holds the .Node namespace for layout templates.
@@ -66,6 +67,7 @@ func (td TemplateData) ToMap() map[string]interface{} {
 			"foot_scripts":  td.App.FootScripts,
 			"block_styles":  td.App.BlockStyles,
 			"block_scripts": td.App.BlockScripts,
+			"theme_url":     td.App.ThemeURL,
 		},
 		"node": map[string]interface{}{
 			"title":         td.Node.Title,
@@ -81,7 +83,7 @@ func (td TemplateData) ToMap() map[string]interface{} {
 			"logged_in": td.User.LoggedIn,
 			"id":        td.User.ID,
 			"email":     td.User.Email,
-			"role":      td.User.Role,
+			"role": td.User.Role,
 			"full_name": td.User.FullName,
 		},
 	}
@@ -148,6 +150,8 @@ func (rc *RenderContext) BuildAppData(settings map[string]string, languages []mo
 		app.BlockStyles = rc.themeAssets.BuildBlockStyleTags()
 		app.BlockScripts = rc.themeAssets.BuildBlockScriptTags()
 	}
+
+	app.ThemeURL = "/theme/assets"
 
 	return app
 }

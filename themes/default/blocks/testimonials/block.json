@@ -1,0 +1,28 @@
+{
+  "slug": "testimonials",
+  "label": "Testimonials",
+  "icon": "message-circle",
+  "description": "Customer testimonial cards with quotes, names, roles, and avatars",
+  "field_schema": [
+    { "key": "heading", "label": "Section Heading", "type": "text" },
+    {
+      "key": "testimonials",
+      "label": "Testimonials",
+      "type": "repeater",
+      "sub_fields": [
+        { "key": "quote", "label": "Quote", "type": "textarea", "required": true },
+        { "key": "author_name", "label": "Author Name", "type": "text", "required": true },
+        { "key": "author_role", "label": "Author Role", "type": "text" },
+        { "key": "avatar", "label": "Avatar", "type": "image" }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "What Our Clients Say",
+    "testimonials": [
+      { "quote": "VibeCMS transformed how we manage our agency's client sites. The performance is incredible and our clients love the admin interface.", "author_name": "Sarah Chen", "author_role": "Creative Director, Studio Nine", "avatar": "" },
+      { "quote": "We migrated from WordPress and saw our page load times drop by 80%. The block-based editor is intuitive and the theme system is a dream.", "author_name": "Marcus Johnson", "author_role": "CTO, Digital Wave", "avatar": "" },
+      { "quote": "The multi-language support and role-based access control saved us weeks of custom development. Highly recommended for agency use.", "author_name": "Elena Rodriguez", "author_role": "Lead Developer, Pixel & Code", "avatar": "" }
+    ]
+  }
+}

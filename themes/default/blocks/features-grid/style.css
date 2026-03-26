@@ -1,0 +1,24 @@
+/* Features Grid Block */
+.vibe-features-grid__card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.vibe-features-grid__card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.vibe-features-grid__icon {
+  font-size: 1.875rem;
+  line-height: 1;
+  display: inline-block;
+}
+
+.vibe-features-grid__card h3 {
+  color: var(--color-text);
+}
+
+.vibe-features-grid__card p {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}

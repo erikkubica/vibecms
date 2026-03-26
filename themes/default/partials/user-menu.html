@@ -1,0 +1,10 @@
+<div class="hidden md:flex items-center space-x-3">
+    {{if .user.logged_in}}
+    <span class="text-sm text-slate-500">{{.user.full_name}}</span>
+    <a href="/admin" class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50 rounded-md transition-colors">Dashboard</a>
+    <a href="/logout" class="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">Logout</a>
+    {{else}}
+    <a href="/login" class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50 rounded-md transition-colors">Login</a>
+    <a href="/register" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Register</a>
+    {{end}}
+</div>

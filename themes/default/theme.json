@@ -1,0 +1,33 @@
+{
+  "name": "VibeCMS Default",
+  "version": "1.0.0",
+  "description": "A polished, neutral starter theme with rebrandable CSS custom properties",
+  "author": "VibeCMS",
+  "styles": [
+    { "handle": "theme-css", "src": "styles/theme.css", "position": "head" }
+  ],
+  "scripts": [],
+  "layouts": [
+    { "slug": "default", "name": "Default Layout", "file": "default.html", "is_default": true },
+    { "slug": "blank", "name": "Blank Layout", "file": "blank.html", "is_default": false }
+  ],
+  "partials": [
+    { "slug": "site-header", "name": "Site Header", "file": "site-header.html" },
+    { "slug": "site-footer", "name": "Site Footer", "file": "site-footer.html" },
+    { "slug": "primary-nav", "name": "Primary Navigation", "file": "primary-nav.html" },
+    { "slug": "user-menu", "name": "User Menu", "file": "user-menu.html" },
+    { "slug": "footer-nav", "name": "Footer Navigation", "file": "footer-nav.html" }
+  ],
+  "blocks": [
+    { "slug": "hero", "dir": "hero" },
+    { "slug": "rich-text", "dir": "rich-text" },
+    { "slug": "image-text", "dir": "image-text" },
+    { "slug": "gallery", "dir": "gallery" },
+    { "slug": "cta", "dir": "cta" },
+    { "slug": "features-grid", "dir": "features-grid" },
+    { "slug": "testimonials", "dir": "testimonials" },
+    { "slug": "faq", "dir": "faq" },
+    { "slug": "contact-form", "dir": "contact-form" },
+    { "slug": "stats", "dir": "stats" }
+  ]
+}

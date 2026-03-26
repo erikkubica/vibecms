@@ -212,11 +212,56 @@ func (tl *ThemeLoader) LoadTheme(themeDir string) error {
 		tl.registerBlock(manifest.Name, def, themeDir)
 	}
 
+	// Clean up stale partial records from the layouts table.
+	// Partials belong in layout_blocks, not layouts. Earlier versions
+	// incorrectly created them in layouts — remove those orphans.
+	for _, def := range manifest.Partials {
+		tl.db.Where("slug = ? AND source = 'theme'", def.Slug).Delete(&models.Layout{})
+	}
+
+	// Upsert theme record in the themes table.
+	tl.upsertThemeRecord(manifest, themeDir)
+
 	log.Printf("theme loaded: %s (%d layouts, %d partials, %d blocks, %d styles, %d scripts)",
 		manifest.Name, len(manifest.Layouts), len(manifest.Partials), len(manifest.Blocks),
 		len(manifest.Styles), len(manifest.Scripts))
 
 	return nil
+}
+
+// upsertThemeRecord creates or updates the theme record in the themes table.
+func (tl *ThemeLoader) upsertThemeRecord(manifest ThemeManifest, themeDir string) {
+	slug := strings.ToLower(strings.ReplaceAll(manifest.Name, " ", "-"))
+
+	var existing models.Theme
+	result := tl.db.Where("slug = ?", slug).First(&existing)
+
+	if result.Error == nil {
+		existing.Name = manifest.Name
+		existing.Version = manifest.Version
+		existing.Description = manifest.Description
+		existing.Author = manifest.Author
+		existing.Path = themeDir
+		existing.Source = "local"
+		existing.IsActive = true
+		if err := tl.db.Save(&existing).Error; err != nil {
+			log.Printf("WARN: failed to update theme record %s: %v", slug, err)
+		}
+	} else {
+		theme := models.Theme{
+			Slug:        slug,
+			Name:        manifest.Name,
+			Version:     manifest.Version,
+			Description: manifest.Description,
+			Author:      manifest.Author,
+			Path:        themeDir,
+			Source:      "local",
+			IsActive:    true,
+		}
+		if err := tl.db.Create(&theme).Error; err != nil {
+			log.Printf("WARN: failed to create theme record %s: %v", slug, err)
+		}
+	}
 }
 
 // registerAssets resolves dependency order and populates the registry.
@@ -250,12 +295,13 @@ func (tl *ThemeLoader) registerAssets(manifest ThemeManifest) {
 // Theme layouts are created as universal (language_id = NULL).
 func (tl *ThemeLoader) upsertLayout(themeName string, def ThemeLayoutDef, code string) {
 	var existing models.Layout
-	result := tl.db.Where("slug = ? AND language_id IS NULL AND source = ?", def.Slug, "theme").First(&existing)
+	result := tl.db.Where("slug = ? AND language_id IS NULL", def.Slug).First(&existing)
 
 	if result.Error == nil {
-		// Update existing.
+		// Update existing (takes ownership from seed/custom).
 		existing.Name = def.Name
 		existing.TemplateCode = code
+		existing.Source = "theme"
 		existing.ThemeName = &themeName
 		existing.IsDefault = def.IsDefault
 		if err := tl.db.Save(&existing).Error; err != nil {
@@ -278,29 +324,30 @@ func (tl *ThemeLoader) upsertLayout(themeName string, def ThemeLayoutDef, code s
 	}
 }
 
-// upsertPartial creates or updates a layout (used as partial) from a theme definition.
-// Theme partials are created as universal (language_id = NULL).
+// upsertPartial creates or updates a layout block from a theme partial definition.
+// Theme partials map to layout_blocks (used by renderLayoutBlock in templates).
 func (tl *ThemeLoader) upsertPartial(themeName string, def ThemePartialDef, code string) {
-	var existing models.Layout
-	result := tl.db.Where("slug = ? AND language_id IS NULL AND source = ?", def.Slug, "theme").First(&existing)
+	var existing models.LayoutBlock
+	result := tl.db.Where("slug = ? AND language_id IS NULL", def.Slug).First(&existing)
 
 	if result.Error == nil {
 		existing.Name = def.Name
 		existing.TemplateCode = code
+		existing.Source = "theme"
 		existing.ThemeName = &themeName
 		if err := tl.db.Save(&existing).Error; err != nil {
 			log.Printf("WARN: failed to update theme partial %s: %v", def.Slug, err)
 		}
 	} else {
-		layout := models.Layout{
-			Slug:       def.Slug,
-			Name:       def.Name,
-			LanguageID: nil,
+		lb := models.LayoutBlock{
+			Slug:         def.Slug,
+			Name:         def.Name,
+			LanguageID:   nil,
 			TemplateCode: code,
 			Source:       "theme",
 			ThemeName:    &themeName,
 		}
-		if err := tl.db.Create(&layout).Error; err != nil {
+		if err := tl.db.Create(&lb).Error; err != nil {
 			log.Printf("WARN: failed to create theme partial %s: %v", def.Slug, err)
 		}
 	}
@@ -371,7 +418,7 @@ func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeD
 
 	// Upsert block type.
 	var existing models.BlockType
-	result := tl.db.Where("slug = ? AND source = ?", def.Slug, "theme").First(&existing)
+	result := tl.db.Where("slug = ?", def.Slug).First(&existing)
 
 	viewFile := filepath.Join("blocks", def.Dir, "view.html")
 
@@ -382,6 +429,7 @@ func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeD
 		existing.FieldSchema = fieldSchema
 		existing.HTMLTemplate = string(viewData)
 		existing.TestData = testData
+		existing.Source = "theme"
 		existing.ThemeName = &themeName
 		existing.ViewFile = viewFile
 		existing.BlockCSS = blockCSS

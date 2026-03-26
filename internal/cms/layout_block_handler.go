@@ -29,6 +29,7 @@ func (h *LayoutBlockHandler) RegisterRoutes(router fiber.Router) {
 	router.Patch("/layout-blocks/:id", h.Update)
 	router.Delete("/layout-blocks/:id", h.Delete)
 	router.Post("/layout-blocks/:id/detach", h.Detach)
+	router.Post("/layout-blocks/:id/reattach", h.Reattach)
 }
 
 // List handles GET /layout-blocks to retrieve all layout blocks with optional filters.
@@ -192,6 +193,24 @@ func (h *LayoutBlockHandler) Detach(c *fiber.Ctx) error {
 			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Layout block not found")
 		}
 		return api.Error(c, fiber.StatusInternalServerError, "DETACH_FAILED", "Failed to detach layout block")
+	}
+
+	return api.Success(c, block)
+}
+
+// Reattach handles POST /layout-blocks/:id/reattach to restore a layout block to its theme version.
+func (h *LayoutBlockHandler) Reattach(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Layout block ID must be a valid integer")
+	}
+
+	block, err := h.svc.Reattach(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Layout block not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "REATTACH_FAILED", "Failed to reattach layout block")
 	}
 
 	return api.Success(c, block)

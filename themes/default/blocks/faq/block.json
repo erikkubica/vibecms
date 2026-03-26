@@ -1,0 +1,30 @@
+{
+  "slug": "faq",
+  "label": "FAQ",
+  "icon": "help-circle",
+  "description": "Frequently asked questions with expandable accordion",
+  "field_schema": [
+    { "key": "heading", "label": "Section Heading", "type": "text" },
+    { "key": "subheading", "label": "Section Subheading", "type": "text" },
+    {
+      "key": "items",
+      "label": "FAQ Items",
+      "type": "repeater",
+      "sub_fields": [
+        { "key": "question", "label": "Question", "type": "text", "required": true },
+        { "key": "answer", "label": "Answer", "type": "richtext", "required": true }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Frequently Asked Questions",
+    "subheading": "Everything you need to know about VibeCMS",
+    "items": [
+      { "question": "How fast is VibeCMS?", "answer": "<p>VibeCMS is optimized for sub-50ms time to first byte (TTFB). Our rendering pipeline uses optimized database queries, template caching, and minimal overhead to deliver pages as fast as possible.</p>" },
+      { "question": "Can I use my own design?", "answer": "<p>Absolutely! VibeCMS uses a powerful theme system with CSS custom properties. You can create your own theme from scratch or customize the default theme by changing a few CSS variables.</p>" },
+      { "question": "Does it support multiple languages?", "answer": "<p>Yes, VibeCMS has built-in multi-language support. You can create content, menus, and layouts in any language, with automatic language detection and URL prefixing.</p>" },
+      { "question": "How do I extend VibeCMS?", "answer": "<p>VibeCMS supports zero-rebuild extensions through Tengo scripts. You can add custom logic, hooks, and integrations without recompiling the application.</p>" },
+      { "question": "Is there an API?", "answer": "<p>Yes, VibeCMS provides a full REST API for content management, user administration, and site configuration. The admin UI is built entirely on this API.</p>" }
+    ]
+  }
+}

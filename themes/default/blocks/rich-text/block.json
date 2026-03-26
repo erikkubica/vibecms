@@ -1,0 +1,12 @@
+{
+  "slug": "rich-text",
+  "label": "Rich Text",
+  "icon": "type",
+  "description": "Rich text content block with formatted HTML",
+  "field_schema": [
+    { "key": "body", "label": "Content", "type": "richtext", "required": true }
+  ],
+  "test_data": {
+    "body": "<h2>Welcome to VibeCMS</h2><p>This is a rich text block that supports <strong>bold</strong>, <em>italic</em>, <a href='#'>links</a>, and other formatting.</p><p>Use it for any free-form content on your pages. It automatically applies beautiful typography with proper spacing and readable line lengths.</p><ul><li>Easy to use</li><li>Beautiful typography</li><li>Responsive design</li></ul>"
+  }
+}

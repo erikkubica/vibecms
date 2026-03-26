@@ -1,0 +1,38 @@
+/* Hero Block — scoped styles */
+
+.vb-hero {
+  min-height: 500px;
+}
+
+/* When no background image is set, apply a gradient fallback */
+.vb-hero:not([style*="background-image"]) {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+/* Dark overlay for background images to ensure text readability */
+.vb-hero__overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.65) 0%,
+    rgba(15, 23, 42, 0.80) 100%
+  );
+}
+
+/* CTA button hover state using accent custom property */
+.vb-hero__cta:hover {
+  background-color: var(--color-accent-hover) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .vb-hero {
+    min-height: 400px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vb-hero {
+    min-height: 560px;
+  }
+}

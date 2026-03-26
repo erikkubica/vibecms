@@ -29,6 +29,7 @@ func (h *LayoutHandler) RegisterRoutes(router fiber.Router) {
 	router.Patch("/layouts/:id", h.Update)
 	router.Delete("/layouts/:id", h.Delete)
 	router.Post("/layouts/:id/detach", h.Detach)
+	router.Post("/layouts/:id/reattach", h.Reattach)
 }
 
 // List handles GET /layouts to retrieve all layouts with optional filters.
@@ -194,6 +195,24 @@ func (h *LayoutHandler) Detach(c *fiber.Ctx) error {
 			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Layout not found")
 		}
 		return api.Error(c, fiber.StatusInternalServerError, "DETACH_FAILED", "Failed to detach layout")
+	}
+
+	return api.Success(c, layout)
+}
+
+// Reattach handles POST /layouts/:id/reattach to restore a layout to its theme version.
+func (h *LayoutHandler) Reattach(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Layout ID must be a valid integer")
+	}
+
+	layout, err := h.svc.Reattach(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Layout not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "REATTACH_FAILED", "Failed to reattach layout")
 	}
 
 	return api.Success(c, layout)

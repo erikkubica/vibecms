@@ -1,0 +1,32 @@
+{
+  "slug": "features-grid",
+  "label": "Features Grid",
+  "icon": "layout-grid",
+  "description": "Grid of feature cards with icons, titles, and descriptions",
+  "field_schema": [
+    { "key": "heading", "label": "Section Heading", "type": "text" },
+    { "key": "subheading", "label": "Section Subheading", "type": "text" },
+    {
+      "key": "features",
+      "label": "Features",
+      "type": "repeater",
+      "sub_fields": [
+        { "key": "icon", "label": "Icon (emoji or text)", "type": "text" },
+        { "key": "title", "label": "Title", "type": "text", "required": true },
+        { "key": "description", "label": "Description", "type": "textarea", "required": true }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Everything You Need",
+    "subheading": "Powerful features to help you build and manage content with ease",
+    "features": [
+      { "icon": "⚡", "title": "Lightning Fast", "description": "Sub-50ms time to first byte with optimized rendering pipeline and intelligent caching." },
+      { "icon": "🧩", "title": "Block-Based Editor", "description": "Build pages with drag-and-drop blocks. Each block has its own fields, templates, and styling." },
+      { "icon": "🎨", "title": "Theme System", "description": "Fully customizable themes with CSS custom properties. Rebrand in minutes, not days." },
+      { "icon": "🔒", "title": "Role-Based Access", "description": "Fine-grained permissions with customizable roles. Control who can access what." },
+      { "icon": "🌍", "title": "Multi-Language", "description": "Built-in internationalization with language-specific content, menus, and layouts." },
+      { "icon": "🔌", "title": "Extensible", "description": "Zero-rebuild extensions via Tengo scripts. Add custom logic without recompiling." }
+    ]
+  }
+}

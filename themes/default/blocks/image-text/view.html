@@ -1,0 +1,36 @@
+{{- $imgPos := "left" -}}
+{{- if .image_position -}}{{- $imgPos = .image_position -}}{{- end -}}
+
+<section class="vb-image-text py-16 px-4">
+  <div class="mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+    {{/* Image column */}}
+    <div class="{{ if eq $imgPos "right" }}md:order-2{{ end }}">
+      <div class="vb-image-text__img-wrap">
+        <img src="{{ .image }}" alt="{{ .heading }}" class="vb-image-text__img w-full h-auto rounded-xl shadow-lg" loading="lazy" />
+      </div>
+    </div>
+
+    {{/* Text column */}}
+    <div class="{{ if eq $imgPos "right" }}md:order-1{{ end }}">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-6">
+        {{ .heading }}
+      </h2>
+
+      {{- if .body }}
+      <div class="prose prose-lg prose-slate mb-8" style="--tw-prose-links: var(--color-accent);">
+        {{ .body | safeHTML }}
+      </div>
+      {{- end }}
+
+      {{- if and .button_text .button_url }}
+      <a href="{{ .button_url }}"
+         class="inline-block px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-md"
+         style="background-color: var(--color-accent); color: var(--color-accent-text);">
+        {{ .button_text }}
+      </a>
+      {{- end }}
+    </div>
+
+  </div>
+</section>

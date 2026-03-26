@@ -13,6 +13,9 @@ import (
 	"vibecms/internal/cms"
 	"vibecms/internal/config"
 	"vibecms/internal/db"
+	"vibecms/internal/email"
+	"vibecms/internal/events"
+	"vibecms/internal/rbac"
 	"vibecms/internal/rendering"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,25 +25,20 @@ import (
 )
 
 func main() {
-	// Load configuration from environment.
 	cfg := config.Load()
-
 	log.Printf("VibeCMS starting | env=%s port=%s", cfg.AppEnv, cfg.Port)
 
-	// Connect to PostgreSQL (fatal on failure per architecture convention).
 	database, err := db.Connect(cfg.DSN())
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
 	}
 	log.Println("database connected successfully")
 
-	// Run migrations.
 	if err := db.RunMigrations(database); err != nil {
 		log.Fatalf("database migration failed: %v", err)
 	}
 	log.Println("database migrations applied")
 
-	// Handle CLI sub-commands: "migrate" and "seed" exit after their task.
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "migrate":
@@ -55,13 +53,15 @@ func main() {
 		}
 	}
 
-	// Initialize Fiber.
+	// Event bus.
+	eventBus := events.New()
+
+	// Fiber app.
 	app := fiber.New(fiber.Config{
 		AppName:               "VibeCMS",
 		DisableStartupMessage: false,
 	})
 
-	// Global middleware.
 	app.Use(fiberlogger.New())
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
@@ -71,34 +71,43 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Create services.
+	// Services.
 	sessionSvc := auth.NewSessionService(database, cfg.SessionExpiryHours)
-	contentSvc := cms.NewContentService(database)
+	contentSvc := cms.NewContentService(database, eventBus)
 	nodeTypeSvc := cms.NewNodeTypeService(database)
 	langSvc := cms.NewLanguageService(database)
-	blockTypeSvc := cms.NewBlockTypeService(database)
+	blockTypeSvc := cms.NewBlockTypeService(database, eventBus)
 	templateSvc := cms.NewTemplateService(database)
+	themeAssets := cms.NewThemeAssetRegistry()
+	layoutSvc := cms.NewLayoutService(database, eventBus, themeAssets)
+	layoutBlockSvc := cms.NewLayoutBlockService(database, eventBus, themeAssets)
+	menuSvc := cms.NewMenuService(database, eventBus)
 	isDev := cfg.AppEnv == "development"
 	renderer := rendering.NewTemplateRenderer("ui/templates", isDev)
 
-	// Create handlers.
+	// Email services.
+	emailRuleSvc := email.NewRuleService(database)
+	emailLogSvc := email.NewLogService(database)
+	emailDispatcher := email.NewDispatcher(database, emailRuleSvc, emailLogSvc)
+	eventBus.SubscribeAll(emailDispatcher.HandleEvent)
+
+	// Handlers.
 	authHandler := auth.NewAuthHandler(database, sessionSvc)
-	userHandler := auth.NewUserHandler(database)
+	userHandler := auth.NewUserHandler(database, eventBus)
 	nodeHandler := cms.NewNodeHandler(contentSvc, database)
 	nodeTypeHandler := cms.NewNodeTypeHandler(nodeTypeSvc)
 	langHandler := cms.NewLanguageHandler(langSvc)
 	blockTypeHandler := cms.NewBlockTypeHandler(blockTypeSvc)
-	layoutSvc := cms.NewLayoutService(database)
-	layoutBlockSvc := cms.NewLayoutBlockService(database)
 	templateHandler := cms.NewTemplateHandler(templateSvc)
 	layoutHandler := cms.NewLayoutHandler(layoutSvc)
 	layoutBlockHandler := cms.NewLayoutBlockHandler(layoutBlockSvc)
-	menuSvc := cms.NewMenuService(database)
 	menuHandler := cms.NewMenuHandler(menuSvc)
 	healthHandler := api.NewHealthHandler(database)
+	roleHandler := rbac.NewRoleHandler(database)
+	emailHandler := email.NewEmailHandler(database)
+	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, eventBus)
 
 	// Theme loading.
-	themeAssets := cms.NewThemeAssetRegistry()
 	themeLoader := cms.NewThemeLoader(database, themeAssets)
 	themePath := os.Getenv("THEME_PATH")
 	if themePath == "" {
@@ -106,21 +115,21 @@ func main() {
 	}
 	themeLoader.LoadTheme(themePath)
 
+	// Theme management.
+	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes")
+	themeHandler := cms.NewThemeHandler(database, themeMgmtSvc)
+
 	renderCtx := cms.NewRenderContext(database, layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx)
-	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, renderer)
-	pageAuthHandler.SetLayoutRenderer(publicHandler.RenderWithLayout)
 
 	// --- Public HTML pages ---
 	pageAuthHandler.RegisterRoutes(app)
 
-	// --- API Auth routes (login is public, logout/me require auth) ---
+	// --- API Auth routes ---
 	authHandler.RegisterRoutes(app)
 
-	// Health check (public).
+	// Health check.
 	app.Get("/api/v1/health", healthHandler.HealthCheck)
-
-	// --- Monitoring routes (bearer token) ---
 	app.Get("/api/v1/stats", api.BearerTokenRequired(cfg.MonitorBearerToken), healthHandler.Stats)
 
 	// --- Admin API routes (session auth required) ---
@@ -134,20 +143,25 @@ func main() {
 	layoutHandler.RegisterRoutes(adminAPI)
 	layoutBlockHandler.RegisterRoutes(adminAPI)
 	menuHandler.RegisterRoutes(adminAPI)
+	roleHandler.RegisterRoutes(adminAPI)
+	emailHandler.RegisterRoutes(adminAPI)
+	themeHandler.RegisterRoutes(adminAPI)
+
+	// Theme deploy webhook (public, authenticated by secret).
+	themeHandler.RegisterWebhook(app)
 
 	// --- Theme static assets ---
 	app.Static("/theme/assets", filepath.Join(themePath, "assets"))
 
-	// --- Admin SPA (serve built React app) ---
+	// --- Admin SPA ---
 	app.Static("/admin/assets", "./admin-ui/dist/assets")
 	app.Get("/admin/*", func(c *fiber.Ctx) error {
 		return c.SendFile("./admin-ui/dist/index.html")
 	})
 
-	// --- Public content routes (must be last - catches /:slug) ---
+	// --- Public content routes (must be last) ---
 	publicHandler.RegisterRoutes(app)
 
-	// Start server in a goroutine for graceful shutdown.
 	go func() {
 		addr := fmt.Sprintf(":%s", cfg.Port)
 		if err := app.Listen(addr); err != nil {
@@ -157,7 +171,6 @@ func main() {
 
 	log.Printf("VibeCMS ready | http://localhost:%s | env=%s", cfg.Port, cfg.AppEnv)
 
-	// Graceful shutdown on SIGINT/SIGTERM.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -169,7 +182,6 @@ func main() {
 	log.Println("VibeCMS stopped")
 }
 
-// corsOrigins returns allowed CORS origins based on the application environment.
 func corsOrigins(env string) string {
 	if env == "development" {
 		return "http://localhost:3000,http://localhost:8080"

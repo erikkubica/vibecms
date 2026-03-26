@@ -1,0 +1,30 @@
+<section class="vb-testimonials py-16 px-4">
+  <div class="max-w-7xl mx-auto">
+    {{if .heading}}
+    <h2 class="text-3xl font-bold text-center mb-12" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {{range .testimonials}}
+      <div class="vb-testimonial-card rounded-lg p-6 border" style="background: var(--color-surface); border-color: var(--color-border); border-radius: var(--radius);">
+        <div class="vb-testimonial-quote-mark text-4xl leading-none mb-2" style="color: var(--color-border);">&ldquo;</div>
+        <blockquote class="italic mb-6" style="color: var(--color-text);">{{.quote}}</blockquote>
+        <div class="flex items-center mt-auto">
+          {{if .avatar}}
+          <img src="{{.avatar}}" alt="{{.author_name}}" class="vb-testimonial-avatar w-10 h-10 rounded-full object-cover mr-3" />
+          {{else}}
+          <div class="vb-testimonial-initials w-10 h-10 rounded-full flex items-center justify-center mr-3 text-sm font-bold" style="background: var(--color-accent); color: var(--color-accent-text);">
+            {{slice .author_name 0 1}}
+          </div>
+          {{end}}
+          <div>
+            <div class="font-bold text-sm" style="color: var(--color-text);">{{.author_name}}</div>
+            {{if .author_role}}
+            <div class="text-sm" style="color: var(--color-text-muted);">{{.author_role}}</div>
+            {{end}}
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

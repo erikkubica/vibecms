@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{or (index .node.seo "meta_title") .node.title "VibeCMS"}}</title>
+    {{- with index .node.seo "meta_description" -}}
+    <meta name="description" content="{{.}}">
+    {{- end -}}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {{- range .app.head_styles -}}
+    <link rel="stylesheet" href="{{.}}">
+    {{- end -}}
+    {{.app.block_styles}}
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 antialiased">
+
+    <main class="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {{.node.blocks_html}}
+    </main>
+
+    {{- range .app.foot_scripts -}}
+    <script src="{{.}}" defer></script>
+    {{- end -}}
+    {{.app.block_scripts}}
+</body>
+</html>

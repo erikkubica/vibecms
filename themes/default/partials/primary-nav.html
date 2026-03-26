@@ -1,0 +1,22 @@
+{{- $menu := index .app.menus "main-nav" -}}
+{{- if $menu -}}
+<nav class="hidden md:flex items-center space-x-1">
+    {{- range $menu.items -}}
+    {{- if .children -}}
+    <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+        <a href="{{.url}}" class="inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50 rounded-md transition-colors" :class="{ 'text-indigo-600 bg-slate-50': open }">
+            {{.title}}
+            <svg class="ml-1 h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+        </a>
+        <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute left-0 mt-0 w-48 rounded-md bg-white shadow-lg ring-1 ring-black/5 py-1 z-50" style="display: none;">
+            {{- range .children -}}
+            <a href="{{.url}}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">{{.title}}</a>
+            {{- end -}}
+        </div>
+    </div>
+    {{- else -}}
+    <a href="{{.url}}" class="px-3 py-2 text-sm font-medium text-slate-700 hover:text-indigo-600 hover:bg-slate-50 rounded-md transition-colors">{{.title}}</a>
+    {{- end -}}
+    {{- end -}}
+</nav>
+{{- end -}}

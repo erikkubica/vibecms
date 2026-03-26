@@ -155,6 +155,9 @@ const defaultLayoutTemplate = `<!DOCTYPE html>
 // Seed populates the database with initial data including a default admin
 // user, a sample content node, layout blocks, a default layout, and a main navigation menu.
 func Seed(db *gorm.DB) error {
+	if err := seedRoles(db); err != nil {
+		return err
+	}
 	if err := seedAdminUser(db); err != nil {
 		return err
 	}
@@ -170,8 +173,46 @@ func Seed(db *gorm.DB) error {
 	if err := seedMenus(db); err != nil {
 		return err
 	}
+	if err := seedAuthBlockTypes(db); err != nil {
+		return err
+	}
+	if err := seedAuthPages(db); err != nil {
+		return err
+	}
+	if err := seedEmailTemplates(db); err != nil {
+		return err
+	}
+	if err := seedEmailRules(db); err != nil {
+		return err
+	}
 	// Seed default site name setting
 	db.Exec(`INSERT INTO site_settings (key, value, updated_at) VALUES ('site_name', 'VibeCMS', NOW()) ON CONFLICT (key) DO NOTHING`)
+	db.Exec(`INSERT INTO site_settings (key, value, updated_at) VALUES ('site_url', 'http://localhost:8099', NOW()) ON CONFLICT (key) DO NOTHING`)
+	return nil
+}
+
+func seedRoles(db *gorm.DB) error {
+	roles := []models.Role{
+		{Slug: "admin", Name: "Administrator", Description: "Full system access", IsSystem: true, Capabilities: models.JSONB(`{"admin_access":true,"manage_users":true,"manage_roles":true,"manage_settings":true,"manage_menus":true,"manage_layouts":true,"manage_email":true,"default_node_access":{"access":"write","scope":"all"},"email_subscriptions":["user.registered","user.deleted","node.created","node.updated","node.published","node.deleted"]}`)},
+		{Slug: "editor", Name: "Editor", Description: "Can manage all content", IsSystem: true, Capabilities: models.JSONB(`{"admin_access":true,"manage_users":false,"manage_roles":false,"manage_settings":false,"manage_menus":true,"manage_layouts":false,"manage_email":false,"default_node_access":{"access":"write","scope":"all"},"email_subscriptions":["node.created","node.published"]}`)},
+		{Slug: "author", Name: "Author", Description: "Can manage own content", IsSystem: true, Capabilities: models.JSONB(`{"admin_access":true,"manage_users":false,"manage_roles":false,"manage_settings":false,"manage_menus":false,"manage_layouts":false,"manage_email":false,"default_node_access":{"access":"write","scope":"own"},"email_subscriptions":["node.published"]}`)},
+		{Slug: "member", Name: "Member", Description: "Public member, no admin access", IsSystem: true, Capabilities: models.JSONB(`{"admin_access":false,"manage_users":false,"manage_roles":false,"manage_settings":false,"manage_menus":false,"manage_layouts":false,"manage_email":false,"default_node_access":{"access":"read","scope":"all"},"email_subscriptions":[]}`)},
+	}
+	for _, role := range roles {
+		var existing models.Role
+		result := db.Where("slug = ?", role.Slug).First(&existing)
+		if result.Error == nil {
+			db.Model(&existing).Updates(map[string]interface{}{
+				"name":         role.Name,
+				"description":  role.Description,
+				"capabilities": role.Capabilities,
+			})
+		} else {
+			if err := db.Create(&role).Error; err != nil {
+				return fmt.Errorf("failed to seed role %q: %w", role.Slug, err)
+			}
+		}
+	}
 	return nil
 }
 
@@ -181,11 +222,16 @@ func seedAdminUser(db *gorm.DB) error {
 		return fmt.Errorf("failed to hash admin password: %w", err)
 	}
 
+	var adminRole models.Role
+	if err := db.Where("slug = ?", "admin").First(&adminRole).Error; err != nil {
+		return fmt.Errorf("failed to find admin role: %w", err)
+	}
+
 	fullName := "Admin"
 	admin := models.User{
 		Email:        "admin@vibecms.local",
 		PasswordHash: string(hash),
-		Role:         "admin",
+		RoleID:       adminRole.ID,
 		FullName:     &fullName,
 	}
 
@@ -273,7 +319,11 @@ func seedLayoutBlocks(db *gorm.DB) error {
 		var existing models.LayoutBlock
 		result := db.Where("slug = ? AND language_id IS NULL", block.Slug).First(&existing)
 		if result.Error == nil {
-			// Update existing block with the latest template
+			// If theme owns this block, don't overwrite
+			if existing.Source == "theme" {
+				continue
+			}
+			// Update existing custom block with the latest template
 			db.Model(&existing).Updates(map[string]interface{}{
 				"name":          block.Name,
 				"description":   block.Description,
@@ -302,7 +352,11 @@ func seedDefaultLayout(db *gorm.DB) error {
 	var existing models.Layout
 	result := db.Where("slug = ? AND language_id IS NULL", layout.Slug).First(&existing)
 	if result.Error == nil {
-		// Update existing layout (created by migration) with the full template
+		// If theme owns this layout, don't overwrite
+		if existing.Source == "theme" {
+			return nil
+		}
+		// Update existing custom layout
 		db.Model(&existing).Updates(map[string]interface{}{
 			"name":          layout.Name,
 			"description":   layout.Description,
@@ -312,6 +366,389 @@ func seedDefaultLayout(db *gorm.DB) error {
 	} else {
 		if err := db.Create(&layout).Error; err != nil {
 			return fmt.Errorf("failed to seed default layout: %w", err)
+		}
+	}
+	return nil
+}
+
+// --- Auth block HTML templates ---
+// These use Alpine.js to read flash cookies client-side since content blocks
+// don't have access to Go request context.
+
+const flashAlpineSnippet = `x-data="{
+    flash: '', flashType: '',
+    init() {
+        const msg = this.getCookie('flash_msg');
+        const typ = this.getCookie('flash_type');
+        if (msg) { this.flash = decodeURIComponent(msg); this.flashType = typ || 'error'; this.clearCookies(); }
+    },
+    getCookie(n) { const m = document.cookie.match('(^|;)\\\\s*'+n+'=([^;]+)'); return m ? m[2] : ''; },
+    clearCookies() { document.cookie='flash_msg=;path=/;max-age=0'; document.cookie='flash_type=;path=/;max-age=0'; }
+}"`
+
+const loginFormTemplate = `<div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full" ` + flashAlpineSnippet + `>
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-900">Sign In</h1>
+            <p class="mt-2 text-sm text-slate-600">Sign in to your account</p>
+        </div>
+
+        <template x-if="flash">
+            <div class="mb-4 rounded-md p-4" :class="flashType === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+                <p class="text-sm" :class="flashType === 'success' ? 'text-green-800' : 'text-red-800'" x-text="flash"></p>
+            </div>
+        </template>
+
+        <div class="bg-white shadow-md rounded-lg px-8 py-8">
+            <form method="POST" action="/auth/login-page" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-700">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="you@example.com">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Enter your password">
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input id="remember" name="remember" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                        <label for="remember" class="ml-2 block text-sm text-slate-700">Remember me</label>
+                    </div>
+                    <a href="/forgot-password" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">Forgot password?</a>
+                </div>
+                <button type="submit" class="w-full flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200">Sign In</button>
+            </form>
+        </div>
+        <p class="mt-6 text-center text-sm text-slate-600">Don't have an account? <a href="/register" class="font-medium text-indigo-600 hover:text-indigo-500">Register</a></p>
+    </div>
+</div>`
+
+const registerFormTemplate = `<div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full" ` + flashAlpineSnippet + `>
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-900">Create Account</h1>
+            <p class="mt-2 text-sm text-slate-600">Create your account</p>
+        </div>
+
+        <template x-if="flash">
+            <div class="mb-4 rounded-md p-4" :class="flashType === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+                <p class="text-sm" :class="flashType === 'success' ? 'text-green-800' : 'text-red-800'" x-text="flash"></p>
+            </div>
+        </template>
+
+        <div class="bg-white shadow-md rounded-lg px-8 py-8">
+            <form method="POST" action="/auth/register" class="space-y-6">
+                <div>
+                    <label for="full_name" class="block text-sm font-medium text-slate-700">Full Name</label>
+                    <input id="full_name" name="full_name" type="text" autocomplete="name" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Jane Doe">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-700">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="you@example.com">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Create a password">
+                </div>
+                <div>
+                    <label for="password_confirm" class="block text-sm font-medium text-slate-700">Confirm Password</label>
+                    <input id="password_confirm" name="password_confirm" type="password" autocomplete="new-password" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Confirm your password">
+                </div>
+                <button type="submit" class="w-full flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200">Create Account</button>
+            </form>
+        </div>
+        <p class="mt-6 text-center text-sm text-slate-600">Already have an account? <a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">Sign In</a></p>
+    </div>
+</div>`
+
+const forgotPasswordFormTemplate = `<div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full" ` + flashAlpineSnippet + `>
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-900">Forgot Password</h1>
+            <p class="mt-2 text-sm text-slate-600">Reset your password</p>
+        </div>
+
+        <template x-if="flash">
+            <div class="mb-4 rounded-md p-4" :class="flashType === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+                <p class="text-sm" :class="flashType === 'success' ? 'text-green-800' : 'text-red-800'" x-text="flash"></p>
+            </div>
+        </template>
+
+        <div class="bg-white shadow-md rounded-lg px-8 py-8">
+            <p class="text-sm text-slate-600 mb-6">Enter your email address and we'll send you a link to reset your password.</p>
+            <form method="POST" action="/auth/forgot-password" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-700">Email address</label>
+                    <input id="email" name="email" type="email" autocomplete="email" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="you@example.com">
+                </div>
+                <button type="submit" class="w-full flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200">Send Reset Link</button>
+            </form>
+        </div>
+        <p class="mt-6 text-center text-sm text-slate-600"><a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">Back to Sign In</a></p>
+    </div>
+</div>`
+
+const resetPasswordFormTemplate = `<div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full" ` + flashAlpineSnippet + `>
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-900">Reset Password</h1>
+            <p class="mt-2 text-sm text-slate-600">Set a new password</p>
+        </div>
+
+        <template x-if="flash">
+            <div class="mb-4 rounded-md p-4" :class="flashType === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
+                <p class="text-sm" :class="flashType === 'success' ? 'text-green-800' : 'text-red-800'" x-text="flash"></p>
+            </div>
+        </template>
+
+        <div class="bg-white shadow-md rounded-lg px-8 py-8">
+            <form method="POST" action="/auth/reset-password" class="space-y-6" x-data x-init="$el.querySelector('[name=token]').value = new URLSearchParams(location.search).get('token') || ''">
+                <input type="hidden" name="token" value="">
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-700">New Password</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Enter new password">
+                </div>
+                <div>
+                    <label for="password_confirm" class="block text-sm font-medium text-slate-700">Confirm New Password</label>
+                    <input id="password_confirm" name="password_confirm" type="password" autocomplete="new-password" required
+                        class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="Confirm new password">
+                </div>
+                <button type="submit" class="w-full flex justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200">Reset Password</button>
+            </form>
+        </div>
+    </div>
+</div>`
+
+func seedAuthBlockTypes(db *gorm.DB) error {
+	blockTypes := []models.BlockType{
+		{
+			Slug:        "login-form",
+			Label:       "Login Form",
+			Icon:        "log-in",
+			Description: "User login form with email and password fields",
+			FieldSchema: models.JSONB(json.RawMessage(`[]`)),
+			HTMLTemplate: loginFormTemplate,
+			Source:      "system",
+		},
+		{
+			Slug:        "register-form",
+			Label:       "Registration Form",
+			Icon:        "user-plus",
+			Description: "User registration form with name, email, and password fields",
+			FieldSchema: models.JSONB(json.RawMessage(`[]`)),
+			HTMLTemplate: registerFormTemplate,
+			Source:      "system",
+		},
+		{
+			Slug:        "forgot-password-form",
+			Label:       "Forgot Password Form",
+			Icon:        "key",
+			Description: "Password reset request form",
+			FieldSchema: models.JSONB(json.RawMessage(`[]`)),
+			HTMLTemplate: forgotPasswordFormTemplate,
+			Source:      "system",
+		},
+		{
+			Slug:        "reset-password-form",
+			Label:       "Reset Password Form",
+			Icon:        "lock",
+			Description: "Set new password form (used with reset token)",
+			FieldSchema: models.JSONB(json.RawMessage(`[]`)),
+			HTMLTemplate: resetPasswordFormTemplate,
+			Source:      "system",
+		},
+	}
+
+	for _, bt := range blockTypes {
+		var existing models.BlockType
+		result := db.Where("slug = ?", bt.Slug).First(&existing)
+		if result.Error == nil {
+			db.Model(&existing).Updates(map[string]interface{}{
+				"label":         bt.Label,
+				"icon":          bt.Icon,
+				"description":   bt.Description,
+				"html_template": bt.HTMLTemplate,
+				"source":        bt.Source,
+			})
+		} else {
+			if err := db.Create(&bt).Error; err != nil {
+				return fmt.Errorf("failed to seed auth block type %q: %w", bt.Slug, err)
+			}
+		}
+	}
+	return nil
+}
+
+func seedAuthPages(db *gorm.DB) error {
+	now := time.Now()
+
+	pages := []struct {
+		slug      string
+		fullURL   string
+		title     string
+		blockType string
+		seoTitle  string
+	}{
+		{"login", "/login", "Sign In", "login-form", "Sign In"},
+		{"register", "/register", "Create Account", "register-form", "Create Account"},
+		{"forgot-password", "/forgot-password", "Forgot Password", "forgot-password-form", "Forgot Password"},
+		{"reset-password", "/reset-password", "Reset Password", "reset-password-form", "Reset Password"},
+	}
+
+	for _, p := range pages {
+		blocksData := json.RawMessage(fmt.Sprintf(`[{"type":"%s","fields":{}}]`, p.blockType))
+		seoSettings := json.RawMessage(fmt.Sprintf(`{"meta_title":"%s"}`, p.seoTitle))
+
+		node := models.ContentNode{
+			NodeType:     "page",
+			Status:       "published",
+			LanguageCode: "en",
+			Slug:         p.slug,
+			FullURL:      p.fullURL,
+			Title:        p.title,
+			BlocksData:   models.JSONB(blocksData),
+			SeoSettings:  models.JSONB(seoSettings),
+			Version:      1,
+			PublishedAt:  &now,
+		}
+
+		result := db.Where("full_url = ?", node.FullURL).FirstOrCreate(&node)
+		if result.Error != nil {
+			return fmt.Errorf("failed to seed auth page %q: %w", p.slug, result.Error)
+		}
+	}
+	return nil
+}
+
+func seedEmailTemplates(db *gorm.DB) error {
+	templates := []models.EmailTemplate{
+		{
+			Slug:            "welcome",
+			Name:            "Welcome Email",
+			SubjectTemplate: "Welcome to {{.site_name}}",
+			BodyTemplate: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+<h2>Welcome, {{.user_full_name}}!</h2>
+<p>Your account has been created on <strong>{{.site_name}}</strong>.</p>
+<p>You can log in at: <a href="{{.site_url}}/login">{{.site_url}}/login</a></p>
+</div>`,
+			TestData: models.JSONB(`{"site_name":"VibeCMS","site_url":"http://localhost:8099","user_full_name":"Jane Doe","user_email":"jane@example.com"}`),
+		},
+		{
+			Slug:            "user-registered-admin",
+			Name:            "New User Registered (Admin)",
+			SubjectTemplate: "New user registered: {{.user_full_name}}",
+			BodyTemplate: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+<h2>New User Registration</h2>
+<p>A new user has registered on <strong>{{.site_name}}</strong>.</p>
+<table style="border-collapse: collapse; margin: 16px 0;">
+<tr><td style="padding: 4px 12px 4px 0; color: #666;">Name:</td><td>{{.user_full_name}}</td></tr>
+<tr><td style="padding: 4px 12px 4px 0; color: #666;">Email:</td><td>{{.user_email}}</td></tr>
+</table>
+</div>`,
+			TestData: models.JSONB(`{"site_name":"VibeCMS","user_full_name":"Jane Doe","user_email":"jane@example.com"}`),
+		},
+		{
+			Slug:            "password-reset",
+			Name:            "Password Reset",
+			SubjectTemplate: "Reset your password on {{.site_name}}",
+			BodyTemplate: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+<h2>Password Reset</h2>
+<p>Hi {{.user_full_name}},</p>
+<p>You requested a password reset for your account on <strong>{{.site_name}}</strong>.</p>
+<p><a href="{{.reset_url}}" style="display: inline-block; padding: 10px 24px; background: #4f46e5; color: #fff; text-decoration: none; border-radius: 6px;">Reset Password</a></p>
+<p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+</div>`,
+			TestData: models.JSONB(`{"site_name":"VibeCMS","user_full_name":"Jane Doe","reset_url":"http://localhost:8099/reset-password?token=abc123"}`),
+		},
+		{
+			Slug:            "node-published",
+			Name:            "Content Published",
+			SubjectTemplate: "{{.node_title}} has been published",
+			BodyTemplate: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+<h2>Content Published</h2>
+<p>"<strong>{{.node_title}}</strong>" ({{.node_type}}) has been published on <strong>{{.site_name}}</strong>.</p>
+<p><a href="{{.site_url}}{{.full_url}}">View it here</a></p>
+</div>`,
+			TestData: models.JSONB(`{"site_name":"VibeCMS","site_url":"http://localhost:8099","node_title":"Hello World","node_type":"post","full_url":"/hello-world"}`),
+		},
+		{
+			Slug:            "node-created-admin",
+			Name:            "New Content Created (Admin)",
+			SubjectTemplate: "New {{.node_type}} created: {{.node_title}}",
+			BodyTemplate: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+<h2>New Content Created</h2>
+<p>A new <strong>{{.node_type}}</strong> has been created on <strong>{{.site_name}}</strong>.</p>
+<table style="border-collapse: collapse; margin: 16px 0;">
+<tr><td style="padding: 4px 12px 4px 0; color: #666;">Title:</td><td>{{.node_title}}</td></tr>
+<tr><td style="padding: 4px 12px 4px 0; color: #666;">URL:</td><td>{{.site_url}}{{.full_url}}</td></tr>
+</table>
+</div>`,
+			TestData: models.JSONB(`{"site_name":"VibeCMS","site_url":"http://localhost:8099","node_title":"Hello World","node_type":"post","full_url":"/hello-world"}`),
+		},
+	}
+
+	for _, t := range templates {
+		var existing models.EmailTemplate
+		result := db.Where("slug = ?", t.Slug).First(&existing)
+		if result.Error == nil {
+			db.Model(&existing).Updates(map[string]interface{}{
+				"name":             t.Name,
+				"subject_template": t.SubjectTemplate,
+				"body_template":    t.BodyTemplate,
+				"test_data":        t.TestData,
+			})
+		} else {
+			if err := db.Create(&t).Error; err != nil {
+				return fmt.Errorf("failed to seed email template %q: %w", t.Slug, err)
+			}
+		}
+	}
+	return nil
+}
+
+func seedEmailRules(db *gorm.DB) error {
+	// Look up template IDs
+	var welcome, adminNotif, nodePublished, nodeCreatedAdmin models.EmailTemplate
+	db.Where("slug = ?", "welcome").First(&welcome)
+	db.Where("slug = ?", "user-registered-admin").First(&adminNotif)
+	db.Where("slug = ?", "node-published").First(&nodePublished)
+	db.Where("slug = ?", "node-created-admin").First(&nodeCreatedAdmin)
+
+	if welcome.ID == 0 || adminNotif.ID == 0 || nodePublished.ID == 0 || nodeCreatedAdmin.ID == 0 {
+		return nil // Templates not seeded yet, skip rules
+	}
+
+	rules := []models.EmailRule{
+		{Action: "user.registered", TemplateID: welcome.ID, RecipientType: "actor", RecipientValue: "", Enabled: true},
+		{Action: "user.registered", TemplateID: adminNotif.ID, RecipientType: "role", RecipientValue: "admin", Enabled: true},
+		{Action: "node.published", TemplateID: nodePublished.ID, RecipientType: "node_author", RecipientValue: "", Enabled: true},
+		{Action: "node.created", TemplateID: nodeCreatedAdmin.ID, RecipientType: "role", RecipientValue: "admin", Enabled: true},
+	}
+
+	for _, r := range rules {
+		var count int64
+		db.Model(&models.EmailRule{}).Where("action = ? AND template_id = ? AND recipient_type = ?", r.Action, r.TemplateID, r.RecipientType).Count(&count)
+		if count == 0 {
+			if err := db.Create(&r).Error; err != nil {
+				return fmt.Errorf("failed to seed email rule for %q: %w", r.Action, err)
+			}
 		}
 	}
 	return nil

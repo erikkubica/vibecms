@@ -1,0 +1,31 @@
+.vb-faq-question {
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.vb-faq-question:hover {
+  background-color: var(--color-surface-alt);
+}
+
+.vb-faq-chevron {
+  transition: transform 0.2s ease;
+}
+
+.vb-faq-chevron.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.vb-faq-answer {
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+
+.vb-faq-answer a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.vb-faq-answer a:hover {
+  color: var(--color-accent-hover);
+}

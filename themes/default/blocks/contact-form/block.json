@@ -1,0 +1,20 @@
+{
+  "slug": "contact-form",
+  "label": "Contact Form",
+  "icon": "mail",
+  "description": "Visual contact form (display only, no submission logic)",
+  "field_schema": [
+    { "key": "heading", "label": "Heading", "type": "text" },
+    { "key": "subheading", "label": "Subheading", "type": "text" },
+    { "key": "email_label", "label": "Email Field Label", "type": "text", "default": "Email" },
+    { "key": "message_label", "label": "Message Field Label", "type": "text", "default": "Message" },
+    { "key": "button_text", "label": "Submit Button Text", "type": "text", "default": "Send Message" }
+  ],
+  "test_data": {
+    "heading": "Get in Touch",
+    "subheading": "Have a question or want to work together? Drop us a message.",
+    "email_label": "Email",
+    "message_label": "Message",
+    "button_text": "Send Message"
+  }
+}

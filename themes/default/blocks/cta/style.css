@@ -1,0 +1,39 @@
+/* Call to Action Block */
+.vibe-cta {
+  position: relative;
+  overflow: hidden;
+}
+
+.vibe-cta__button {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.vibe-cta__button:hover {
+  transform: translateY(-1px);
+}
+
+.vibe-cta__button:active {
+  transform: translateY(0);
+}
+
+/* Accent variant button */
+.vibe-cta--accent .vibe-cta__button:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Dark variant button */
+.vibe-cta--dark .vibe-cta__button:hover {
+  filter: brightness(1.1);
+}
+
+/* Light variant button */
+.vibe-cta--light .vibe-cta__button:hover {
+  filter: brightness(1.1);
+}

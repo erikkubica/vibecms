@@ -1,24 +1,30 @@
 package cms
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"gorm.io/gorm"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
 // LayoutService provides business logic for managing layouts.
 type LayoutService struct {
-	db    *gorm.DB
-	cache sync.Map
+	db          *gorm.DB
+	cache       sync.Map
+	eventBus    *events.EventBus
+	themeAssets *ThemeAssetRegistry
 }
 
 // NewLayoutService creates a new LayoutService with the given database connection.
-func NewLayoutService(db *gorm.DB) *LayoutService {
-	return &LayoutService{db: db}
+func NewLayoutService(db *gorm.DB, eventBus *events.EventBus, themeAssets *ThemeAssetRegistry) *LayoutService {
+	return &LayoutService{db: db, eventBus: eventBus, themeAssets: themeAssets}
 }
 
 // List retrieves layouts with optional filters for language_id and source.
@@ -67,6 +73,15 @@ func (s *LayoutService) Create(layout *models.Layout) error {
 	}
 
 	s.InvalidateCache()
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("layout.created", events.Payload{
+			"layout_id":   layout.ID,
+			"layout_slug": layout.Slug,
+			"layout_name": layout.Name,
+		})
+	}
+
 	return nil
 }
 
@@ -118,6 +133,15 @@ func (s *LayoutService) Update(id int, updates map[string]interface{}) (*models.
 	if err != nil {
 		return nil, err
 	}
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("layout.updated", events.Payload{
+			"layout_id":   updated.ID,
+			"layout_slug": updated.Slug,
+			"layout_name": updated.Name,
+		})
+	}
+
 	return updated, nil
 }
 
@@ -141,6 +165,15 @@ func (s *LayoutService) Delete(id int) error {
 	}
 
 	s.InvalidateCache()
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("layout.deleted", events.Payload{
+			"layout_id":   existing.ID,
+			"layout_slug": existing.Slug,
+			"layout_name": existing.Name,
+		})
+	}
+
 	return nil
 }
 
@@ -165,6 +198,60 @@ func (s *LayoutService) Detach(id int) (*models.Layout, error) {
 		return nil, err
 	}
 	return updated, nil
+}
+
+// Reattach restores a detached layout to its theme version by re-reading the theme file.
+func (s *LayoutService) Reattach(id int) (*models.Layout, error) {
+	existing, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if existing.Source == "theme" {
+		return existing, nil
+	}
+
+	if s.themeAssets == nil {
+		return nil, fmt.Errorf("no theme loaded")
+	}
+
+	s.themeAssets.mu.RLock()
+	themeDir := s.themeAssets.themeDir
+	s.themeAssets.mu.RUnlock()
+
+	if themeDir == "" {
+		return nil, fmt.Errorf("no theme directory configured")
+	}
+
+	manifestData, err := os.ReadFile(filepath.Join(themeDir, "theme.json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read theme.json: %w", err)
+	}
+	var manifest ThemeManifest
+	if err := json.Unmarshal(manifestData, &manifest); err != nil {
+		return nil, fmt.Errorf("failed to parse theme.json: %w", err)
+	}
+
+	for _, def := range manifest.Layouts {
+		if def.Slug == existing.Slug {
+			code, err := os.ReadFile(filepath.Join(themeDir, "layouts", def.File))
+			if err != nil {
+				return nil, fmt.Errorf("failed to read theme layout file: %w", err)
+			}
+			themeName := manifest.Name
+			if err := s.db.Model(existing).Updates(map[string]interface{}{
+				"template_code": string(code),
+				"source":        "theme",
+				"theme_name":    &themeName,
+				"is_default":    def.IsDefault,
+			}).Error; err != nil {
+				return nil, fmt.Errorf("failed to reattach layout: %w", err)
+			}
+			s.InvalidateCache()
+			return s.GetByID(id)
+		}
+	}
+
+	return nil, fmt.Errorf("layout %q not found in theme", existing.Slug)
 }
 
 // ResolveForNode resolves the best layout for a content node using cascade resolution.

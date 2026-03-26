@@ -1,24 +1,30 @@
 package cms
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"gorm.io/gorm"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
 // LayoutBlockService provides business logic for managing layout blocks (partials).
 type LayoutBlockService struct {
-	db    *gorm.DB
-	cache sync.Map
+	db          *gorm.DB
+	cache       sync.Map
+	eventBus    *events.EventBus
+	themeAssets *ThemeAssetRegistry
 }
 
 // NewLayoutBlockService creates a new LayoutBlockService with the given database connection.
-func NewLayoutBlockService(db *gorm.DB) *LayoutBlockService {
-	return &LayoutBlockService{db: db}
+func NewLayoutBlockService(db *gorm.DB, eventBus *events.EventBus, themeAssets *ThemeAssetRegistry) *LayoutBlockService {
+	return &LayoutBlockService{db: db, eventBus: eventBus, themeAssets: themeAssets}
 }
 
 // List retrieves layout blocks with optional filters for language_id and source.
@@ -107,6 +113,15 @@ func (s *LayoutBlockService) Create(block *models.LayoutBlock) error {
 	}
 
 	s.InvalidateCache()
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("layout_block.created", events.Payload{
+			"layout_block_id":   block.ID,
+			"layout_block_slug": block.Slug,
+			"layout_block_name": block.Name,
+		})
+	}
+
 	return nil
 }
 
@@ -158,6 +173,15 @@ func (s *LayoutBlockService) Update(id int, updates map[string]interface{}) (*mo
 	if err != nil {
 		return nil, err
 	}
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("layout_block.updated", events.Payload{
+			"layout_block_id":   updated.ID,
+			"layout_block_slug": updated.Slug,
+			"layout_block_name": updated.Name,
+		})
+	}
+
 	return updated, nil
 }
 
@@ -181,6 +205,15 @@ func (s *LayoutBlockService) Delete(id int) error {
 	}
 
 	s.InvalidateCache()
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("layout_block.deleted", events.Payload{
+			"layout_block_id":   existing.ID,
+			"layout_block_slug": existing.Slug,
+			"layout_block_name": existing.Name,
+		})
+	}
+
 	return nil
 }
 
@@ -205,6 +238,60 @@ func (s *LayoutBlockService) Detach(id int) (*models.LayoutBlock, error) {
 		return nil, err
 	}
 	return updated, nil
+}
+
+// Reattach restores a detached layout block to its theme version by re-reading the theme file.
+func (s *LayoutBlockService) Reattach(id int) (*models.LayoutBlock, error) {
+	existing, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if existing.Source == "theme" {
+		return existing, nil // already attached
+	}
+
+	if s.themeAssets == nil {
+		return nil, fmt.Errorf("no theme loaded")
+	}
+
+	s.themeAssets.mu.RLock()
+	themeDir := s.themeAssets.themeDir
+	s.themeAssets.mu.RUnlock()
+
+	if themeDir == "" {
+		return nil, fmt.Errorf("no theme directory configured")
+	}
+
+	// Read theme.json to find the matching partial file.
+	manifestData, err := os.ReadFile(filepath.Join(themeDir, "theme.json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read theme.json: %w", err)
+	}
+	var manifest ThemeManifest
+	if err := json.Unmarshal(manifestData, &manifest); err != nil {
+		return nil, fmt.Errorf("failed to parse theme.json: %w", err)
+	}
+
+	for _, def := range manifest.Partials {
+		if def.Slug == existing.Slug {
+			code, err := os.ReadFile(filepath.Join(themeDir, "partials", def.File))
+			if err != nil {
+				return nil, fmt.Errorf("failed to read theme partial file: %w", err)
+			}
+			themeName := manifest.Name
+			if err := s.db.Model(existing).Updates(map[string]interface{}{
+				"template_code": string(code),
+				"source":        "theme",
+				"theme_name":    &themeName,
+			}).Error; err != nil {
+				return nil, fmt.Errorf("failed to reattach layout block: %w", err)
+			}
+			s.InvalidateCache()
+			return s.GetByID(id)
+		}
+	}
+
+	return nil, fmt.Errorf("partial %q not found in theme", existing.Slug)
 }
 
 // InvalidateCache resets the entire layout block cache.

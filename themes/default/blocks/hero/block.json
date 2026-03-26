@@ -1,0 +1,22 @@
+{
+  "slug": "hero",
+  "label": "Hero",
+  "icon": "image",
+  "description": "Full-width hero section with heading, subheading, background image, and CTA button",
+  "field_schema": [
+    { "key": "heading", "label": "Heading", "type": "text", "required": true },
+    { "key": "subheading", "label": "Subheading", "type": "textarea" },
+    { "key": "background_image", "label": "Background Image", "type": "image" },
+    { "key": "button_text", "label": "Button Text", "type": "text" },
+    { "key": "button_url", "label": "Button URL", "type": "text" },
+    { "key": "alignment", "label": "Text Alignment", "type": "select", "options": ["left", "center", "right"], "default": "center" }
+  ],
+  "test_data": {
+    "heading": "Build Something Amazing",
+    "subheading": "A modern content management system designed for speed, flexibility, and beautiful results.",
+    "background_image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80",
+    "button_text": "Get Started",
+    "button_url": "/get-started",
+    "alignment": "center"
+  }
+}

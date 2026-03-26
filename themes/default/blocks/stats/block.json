@@ -1,0 +1,29 @@
+{
+  "slug": "stats",
+  "label": "Stats",
+  "icon": "bar-chart",
+  "description": "Display key statistics with large numbers and labels",
+  "field_schema": [
+    { "key": "heading", "label": "Section Heading", "type": "text" },
+    {
+      "key": "stats",
+      "label": "Statistics",
+      "type": "repeater",
+      "sub_fields": [
+        { "key": "number", "label": "Number", "type": "text", "required": true },
+        { "key": "label", "label": "Label", "type": "text", "required": true },
+        { "key": "prefix", "label": "Prefix", "type": "text" },
+        { "key": "suffix", "label": "Suffix (e.g. +, %, K)", "type": "text" }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "VibeCMS by the Numbers",
+    "stats": [
+      { "number": "50", "label": "Millisecond TTFB", "prefix": "<", "suffix": "ms" },
+      { "number": "500", "label": "Active Sites", "prefix": "", "suffix": "+" },
+      { "number": "99.9", "label": "Uptime", "prefix": "", "suffix": "%" },
+      { "number": "10", "label": "Block Types", "prefix": "", "suffix": "+" }
+    ]
+  }
+}

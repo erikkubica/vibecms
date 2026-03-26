@@ -1,0 +1,8 @@
+{{- $menu := index .app.menus "footer-nav" -}}
+{{- if $menu -}}
+<nav class="flex items-center space-x-6">
+    {{- range $menu.items -}}
+    <a href="{{.url}}" class="text-sm text-slate-500 hover:text-indigo-600 transition-colors">{{.title}}</a>
+    {{- end -}}
+</nav>
+{{- end -}}

@@ -1,0 +1,36 @@
+{{- $align := "center" -}}
+{{- if .alignment -}}{{- $align = .alignment -}}{{- end -}}
+
+{{- $alignClass := "items-center text-center" -}}
+{{- if eq $align "left" -}}{{- $alignClass = "items-start text-left" -}}{{- end -}}
+{{- if eq $align "right" -}}{{- $alignClass = "items-end text-right" -}}{{- end -}}
+
+<section class="vb-hero relative w-full overflow-hidden"
+  {{- if .background_image }} style="background-image: url('{{ .background_image }}'); background-size: cover; background-position: center;"{{ end }}>
+
+  {{- if .background_image }}
+  <div class="vb-hero__overlay absolute inset-0"></div>
+  {{- end }}
+
+  <div class="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 md:py-32 flex flex-col {{ $alignClass }}" style="min-height: 500px;">
+    <div class="max-w-3xl">
+      <h1 class="text-4xl md:text-6xl font-bold tracking-tight {{ if .background_image }}text-white{{ else }}text-white{{ end }} mb-6">
+        {{ .heading }}
+      </h1>
+
+      {{- if .subheading }}
+      <p class="text-xl md:text-2xl {{ if .background_image }}text-gray-200{{ else }}text-gray-300{{ end }} mb-10 leading-relaxed">
+        {{ .subheading }}
+      </p>
+      {{- end }}
+
+      {{- if and .button_text .button_url }}
+      <a href="{{ .button_url }}"
+         class="vb-hero__cta inline-block px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5"
+         style="background-color: var(--color-accent); color: var(--color-accent-text);">
+        {{ .button_text }}
+      </a>
+      {{- end }}
+    </div>
+  </div>
+</section>

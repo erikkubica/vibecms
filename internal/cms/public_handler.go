@@ -221,17 +221,8 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 	blocksHTML := strings.Join(renderedBlocks, "\n")
 
 	// Build template data
-	appData := AppData{
-		Menus:        menus,
-		Settings:     settings,
-		Languages:    languages,
-		CurrentLang:  currentLang,
-		HeadStyles:   []string{},
-		HeadScripts:  []string{},
-		FootScripts:  []string{},
-		BlockStyles:  "",
-		BlockScripts: "",
-	}
+	appData := h.renderCtx.BuildAppData(settings, languages, currentLang)
+	appData.Menus = menus
 
 	nodeData := h.renderCtx.BuildNodeData(node, blocksHTML)
 
@@ -302,17 +293,8 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 		<a href="/" class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Back to Home</a>
 	</div>`
 
-	appData := AppData{
-		Menus:        menus,
-		Settings:     settings,
-		Languages:    languages,
-		CurrentLang:  currentLang,
-		HeadStyles:   []string{},
-		HeadScripts:  []string{},
-		FootScripts:  []string{},
-		BlockStyles:  "",
-		BlockScripts: "",
-	}
+	appData := h.renderCtx.BuildAppData(settings, languages, currentLang)
+	appData.Menus = menus
 
 	nodeData := NodeData{
 		Title:        "Page Not Found",
@@ -376,12 +358,8 @@ func (h *PublicHandler) RenderWithLayout(c *fiber.Ctx, title string, innerHTML t
 	menus := h.renderCtx.LoadMenus(defaultLangID)
 	user := h.currentUser(c)
 
-	appData := AppData{
-		Menus:       menus,
-		Settings:    settings,
-		Languages:   languages,
-		CurrentLang: currentLang,
-	}
+	appData := h.renderCtx.BuildAppData(settings, languages, currentLang)
+	appData.Menus = menus
 
 	nodeData := NodeData{
 		Title:      title,
@@ -744,7 +722,7 @@ func buildUserData(user *models.User) UserData {
 		LoggedIn: true,
 		ID:       user.ID,
 		Email:    user.Email,
-		Role:     user.Role,
+		Role:     user.Role.Slug,
 		FullName: fullName,
 	}
 }

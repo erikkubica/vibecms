@@ -147,7 +147,7 @@ func (e *ScriptEngine) makeHTTPHandler(scriptPath string) fiber.Handler {
 			"request": reqMap,
 		}
 
-		result, err := e.runScript(scriptPath, vars)
+		result, err := e.runScript(scriptPath, vars, nil)
 		if err != nil {
 			log.Printf("[script] HTTP handler error: %s: %v", scriptPath, err)
 			return c.Status(500).JSON(fiber.Map{"error": "script execution error"})

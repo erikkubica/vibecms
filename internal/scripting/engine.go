@@ -77,7 +77,7 @@ func (e *ScriptEngine) LoadThemeScripts(themeDir string) error {
 
 	// Compile and execute the entry script
 	script := tengo.NewScript(src)
-	script.SetImports(e.buildModuleMap())
+	script.SetImports(e.buildModuleMap(nil))
 
 	// Set a max execution time for safety
 	script.SetMaxAllocs(50000)
@@ -118,8 +118,9 @@ func (e *ScriptEngine) MountHTTPRoutes(app *fiber.App) {
 
 // runScript compiles and executes a Tengo script file with the given context variables.
 // Script path is relative to the theme's scripts/ directory (without .tengo extension).
+// renderCtx is the optional template render context (for cms/routing module); pass nil if not in a render.
 // Returns the value of the "response" variable after execution.
-func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{}) (interface{}, error) {
+func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{}, renderCtx interface{}) (interface{}, error) {
 	fullPath := filepath.Join(e.scriptsDir, scriptPath+".tengo")
 
 	src, err := os.ReadFile(fullPath)
@@ -128,7 +129,7 @@ func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{})
 	}
 
 	script := tengo.NewScript(src)
-	script.SetImports(e.buildModuleMap())
+	script.SetImports(e.buildModuleMap(renderCtx))
 	script.SetMaxAllocs(50000)
 
 	// Inject context variables — convert to Tengo objects first to handle

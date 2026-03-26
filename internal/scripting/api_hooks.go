@@ -68,14 +68,12 @@ func (e *ScriptEngine) RunAction(name string, ctx interface{}) template.HTML {
 	copy(paths, scripts)
 	e.mu.RUnlock()
 
-	// Build context variables for the hook script
-	vars := map[string]interface{}{
-		"page": ctx,
-	}
+	// Normalize the render context for the routing module
+	renderCtx := normalizeForTengo(ctx)
 
 	var sb strings.Builder
 	for _, scriptPath := range paths {
-		result, err := e.runScript(scriptPath, vars)
+		result, err := e.runScript(scriptPath, nil, renderCtx)
 		if err != nil {
 			log.Printf("[script] hook error: %s (%s): %v", name, scriptPath, err)
 			continue

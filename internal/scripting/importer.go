@@ -10,7 +10,8 @@ import (
 )
 
 // buildModuleMap creates a ModuleMap with all API modules and theme source modules.
-func (e *ScriptEngine) buildModuleMap() *tengo.ModuleMap {
+// renderCtx is the optional template render context passed to cms/routing; nil outside renders.
+func (e *ScriptEngine) buildModuleMap(renderCtx interface{}) *tengo.ModuleMap {
 	modules := tengo.NewModuleMap()
 
 	// Register built-in API modules
@@ -22,6 +23,8 @@ func (e *ScriptEngine) buildModuleMap() *tengo.ModuleMap {
 	modules.AddBuiltinModule("cms/menus", e.menusModule())
 	modules.AddBuiltinModule("cms/log", logModule())
 	modules.AddBuiltinModule("cms/hooks", e.hooksModule())
+	modules.AddBuiltinModule("cms/routing", e.routingModule(renderCtx))
+	modules.AddBuiltinModule("cms/helpers", helpersModule())
 
 	// Register standard Tengo stdlib modules (safe subset — no OS/file access)
 	safeModules := []string{"fmt", "math", "text", "times", "rand", "json", "base64", "hex", "enum"}

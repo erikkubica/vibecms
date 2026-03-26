@@ -26,7 +26,7 @@ response = {
 		t.Fatal(err)
 	}
 
-	result, err := engine.runScript("test_handler", nil)
+	result, err := engine.runScript("test_handler", nil, nil)
 	if err != nil {
 		t.Fatalf("runScript failed: %v", err)
 	}
@@ -67,7 +67,7 @@ response = {
 		},
 	}
 
-	result, err := engine.runScript("event_handler", vars)
+	result, err := engine.runScript("event_handler", vars, nil)
 	if err != nil {
 		t.Fatalf("runScript failed: %v", err)
 	}
@@ -106,7 +106,7 @@ response = { result: helpers.double(21) }
 `
 	os.WriteFile(filepath.Join(tmpDir, "use_helpers.tengo"), []byte(script), 0644)
 
-	result, err := engine.runScript("use_helpers", nil)
+	result, err := engine.runScript("use_helpers", nil, nil)
 	if err != nil {
 		t.Fatalf("runScript failed: %v", err)
 	}
@@ -138,7 +138,7 @@ response = {
 `
 	os.WriteFile(filepath.Join(tmpDir, "stdlib_test.tengo"), []byte(script), 0644)
 
-	result, err := engine.runScript("stdlib_test", nil)
+	result, err := engine.runScript("stdlib_test", nil, nil)
 	if err != nil {
 		t.Fatalf("runScript failed: %v", err)
 	}
@@ -168,7 +168,7 @@ response = { logged: true }
 `
 	os.WriteFile(filepath.Join(tmpDir, "log_test.tengo"), []byte(script), 0644)
 
-	result, err := engine.runScript("log_test", nil)
+	result, err := engine.runScript("log_test", nil, nil)
 	if err != nil {
 		t.Fatalf("runScript failed: %v", err)
 	}

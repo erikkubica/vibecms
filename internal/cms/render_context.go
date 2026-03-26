@@ -26,6 +26,8 @@ type AppData struct {
 
 // NodeData holds the .Node namespace for layout templates.
 type NodeData struct {
+	ID           int
+	Status       string
 	Title        string
 	Slug         string
 	FullURL      string
@@ -71,6 +73,8 @@ func (td TemplateData) ToMap() map[string]interface{} {
 			"theme_url":     td.App.ThemeURL,
 		},
 		"node": map[string]interface{}{
+			"id":            td.Node.ID,
+			"status":        td.Node.Status,
 			"title":         td.Node.Title,
 			"slug":          td.Node.Slug,
 			"full_url":      td.Node.FullURL,
@@ -178,6 +182,8 @@ func (rc *RenderContext) BuildNodeData(node *models.ContentNode, blocksHTML stri
 	translations := rc.loadTranslations(node)
 
 	return NodeData{
+		ID:           node.ID,
+		Status:       node.Status,
 		Title:        node.Title,
 		Slug:         node.Slug,
 		FullURL:      node.FullURL,

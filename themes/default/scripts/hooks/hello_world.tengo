@@ -1,38 +1,10 @@
 // hello_world.tengo — Hook script for "before_main_content" action.
-// Only renders on the homepage. The `page` variable is injected with
-// the current template context: page.node, page.app, page.user.
+// Uses cms/routing to detect if the current page is the homepage.
+// Language-aware: works on all homepage translations.
 
-settings := import("cms/settings")
-nodes := import("cms/nodes")
+routing := import("cms/routing")
 
-is_homepage := false
-
-if page != undefined && page.node != undefined {
-	// Check if full_url is "/" (default language homepage)
-	if page.node.full_url == "/" {
-		is_homepage = true
-	}
-
-	// Check by homepage_node_id setting
-	if !is_homepage {
-		hp_id := settings.get("homepage_node_id")
-		if hp_id != undefined {
-			// Direct match
-			if string(page.node.id) == hp_id {
-				is_homepage = true
-			}
-
-			// Translation match: check if current page is a translation
-			// of the homepage by comparing slugs (homepage slug is "home")
-			hp_node := nodes.get(int(hp_id))
-			if hp_node != undefined && page.node.slug == hp_node.slug {
-				is_homepage = true
-			}
-		}
-	}
-}
-
-if is_homepage {
+if routing.is_homepage() {
 	response = {
 		html: `<div style="background: #4f46e5; color: white; text-align: center; padding: 1rem; font-size: 1.25rem; font-weight: 600;">Hello World from Theme Script!</div>`
 	}

@@ -104,7 +104,7 @@ func (e *ScriptEngine) subscribeEventHandlers() {
 					},
 				}
 
-				if _, err := e.runScript(sp, vars); err != nil {
+				if _, err := e.runScript(sp, vars, nil); err != nil {
 					log.Printf("[script] event handler error: %s (%s): %v", a, sp, err)
 				}
 			})

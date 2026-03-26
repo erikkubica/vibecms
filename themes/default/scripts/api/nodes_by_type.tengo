@@ -1,0 +1,51 @@
+// nodes_by_type.tengo — List published nodes by type.
+// GET /api/theme/nodes/:type?page=1&per_page=20
+
+nodes := import("cms/nodes")
+
+node_type := ""
+if request.params.type != undefined {
+	node_type = request.params.type
+}
+
+page := 1
+if request.query.page != undefined {
+	page = int(request.query.page)
+}
+
+per_page := 20
+if request.query.per_page != undefined {
+	per_page = int(request.query.per_page)
+}
+if per_page > 100 {
+	per_page = 100
+}
+
+result := nodes.list({
+	node_type: node_type,
+	status: "published",
+	page: page,
+	per_page: per_page
+})
+
+items := []
+for item in result.items {
+	items = append(items, {
+		id: item.id,
+		title: item.title,
+		slug: item.slug,
+		full_url: item.full_url,
+		language_code: item.language_code
+	})
+}
+
+response = {
+	status: 200,
+	body: {
+		node_type: node_type,
+		total: result.total,
+		page: page,
+		per_page: per_page,
+		items: items
+	}
+}

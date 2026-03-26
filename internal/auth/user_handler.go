@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"vibecms/internal/api"
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,7 +17,7 @@ type createUserRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	FullName string `json:"full_name"`
-	Role     string `json:"role"`
+	RoleID   int    `json:"role_id"`
 }
 
 // updateUserRequest represents the expected JSON body for updating a user.
@@ -24,7 +25,7 @@ type updateUserRequest struct {
 	Email    *string `json:"email,omitempty"`
 	Password *string `json:"password,omitempty"`
 	FullName *string `json:"full_name,omitempty"`
-	Role     *string `json:"role,omitempty"`
+	RoleID   *int    `json:"role_id,omitempty"`
 }
 
 // userResponse represents the sanitized user data returned in API responses.
@@ -32,7 +33,8 @@ type userResponse struct {
 	ID          int         `json:"id"`
 	Email       string      `json:"email"`
 	FullName    *string     `json:"full_name"`
-	Role        string      `json:"role"`
+	RoleID      int         `json:"role_id"`
+	Role        models.Role `json:"role"`
 	LastLoginAt interface{} `json:"last_login_at"`
 	CreatedAt   interface{} `json:"created_at"`
 	UpdatedAt   interface{} `json:"updated_at"`
@@ -43,6 +45,7 @@ func toUserResponse(u models.User) userResponse {
 		ID:          u.ID,
 		Email:       u.Email,
 		FullName:    u.FullName,
+		RoleID:      u.RoleID,
 		Role:        u.Role,
 		LastLoginAt: u.LastLoginAt,
 		CreatedAt:   u.CreatedAt,
@@ -52,12 +55,13 @@ func toUserResponse(u models.User) userResponse {
 
 // UserHandler handles user management HTTP endpoints.
 type UserHandler struct {
-	db *gorm.DB
+	db       *gorm.DB
+	eventBus *events.EventBus
 }
 
 // NewUserHandler creates a new UserHandler.
-func NewUserHandler(db *gorm.DB) *UserHandler {
-	return &UserHandler{db: db}
+func NewUserHandler(db *gorm.DB, eventBus *events.EventBus) *UserHandler {
+	return &UserHandler{db: db, eventBus: eventBus}
 }
 
 // RegisterRoutes registers user management routes on the given router group.
@@ -69,11 +73,11 @@ func (h *UserHandler) RegisterRoutes(router fiber.Router) {
 	router.Delete("/users/:id", h.DeleteUser)
 }
 
-// ListUsers returns a paginated list of users. Admin only.
+// ListUsers returns a paginated list of users. Requires manage_users capability.
 func (h *UserHandler) ListUsers(c *fiber.Ctx) error {
 	currentUser := GetCurrentUser(c)
-	if currentUser == nil || currentUser.Role != "admin" {
-		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Admin access required")
+	if !HasCapability(currentUser, "manage_users") {
+		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Insufficient permissions")
 	}
 
 	page, _ := strconv.Atoi(c.Query("page", "1"))
@@ -94,7 +98,7 @@ func (h *UserHandler) ListUsers(c *fiber.Ctx) error {
 
 	var users []models.User
 	offset := (page - 1) * perPage
-	if err := h.db.Order("id ASC").Offset(offset).Limit(perPage).Find(&users).Error; err != nil {
+	if err := h.db.Preload("Role").Order("id ASC").Offset(offset).Limit(perPage).Find(&users).Error; err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "Failed to fetch users")
 	}
 
@@ -114,7 +118,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	if err := h.db.First(&user, id).Error; err != nil {
+	if err := h.db.Preload("Role").First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "User not found")
 		}
@@ -124,11 +128,11 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	return api.Success(c, toUserResponse(user))
 }
 
-// CreateUser creates a new user. Admin only.
+// CreateUser creates a new user. Requires manage_users capability.
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	currentUser := GetCurrentUser(c)
-	if currentUser == nil || currentUser.Role != "admin" {
-		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Admin access required")
+	if !HasCapability(currentUser, "manage_users") {
+		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Insufficient permissions")
 	}
 
 	var req createUserRequest
@@ -136,7 +140,6 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusBadRequest, "BAD_REQUEST", "Invalid request body")
 	}
 
-	// Validate required fields.
 	fields := make(map[string]string)
 	if req.Email == "" {
 		fields["email"] = "Email is required"
@@ -148,32 +151,43 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return api.ValidationError(c, fields)
 	}
 
-	// Hash password.
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "Failed to hash password")
 	}
 
-	role := req.Role
-	if role == "" {
-		role = "editor"
+	roleID := req.RoleID
+	if roleID == 0 {
+		var editorRole models.Role
+		if err := h.db.Where("slug = ?", "editor").First(&editorRole).Error; err == nil {
+			roleID = editorRole.ID
+		}
 	}
 
 	user := models.User{
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
 		FullName:     &req.FullName,
-		Role:         role,
+		RoleID:       roleID,
 	}
 
 	if err := h.db.Create(&user).Error; err != nil {
 		return api.Error(c, fiber.StatusConflict, "CONFLICT", "A user with this email already exists")
 	}
 
+	h.db.Preload("Role").First(&user, user.ID)
+
+	if h.eventBus != nil {
+		go h.eventBus.Publish("user.registered", events.Payload{
+			"user_id":    user.ID,
+			"user_email": user.Email,
+		})
+	}
+
 	return api.Created(c, toUserResponse(user))
 }
 
-// UpdateUser updates an existing user. Admins can update any user; non-admins can only update themselves.
+// UpdateUser updates an existing user.
 func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
@@ -185,8 +199,7 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Authentication required")
 	}
 
-	// Non-admins can only update themselves.
-	if currentUser.Role != "admin" && currentUser.ID != id {
+	if !HasCapability(currentUser, "manage_users") && currentUser.ID != id {
 		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "You can only update your own profile")
 	}
 
@@ -211,12 +224,11 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 	if req.FullName != nil {
 		updates["full_name"] = *req.FullName
 	}
-	if req.Role != nil {
-		// Only admins can change roles.
-		if currentUser.Role != "admin" {
+	if req.RoleID != nil {
+		if !HasCapability(currentUser, "manage_users") {
 			return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Only admins can change user roles")
 		}
-		updates["role"] = *req.Role
+		updates["role_id"] = *req.RoleID
 	}
 	if req.Password != nil {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
@@ -234,17 +246,23 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update user")
 	}
 
-	// Reload the user to get the updated fields.
-	h.db.First(&user, id)
+	h.db.Preload("Role").First(&user, id)
+
+	if h.eventBus != nil {
+		go h.eventBus.Publish("user.updated", events.Payload{
+			"user_id":    user.ID,
+			"user_email": user.Email,
+		})
+	}
 
 	return api.Success(c, toUserResponse(user))
 }
 
-// DeleteUser deletes a user by ID. Admin only.
+// DeleteUser deletes a user by ID. Requires manage_users capability.
 func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	currentUser := GetCurrentUser(c)
-	if currentUser == nil || currentUser.Role != "admin" {
-		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Admin access required")
+	if !HasCapability(currentUser, "manage_users") {
+		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Insufficient permissions")
 	}
 
 	id, err := strconv.Atoi(c.Params("id"))
@@ -258,6 +276,12 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	}
 	if result.RowsAffected == 0 {
 		return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "User not found")
+	}
+
+	if h.eventBus != nil {
+		go h.eventBus.Publish("user.deleted", events.Payload{
+			"user_id": id,
+		})
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)

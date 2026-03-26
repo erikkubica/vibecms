@@ -54,7 +54,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	if err := h.db.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	if err := h.db.Preload("Role").Where("email = ?", req.Email).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return api.Error(c, fiber.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 		}
@@ -87,7 +87,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	return api.Success(c, fiber.Map{
 		"user_id": user.ID,
 		"email":   user.Email,
-		"role":    user.Role,
+		"role":    user.Role.Slug,
 	})
 }
 
@@ -124,7 +124,7 @@ func (h *AuthHandler) Me(c *fiber.Ctx) error {
 		"id":            user.ID,
 		"email":         user.Email,
 		"full_name":     user.FullName,
-		"role":          user.Role,
+		"role":          user.Role.Slug,
 		"last_login_at": user.LastLoginAt,
 	})
 }

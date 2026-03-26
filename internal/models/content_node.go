@@ -65,6 +65,8 @@ type ContentNode struct {
 	BlocksData         JSONB          `gorm:"column:blocks_data;type:jsonb;not null;default:'[]'" json:"blocks_data"`
 	SeoSettings        JSONB          `gorm:"column:seo_settings;type:jsonb;not null;default:'{}'" json:"seo_settings"`
 	FieldsData         JSONB          `gorm:"column:fields_data;type:jsonb;not null;default:'{}'" json:"fields_data"`
+	AuthorID           *int           `gorm:"column:author_id" json:"author_id,omitempty"`
+	Author             *User          `gorm:"foreignKey:AuthorID;references:ID" json:"author,omitempty"`
 	LayoutID           *int           `gorm:"column:layout_id" json:"layout_id,omitempty"`
 	TranslationGroupID *string        `gorm:"column:translation_group_id;type:uuid" json:"translation_group_id,omitempty"`
 	Version            int            `gorm:"column:version;not null;default:1" json:"version"`

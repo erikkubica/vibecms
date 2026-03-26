@@ -1,0 +1,39 @@
+// helpers.tengo — Shared utility functions for theme scripts.
+// Import with: helpers := import("./lib/helpers")
+
+fmt := import("fmt")
+
+truncate := func(s, max_len) {
+	if len(s) <= max_len {
+		return s
+	}
+	return s[:max_len] + "..."
+}
+
+slugify := func(s) {
+	result := ""
+	for c in s {
+		if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
+			result += string(c)
+		} else if c >= 'A' && c <= 'Z' {
+			result += string(c + 32)
+		} else if c == ' ' || c == '_' {
+			result += "-"
+		}
+	}
+	return result
+}
+
+format_date := func(iso_date) {
+	// Simple date formatting: "2006-01-02T15:04:05Z" -> "Jan 2, 2006"
+	if len(iso_date) < 10 {
+		return iso_date
+	}
+	return iso_date[:10]
+}
+
+export {
+	truncate: truncate,
+	slugify: slugify,
+	format_date: format_date
+}

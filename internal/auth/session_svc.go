@@ -70,7 +70,7 @@ func (s *SessionService) ValidateSession(token string) (*models.User, error) {
 	tokenHash := hashToken(token)
 
 	var session models.Session
-	err := s.db.Preload("User").Where("token_hash = ?", tokenHash).First(&session).Error
+	err := s.db.Preload("User").Preload("User.Role").Where("token_hash = ?", tokenHash).First(&session).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrSessionNotFound

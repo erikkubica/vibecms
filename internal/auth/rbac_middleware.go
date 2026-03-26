@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"strings"
 
 	"vibecms/internal/api"
@@ -57,7 +58,7 @@ func RoleRequired(roles ...string) fiber.Handler {
 		}
 
 		for _, role := range roles {
-			if user.Role == role {
+			if user.Role.Slug == role {
 				return c.Next()
 			}
 		}
@@ -74,4 +75,43 @@ func GetCurrentUser(c *fiber.Ctx) *models.User {
 		return nil
 	}
 	return user
+}
+
+// HasCapability checks if the user's role has a specific boolean capability.
+func HasCapability(user *models.User, capability string) bool {
+	if user == nil {
+		return false
+	}
+	caps := ParseCapabilities(user.Role.Capabilities)
+	val, ok := caps[capability]
+	if !ok {
+		return false
+	}
+	b, ok := val.(bool)
+	return ok && b
+}
+
+// ParseCapabilities unmarshals a JSONB capabilities field into a map.
+func ParseCapabilities(data models.JSONB) map[string]interface{} {
+	var caps map[string]interface{}
+	if err := json.Unmarshal(data, &caps); err != nil {
+		return make(map[string]interface{})
+	}
+	return caps
+}
+
+// CapabilityRequired returns middleware that checks a boolean capability.
+func CapabilityRequired(capability string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		user := GetCurrentUser(c)
+		if !HasCapability(user, capability) {
+			return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Insufficient permissions")
+		}
+		return c.Next()
+	}
+}
+
+// IsAdmin checks if the user has the admin role slug.
+func IsAdmin(user *models.User) bool {
+	return user != nil && user.Role.Slug == "admin"
 }

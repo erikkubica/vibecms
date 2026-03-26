@@ -17,6 +17,7 @@ import (
 	"vibecms/internal/events"
 	"vibecms/internal/rbac"
 	"vibecms/internal/rendering"
+	"vibecms/internal/scripting"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -119,6 +120,13 @@ func main() {
 	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes")
 	themeHandler := cms.NewThemeHandler(database, themeMgmtSvc)
 
+	// Theme scripting engine.
+	scriptEngine := scripting.NewScriptEngine(database, eventBus, contentSvc, menuSvc)
+	if err := scriptEngine.LoadThemeScripts(themePath); err != nil {
+		log.Printf("WARN: theme script loading failed: %v", err)
+	}
+	renderer.SetActionRunner(scriptEngine.RunAction)
+
 	renderCtx := cms.NewRenderContext(database, layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx)
 
@@ -158,6 +166,9 @@ func main() {
 	app.Get("/admin/*", func(c *fiber.Ctx) error {
 		return c.SendFile("./admin-ui/dist/index.html")
 	})
+
+	// --- Theme script API routes ---
+	scriptEngine.MountHTTPRoutes(app)
 
 	// --- Public content routes (must be last) ---
 	publicHandler.RegisterRoutes(app)

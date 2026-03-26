@@ -17,8 +17,15 @@ type TemplateRenderer struct {
 	templateDir string
 	cache       map[string]*template.Template
 	mu          sync.RWMutex
-	isDev       bool
-	funcMap     template.FuncMap
+	isDev        bool
+	funcMap      template.FuncMap
+	actionRunner func(string) template.HTML
+}
+
+// SetActionRunner sets the function called by {{action "name"}} in templates.
+// This connects the template engine to the scripting hook system.
+func (r *TemplateRenderer) SetActionRunner(fn func(string) template.HTML) {
+	r.actionRunner = fn
 }
 
 // NewTemplateRenderer creates a new TemplateRenderer.
@@ -30,7 +37,13 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 		cache:       make(map[string]*template.Template),
 		isDev:       isDev,
 	}
+	// Default no-op action runner (replaced when scripting engine is loaded)
+	r.actionRunner = func(name string) template.HTML { return "" }
+
 	r.funcMap = template.FuncMap{
+		"action": func(name string) template.HTML {
+			return r.actionRunner(name)
+		},
 		"deref": func(v interface{}) interface{} {
 			if v == nil {
 				return ""

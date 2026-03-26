@@ -17,7 +17,9 @@
 <body class="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 antialiased">
 
     <main class="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {{action "before_main_content"}}
         {{.node.blocks_html}}
+        {{action "after_main_content"}}
     </main>
 
     {{- range .app.foot_scripts -}}

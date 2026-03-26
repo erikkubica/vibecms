@@ -1,0 +1,6 @@
+// hello_world.tengo — Hook script for "before_main_content" action.
+// Returns HTML that gets injected before the main content area.
+
+response = {
+	html: `<div style="background: #4f46e5; color: white; text-align: center; padding: 1rem; font-size: 1.25rem; font-weight: 600;">Hello World from Theme Script!</div>`
+}

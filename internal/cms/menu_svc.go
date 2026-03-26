@@ -7,18 +7,20 @@ import (
 
 	"gorm.io/gorm"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
 // MenuService provides business logic for managing menus and menu items.
 type MenuService struct {
-	db    *gorm.DB
-	cache sync.Map
+	db       *gorm.DB
+	cache    sync.Map
+	eventBus *events.EventBus
 }
 
 // NewMenuService creates a new MenuService with the given database connection.
-func NewMenuService(db *gorm.DB) *MenuService {
-	return &MenuService{db: db}
+func NewMenuService(db *gorm.DB, eventBus *events.EventBus) *MenuService {
+	return &MenuService{db: db, eventBus: eventBus}
 }
 
 // List retrieves menus with an optional language_id filter.
@@ -70,6 +72,15 @@ func (s *MenuService) Create(menu *models.Menu) error {
 	}
 
 	s.InvalidateCache()
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("menu.created", events.Payload{
+			"menu_id":   menu.ID,
+			"menu_slug": menu.Slug,
+			"menu_name": menu.Name,
+		})
+	}
+
 	return nil
 }
 
@@ -115,15 +126,25 @@ func (s *MenuService) Update(id int, updates map[string]interface{}) (*models.Me
 	if err != nil {
 		return nil, err
 	}
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("menu.updated", events.Payload{
+			"menu_id":   updated.ID,
+			"menu_slug": updated.Slug,
+			"menu_name": updated.Name,
+		})
+	}
+
 	return updated, nil
 }
 
 // Delete removes a menu and all its items by ID.
 func (s *MenuService) Delete(id int) error {
-	_, err := s.GetByID(id)
+	existing, err := s.GetByID(id)
 	if err != nil {
 		return err
 	}
+	_ = existing // used in event payload below
 
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("menu_id = ?", id).Delete(&models.MenuItem{}).Error; err != nil {
@@ -137,6 +158,15 @@ func (s *MenuService) Delete(id int) error {
 			return gorm.ErrRecordNotFound
 		}
 		s.InvalidateCache()
+
+		if s.eventBus != nil {
+			go s.eventBus.Publish("menu.deleted", events.Payload{
+				"menu_id":   existing.ID,
+				"menu_slug": existing.Slug,
+				"menu_name": existing.Name,
+			})
+		}
+
 		return nil
 	})
 }

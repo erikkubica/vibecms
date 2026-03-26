@@ -1,95 +1,43 @@
 package auth
 
 import (
-	"bytes"
-	"html/template"
 	"log"
 	"strings"
 	"time"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
-	"vibecms/internal/rendering"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-// pageData holds data passed to auth page templates.
-type pageData struct {
-	Title     string
-	User      *models.User
-	FlashMsg  string
-	FlashType string // "success" or "error"
-	Token     string
-}
-
-// LayoutRenderer is a callback that renders content inside the site layout.
-// It takes the fiber context, page title, and inner HTML content, and returns the full page HTML.
-type LayoutRenderer func(c *fiber.Ctx, title string, innerHTML template.HTML) (string, bool)
-
-// PageAuthHandler serves HTML authentication pages (login, register, etc.).
+// PageAuthHandler serves auth form POST handlers and logout.
+// GET pages for login/register/forgot-password/reset-password are served as
+// content nodes with auth block types (login-form, register-form, etc.).
 type PageAuthHandler struct {
-	db             *gorm.DB
-	sessionSvc     *SessionService
-	renderer       *rendering.TemplateRenderer
-	layoutRenderer LayoutRenderer
+	db         *gorm.DB
+	sessionSvc *SessionService
+	eventBus   *events.EventBus
 }
 
 // NewPageAuthHandler creates a new PageAuthHandler.
-func NewPageAuthHandler(db *gorm.DB, sessionSvc *SessionService, renderer *rendering.TemplateRenderer) *PageAuthHandler {
+func NewPageAuthHandler(db *gorm.DB, sessionSvc *SessionService, eventBus *events.EventBus) *PageAuthHandler {
 	return &PageAuthHandler{
 		db:         db,
 		sessionSvc: sessionSvc,
-		renderer:   renderer,
+		eventBus:   eventBus,
 	}
 }
 
-// SetLayoutRenderer sets the layout rendering callback.
-func (h *PageAuthHandler) SetLayoutRenderer(lr LayoutRenderer) {
-	h.layoutRenderer = lr
-}
-
-// RegisterRoutes registers all auth page routes on the Fiber app.
+// RegisterRoutes registers auth POST handlers and logout on the Fiber app.
 func (h *PageAuthHandler) RegisterRoutes(app *fiber.App) {
-	app.Get("/login", h.ShowLogin)
 	app.Post("/auth/login-page", h.ProcessLogin)
-	app.Get("/register", h.ShowRegister)
-	app.Post("/register", h.ProcessRegister)
-	app.Get("/auth/forgot-password", h.ShowForgotPassword)
+	app.Post("/auth/register", h.ProcessRegister)
 	app.Post("/auth/forgot-password", h.ProcessForgotPassword)
-	app.Get("/auth/reset-password", h.ShowResetPassword)
 	app.Post("/auth/reset-password", h.ProcessResetPassword)
 	app.Get("/logout", h.Logout)
-}
-
-// renderTemplate renders the named auth template, wrapped in the site layout if available.
-func (h *PageAuthHandler) renderTemplate(c *fiber.Ctx, name string, data pageData) error {
-	if data.FlashMsg == "" {
-		data.FlashMsg = c.Cookies("flash_msg")
-		data.FlashType = c.Cookies("flash_type")
-	}
-	clearFlashCookies(c)
-
-	c.Set("Content-Type", "text/html; charset=utf-8")
-
-	// If layout renderer is available, render only the form fragment and wrap in site layout
-	if h.layoutRenderer != nil {
-		var buf bytes.Buffer
-		if err := h.renderer.RenderFragment(&buf, "auth/"+name, data); err == nil {
-			if html, ok := h.layoutRenderer(c, data.Title, template.HTML(buf.String())); ok {
-				return c.SendString(html)
-			}
-		}
-	}
-
-	// Fallback to full page rendering with base layout
-	var buf strings.Builder
-	if err := h.renderer.RenderPage(&buf, "auth/"+name, data); err != nil {
-		log.Printf("template render error (%s): %v", name, err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Internal Server Error")
-	}
-	return c.SendString(buf.String())
 }
 
 // setFlash sets flash message cookies for the next request.
@@ -99,24 +47,14 @@ func setFlash(c *fiber.Ctx, msg, flashType string) {
 		Value:    msg,
 		Path:     "/",
 		MaxAge:   10,
-		HTTPOnly: true,
+		HTTPOnly: false, // Alpine.js needs to read these
 	})
 	c.Cookie(&fiber.Cookie{
 		Name:     "flash_type",
 		Value:    flashType,
 		Path:     "/",
 		MaxAge:   10,
-		HTTPOnly: true,
-	})
-}
-
-// clearFlashCookies removes flash cookies.
-func clearFlashCookies(c *fiber.Ctx) {
-	c.Cookie(&fiber.Cookie{
-		Name: "flash_msg", Value: "", Path: "/", MaxAge: -1, HTTPOnly: true,
-	})
-	c.Cookie(&fiber.Cookie{
-		Name: "flash_type", Value: "", Path: "/", MaxAge: -1, HTTPOnly: true,
+		HTTPOnly: false,
 	})
 }
 
@@ -130,28 +68,6 @@ func (h *PageAuthHandler) isLoggedIn(c *fiber.Ctx) bool {
 	return err == nil
 }
 
-// --- GET handlers ---
-
-func (h *PageAuthHandler) ShowLogin(c *fiber.Ctx) error {
-	if h.isLoggedIn(c) {
-		return c.Redirect("/admin/dashboard", fiber.StatusFound)
-	}
-	return h.renderTemplate(c, "login.html", pageData{Title: "Sign In"})
-}
-
-func (h *PageAuthHandler) ShowRegister(c *fiber.Ctx) error {
-	return h.renderTemplate(c, "register.html", pageData{Title: "Create Account"})
-}
-
-func (h *PageAuthHandler) ShowForgotPassword(c *fiber.Ctx) error {
-	return h.renderTemplate(c, "forgot_password.html", pageData{Title: "Forgot Password"})
-}
-
-func (h *PageAuthHandler) ShowResetPassword(c *fiber.Ctx) error {
-	token := c.Query("token")
-	return h.renderTemplate(c, "reset_password.html", pageData{Title: "Reset Password", Token: token})
-}
-
 // --- POST handlers ---
 
 func (h *PageAuthHandler) ProcessLogin(c *fiber.Ctx) error {
@@ -159,30 +75,26 @@ func (h *PageAuthHandler) ProcessLogin(c *fiber.Ctx) error {
 	password := c.FormValue("password")
 
 	if email == "" || password == "" {
-		return h.renderTemplate(c, "login.html", pageData{
-			Title: "Sign In", FlashMsg: "Email and password are required.", FlashType: "error",
-		})
+		setFlash(c, "Email and password are required.", "error")
+		return c.Redirect("/login", fiber.StatusFound)
 	}
 
 	var user models.User
-	if err := h.db.Where("email = ?", email).First(&user).Error; err != nil {
-		return h.renderTemplate(c, "login.html", pageData{
-			Title: "Sign In", FlashMsg: "Invalid email or password.", FlashType: "error",
-		})
+	if err := h.db.Preload("Role").Where("email = ?", email).First(&user).Error; err != nil {
+		setFlash(c, "Invalid email or password.", "error")
+		return c.Redirect("/login", fiber.StatusFound)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return h.renderTemplate(c, "login.html", pageData{
-			Title: "Sign In", FlashMsg: "Invalid email or password.", FlashType: "error",
-		})
+		setFlash(c, "Invalid email or password.", "error")
+		return c.Redirect("/login", fiber.StatusFound)
 	}
 
 	token, err := h.sessionSvc.CreateSession(user.ID, c.IP(), c.Get("User-Agent"))
 	if err != nil {
 		log.Printf("failed to create session: %v", err)
-		return h.renderTemplate(c, "login.html", pageData{
-			Title: "Sign In", FlashMsg: "An unexpected error occurred.", FlashType: "error",
-		})
+		setFlash(c, "An unexpected error occurred.", "error")
+		return c.Redirect("/login", fiber.StatusFound)
 	}
 
 	now := time.Now()
@@ -198,6 +110,15 @@ func (h *PageAuthHandler) ProcessLogin(c *fiber.Ctx) error {
 		Expires:  time.Now().Add(h.sessionSvc.sessionExpiry),
 	})
 
+	if h.eventBus != nil {
+		go h.eventBus.Publish("user.login", events.Payload{
+			"user_id":     user.ID,
+			"user_email":  user.Email,
+			"actor_email": user.Email,
+			"ip_address":  c.IP(),
+		})
+	}
+
 	setFlash(c, "Welcome back!", "success")
 	return c.Redirect("/admin/dashboard", fiber.StatusFound)
 }
@@ -209,43 +130,45 @@ func (h *PageAuthHandler) ProcessRegister(c *fiber.Ctx) error {
 	passwordConfirm := c.FormValue("password_confirm")
 
 	if fullName == "" || email == "" || password == "" || passwordConfirm == "" {
-		return h.renderTemplate(c, "register.html", pageData{
-			Title: "Create Account", FlashMsg: "All fields are required.", FlashType: "error",
-		})
+		setFlash(c, "All fields are required.", "error")
+		return c.Redirect("/register", fiber.StatusFound)
 	}
 
 	if password != passwordConfirm {
-		return h.renderTemplate(c, "register.html", pageData{
-			Title: "Create Account", FlashMsg: "Passwords do not match.", FlashType: "error",
-		})
+		setFlash(c, "Passwords do not match.", "error")
+		return c.Redirect("/register", fiber.StatusFound)
 	}
 
 	var existing models.User
 	if err := h.db.Where("email = ?", email).First(&existing).Error; err == nil {
-		return h.renderTemplate(c, "register.html", pageData{
-			Title: "Create Account", FlashMsg: "An account with this email already exists.", FlashType: "error",
-		})
+		setFlash(c, "An account with this email already exists.", "error")
+		return c.Redirect("/register", fiber.StatusFound)
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("failed to hash password: %v", err)
-		return h.renderTemplate(c, "register.html", pageData{
-			Title: "Create Account", FlashMsg: "An unexpected error occurred.", FlashType: "error",
-		})
+		setFlash(c, "An unexpected error occurred.", "error")
+		return c.Redirect("/register", fiber.StatusFound)
+	}
+
+	var editorRole models.Role
+	if err := h.db.Where("slug = ?", "editor").First(&editorRole).Error; err != nil {
+		log.Printf("failed to find editor role: %v", err)
+		setFlash(c, "An unexpected error occurred.", "error")
+		return c.Redirect("/register", fiber.StatusFound)
 	}
 
 	user := models.User{
 		Email:        email,
 		PasswordHash: string(hash),
-		Role:         "editor",
+		RoleID:       editorRole.ID,
 		FullName:     &fullName,
 	}
 	if err := h.db.Create(&user).Error; err != nil {
 		log.Printf("failed to create user: %v", err)
-		return h.renderTemplate(c, "register.html", pageData{
-			Title: "Create Account", FlashMsg: "An unexpected error occurred.", FlashType: "error",
-		})
+		setFlash(c, "An unexpected error occurred.", "error")
+		return c.Redirect("/register", fiber.StatusFound)
 	}
 
 	token, err := h.sessionSvc.CreateSession(user.ID, c.IP(), c.Get("User-Agent"))
@@ -264,13 +187,21 @@ func (h *PageAuthHandler) ProcessRegister(c *fiber.Ctx) error {
 		Expires:  time.Now().Add(h.sessionSvc.sessionExpiry),
 	})
 
+	if h.eventBus != nil {
+		go h.eventBus.Publish("user.registered", events.Payload{
+			"user_id":     user.ID,
+			"user_email":  user.Email,
+			"actor_email": user.Email,
+		})
+	}
+
 	setFlash(c, "Account created!", "success")
 	return c.Redirect("/admin/dashboard", fiber.StatusFound)
 }
 
 func (h *PageAuthHandler) ProcessForgotPassword(c *fiber.Ctx) error {
 	setFlash(c, "If an account exists with that email, a reset link has been sent.", "success")
-	return c.Redirect("/auth/forgot-password", fiber.StatusFound)
+	return c.Redirect("/forgot-password", fiber.StatusFound)
 }
 
 func (h *PageAuthHandler) ProcessResetPassword(c *fiber.Ctx) error {

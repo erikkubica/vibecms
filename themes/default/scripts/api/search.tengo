@@ -1,0 +1,51 @@
+// search.tengo — Theme search API endpoint.
+// GET /api/theme/search?q=keyword&type=page&limit=10
+// The `request` variable is injected with {method, path, query, params, headers, body, ip}.
+
+nodes := import("cms/nodes")
+
+q := ""
+if request.query.q != undefined {
+	q = request.query.q
+}
+
+node_type := ""
+if request.query.type != undefined {
+	node_type = request.query.type
+}
+
+limit := 10
+if request.query.limit != undefined {
+	limit = int(request.query.limit)
+}
+if limit > 50 {
+	limit = 50
+}
+
+result := nodes.list({
+	search: q,
+	node_type: node_type,
+	status: "published",
+	per_page: limit
+})
+
+items := []
+for item in result.items {
+	items = append(items, {
+		id: item.id,
+		title: item.title,
+		slug: item.slug,
+		full_url: item.full_url,
+		node_type: item.node_type,
+		language_code: item.language_code
+	})
+}
+
+response = {
+	status: 200,
+	body: {
+		query: q,
+		total: result.total,
+		items: items
+	}
+}

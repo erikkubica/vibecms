@@ -1,0 +1,6 @@
+// on_node_published.tengo — Runs when a node is published.
+// The `event` variable is injected with {action, payload}.
+
+log := import("cms/log")
+
+log.info("Node published: " + string(event.payload.node_id) + " — " + event.payload.node_title)

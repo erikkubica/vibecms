@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import CodeMirror, { type Extension } from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { autocompletion, type CompletionContext } from "@codemirror/autocomplete";
+import { keymap } from "@codemirror/view";
+import { format } from "prettier/standalone";
+import * as htmlParser from "prettier/plugins/html";
 
 interface CodeEditorProps {
   value: string;
@@ -21,8 +24,46 @@ export default function CodeEditor({
   height = "300px",
   variables = [],
 }: CodeEditorProps) {
+  const [formatting, setFormatting] = useState(false);
+
+  const handleFormat = useCallback(async () => {
+    if (disabled || !value.trim()) return;
+    setFormatting(true);
+    try {
+      // Protect Go template tags from prettier mangling
+      let code = value;
+      const tags: string[] = [];
+      code = code.replace(/\{\{[^}]*\}\}/g, (match) => {
+        tags.push(match);
+        return `<!--TMPL${tags.length - 1}-->`;
+      });
+
+      const formatted = await format(code, {
+        parser: "html",
+        plugins: [htmlParser],
+        printWidth: 120,
+        tabWidth: 2,
+        useTabs: false,
+      });
+
+      // Restore Go template tags
+      const restored = formatted.replace(/<!--TMPL(\d+)-->/g, (_, i) => tags[Number(i)]);
+      onChange(restored.trimEnd());
+    } catch {
+      // If formatting fails (invalid HTML), silently ignore
+    } finally {
+      setFormatting(false);
+    }
+  }, [value, onChange, disabled]);
+
   const extensions = useMemo(() => {
-    const exts: Extension[] = [html()];
+    const exts: Extension[] = [
+      html(),
+      keymap.of([{
+        key: "Shift-Alt-f",
+        run: () => { handleFormat(); return true; },
+      }]),
+    ];
 
     if (variables.length > 0) {
       const varCompletions = variables.map((v) => ({
@@ -65,6 +106,17 @@ export default function CodeEditor({
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-300 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+      <div className="flex items-center justify-end gap-2 border-b border-slate-700 bg-[#282c34] px-3 py-1.5">
+        <button
+          type="button"
+          onClick={handleFormat}
+          disabled={disabled || formatting}
+          className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {formatting ? "Formatting..." : "Format"}
+          <kbd className="hidden sm:inline rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500">Shift+Alt+F</kbd>
+        </button>
+      </div>
       <CodeMirror
         value={value}
         onChange={onChange}

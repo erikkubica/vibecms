@@ -59,10 +59,10 @@ export default function CodeEditor({
   const extensions = useMemo(() => {
     const exts: Extension[] = [
       html(),
-      keymap.of([{
-        key: "Shift-Alt-f",
-        run: () => { handleFormat(); return true; },
-      }]),
+      keymap.of([
+        { key: "Shift-Alt-f", run: () => { handleFormat(); return true; } },
+        { key: "Shift-Mod-f", run: () => { handleFormat(); return true; } },
+      ]),
     ];
 
     if (variables.length > 0) {
@@ -114,7 +114,7 @@ export default function CodeEditor({
           className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {formatting ? "Formatting..." : "Format"}
-          <kbd className="hidden sm:inline rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500">Shift+Alt+F</kbd>
+          <kbd className="hidden sm:inline rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500">{navigator.platform.includes("Mac") ? "⇧⌘F" : "Shift+Alt+F"}</kbd>
         </button>
       </div>
       <CodeMirror

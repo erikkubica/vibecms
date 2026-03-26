@@ -97,6 +97,12 @@ export default function LayoutBlockEditorPage() {
     try {
       const data = await getLanguages(true);
       setLanguages(data);
+      // Default to the default language if creating new
+      if (!id && !languageCode) {
+        const defaultLang = data.find((l: Language) => l.is_default);
+        if (defaultLang) setLanguageCode(defaultLang.code);
+        else if (data.length > 0) setLanguageCode(data[0].code);
+      }
     } catch {
       // silent
     }
@@ -297,15 +303,14 @@ export default function LayoutBlockEditorPage() {
               <div className="space-y-2">
                 <Label htmlFor="language">Language</Label>
                 <Select
-                  value={languageCode || "all"}
-                  onValueChange={(v) => setLanguageCode(v === "all" ? "" : v)}
+                  value={languageCode || ""}
+                  onValueChange={(v) => setLanguageCode(v)}
                   disabled={isTheme}
                 >
                   <SelectTrigger id="language">
-                    <SelectValue placeholder="All Languages" />
+                    <SelectValue placeholder="Select language..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Languages</SelectItem>
                     {languages.map((lang) => (
                       <SelectItem key={lang.code} value={lang.code}>
                         {lang.flag} {lang.name}

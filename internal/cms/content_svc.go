@@ -5,19 +5,22 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
 // ContentService provides business logic for managing content nodes.
 type ContentService struct {
-	db *gorm.DB
+	db       *gorm.DB
+	eventBus *events.EventBus
 }
 
 // NewContentService creates a new ContentService with the given database connection.
-func NewContentService(db *gorm.DB) *ContentService {
-	return &ContentService{db: db}
+func NewContentService(db *gorm.DB, eventBus *events.EventBus) *ContentService {
+	return &ContentService{db: db, eventBus: eventBus}
 }
 
 // List retrieves a paginated list of content nodes with optional filters.
@@ -96,6 +99,17 @@ func (s *ContentService) Create(node *models.ContentNode, userID int) error {
 		return fmt.Errorf("creating content node: %w", err)
 	}
 
+	if s.eventBus != nil {
+		go s.eventBus.Publish("node.created", events.Payload{
+			"node_id":   node.ID,
+			"node_type": node.NodeType,
+			"node_title": node.Title,
+			"node_slug": node.Slug,
+			"full_url":  node.FullURL,
+			"author_id": node.AuthorID,
+		})
+	}
+
 	return nil
 }
 
@@ -171,6 +185,41 @@ func (s *ContentService) Update(id int, updates map[string]interface{}, userID i
 
 		s.db.Model(updated).Update("full_url", newFullURL)
 		updated.FullURL = newFullURL
+
+		if s.eventBus != nil {
+			go s.eventBus.Publish("node.updated", events.Payload{
+				"node_id":    updated.ID,
+				"node_type":  updated.NodeType,
+				"node_title": updated.Title,
+				"node_slug":  updated.Slug,
+				"full_url":   updated.FullURL,
+				"author_id":  updated.AuthorID,
+			})
+
+			// Check for publish/unpublish status transitions
+			if newStatus, ok := updates["status"].(string); ok {
+				if newStatus == "published" && existing.Status != "published" {
+					go s.eventBus.Publish("node.published", events.Payload{
+						"node_id":    updated.ID,
+						"node_type":  updated.NodeType,
+						"node_title": updated.Title,
+						"node_slug":  updated.Slug,
+						"full_url":   updated.FullURL,
+						"author_id":  updated.AuthorID,
+					})
+				} else if newStatus != "published" && existing.Status == "published" {
+					go s.eventBus.Publish("node.unpublished", events.Payload{
+						"node_id":    updated.ID,
+						"node_type":  updated.NodeType,
+						"node_title": updated.Title,
+						"node_slug":  updated.Slug,
+						"full_url":   updated.FullURL,
+						"author_id":  updated.AuthorID,
+					})
+				}
+			}
+		}
+
 		return updated, nil
 	}
 
@@ -179,11 +228,54 @@ func (s *ContentService) Update(id int, updates map[string]interface{}, userID i
 	if err != nil {
 		return nil, err
 	}
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("node.updated", events.Payload{
+			"node_id":   updated.ID,
+			"node_type": updated.NodeType,
+			"node_title": updated.Title,
+			"node_slug": updated.Slug,
+			"full_url":  updated.FullURL,
+			"author_id": updated.AuthorID,
+		})
+
+		// Check for publish/unpublish status transitions
+		if newStatus, ok := updates["status"].(string); ok {
+			if newStatus == "published" && existing.Status != "published" {
+				go s.eventBus.Publish("node.published", events.Payload{
+					"node_id":   updated.ID,
+					"node_type": updated.NodeType,
+					"node_title": updated.Title,
+					"node_slug": updated.Slug,
+					"full_url":  updated.FullURL,
+					"author_id": updated.AuthorID,
+				})
+			} else if newStatus != "published" && existing.Status == "published" {
+				go s.eventBus.Publish("node.unpublished", events.Payload{
+					"node_id":   updated.ID,
+					"node_type": updated.NodeType,
+					"node_title": updated.Title,
+					"node_slug": updated.Slug,
+					"full_url":  updated.FullURL,
+					"author_id": updated.AuthorID,
+				})
+			}
+		}
+	}
+
 	return updated, nil
 }
 
 // Delete performs a soft delete on a content node.
 func (s *ContentService) Delete(id int) error {
+	// Fetch node before deletion for event payload
+	var node models.ContentNode
+	if s.eventBus != nil {
+		if n, err := s.GetByID(id); err == nil {
+			node = *n
+		}
+	}
+
 	result := s.db.Delete(&models.ContentNode{}, id)
 	if result.Error != nil {
 		return fmt.Errorf("deleting content node: %w", result.Error)
@@ -191,6 +283,18 @@ func (s *ContentService) Delete(id int) error {
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("node.deleted", events.Payload{
+			"node_id":   node.ID,
+			"node_type": node.NodeType,
+			"node_title": node.Title,
+			"node_slug": node.Slug,
+			"full_url":  node.FullURL,
+			"author_id": node.AuthorID,
+		})
+	}
+
 	return nil
 }
 
@@ -290,6 +394,80 @@ func resolveURLPrefix(nodeType, lang string, db *gorm.DB) string {
 	}
 
 	return nodeType // fallback to type slug
+}
+
+// GetTranslations returns all translation siblings of the given node.
+// If the node has no translation_group_id, an empty slice is returned.
+func (s *ContentService) GetTranslations(nodeID int) ([]models.ContentNode, error) {
+	node, err := s.GetByID(nodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if node.TranslationGroupID == nil || *node.TranslationGroupID == "" {
+		return []models.ContentNode{}, nil
+	}
+
+	var translations []models.ContentNode
+	err = s.db.
+		Where("translation_group_id = ? AND id != ?", *node.TranslationGroupID, nodeID).
+		Find(&translations).Error
+	if err != nil {
+		return nil, fmt.Errorf("fetching translations: %w", err)
+	}
+
+	return translations, nil
+}
+
+// CreateTranslation clones a content node as a translation in a new language.
+func (s *ContentService) CreateTranslation(sourceID int, targetLangCode string) (*models.ContentNode, error) {
+	source, err := s.GetByID(sourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the source node has a translation_group_id
+	if source.TranslationGroupID == nil || *source.TranslationGroupID == "" {
+		groupID := uuid.New().String()
+		source.TranslationGroupID = &groupID
+		if err := s.db.Model(source).Update("translation_group_id", groupID).Error; err != nil {
+			return nil, fmt.Errorf("setting translation group on source: %w", err)
+		}
+	}
+
+	newNode := models.ContentNode{
+		Title:              fmt.Sprintf("[%s] %s", targetLangCode, source.Title),
+		Slug:               source.Slug,
+		NodeType:           source.NodeType,
+		BlocksData:         source.BlocksData,
+		FieldsData:         source.FieldsData,
+		SeoSettings:        source.SeoSettings,
+		Status:             "draft",
+		LanguageCode:       targetLangCode,
+		ParentID:           source.ParentID,
+		TranslationGroupID: source.TranslationGroupID,
+	}
+
+	newNode.FullURL = buildFullURL(&newNode, s.db)
+
+	// Handle slug conflicts by appending -2, -3, etc.
+	baseFullURL := newNode.FullURL
+	baseSlug := newNode.Slug
+	for suffix := 2; ; suffix++ {
+		var count int64
+		s.db.Model(&models.ContentNode{}).Where("full_url = ?", newNode.FullURL).Count(&count)
+		if count == 0 {
+			break
+		}
+		newNode.Slug = fmt.Sprintf("%s-%d", baseSlug, suffix)
+		newNode.FullURL = fmt.Sprintf("%s-%d", baseFullURL, suffix)
+	}
+
+	if err := s.db.Create(&newNode).Error; err != nil {
+		return nil, fmt.Errorf("creating translation node: %w", err)
+	}
+
+	return &newNode, nil
 }
 
 // collectParentSlugs recursively collects slugs from parent nodes.

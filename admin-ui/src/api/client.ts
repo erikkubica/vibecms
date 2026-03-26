@@ -22,6 +22,7 @@ export interface ContentNode {
   seo_settings: Record<string, unknown>;
   fields_data: Record<string, unknown>;
   layout_id: number | null;
+  translation_group_id: string | null;
   version: number;
   published_at: string | null;
   created_at: string;
@@ -175,6 +176,19 @@ export async function getUsers(params?: {
     `/admin/api/users?${searchParams.toString()}`
   );
   return res;
+}
+
+export async function getNodeTranslations(id: number | string): Promise<ContentNode[]> {
+  const res = await api<ApiResponse<ContentNode[]>>(`/admin/api/nodes/${id}/translations`);
+  return res.data;
+}
+
+export async function createNodeTranslation(id: number | string, languageCode: string): Promise<ContentNode> {
+  const res = await api<ApiResponse<ContentNode>>(`/admin/api/nodes/${id}/translations`, {
+    method: "POST",
+    body: JSON.stringify({ language_code: languageCode }),
+  });
+  return res.data;
 }
 
 export async function setHomepage(nodeId: number | string): Promise<void> {

@@ -54,6 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,8 @@ import {
   getTemplates,
   getTemplate,
   getLayouts,
+  getNodeTranslations,
+  createNodeTranslation,
   type ContentNode,
   type NodeType,
   type NodeTypeField,
@@ -175,6 +178,11 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
 
+  // Translations
+  const [translations, setTranslations] = useState<ContentNode[]>([]);
+  const [showCreateTranslation, setShowCreateTranslation] = useState(false);
+  const [creatingTranslation, setCreatingTranslation] = useState(false);
+
   // Block editor state
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(new Set());
   const [showRawJson, setShowRawJson] = useState(false);
@@ -239,6 +247,30 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
       cancelled = true;
     };
   }, [id, isEdit, label, basePath, navigate]);
+
+  // Load translations when editing
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    getNodeTranslations(id)
+      .then(setTranslations)
+      .catch(() => setTranslations([]));
+  }, [id, isEdit]);
+
+  async function handleCreateTranslation(langCode: string) {
+    if (!id) return;
+    setCreatingTranslation(true);
+    try {
+      const newNode = await createNodeTranslation(id, langCode);
+      toast.success(`Translation created in ${langCode}`);
+      navigate(`${basePath}/${newNode.id}/edit`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create translation";
+      toast.error(message);
+    } finally {
+      setCreatingTranslation(false);
+      setShowCreateTranslation(false);
+    }
+  }
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -925,6 +957,53 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* Translations (edit mode) */}
+          {isEdit && (
+            <Card className="rounded-xl border border-slate-200 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-xs font-medium text-slate-500">Translations</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-indigo-600 hover:text-indigo-700 px-2"
+                    onClick={() => setShowCreateTranslation(true)}
+                  >
+                    + Add
+                  </Button>
+                </div>
+                {/* Current language */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-2">
+                    <span className="text-sm">{languages.find(l => l.code === languageCode)?.flag || "🌐"}</span>
+                    <span className="text-xs font-medium text-indigo-700 flex-1">{languages.find(l => l.code === languageCode)?.name || languageCode}</span>
+                    <Badge className="bg-indigo-100 text-indigo-600 border-0 text-[10px] h-5">Current</Badge>
+                  </div>
+                  {translations.map((t) => {
+                    const lang = languages.find(l => l.code === t.language_code);
+                    return (
+                      <Link
+                        key={t.id}
+                        to={`${basePath}/${t.id}/edit`}
+                        className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
+                      >
+                        <span className="text-sm">{lang?.flag || "🌐"}</span>
+                        <span className="text-xs font-medium text-slate-700 flex-1 truncate">{lang?.name || t.language_code}</span>
+                        <Badge className={`border-0 text-[10px] h-5 ${t.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                          {t.status}
+                        </Badge>
+                      </Link>
+                    );
+                  })}
+                  {translations.length === 0 && (
+                    <p className="text-[11px] text-slate-400 text-center py-1">No translations yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </form>
 
@@ -1108,6 +1187,42 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
               {applyingTemplate ? "Applying..." : "Apply Template"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Translation dialog */}
+      <Dialog open={showCreateTranslation} onOpenChange={setShowCreateTranslation}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Create Translation</DialogTitle>
+            <DialogDescription>
+              Choose a language to create a translation of this content.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-64 overflow-y-auto py-2">
+            {languages
+              .filter((l) => l.code !== languageCode && !translations.some((t) => t.language_code === l.code))
+              .map((lang) => (
+                <button
+                  key={lang.id}
+                  type="button"
+                  onClick={() => handleCreateTranslation(lang.code)}
+                  disabled={creatingTranslation}
+                  className="flex items-center gap-3 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50"
+                >
+                  <span className="text-lg">{lang.flag}</span>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{lang.name}</p>
+                    <p className="text-xs text-slate-400">{lang.native_name}</p>
+                  </div>
+                </button>
+              ))}
+            {languages.filter((l) => l.code !== languageCode && !translations.some((t) => t.language_code === l.code)).length === 0 && (
+              <p className="text-center text-sm text-slate-400 py-4">
+                All available languages already have translations.
+              </p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -31,8 +31,62 @@ func (h *NodeHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/nodes", h.Create)
 	router.Patch("/nodes/:id", h.Update)
 	router.Delete("/nodes/:id", h.Delete)
+	router.Get("/nodes/:id/translations", h.GetTranslations)
+	router.Post("/nodes/:id/translations", h.CreateTranslation)
 	router.Post("/nodes/:id/homepage", h.SetHomepage)
 	router.Get("/homepage", h.GetHomepage)
+}
+
+// GetTranslations handles GET /nodes/:id/translations.
+func (h *NodeHandler) GetTranslations(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Node ID must be a valid integer")
+	}
+
+	translations, err := h.svc.GetTranslations(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Content node not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch translations")
+	}
+
+	return api.Success(c, translations)
+}
+
+// createTranslationRequest represents the JSON body for creating a translation.
+type createTranslationRequest struct {
+	LanguageCode string `json:"language_code"`
+}
+
+// CreateTranslation handles POST /nodes/:id/translations.
+func (h *NodeHandler) CreateTranslation(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Node ID must be a valid integer")
+	}
+
+	var req createTranslationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_BODY", "Invalid request body")
+	}
+
+	if req.LanguageCode == "" {
+		return api.ValidationError(c, map[string]string{
+			"language_code": "Language code is required",
+		})
+	}
+
+	node, err := h.svc.CreateTranslation(id, req.LanguageCode)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Content node not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "CREATE_FAILED", "Failed to create translation")
+	}
+
+	return api.Created(c, node)
 }
 
 // SetHomepage sets a node as the site homepage.

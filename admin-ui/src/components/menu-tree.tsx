@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -11,11 +11,131 @@ import {
   Globe,
   Link as LinkIcon,
   FileText,
+  Search,
+  Loader2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import type { MenuItem } from "@/api/client";
+import { getNodes, type MenuItem, type ContentNode } from "@/api/client";
+
+function NodeSearchInput({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (nodeId: number | null, title?: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ContentNode[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState<string>("");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Load initial label for existing node_id
+  useEffect(() => {
+    if (value && !selectedLabel) {
+      getNodes({ search: "", per_page: 100 })
+        .then((res) => {
+          const node = res.data.find((n) => n.id === value);
+          if (node) setSelectedLabel(`${node.title} (/${node.slug})`);
+          else setSelectedLabel(`Node #${value}`);
+        })
+        .catch(() => setSelectedLabel(`Node #${value}`));
+    }
+  }, [value]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const doSearch = useCallback((q: string) => {
+    setLoading(true);
+    getNodes({ search: q, per_page: 20 })
+      .then((res) => setResults(res.data))
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  function handleInput(val: string) {
+    setQuery(val);
+    setOpen(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(val), 250);
+  }
+
+  function handleSelect(node: ContentNode) {
+    onChange(node.id, node.title);
+    setSelectedLabel(`${node.title} (/${node.slug})`);
+    setQuery("");
+    setOpen(false);
+  }
+
+  function handleClear() {
+    onChange(null);
+    setSelectedLabel("");
+    setQuery("");
+  }
+
+  if (value && selectedLabel) {
+    return (
+      <div className="flex items-center gap-1 h-9 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm">
+        <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        <span className="flex-1 truncate text-slate-700">{selectedLabel}</span>
+        <button type="button" onClick={handleClear} className="text-slate-400 hover:text-red-500">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2 h-4 w-4 text-slate-400" />
+        <Input
+          value={query}
+          onChange={(e) => handleInput(e.target.value)}
+          onFocus={() => { if (!open) { setOpen(true); doSearch(query); } }}
+          placeholder="Search pages..."
+          className="h-9 pl-8"
+        />
+        {loading && <Loader2 className="absolute right-2.5 top-2 h-4 w-4 animate-spin text-slate-400" />}
+      </div>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+          {results.length === 0 && !loading && (
+            <p className="px-3 py-2 text-xs text-slate-400">
+              {query ? "No results found" : "Type to search pages"}
+            </p>
+          )}
+          {results.map((node) => (
+            <button
+              key={node.id}
+              type="button"
+              onClick={() => handleSelect(node)}
+              className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm hover:bg-indigo-50 transition-colors"
+            >
+              <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <span className="font-medium text-slate-800 truncate">{node.title}</span>
+              <span className="text-xs text-slate-400 truncate">/{node.slug}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const MAX_DEPTH = 3;
 
@@ -306,20 +426,16 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
                       {fi.item.item_type === "node" && (
                         <div>
                           <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Node ID
+                            Page / Content Node
                           </label>
-                          <Input
-                            type="number"
-                            value={fi.item.node_id ?? ""}
-                            onChange={(e) =>
-                              updateItemField(
-                                fi.path,
-                                "node_id",
-                                e.target.value ? Number(e.target.value) : null
-                              )
-                            }
-                            placeholder="Enter node ID"
-                            className="h-9"
+                          <NodeSearchInput
+                            value={fi.item.node_id ?? null}
+                            onChange={(nodeId, title) => {
+                              updateItemField(fi.path, "node_id", nodeId);
+                              if (title && !fi.item.title) {
+                                updateItemField(fi.path, "title", title);
+                              }
+                            }}
                           />
                         </div>
                       )}

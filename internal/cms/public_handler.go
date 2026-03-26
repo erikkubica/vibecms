@@ -142,6 +142,13 @@ func (h *PublicHandler) PageByFullURL(c *fiber.Ctx) error {
 	}
 
 	if !found {
+		// Try rendering 404 with the default layout
+		if html, ok := h.render404WithLayout(c); ok {
+			c.Set("Content-Type", "text/html; charset=utf-8")
+			c.Status(fiber.StatusNotFound)
+			return c.SendString(html)
+		}
+		// Fall back to file-based 404
 		data := PageData{
 			Title: "Page Not Found - VibeCMS",
 			User:  user,
@@ -245,6 +252,85 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 	var buf bytes.Buffer
 	if err := h.renderer.RenderLayout(&buf, layout.TemplateCode, templateData.ToMap(), blockResolver); err != nil {
 		log.Printf("WARN: layout render failed, falling back: %v", err)
+		return "", false
+	}
+
+	return buf.String(), true
+}
+
+// render404WithLayout renders a 404 page using the default layout.
+func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
+	// Get default language
+	var defaultLang models.Language
+	if err := h.db.Where("is_default = ?", true).First(&defaultLang).Error; err != nil {
+		return "", false
+	}
+
+	// Find default layout
+	var layout models.Layout
+	if err := h.db.Where("is_default = ? AND language_code = ?", true, defaultLang.Code).First(&layout).Error; err != nil {
+		return "", false
+	}
+
+	// Get languages, settings, menus
+	var languages []models.Language
+	h.db.Where("is_active = ?", true).Order("sort_order ASC").Find(&languages)
+
+	var currentLang *models.Language
+	for i := range languages {
+		if languages[i].Code == defaultLang.Code {
+			currentLang = &languages[i]
+			break
+		}
+	}
+
+	settings := h.loadSiteSettings()
+	menus := h.renderCtx.LoadMenus(defaultLang.Code, defaultLang.Code)
+
+	// Build 404 content
+	notFoundHTML := `<div class="text-center py-24">
+		<h1 class="text-6xl font-extrabold text-slate-200 mb-4">404</h1>
+		<h2 class="text-2xl font-bold text-slate-700 mb-2">Page Not Found</h2>
+		<p class="text-slate-500 mb-8">The page you are looking for does not exist or has been removed.</p>
+		<a href="/" class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Back to Home</a>
+	</div>`
+
+	appData := AppData{
+		Menus:        menus,
+		Settings:     settings,
+		Languages:    languages,
+		CurrentLang:  currentLang,
+		HeadStyles:   []string{},
+		HeadScripts:  []string{},
+		FootScripts:  []string{},
+		BlockStyles:  "",
+		BlockScripts: "",
+	}
+
+	nodeData := NodeData{
+		Title:        "Page Not Found",
+		Slug:         "404",
+		FullURL:      c.Path(),
+		BlocksHTML:   template.HTML(notFoundHTML),
+		Fields:       make(map[string]interface{}),
+		SEO:          map[string]interface{}{"title": "Page Not Found"},
+		NodeType:     "page",
+		LanguageCode: defaultLang.Code,
+	}
+
+	templateData := TemplateData{App: appData, Node: nodeData}
+
+	blockResolver := func(slug string) (string, error) {
+		lb, err := h.layoutBlockSvc.Resolve(slug, defaultLang.Code, defaultLang.Code)
+		if err != nil {
+			return "", err
+		}
+		return lb.TemplateCode, nil
+	}
+
+	var buf bytes.Buffer
+	if err := h.renderer.RenderLayout(&buf, layout.TemplateCode, templateData.ToMap(), blockResolver); err != nil {
+		log.Printf("WARN: 404 layout render failed: %v", err)
 		return "", false
 	}
 

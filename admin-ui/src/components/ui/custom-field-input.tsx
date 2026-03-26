@@ -433,7 +433,7 @@ function CustomFieldInput({
 }) {
   const inputClass =
     "rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
-  const strVal = value == null ? "" : String(value);
+  const strVal = value == null ? (field.default_value ?? "") : String(value);
 
   const input = (() => { switch (field.type) {
     case "text":
@@ -646,7 +646,7 @@ function CustomFieldInput({
       return (
         <div className="space-y-2">
           {(field.options || []).map((opt) => (
-            <label key={opt} className="flex items-center gap-2.5 cursor-pointer group">
+            <label key={opt} className="flex items-center gap-2.5 cursor-pointer group" onClick={() => onChange(opt)}>
               <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${strVal === opt ? "border-indigo-600 bg-indigo-600" : "border-slate-300 group-hover:border-slate-400"}`}>
                 {strVal === opt && <div className="h-2 w-2 rounded-full bg-white" />}
               </div>
@@ -656,7 +656,7 @@ function CustomFieldInput({
         </div>
       );
     case "checkbox": {
-      const checked: string[] = Array.isArray(value) ? (value as string[]) : [];
+      const checked: string[] = Array.isArray(value) ? (value as string[]) : (value == null && field.default_value ? [field.default_value] : []);
       return (
         <div className="space-y-2">
           {(field.options || []).map((opt) => (

@@ -1,6 +1,7 @@
 package cms
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -47,7 +48,7 @@ func (s *ContentService) List(page, perPage int, status, nodeType, langCode, sea
 
 	offset := (page - 1) * perPage
 	err := query.
-		Select("id, uuid, parent_id, node_type, status, language_code, slug, full_url, title, seo_settings, translation_group_id, version, published_at, created_at, updated_at, deleted_at").
+		Select("id, uuid, parent_id, node_type, status, language_code, slug, full_url, title, seo_settings, fields_data, translation_group_id, version, published_at, created_at, updated_at, deleted_at").
 		Order("created_at DESC").
 		Offset(offset).
 		Limit(perPage).
@@ -127,6 +128,16 @@ func (s *ContentService) Update(id int, updates map[string]interface{}, userID i
 	// Increment version
 	updates["version"] = existing.Version + 1
 
+	// Convert JSONB fields from parsed JSON (map/slice) to models.JSONB
+	for _, key := range []string{"blocks_data", "seo_settings", "fields_data"} {
+		if val, ok := updates[key]; ok && val != nil {
+			b, err := json.Marshal(val)
+			if err == nil {
+				updates[key] = models.JSONB(b)
+			}
+		}
+	}
+
 	if err := s.db.Model(existing).Updates(updates).Error; err != nil {
 		return nil, fmt.Errorf("updating content node: %w", err)
 	}
@@ -198,28 +209,87 @@ func (s *ContentService) ValidateSlugUnique(slug string, excludeID int) (bool, e
 }
 
 // buildFullURL constructs the full URL path for a content node based on its
-// language code, parent hierarchy, and slug.
-// Format: /{language_code}/{parent_slugs...}/{slug}
+// language code, node type, parent hierarchy, and slug.
+// Format for page/post: /{language_code}/{parent_slugs...}/{slug}
+// Format for custom types: /{language_code}/{node_type_slug}/{parent_slugs...}/{slug}
 // Special case: if slug is "index", full_url is /{language_code} (or / for default).
 func buildFullURL(node *models.ContentNode, db *gorm.DB) string {
-	lang := node.LanguageCode
-	if lang == "" {
-		lang = "en"
+	langCode := node.LanguageCode
+	if langCode == "" {
+		langCode = "en"
 	}
+
+	// Resolve language slug (URL segment) from language code
+	langSlug := resolveLanguageSlug(langCode, db)
 
 	// Special case for index pages
 	if node.Slug == "index" {
-		return "/" + lang
+		if langSlug == "" {
+			return "/"
+		}
+		return "/" + langSlug
 	}
 
-	// Build parent slug chain
+	// Build segment chain
 	var segments []string
+
+	// Add language slug prefix (empty if hide_prefix is on)
+	if langSlug != "" {
+		segments = append(segments, langSlug)
+	}
+
+	// Custom node types get a URL prefix (translated if available)
+	if node.NodeType != "page" && node.NodeType != "" {
+		prefix := resolveURLPrefix(node.NodeType, langCode, db)
+		if prefix != "" {
+			segments = append(segments, prefix)
+		}
+	}
+
 	if node.ParentID != nil {
-		segments = collectParentSlugs(*node.ParentID, db)
+		segments = append(segments, collectParentSlugs(*node.ParentID, db)...)
 	}
 	segments = append(segments, node.Slug)
 
-	return "/" + lang + "/" + strings.Join(segments, "/")
+	return "/" + strings.Join(segments, "/")
+}
+
+// resolveLanguageSlug returns the URL slug for a language code.
+// Returns empty string if language has hide_prefix enabled.
+// Falls back to the code itself if no language record is found.
+func resolveLanguageSlug(langCode string, db *gorm.DB) string {
+	var lang models.Language
+	if err := db.Select("slug, hide_prefix").Where("code = ?", langCode).First(&lang).Error; err != nil {
+		return langCode // fallback to code
+	}
+	if lang.HidePrefix {
+		return ""
+	}
+	if lang.Slug == "" {
+		return langCode
+	}
+	return lang.Slug
+}
+
+// resolveURLPrefix returns the URL prefix for a node type in the given language.
+// It checks the node_types table for a translated prefix. Falls back to the type slug.
+func resolveURLPrefix(nodeType, lang string, db *gorm.DB) string {
+	var nt models.NodeType
+	if err := db.Select("slug, url_prefixes").Where("slug = ?", nodeType).First(&nt).Error; err != nil {
+		return nodeType // fallback to type slug
+	}
+
+	// Parse url_prefixes JSONB
+	var prefixes map[string]string
+	if len(nt.URLPrefixes) > 0 {
+		if err := json.Unmarshal([]byte(nt.URLPrefixes), &prefixes); err == nil {
+			if p, ok := prefixes[lang]; ok && p != "" {
+				return p
+			}
+		}
+	}
+
+	return nodeType // fallback to type slug
 }
 
 // collectParentSlugs recursively collects slugs from parent nodes.

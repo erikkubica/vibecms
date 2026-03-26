@@ -26,6 +26,7 @@ func NewNodeHandler(svc *ContentService, db *gorm.DB) *NodeHandler {
 // RegisterRoutes registers all content node routes on the provided router group.
 func (h *NodeHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/nodes", h.List)
+	router.Get("/nodes/search", h.Search)
 	router.Get("/nodes/:id", h.Get)
 	router.Post("/nodes", h.Create)
 	router.Patch("/nodes/:id", h.Update)
@@ -50,6 +51,61 @@ func (h *NodeHandler) GetHomepage(c *fiber.Ctx) error {
 	h.db.Raw("SELECT value FROM site_settings WHERE key = 'homepage_node_id'").Scan(&value)
 	id, _ := strconv.Atoi(value)
 	return api.Success(c, fiber.Map{"homepage_node_id": id})
+}
+
+// Search handles GET /nodes/search for lightweight node lookup.
+// Query params: q (search term), node_type (filter by type), limit (max results, default 20)
+func (h *NodeHandler) Search(c *fiber.Ctx) error {
+	q := c.Query("q", "")
+	nodeType := c.Query("node_type", "")
+	limit, _ := strconv.Atoi(c.Query("limit", "20"))
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := h.db.Model(&models.ContentNode{}).
+		Select("id, title, slug, node_type, status, language_code").
+		Where("deleted_at IS NULL")
+
+	if q != "" {
+		searchTerm := "%" + q + "%"
+		query = query.Where("title ILIKE ? OR slug ILIKE ?", searchTerm, searchTerm)
+	}
+	if nodeType != "" {
+		query = query.Where("node_type = ?", nodeType)
+	}
+
+	var nodes []models.ContentNode
+	if err := query.Order("title ASC").Limit(limit).Find(&nodes).Error; err != nil {
+		return api.Error(c, fiber.StatusInternalServerError, "SEARCH_FAILED", "Failed to search nodes")
+	}
+
+	// Return lightweight results
+	type searchResult struct {
+		ID           int    `json:"id"`
+		Title        string `json:"title"`
+		Slug         string `json:"slug"`
+		NodeType     string `json:"node_type"`
+		Status       string `json:"status"`
+		LanguageCode string `json:"language_code"`
+	}
+
+	results := make([]searchResult, len(nodes))
+	for i, n := range nodes {
+		results[i] = searchResult{
+			ID:           n.ID,
+			Title:        n.Title,
+			Slug:         n.Slug,
+			NodeType:     n.NodeType,
+			Status:       n.Status,
+			LanguageCode: n.LanguageCode,
+		}
+	}
+
+	return api.Success(c, results)
 }
 
 // List handles GET /nodes with pagination and filtering.

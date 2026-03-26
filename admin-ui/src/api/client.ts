@@ -18,6 +18,7 @@ export interface ContentNode {
   title: string;
   blocks_data: Record<string, unknown>[];
   seo_settings: Record<string, unknown>;
+  fields_data: Record<string, unknown>;
   version: number;
   published_at: string | null;
   created_at: string;
@@ -112,6 +113,7 @@ export async function getNodes(params: {
   per_page?: number;
   status?: string;
   node_type?: string;
+  language_code?: string;
   search?: string;
 }): Promise<{ data: ContentNode[]; meta: PaginationMeta }> {
   const searchParams = new URLSearchParams();
@@ -119,6 +121,7 @@ export async function getNodes(params: {
   if (params.per_page) searchParams.set("per_page", String(params.per_page));
   if (params.status) searchParams.set("status", params.status);
   if (params.node_type) searchParams.set("node_type", params.node_type);
+  if (params.language_code) searchParams.set("language_code", params.language_code);
   if (params.search) searchParams.set("search", params.search);
 
   const res = await api<{ data: ContentNode[]; meta: PaginationMeta }>(
@@ -173,4 +176,236 @@ export async function getUsers(params?: {
 
 export async function setHomepage(nodeId: number | string): Promise<void> {
   await api<void>(`/admin/api/nodes/${nodeId}/homepage`, { method: "POST" });
+}
+
+export interface NodeTypeField {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "number" | "date" | "select" | "image" | "toggle" | "link" | "group" | "repeater" | "node" | "color" | "email" | "url" | "richtext" | "range" | "file" | "gallery" | "radio" | "checkbox";
+  required?: boolean;
+  options?: string[];            // for select, radio, checkbox types
+  placeholder?: string;          // for text, textarea, number, email, url
+  default_value?: string;        // default value for any field
+  help_text?: string;            // instructions/description shown below field
+  sub_fields?: NodeTypeField[];  // for group and repeater
+  node_type_filter?: string;     // for node selector - filter by content type
+  multiple?: boolean;            // for node selector, file - multi-select
+  min?: number;                  // for number, range
+  max?: number;                  // for number, range
+  step?: number;                 // for number, range
+  min_length?: number;           // for text, textarea
+  max_length?: number;           // for text, textarea
+  rows?: number;                 // for textarea
+  prepend?: string;              // text before input (text, number, email, url)
+  append?: string;               // text after input (text, number, email, url)
+  allowed_types?: string;        // for file - comma-separated mime types or extensions
+}
+
+export interface NodeSearchResult {
+  id: number;
+  title: string;
+  slug: string;
+  node_type: string;
+  status: string;
+  language_code: string;
+}
+
+export async function searchNodes(params: {
+  q?: string;
+  node_type?: string;
+  limit?: number;
+}): Promise<NodeSearchResult[]> {
+  const searchParams = new URLSearchParams();
+  if (params.q) searchParams.set("q", params.q);
+  if (params.node_type) searchParams.set("node_type", params.node_type);
+  if (params.limit) searchParams.set("limit", String(params.limit));
+  const res = await api<ApiResponse<NodeSearchResult[]>>(
+    `/admin/api/nodes/search?${searchParams.toString()}`
+  );
+  return res.data;
+}
+
+export interface NodeType {
+  id: number;
+  slug: string;
+  label: string;
+  icon: string;
+  description: string;
+  field_schema: NodeTypeField[];
+  url_prefixes: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getNodeTypes(): Promise<NodeType[]> {
+  const res = await api<ApiResponse<NodeType[]>>("/admin/api/node-types");
+  return res.data;
+}
+
+export async function getNodeType(id: number | string): Promise<NodeType> {
+  const res = await api<ApiResponse<NodeType>>(`/admin/api/node-types/${id}`);
+  return res.data;
+}
+
+export async function createNodeType(data: Partial<NodeType>): Promise<NodeType> {
+  const res = await api<ApiResponse<NodeType>>("/admin/api/node-types", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateNodeType(id: number | string, data: Partial<NodeType>): Promise<NodeType> {
+  const res = await api<ApiResponse<NodeType>>(`/admin/api/node-types/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteNodeType(id: number | string): Promise<void> {
+  await api<void>(`/admin/api/node-types/${id}`, { method: "DELETE" });
+}
+
+export interface Language {
+  id: number;
+  code: string;
+  slug: string;
+  name: string;
+  native_name: string;
+  flag: string;
+  is_default: boolean;
+  is_active: boolean;
+  hide_prefix: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getLanguages(activeOnly?: boolean): Promise<Language[]> {
+  const params = activeOnly ? "?active=true" : "";
+  const res = await api<ApiResponse<Language[]>>(`/admin/api/languages${params}`);
+  return res.data;
+}
+
+export async function getLanguage(id: number | string): Promise<Language> {
+  const res = await api<ApiResponse<Language>>(`/admin/api/languages/${id}`);
+  return res.data;
+}
+
+export async function createLanguage(data: Partial<Language>): Promise<Language> {
+  const res = await api<ApiResponse<Language>>("/admin/api/languages", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateLanguage(id: number | string, data: Partial<Language>): Promise<Language> {
+  const res = await api<ApiResponse<Language>>(`/admin/api/languages/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteLanguage(id: number | string): Promise<void> {
+  await api<void>(`/admin/api/languages/${id}`, { method: "DELETE" });
+}
+
+export interface BlockType {
+  id: number;
+  slug: string;
+  label: string;
+  icon: string;
+  description: string;
+  field_schema: NodeTypeField[];
+  html_template: string;
+  test_data: Record<string, unknown>;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateBlockConfig {
+  block_type_slug: string;
+  default_values: Record<string, unknown>;
+}
+
+export interface Template {
+  id: number;
+  slug: string;
+  label: string;
+  description: string;
+  block_config: TemplateBlockConfig[];
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getBlockTypes(): Promise<BlockType[]> {
+  const res = await api<ApiResponse<BlockType[]>>("/admin/api/block-types");
+  return res.data;
+}
+
+export async function getBlockType(id: number | string): Promise<BlockType> {
+  const res = await api<ApiResponse<BlockType>>(`/admin/api/block-types/${id}`);
+  return res.data;
+}
+
+export async function createBlockType(data: Partial<BlockType>): Promise<BlockType> {
+  const res = await api<ApiResponse<BlockType>>("/admin/api/block-types", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateBlockType(id: number | string, data: Partial<BlockType>): Promise<BlockType> {
+  const res = await api<ApiResponse<BlockType>>(`/admin/api/block-types/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteBlockType(id: number | string): Promise<void> {
+  await api<void>(`/admin/api/block-types/${id}`, { method: "DELETE" });
+}
+
+export async function previewBlockTemplate(htmlTemplate: string, testData: Record<string, unknown>): Promise<string> {
+  const res = await api<{ html: string }>(`/admin/api/block-types/preview`, {
+    method: "POST",
+    body: JSON.stringify({ html_template: htmlTemplate, test_data: testData }),
+  });
+  return res.html;
+}
+
+export async function getTemplates(): Promise<Template[]> {
+  const res = await api<ApiResponse<Template[]>>("/admin/api/templates");
+  return res.data;
+}
+
+export async function getTemplate(id: number | string): Promise<Template> {
+  const res = await api<ApiResponse<Template>>(`/admin/api/templates/${id}`);
+  return res.data;
+}
+
+export async function createTemplate(data: Partial<Template>): Promise<Template> {
+  const res = await api<ApiResponse<Template>>("/admin/api/templates", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateTemplate(id: number | string, data: Partial<Template>): Promise<Template> {
+  const res = await api<ApiResponse<Template>>(`/admin/api/templates/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteTemplate(id: number | string): Promise<void> {
+  await api<void>(`/admin/api/templates/${id}`, { method: "DELETE" });
 }

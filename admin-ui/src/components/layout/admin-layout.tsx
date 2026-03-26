@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
   Newspaper,
+  Boxes,
+  Square,
+  LayoutTemplate,
+  Globe,
   Image,
   Settings,
   LogOut,
@@ -11,6 +15,15 @@ import {
   X,
   ChevronRight,
   User,
+  ShoppingBag,
+  Calendar,
+  Users,
+  Folder,
+  Bookmark,
+  Tag,
+  Star,
+  Heart,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +35,42 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
+import { useAdminLanguage } from "@/hooks/use-admin-language";
+import { getNodeTypes, type NodeType } from "@/api/client";
 
-const navItems = [
+const iconMap: Record<string, LucideIcon> = {
+  "file-text": FileText,
+  "newspaper": Newspaper,
+  "shopping-bag": ShoppingBag,
+  "calendar": Calendar,
+  "users": Users,
+  "folder": Folder,
+  "bookmark": Bookmark,
+  "tag": Tag,
+  "star": Star,
+  "heart": Heart,
+  "boxes": Boxes,
+  "image": Image,
+};
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  disabled?: boolean;
+}
+
+const staticNavTop: NavItem[] = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/pages", label: "Pages", icon: FileText },
   { to: "/admin/posts", label: "Posts", icon: Newspaper },
+];
+
+const staticNavBottom: NavItem[] = [
+  { to: "/admin/block-types", label: "Block Types", icon: Square },
+  { to: "/admin/templates", label: "Templates", icon: LayoutTemplate },
+  { to: "/admin/languages", label: "Languages", icon: Globe },
+  { to: "/admin/content-types", label: "Content Types", icon: Boxes },
   { to: "/admin/media", label: "Media", icon: Image, disabled: true },
   { to: "/admin/settings", label: "Settings", icon: Settings, disabled: true },
 ];
@@ -39,9 +83,27 @@ function getBreadcrumb(pathname: string): string[] {
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [customTypes, setCustomTypes] = useState<NodeType[]>([]);
   const { user, logout } = useAuth();
+  const { languages: adminLangs, currentCode, currentLanguage, setCurrentCode } = useAdminLanguage();
   const location = useLocation();
   const breadcrumbs = getBreadcrumb(location.pathname);
+
+  useEffect(() => {
+    getNodeTypes()
+      .then((types) => {
+        setCustomTypes(types.filter((t) => t.slug !== "page" && t.slug !== "post"));
+      })
+      .catch(() => {});
+  }, []);
+
+  const customNavItems: NavItem[] = customTypes.map((t) => ({
+    to: `/admin/content/${t.slug}`,
+    label: t.label,
+    icon: iconMap[t.icon] || FileText,
+  }));
+
+  const navItems: NavItem[] = [...staticNavTop, ...customNavItems, ...staticNavBottom];
 
   const sidebarWidth = collapsed ? "w-16" : "w-64";
 
@@ -173,6 +235,39 @@ export default function AdminLayout() {
             </nav>
           </div>
 
+          <div className="flex items-center gap-3">
+            {/* Language picker */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 rounded-lg border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                  <Globe className="h-4 w-4 text-slate-400" />
+                  {currentCode === "all" ? "All languages" : (
+                    <>{currentLanguage?.flag} {currentLanguage?.name || currentCode}</>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 shadow-md">
+                <DropdownMenuItem
+                  onClick={() => setCurrentCode("all")}
+                  className={currentCode === "all" ? "bg-indigo-50 text-indigo-700" : ""}
+                >
+                  <Globe className="mr-2 h-4 w-4" />
+                  All languages
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {adminLangs.map((lang) => (
+                  <DropdownMenuItem
+                    key={lang.code}
+                    onClick={() => setCurrentCode(lang.code)}
+                    className={currentCode === lang.code ? "bg-indigo-50 text-indigo-700" : ""}
+                  >
+                    <span className="mr-2">{lang.flag}</span>
+                    {lang.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2">
@@ -199,6 +294,7 @@ export default function AdminLayout() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </header>
 
         {/* Page content */}

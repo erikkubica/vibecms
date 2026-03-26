@@ -18,29 +18,11 @@
 
         <!-- Blocks Content -->
         <div class="prose prose-slate prose-lg max-w-none">
-            {{range .Blocks}}
-                {{if eq (index . "type") "text"}}
-                    <div class="mb-8">
-                        {{safeHTML (index . "body")}}
-                    </div>
-                {{else if eq (index . "type") "hero"}}
-                    <div class="mb-12 bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-10 text-white">
-                        <h2 class="text-3xl font-bold mb-3">{{index . "title"}}</h2>
-                        {{if index . "subtitle"}}
-                        <p class="text-lg text-primary-100">{{index . "subtitle"}}</p>
-                        {{end}}
-                    </div>
-                {{else}}
-                    <div class="mb-8 bg-slate-100 rounded-xl p-6 border border-slate-200">
-                        <div class="flex items-center space-x-2 mb-3">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-slate-200 text-slate-600">{{index . "type"}}</span>
-                            <span class="text-xs text-slate-400">block</span>
-                        </div>
-                        <pre class="text-sm text-slate-700 overflow-x-auto"><code>{{json .}}</code></pre>
-                    </div>
-                {{end}}
+            {{range .RenderedBlocks}}
+                {{safeHTML .}}
             {{end}}
 
+            {{if not .RenderedBlocks}}
             {{if not .Blocks}}
             <div class="text-center py-12 text-slate-400">
                 <svg class="w-12 h-12 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,6 +31,7 @@
                 <p class="text-lg font-medium">No content blocks</p>
                 <p class="text-sm mt-1">This page has no content blocks defined yet.</p>
             </div>
+            {{end}}
             {{end}}
         </div>
 

@@ -63,6 +63,7 @@ type ContentNode struct {
 	Title              string         `gorm:"column:title;type:varchar(255);not null" json:"title"`
 	BlocksData         JSONB          `gorm:"column:blocks_data;type:jsonb;not null;default:'[]'" json:"blocks_data"`
 	SeoSettings        JSONB          `gorm:"column:seo_settings;type:jsonb;not null;default:'{}'" json:"seo_settings"`
+	FieldsData         JSONB          `gorm:"column:fields_data;type:jsonb;not null;default:'{}'" json:"fields_data"`
 	TranslationGroupID *string        `gorm:"column:translation_group_id;type:uuid" json:"translation_group_id,omitempty"`
 	Version            int            `gorm:"column:version;not null;default:1" json:"version"`
 	PublishedAt        *time.Time     `gorm:"column:published_at" json:"published_at,omitempty"`

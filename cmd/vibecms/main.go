@@ -73,6 +73,10 @@ func main() {
 	// Create services.
 	sessionSvc := auth.NewSessionService(database, cfg.SessionExpiryHours)
 	contentSvc := cms.NewContentService(database)
+	nodeTypeSvc := cms.NewNodeTypeService(database)
+	langSvc := cms.NewLanguageService(database)
+	blockTypeSvc := cms.NewBlockTypeService(database)
+	templateSvc := cms.NewTemplateService(database)
 	isDev := cfg.AppEnv == "development"
 	renderer := rendering.NewTemplateRenderer("ui/templates", isDev)
 
@@ -80,6 +84,10 @@ func main() {
 	authHandler := auth.NewAuthHandler(database, sessionSvc)
 	userHandler := auth.NewUserHandler(database)
 	nodeHandler := cms.NewNodeHandler(contentSvc, database)
+	nodeTypeHandler := cms.NewNodeTypeHandler(nodeTypeSvc)
+	langHandler := cms.NewLanguageHandler(langSvc)
+	blockTypeHandler := cms.NewBlockTypeHandler(blockTypeSvc)
+	templateHandler := cms.NewTemplateHandler(templateSvc)
 	healthHandler := api.NewHealthHandler(database)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, renderer)
@@ -100,6 +108,10 @@ func main() {
 	adminAPI := app.Group("/admin/api", auth.AuthRequired(sessionSvc))
 	userHandler.RegisterRoutes(adminAPI)
 	nodeHandler.RegisterRoutes(adminAPI)
+	nodeTypeHandler.RegisterRoutes(adminAPI)
+	langHandler.RegisterRoutes(adminAPI)
+	blockTypeHandler.RegisterRoutes(adminAPI)
+	templateHandler.RegisterRoutes(adminAPI)
 
 	// --- Admin SPA (serve built React app) ---
 	app.Static("/admin/assets", "./admin-ui/dist/assets")

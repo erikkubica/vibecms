@@ -2,8 +2,12 @@ package cms
 
 import (
 	"encoding/json"
+	"fmt"
+	"html/template"
 	"log"
+	"os"
 	"strconv"
+	"strings"
 
 	"vibecms/internal/auth"
 	"vibecms/internal/models"
@@ -15,13 +19,14 @@ import (
 
 // PageData holds all data passed to public page templates.
 type PageData struct {
-	Title     string
-	User      *models.User
-	Node      *models.ContentNode
-	Nodes     []models.ContentNode
-	Blocks    []map[string]interface{}
-	FlashMsg  string
-	FlashType string // "success" or "error"
+	Title          string
+	User           *models.User
+	Node           *models.ContentNode
+	Nodes          []models.ContentNode
+	Blocks         []map[string]interface{}
+	RenderedBlocks []string
+	FlashMsg       string
+	FlashType      string // "success" or "error"
 }
 
 // PublicHandler serves the public-facing HTML pages.
@@ -43,8 +48,8 @@ func NewPublicHandler(db *gorm.DB, renderer *rendering.TemplateRenderer, session
 // RegisterRoutes registers public page routes on the Fiber app.
 func (h *PublicHandler) RegisterRoutes(app *fiber.App) {
 	app.Get("/", h.HomePage)
-	app.Get("/:slug", h.PageBySlug)
-	app.Get("/:lang/:slug", h.PageByLangSlug)
+	// Catch-all for public pages: match by full_url stored in DB
+	app.Get("/*", h.PageByFullURL)
 }
 
 // HomePage renders the public homepage. If a homepage node is configured in
@@ -59,11 +64,13 @@ func (h *PublicHandler) HomePage(c *fiber.Ctx) error {
 			var node models.ContentNode
 			if err := h.db.Where("id = ? AND status = ?", homepageID, "published").First(&node).Error; err == nil {
 				blocks := parseBlocks(node.BlocksData)
+				renderedBlocks := h.renderBlocks(blocks)
 				data := PageData{
-					Title:  node.Title + " - VibeCMS",
-					User:   user,
-					Node:   &node,
-					Blocks: blocks,
+					Title:          node.Title + " - VibeCMS",
+					User:           user,
+					Node:           &node,
+					Blocks:         blocks,
+					RenderedBlocks: renderedBlocks,
 				}
 				c.Set("Content-Type", "text/html; charset=utf-8")
 				return h.renderer.RenderPage(c, "public/page.html", data)
@@ -88,31 +95,28 @@ func (h *PublicHandler) HomePage(c *fiber.Ctx) error {
 	return h.renderer.RenderPage(c, "public/home.html", data)
 }
 
-// PageBySlug renders a content node page by its slug.
-func (h *PublicHandler) PageBySlug(c *fiber.Ctx) error {
-	slug := c.Params("slug")
-	return h.renderNodePage(c, slug, "")
-}
-
-// PageByLangSlug renders a content node page by language code and slug.
-func (h *PublicHandler) PageByLangSlug(c *fiber.Ctx) error {
-	lang := c.Params("lang")
-	slug := c.Params("slug")
-	return h.renderNodePage(c, slug, lang)
-}
-
-// renderNodePage fetches and renders a content node by slug and optional language.
-func (h *PublicHandler) renderNodePage(c *fiber.Ctx, slug, lang string) error {
+// PageByFullURL looks up a content node by matching the request path against full_url.
+// This handles all URL patterns: /{lang-slug}/{slug}, /{lang-slug}/{type-prefix}/{slug}, etc.
+// For languages with hide_prefix, both /test and /en/test resolve to the same page.
+func (h *PublicHandler) PageByFullURL(c *fiber.Ctx) error {
 	user := h.currentUser(c)
+	path := "/" + c.Params("*")
 
-	query := h.db.Where("slug = ? AND status = ? AND deleted_at IS NULL", slug, "published")
-	if lang != "" {
-		query = query.Where("language_code = ?", lang)
+	// Strip trailing slash for consistency (but keep "/" as-is)
+	if len(path) > 1 && path[len(path)-1] == '/' {
+		path = path[:len(path)-1]
 	}
 
-	var node models.ContentNode
-	if err := query.First(&node).Error; err != nil {
-		// Node not found — render page template without a node (shows 404).
+	node, found := h.findNodeByURL(path)
+
+	if !found {
+		// Try alternate forms for hide_prefix languages:
+		// 1. If path looks like /en/slug, try /slug (hide_prefix match)
+		// 2. If path looks like /slug, try /{lang-slug}/slug for each hide_prefix language
+		node, found = h.findNodeWithPrefixFallback(path)
+	}
+
+	if !found {
 		data := PageData{
 			Title: "Page Not Found - VibeCMS",
 			User:  user,
@@ -123,16 +127,310 @@ func (h *PublicHandler) renderNodePage(c *fiber.Ctx, slug, lang string) error {
 	}
 
 	blocks := parseBlocks(node.BlocksData)
+	renderedBlocks := h.renderBlocks(blocks)
 
 	data := PageData{
-		Title:  node.Title + " - VibeCMS",
-		User:   user,
-		Node:   &node,
-		Blocks: blocks,
+		Title:          node.Title + " - VibeCMS",
+		User:           user,
+		Node:           node,
+		Blocks:         blocks,
+		RenderedBlocks: renderedBlocks,
 	}
 
 	c.Set("Content-Type", "text/html; charset=utf-8")
 	return h.renderer.RenderPage(c, "public/page.html", data)
+}
+
+// renderBlocks renders each block's HTML template with its field values.
+func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
+	// Fetch all block types
+	var blockTypes []models.BlockType
+	h.db.Find(&blockTypes)
+	btMap := make(map[string]models.BlockType)
+	for _, bt := range blockTypes {
+		btMap[bt.Slug] = bt
+	}
+
+	var rendered []string
+	for _, block := range blocks {
+		blockType, _ := block["type"].(string)
+		fields, _ := block["fields"].(map[string]interface{})
+		if fields == nil {
+			fields = block // fallback for old format
+		}
+
+		bt, ok := btMap[blockType]
+		if !ok || bt.HTMLTemplate == "" {
+			// Fallback: render raw JSON debug block
+			jsonBytes, _ := json.MarshalIndent(fields, "", "  ")
+			rendered = append(rendered, fmt.Sprintf(
+				`<div class="mb-8 bg-slate-50 rounded-xl p-6 border border-slate-200">
+					<div class="flex items-center gap-2 mb-3">
+						<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-200 text-slate-700">%s</span>
+						<span class="text-xs text-slate-400">No template defined</span>
+					</div>
+					<pre class="text-sm text-slate-600 overflow-x-auto bg-white rounded-lg p-4 border border-slate-200"><code>%s</code></pre>
+				</div>`, blockType, string(jsonBytes)))
+			continue
+		}
+
+		// Check for theme file override
+		tmplContent := bt.HTMLTemplate
+		themeFile := fmt.Sprintf("themes/default/blocks/%s.html", blockType)
+		if fileContent, err := os.ReadFile(themeFile); err == nil {
+			tmplContent = string(fileContent)
+		}
+
+		// Hydrate node references — resolve node selector fields to full node data
+		h.hydrateFields(fields)
+
+		// Auto-mark richtext fields as template.HTML so they render unescaped.
+		// Also walk repeater rows to mark nested richtext fields.
+		markRichTextFields(fields, bt.FieldSchema)
+
+		// Execute template with field values and custom functions
+		tmpl, err := template.New(blockType).Funcs(template.FuncMap{
+			"safeHTML": func(s interface{}) template.HTML {
+				return template.HTML(fmt.Sprintf("%v", s))
+			},
+		}).Parse(tmplContent)
+		if err != nil {
+			rendered = append(rendered, fmt.Sprintf(`<div class="mb-4 text-red-500 text-sm">Template error in %s: %v</div>`, blockType, err))
+			continue
+		}
+
+		var buf strings.Builder
+		if err := tmpl.Execute(&buf, fields); err != nil {
+			rendered = append(rendered, fmt.Sprintf(`<div class="mb-4 text-red-500 text-sm">Render error in %s: %v</div>`, blockType, err))
+			continue
+		}
+
+		rendered = append(rendered, buf.String())
+	}
+	return rendered
+}
+
+// hydrateFields walks through field values and hydrates node references.
+// A node reference is a map with an "id" key (single node selector) or
+// an array of such maps (multi node selector). Each reference is replaced
+// with full node data including flattened fields_data.
+func (h *PublicHandler) hydrateFields(fields map[string]interface{}) {
+	for key, val := range fields {
+		switch v := val.(type) {
+		case map[string]interface{}:
+			// Single node reference: {"id": 5, "title": "..."}
+			if _, hasID := v["id"]; hasID {
+				fields[key] = h.hydrateNodeRef(v)
+			}
+		case []interface{}:
+			// Array: could be multi node selector or repeater rows
+			if len(v) > 0 {
+				if first, ok := v[0].(map[string]interface{}); ok {
+					if _, hasID := first["id"]; hasID {
+						// Multi node selector: hydrate each
+						for i, item := range v {
+							if m, ok := item.(map[string]interface{}); ok {
+								v[i] = h.hydrateNodeRef(m)
+							}
+						}
+						fields[key] = v
+					} else {
+						// Repeater rows: recursively hydrate each row
+						for _, item := range v {
+							if m, ok := item.(map[string]interface{}); ok {
+								h.hydrateFields(m)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// fieldSchemaDef represents a field definition from the block type's field_schema.
+type fieldSchemaDef struct {
+	Key       string           `json:"key"`
+	Type      string           `json:"type"`
+	SubFields []fieldSchemaDef `json:"sub_fields"`
+}
+
+// markRichTextFields walks field values and converts richtext/textarea HTML strings
+// to template.HTML so Go's html/template does not escape them.
+// It uses the block type's field_schema to identify which fields are richtext.
+func markRichTextFields(fields map[string]interface{}, schema models.JSONB) {
+	var defs []fieldSchemaDef
+	if err := json.Unmarshal(schema, &defs); err != nil {
+		return
+	}
+	applyRichTextMarking(fields, defs)
+}
+
+// applyRichTextMarking recursively walks fields and marks richtext values as template.HTML.
+func applyRichTextMarking(fields map[string]interface{}, defs []fieldSchemaDef) {
+	for _, def := range defs {
+		val, ok := fields[def.Key]
+		if !ok || val == nil {
+			continue
+		}
+		switch def.Type {
+		case "richtext":
+			// Convert string HTML to template.HTML to prevent escaping
+			if s, ok := val.(string); ok {
+				fields[def.Key] = template.HTML(s)
+			}
+		case "group":
+			// Recurse into group sub-fields
+			if m, ok := val.(map[string]interface{}); ok && len(def.SubFields) > 0 {
+				applyRichTextMarking(m, def.SubFields)
+			}
+		case "repeater":
+			// Recurse into each repeater row
+			if arr, ok := val.([]interface{}); ok && len(def.SubFields) > 0 {
+				for _, item := range arr {
+					if m, ok := item.(map[string]interface{}); ok {
+						applyRichTextMarking(m, def.SubFields)
+					}
+				}
+			}
+		}
+	}
+}
+
+// hydrateNodeRef takes a lightweight node reference {"id": 5, "title": "..."}
+// and returns a fully hydrated map with all node fields + flattened fields_data.
+// Template can then use {{.title}}, {{.slug}}, {{.position}}, {{.bio}}, etc.
+func (h *PublicHandler) hydrateNodeRef(ref map[string]interface{}) map[string]interface{} {
+	idVal, ok := ref["id"]
+	if !ok {
+		return ref
+	}
+
+	// Parse ID (could be float64 from JSON)
+	var nodeID int
+	switch id := idVal.(type) {
+	case float64:
+		nodeID = int(id)
+	case int:
+		nodeID = id
+	case json.Number:
+		n, _ := id.Int64()
+		nodeID = int(n)
+	default:
+		return ref
+	}
+
+	if nodeID == 0 {
+		return ref
+	}
+
+	var node models.ContentNode
+	if err := h.db.First(&node, nodeID).Error; err != nil {
+		return ref
+	}
+
+	// Build hydrated map with core node fields
+	hydrated := map[string]interface{}{
+		"id":            node.ID,
+		"uuid":          node.UUID,
+		"title":         node.Title,
+		"slug":          node.Slug,
+		"full_url":      node.FullURL,
+		"node_type":     node.NodeType,
+		"status":        node.Status,
+		"language_code": node.LanguageCode,
+		"version":       node.Version,
+		"created_at":    node.CreatedAt,
+		"updated_at":    node.UpdatedAt,
+	}
+
+	if node.PublishedAt != nil {
+		hydrated["published_at"] = *node.PublishedAt
+	}
+
+	// Flatten fields_data into the hydrated map so custom fields are directly accessible
+	if len(node.FieldsData) > 0 {
+		var fieldsData map[string]interface{}
+		if err := json.Unmarshal([]byte(node.FieldsData), &fieldsData); err == nil {
+			// Look up node type schema to mark richtext fields
+			var nodeType models.NodeType
+			if err := h.db.Where("slug = ?", node.NodeType).First(&nodeType).Error; err == nil {
+				markRichTextFields(fieldsData, nodeType.FieldSchema)
+			}
+			for k, v := range fieldsData {
+				hydrated[k] = v
+			}
+		}
+	}
+
+	// Also parse and flatten blocks_data for advanced use
+	if len(node.BlocksData) > 0 {
+		var blocksData []map[string]interface{}
+		if err := json.Unmarshal([]byte(node.BlocksData), &blocksData); err == nil {
+			hydrated["blocks"] = blocksData
+		}
+	}
+
+	return hydrated
+}
+
+// findNodeByURL does a direct full_url lookup.
+func (h *PublicHandler) findNodeByURL(path string) (*models.ContentNode, bool) {
+	var node models.ContentNode
+	if err := h.db.Where("full_url = ? AND status = ? AND deleted_at IS NULL", path, "published").First(&node).Error; err != nil {
+		return nil, false
+	}
+	return &node, true
+}
+
+// findNodeWithPrefixFallback handles both directions for hide_prefix languages:
+// - /en/test -> tries /test (for when hide_prefix is ON but user typed with prefix)
+// - /test -> tries /en/test (for when hide_prefix is OFF but URL has no prefix)
+func (h *PublicHandler) findNodeWithPrefixFallback(path string) (*models.ContentNode, bool) {
+	// Get all languages with hide_prefix enabled
+	var hiddenLangs []models.Language
+	h.db.Where("hide_prefix = ?", true).Find(&hiddenLangs)
+
+	// Get all active languages for the reverse lookup
+	var allLangs []models.Language
+	h.db.Where("is_active = ?", true).Find(&allLangs)
+
+	// Case 1: path is /en/something — check if "en" is a language slug with hide_prefix,
+	// meaning the stored URL is just /something
+	parts := strings.SplitN(strings.TrimPrefix(path, "/"), "/", 2)
+	if len(parts) >= 2 {
+		firstSegment := parts[0]
+		rest := "/" + parts[1]
+		for _, lang := range hiddenLangs {
+			if lang.Slug == firstSegment || lang.Code == firstSegment {
+				if node, found := h.findNodeByURL(rest); found {
+					return node, true
+				}
+			}
+		}
+	}
+
+	// Case 2: path is /something — try prepending each hide_prefix language slug
+	for _, lang := range hiddenLangs {
+		prefixed := "/" + lang.Slug + path
+		if node, found := h.findNodeByURL(prefixed); found {
+			return node, true
+		}
+	}
+
+	// Case 3: path is /something — try prepending any active language slug
+	// (handles case where URL was built without prefix but hide_prefix is now off)
+	for _, lang := range allLangs {
+		if lang.HidePrefix {
+			continue // already tried above
+		}
+		prefixed := "/" + lang.Slug + path
+		if node, found := h.findNodeByURL(prefixed); found {
+			return node, true
+		}
+	}
+
+	return nil, false
 }
 
 // currentUser attempts to retrieve the logged-in user from the session cookie.

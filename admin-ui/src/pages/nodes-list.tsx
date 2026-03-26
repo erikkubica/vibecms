@@ -8,7 +8,9 @@ import {
   Trash2,
   FileText,
   Home,
+  Globe,
 } from "lucide-react";
+import { useAdminLanguage } from "@/hooks/use-admin-language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +47,7 @@ import {
 } from "@/api/client";
 
 interface NodesListProps {
-  nodeType: "page" | "post";
+  nodeType: string;
 }
 
 function statusBadgeClass(status: string): string {
@@ -62,9 +64,12 @@ function statusBadgeClass(status: string): string {
 }
 
 export default function NodesListPage({ nodeType }: NodesListProps) {
-  const label = nodeType === "page" ? "Page" : "Post";
-  const labelPlural = nodeType === "page" ? "Pages" : "Posts";
-  const basePath = nodeType === "page" ? "/admin/pages" : "/admin/posts";
+  const label = nodeType === "page" ? "Page" : nodeType === "post" ? "Post" : nodeType.charAt(0).toUpperCase() + nodeType.slice(1);
+  const labelPlural = nodeType === "page" ? "Pages" : nodeType === "post" ? "Posts" : label + "s";
+  const basePath = nodeType === "page" ? "/admin/pages" : nodeType === "post" ? "/admin/posts" : `/admin/content/${nodeType}`;
+
+  const { languages, currentCode: globalLangCode } = useAdminLanguage();
+  const [langFilter, setLangFilter] = useState<string>("global");
 
   const [nodes, setNodes] = useState<ContentNode[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
@@ -75,6 +80,11 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
   const [deleteTarget, setDeleteTarget] = useState<ContentNode | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchDebounce, setSearchDebounce] = useState("");
+
+  // Resolve effective language code: "global" uses the top-bar setting, "all" shows everything
+  const effectiveLangCode = langFilter === "global"
+    ? (globalLangCode === "all" ? undefined : globalLangCode)
+    : langFilter === "all" ? undefined : langFilter;
 
   // Debounce search input
   useEffect(() => {
@@ -90,6 +100,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
         per_page: 20,
         node_type: nodeType,
         status: status === "all" ? undefined : status,
+        language_code: effectiveLangCode || undefined,
         search: searchDebounce || undefined,
       });
       setNodes(res.data);
@@ -99,11 +110,11 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
     } finally {
       setLoading(false);
     }
-  }, [page, nodeType, status, searchDebounce, labelPlural]);
+  }, [page, nodeType, status, effectiveLangCode, searchDebounce, labelPlural]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchDebounce, status, nodeType]);
+  }, [searchDebounce, status, nodeType, effectiveLangCode]);
 
   useEffect(() => {
     fetchNodes();
@@ -159,6 +170,23 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={langFilter} onValueChange={setLangFilter}>
+          <SelectTrigger className="w-full rounded-lg border-slate-300 sm:w-48">
+            <Globe className="mr-1.5 h-4 w-4 text-slate-400" />
+            <SelectValue placeholder="Language" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="global">
+              {globalLangCode === "all" ? "All (global)" : `Global (${globalLangCode})`}
+            </SelectItem>
+            <SelectItem value="all">All languages</SelectItem>
+            {languages.map((lang) => (
+              <SelectItem key={lang.code} value={lang.code}>
+                {lang.flag} {lang.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -194,6 +222,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
                 <TableRow className="bg-slate-50 hover:bg-slate-50">
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Title</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider lg:table-cell">Lang</TableHead>
                   <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider md:table-cell">Slug</TableHead>
                   <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider sm:table-cell">
                     Updated
@@ -224,6 +253,16 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
                       <Badge className={`${statusBadgeClass(node.status)} border-0 font-medium`}>
                         {node.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden px-6 py-4 text-sm lg:table-cell">
+                      {(() => {
+                        const lang = languages.find((l) => l.code === node.language_code);
+                        return lang ? (
+                          <span className="text-slate-600" title={lang.name}>{lang.flag} {lang.code.toUpperCase()}</span>
+                        ) : (
+                          <span className="text-slate-400 font-mono">{node.language_code}</span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="hidden px-6 py-4 text-sm text-slate-500 md:table-cell">
                       /{node.slug}

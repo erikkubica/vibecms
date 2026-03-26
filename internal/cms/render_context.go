@@ -5,6 +5,8 @@ import (
 	"html/template"
 	"log"
 
+	"gorm.io/gorm"
+
 	"vibecms/internal/models"
 )
 
@@ -96,6 +98,7 @@ func languagesToMaps(langs []models.Language) []map[string]interface{} {
 
 // RenderContext builds template data for layout rendering.
 type RenderContext struct {
+	db             *gorm.DB
 	layoutSvc      *LayoutService
 	layoutBlockSvc *LayoutBlockService
 	menuSvc        *MenuService
@@ -103,8 +106,9 @@ type RenderContext struct {
 }
 
 // NewRenderContext creates a new RenderContext.
-func NewRenderContext(layoutSvc *LayoutService, lbSvc *LayoutBlockService, menuSvc *MenuService, themeAssets *ThemeAssetRegistry) *RenderContext {
+func NewRenderContext(db *gorm.DB, layoutSvc *LayoutService, lbSvc *LayoutBlockService, menuSvc *MenuService, themeAssets *ThemeAssetRegistry) *RenderContext {
 	return &RenderContext{
+		db:             db,
 		layoutSvc:      layoutSvc,
 		layoutBlockSvc: lbSvc,
 		menuSvc:        menuSvc,
@@ -177,34 +181,43 @@ func (rc *RenderContext) LoadMenus(languageID *int) map[string]interface{} {
 		if err != nil {
 			continue
 		}
-		menus[slug] = menuToMap(menu)
+		menus[slug] = rc.menuToMap(menu)
 	}
 	return menus
 }
 
 // menuToMap converts a Menu struct to a snake_case map for template access.
-func menuToMap(menu *models.Menu) map[string]interface{} {
+func (rc *RenderContext) menuToMap(menu *models.Menu) map[string]interface{} {
 	return map[string]interface{}{
 		"id":          menu.ID,
 		"slug":        menu.Slug,
 		"name":        menu.Name,
 		"language_id": menu.LanguageID,
-		"items":       menuItemsToMaps(menu.Items),
+		"items":       rc.menuItemsToMaps(menu.Items),
 	}
 }
 
 // menuItemsToMaps converts MenuItem structs to snake_case maps recursively.
-func menuItemsToMaps(items []models.MenuItem) []map[string]interface{} {
+// For "node" type items, resolves the URL from the content node's full_url.
+func (rc *RenderContext) menuItemsToMaps(items []models.MenuItem) []map[string]interface{} {
 	result := make([]map[string]interface{}, 0, len(items))
 	for _, item := range items {
+		url := item.URL
+		// Resolve URL for node-type items from the content node
+		if item.ItemType == "node" && item.NodeID != nil {
+			var node models.ContentNode
+			if err := rc.db.Select("full_url").First(&node, *item.NodeID).Error; err == nil {
+				url = node.FullURL
+			}
+		}
 		m := map[string]interface{}{
 			"id":        item.ID,
 			"title":     item.Title,
 			"item_type": item.ItemType,
-			"url":       item.URL,
+			"url":       url,
 			"target":    item.Target,
 			"css_class": item.CSSClass,
-			"children":  menuItemsToMaps(item.Children),
+			"children":  rc.menuItemsToMaps(item.Children),
 		}
 		if item.NodeID != nil {
 			m["node_id"] = *item.NodeID

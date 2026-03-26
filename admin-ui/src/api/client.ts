@@ -529,7 +529,7 @@ export async function detachLayoutBlock(id: number | string): Promise<LayoutBloc
 export interface MenuItem {
   id?: number;
   title: string;
-  item_type: "node" | "url" | "anchor";
+  item_type: "node" | "custom";
   node_id?: number | null;
   url?: string;
   target: string;

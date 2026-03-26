@@ -41,8 +41,7 @@ function newMenuItem(type: MenuItem["item_type"]): MenuItem {
     css_class: "",
     children: [],
   };
-  if (type === "url") base.url = "";
-  if (type === "anchor") base.url = "";
+  if (type === "custom") base.url = "";
   if (type === "node") base.node_id = null;
   return base;
 }
@@ -218,15 +217,6 @@ export default function MenuEditorPage() {
               variant="outline"
               size="sm"
               className="gap-1.5"
-              onClick={() => addItem("url")}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              Custom URL
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
               onClick={() => addItem("node")}
             >
               <LinkIcon className="h-3.5 w-3.5" />
@@ -236,10 +226,10 @@ export default function MenuEditorPage() {
               variant="outline"
               size="sm"
               className="gap-1.5"
-              onClick={() => addItem("anchor")}
+              onClick={() => addItem("custom")}
             >
-              <Hash className="h-3.5 w-3.5" />
-              Anchor
+              <Globe className="h-3.5 w-3.5" />
+              Custom URL
             </Button>
           </div>
 
@@ -263,14 +253,6 @@ export default function MenuEditorPage() {
                 variant="ghost"
                 size="sm"
                 className="text-xs"
-                onClick={() => addItem("url")}
-              >
-                Add URL
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
                 onClick={() => addItem("node")}
               >
                 Add Page
@@ -279,9 +261,9 @@ export default function MenuEditorPage() {
                 variant="ghost"
                 size="sm"
                 className="text-xs"
-                onClick={() => addItem("anchor")}
+                onClick={() => addItem("custom")}
               >
-                Add Anchor
+                Add Custom URL
               </Button>
             </div>
           )}

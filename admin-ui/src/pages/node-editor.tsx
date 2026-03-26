@@ -175,12 +175,10 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
     getTemplates().then(setTemplates).catch(() => {});
   }, []);
 
-  // Fetch layouts filtered by language
+  // Fetch layouts (all — filtering by language happens at render time via cascade)
   useEffect(() => {
-    if (languageCode) {
-      getLayouts({ language_code: languageCode }).then(setLayouts).catch(() => {});
-    }
-  }, [languageCode]);
+    getLayouts().then(setLayouts).catch(() => {});
+  }, []);
 
   // Fetch node type definition
   useEffect(() => {

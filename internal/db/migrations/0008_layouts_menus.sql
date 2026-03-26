@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     menu_id INT NOT NULL REFERENCES menus(id) ON DELETE CASCADE,
     parent_id INT REFERENCES menu_items(id) ON DELETE SET NULL,
     title VARCHAR(255) NOT NULL,
-    item_type VARCHAR(20) NOT NULL DEFAULT 'url',
+    item_type VARCHAR(20) NOT NULL DEFAULT 'custom',
     node_id INT REFERENCES content_nodes(id),
     url VARCHAR(2048),
     target VARCHAR(20) NOT NULL DEFAULT '_self',

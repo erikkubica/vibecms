@@ -106,7 +106,7 @@ func main() {
 	}
 	themeLoader.LoadTheme(themePath)
 
-	renderCtx := cms.NewRenderContext(layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
+	renderCtx := cms.NewRenderContext(database, layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, renderer)
 

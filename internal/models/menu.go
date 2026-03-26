@@ -22,7 +22,7 @@ type MenuItem struct {
 	MenuID    int        `gorm:"column:menu_id;not null" json:"menu_id"`
 	ParentID  *int       `gorm:"column:parent_id" json:"parent_id"`
 	Title     string     `gorm:"column:title;type:varchar(255);not null" json:"title"`
-	ItemType  string     `gorm:"column:item_type;type:varchar(20);not null;default:'url'" json:"item_type"`
+	ItemType  string     `gorm:"column:item_type;type:varchar(20);not null;default:'custom'" json:"item_type"`
 	NodeID    *int       `gorm:"column:node_id" json:"node_id"`
 	URL       string     `gorm:"column:url;type:varchar(2048)" json:"url"`
 	Target    string     `gorm:"column:target;type:varchar(20);not null;default:'_self'" json:"target"`

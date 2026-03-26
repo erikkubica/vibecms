@@ -291,7 +291,7 @@ func insertItems(tx *gorm.DB, menuID int, parentID *int, items []models.MenuItem
 		}
 		itemType := item.ItemType
 		if itemType == "" {
-			itemType = "url"
+			itemType = "custom"
 		}
 
 		mi := models.MenuItem{

@@ -38,18 +38,11 @@ function itemTypeBadge(type: MenuItem["item_type"]) {
           Page
         </Badge>
       );
-    case "url":
+    case "custom":
       return (
         <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-xs gap-1">
           <Globe className="h-3 w-3" />
-          URL
-        </Badge>
-      );
-    case "anchor":
-      return (
-        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs gap-1">
-          <Hash className="h-3 w-3" />
-          Anchor
+          Custom
         </Badge>
       );
   }
@@ -289,13 +282,12 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
                           onChange={(e) => updateItemField(fi.path, "item_type", e.target.value)}
                         >
                           <option value="node">Page (Node)</option>
-                          <option value="url">Custom URL</option>
-                          <option value="anchor">Anchor</option>
+                          <option value="custom">Custom URL</option>
                         </select>
                       </div>
 
                       {/* Type-specific field */}
-                      {fi.item.item_type === "url" && (
+                      {fi.item.item_type === "custom" && (
                         <div>
                           <label className="mb-1 block text-xs font-medium text-slate-600">
                             URL
@@ -305,7 +297,7 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
                             <Input
                               value={fi.item.url || ""}
                               onChange={(e) => updateItemField(fi.path, "url", e.target.value)}
-                              placeholder="https://example.com"
+                              placeholder="https://example.com or #anchor"
                               className="h-9 pl-8"
                             />
                           </div>
@@ -330,23 +322,6 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
                             placeholder="Enter node ID"
                             className="h-9"
                           />
-                        </div>
-                      )}
-
-                      {fi.item.item_type === "anchor" && (
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Anchor
-                          </label>
-                          <div className="relative">
-                            <Hash className="absolute left-2.5 top-2 h-4 w-4 text-slate-400" />
-                            <Input
-                              value={fi.item.url || ""}
-                              onChange={(e) => updateItemField(fi.path, "url", e.target.value)}
-                              placeholder="section-name"
-                              className="h-9 pl-8"
-                            />
-                          </div>
                         </div>
                       )}
 

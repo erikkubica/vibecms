@@ -3,21 +3,26 @@ package cms
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"gorm.io/gorm"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
 // BlockTypeService provides business logic for managing block types.
 type BlockTypeService struct {
-	db *gorm.DB
+	db          *gorm.DB
+	eventBus    *events.EventBus
+	themeAssets *ThemeAssetRegistry
 }
 
 // NewBlockTypeService creates a new BlockTypeService with the given database connection.
-func NewBlockTypeService(db *gorm.DB) *BlockTypeService {
-	return &BlockTypeService{db: db}
+func NewBlockTypeService(db *gorm.DB, eventBus *events.EventBus, themeAssets *ThemeAssetRegistry) *BlockTypeService {
+	return &BlockTypeService{db: db, eventBus: eventBus, themeAssets: themeAssets}
 }
 
 // List retrieves all block types ordered by label.
@@ -70,6 +75,14 @@ func (s *BlockTypeService) Create(bt *models.BlockType) error {
 		return fmt.Errorf("creating block type: %w", err)
 	}
 
+	if s.eventBus != nil {
+		go s.eventBus.Publish("block_type.created", events.Payload{
+			"block_type_id":   bt.ID,
+			"block_type_slug": bt.Slug,
+			"block_type_label": bt.Label,
+		})
+	}
+
 	return nil
 }
 
@@ -112,12 +125,21 @@ func (s *BlockTypeService) Update(id int, updates map[string]interface{}) (*mode
 	if err != nil {
 		return nil, err
 	}
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("block_type.updated", events.Payload{
+			"block_type_id":    updated.ID,
+			"block_type_slug":  updated.Slug,
+			"block_type_label": updated.Label,
+		})
+	}
+
 	return updated, nil
 }
 
 // Delete removes a block type by ID.
 func (s *BlockTypeService) Delete(id int) error {
-	_, err := s.GetByID(id)
+	existing, err := s.GetByID(id)
 	if err != nil {
 		return err
 	}
@@ -129,5 +151,136 @@ func (s *BlockTypeService) Delete(id int) error {
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
+
+	if s.eventBus != nil {
+		go s.eventBus.Publish("block_type.deleted", events.Payload{
+			"block_type_id":    existing.ID,
+			"block_type_slug":  existing.Slug,
+			"block_type_label": existing.Label,
+		})
+	}
+
 	return nil
+}
+
+// Detach converts a theme-sourced block type to custom.
+func (s *BlockTypeService) Detach(id int) (*models.BlockType, error) {
+	var existing models.BlockType
+	if err := s.db.First(&existing, id).Error; err != nil {
+		return nil, err
+	}
+	if err := s.db.Model(&existing).Updates(map[string]interface{}{
+		"source":     "custom",
+		"theme_name": nil,
+	}).Error; err != nil {
+		return nil, fmt.Errorf("failed to detach block type: %w", err)
+	}
+	s.db.First(&existing, id)
+	return &existing, nil
+}
+
+// Reattach restores a detached block type to its theme version.
+func (s *BlockTypeService) Reattach(id int) (*models.BlockType, error) {
+	var existing models.BlockType
+	if err := s.db.First(&existing, id).Error; err != nil {
+		return nil, err
+	}
+	if existing.Source == "theme" {
+		return &existing, nil // already attached
+	}
+
+	if s.themeAssets == nil {
+		return nil, fmt.Errorf("no theme loaded")
+	}
+
+	s.themeAssets.mu.RLock()
+	themeDir := s.themeAssets.themeDir
+	s.themeAssets.mu.RUnlock()
+
+	if themeDir == "" {
+		return nil, fmt.Errorf("no theme directory configured")
+	}
+
+	// Read theme.json to find the matching block definition.
+	manifestData, err := os.ReadFile(filepath.Join(themeDir, "theme.json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read theme.json: %w", err)
+	}
+	var manifest ThemeManifest
+	if err := json.Unmarshal(manifestData, &manifest); err != nil {
+		return nil, fmt.Errorf("failed to parse theme.json: %w", err)
+	}
+
+	for _, def := range manifest.Blocks {
+		if def.Slug == existing.Slug {
+			blockDir := filepath.Join(themeDir, "blocks", def.Dir)
+
+			// Read block.json.
+			bjData, err := os.ReadFile(filepath.Join(blockDir, "block.json"))
+			if err != nil {
+				return nil, fmt.Errorf("failed to read block.json: %w", err)
+			}
+			var bm blockManifest
+			if err := json.Unmarshal(bjData, &bm); err != nil {
+				return nil, fmt.Errorf("failed to parse block.json: %w", err)
+			}
+
+			// Read view.html.
+			viewData, err := os.ReadFile(filepath.Join(blockDir, "view.html"))
+			if err != nil {
+				return nil, fmt.Errorf("failed to read view.html: %w", err)
+			}
+
+			// Read optional style.css and script.js.
+			var blockCSS, blockJS string
+			if cssData, err := os.ReadFile(filepath.Join(blockDir, "style.css")); err == nil {
+				blockCSS = string(cssData)
+			}
+			if jsData, err := os.ReadFile(filepath.Join(blockDir, "script.js")); err == nil {
+				blockJS = string(jsData)
+			}
+
+			// Prepare field_schema and test_data.
+			fieldSchema := models.JSONB("[]")
+			if len(bm.FieldSchema) > 0 {
+				fieldSchema = models.JSONB(bm.FieldSchema)
+			}
+			testData := models.JSONB("{}")
+			if len(bm.TestData) > 0 {
+				testData = models.JSONB(bm.TestData)
+			}
+
+			label := bm.Label
+			if label == "" {
+				label = def.Slug
+			}
+			icon := bm.Icon
+			if icon == "" {
+				icon = "square"
+			}
+
+			themeName := manifest.Name
+			viewFile := filepath.Join("blocks", def.Dir, "view.html")
+
+			if err := s.db.Model(&existing).Updates(map[string]interface{}{
+				"label":         label,
+				"icon":          icon,
+				"description":   bm.Description,
+				"field_schema":  fieldSchema,
+				"html_template": string(viewData),
+				"test_data":     testData,
+				"source":        "theme",
+				"theme_name":    &themeName,
+				"view_file":     viewFile,
+				"block_css":     blockCSS,
+				"block_js":      blockJS,
+			}).Error; err != nil {
+				return nil, fmt.Errorf("failed to reattach block type: %w", err)
+			}
+
+			return s.GetByID(id)
+		}
+	}
+
+	return nil, fmt.Errorf("block %q not found in theme", existing.Slug)
 }

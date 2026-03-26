@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
   Save,
@@ -34,6 +34,7 @@ import {
   Tag,
   Star,
   Heart,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,8 @@ import {
   getBlockTypes,
   getTemplates,
   getLayouts,
+  listPageTemplates,
+  getPageTemplate,
   type ContentNode,
   type NodeType,
   type NodeTypeField,
@@ -82,6 +85,7 @@ import {
   type BlockType,
   type Template,
   type Layout,
+  type PageTemplate,
 } from "@/api/client";
 
 const BLOCK_ICON_MAP: Record<string, LucideIcon> = {
@@ -130,6 +134,7 @@ function slugify(text: string): string {
 export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isEdit = !!id;
 
   const [loading, setLoading] = useState(true);
@@ -163,6 +168,14 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   const [blocks, setBlocks] = useState<BlockData[]>([]);
   const [fieldsData, setFieldsData] = useState<Record<string, unknown>>({});
   const [originalNode, setOriginalNode] = useState<ContentNode | null>(null);
+
+  // Page templates
+  const [showLoadTemplate, setShowLoadTemplate] = useState(false);
+  const [showConfirmTemplate, setShowConfirmTemplate] = useState(false);
+  const [pageTemplates, setPageTemplates] = useState<PageTemplate[]>([]);
+  const [selectedPageTemplate, setSelectedPageTemplate] = useState<string | null>(null);
+  const [loadingPageTemplates, setLoadingPageTemplates] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   // Block editor state
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(new Set());
@@ -235,6 +248,25 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
       setSlug(slugify(title));
     }
   }, [title, autoSlug]);
+
+  // Auto-load template from query parameter (e.g. ?template=slug)
+  useEffect(() => {
+    const templateSlug = searchParams.get("template");
+    if (templateSlug && !isEdit && !loading) {
+      getPageTemplate(templateSlug)
+        .then((detail) => {
+          const newBlocks: BlockData[] = detail.blocks.map((b) => ({
+            type: b.type,
+            fields: { ...b.fields },
+          }));
+          setBlocks(newBlocks);
+          toast.success(`Loaded template "${detail.name}" with ${newBlocks.length} block(s)`);
+        })
+        .catch(() => {
+          toast.error("Failed to load page template");
+        });
+    }
+  }, [searchParams, isEdit, loading]);
 
   // Sync rawJson when blocks change and raw view is open
   useEffect(() => {
@@ -361,6 +393,46 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
     }
   }
 
+  async function openLoadTemplate() {
+    setShowLoadTemplate(true);
+    setLoadingPageTemplates(true);
+    try {
+      const templates = await listPageTemplates();
+      setPageTemplates(templates);
+    } catch {
+      toast.error("Failed to load page templates");
+    } finally {
+      setLoadingPageTemplates(false);
+    }
+  }
+
+  function selectPageTemplate(slug: string) {
+    setSelectedPageTemplate(slug);
+    setShowLoadTemplate(false);
+    setShowConfirmTemplate(true);
+  }
+
+  async function applyPageTemplate() {
+    if (!selectedPageTemplate) return;
+    setApplyingTemplate(true);
+    try {
+      const detail = await getPageTemplate(selectedPageTemplate);
+      const newBlocks: BlockData[] = detail.blocks.map((b) => ({
+        type: b.type,
+        fields: { ...b.fields },
+      }));
+      setBlocks(newBlocks);
+      setCollapsedBlocks(new Set());
+      toast.success(`Loaded template "${detail.name}" with ${newBlocks.length} block(s)`);
+    } catch {
+      toast.error("Failed to load template");
+    } finally {
+      setApplyingTemplate(false);
+      setShowConfirmTemplate(false);
+      setSelectedPageTemplate(null);
+    }
+  }
+
   async function handleSave(e: FormEvent, publishStatus?: string) {
     e.preventDefault();
 
@@ -446,68 +518,69 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
       <form onSubmit={(e) => handleSave(e)} className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Content</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-sm font-medium text-slate-700">Title</Label>
-                <Input
-                  id="title"
-                  placeholder={`Enter ${label.toLowerCase()} title`}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+          {/* Title + Slug compact row */}
+          <div className="space-y-3">
+            <Input
+              id="title"
+              placeholder={`Enter ${label.toLowerCase()} title`}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="text-lg font-semibold h-11 rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+            />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center flex-1 rounded-lg border border-slate-200 bg-white overflow-hidden h-8">
+                <span className="shrink-0 bg-slate-50 px-2.5 text-xs text-slate-400 border-r border-slate-200 h-full flex items-center">
+                  /{langSlug ? `${langSlug}/` : ""}{urlPrefix ? `${urlPrefix}/` : ""}
+                </span>
+                <input
+                  id="slug"
+                  placeholder="url-slug"
+                  value={slug}
+                  onChange={(e) => {
+                    setAutoSlug(false);
+                    setSlug(e.target.value);
+                  }}
+                  disabled={autoSlug}
                   required
-                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  className="flex-1 bg-transparent px-2 text-xs outline-none disabled:opacity-50 font-mono"
                 />
+                <button
+                  type="button"
+                  className="shrink-0 px-2.5 text-xs text-indigo-500 hover:text-indigo-700 border-l border-slate-200 h-full"
+                  onClick={() => setAutoSlug(!autoSlug)}
+                >
+                  {autoSlug ? "Edit" : "Auto"}
+                </button>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="slug" className="text-sm font-medium text-slate-700">Slug</Label>
-                  <button
-                    type="button"
-                    className="text-xs text-indigo-600 hover:underline"
-                    onClick={() => setAutoSlug(!autoSlug)}
-                  >
-                    {autoSlug ? "Edit manually" : "Auto-generate"}
-                  </button>
-                </div>
-                <div className="flex items-center rounded-lg border border-slate-300 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 overflow-hidden">
-                  <span className="shrink-0 bg-slate-100 px-3 py-2 text-sm text-slate-500 border-r border-slate-300">
-                    /{langSlug ? `${langSlug}/` : ""}{urlPrefix ? `${urlPrefix}/` : ""}
-                  </span>
-                  <input
-                    id="slug"
-                    placeholder="url-slug"
-                    value={slug}
-                    onChange={(e) => {
-                      setAutoSlug(false);
-                      setSlug(e.target.value);
-                    }}
-                    disabled={autoSlug}
-                    required
-                    className="flex-1 bg-transparent px-3 py-2 text-sm outline-none disabled:opacity-50"
-                  />
-                </div>
-                {isEdit && originalNode ? (
-                  <p className="text-xs text-slate-400 font-mono">
-                    Full URL: {originalNode.full_url}
-                  </p>
-                ) : slug ? (
-                  <p className="text-xs text-slate-400 font-mono">
-                    Full URL: /{langSlug ? `${langSlug}/` : ""}{urlPrefix ? `${urlPrefix}/` : ""}{slug}
-                  </p>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+              {isEdit && originalNode && status === "published" && (
+                <a
+                  href={originalNode.full_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg border border-slate-200 text-xs text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  View
+                </a>
+              )}
+            </div>
+          </div>
 
           {/* Visual Block Editor */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold text-slate-900">Blocks</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-slate-300 text-slate-600 hover:border-indigo-400 hover:text-indigo-600"
+                onClick={openLoadTemplate}
+              >
+                <LayoutTemplate className="mr-1.5 h-3.5 w-3.5" />
+                Load from Template
+              </Button>
             </CardHeader>
             <CardContent className="space-y-3 p-6 pt-0">
               {blocks.length === 0 && (
@@ -703,160 +776,150 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
         {/* Sidebar */}
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Publish</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="rounded-lg border-slate-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
+            <CardContent className="space-y-4 p-5">
+              {/* Status + Language row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">Status</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">Language</Label>
+                  <Select value={languageCode} onValueChange={setLanguageCode}>
+                    <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languages.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          {lang.flag} {lang.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Language</Label>
-                <Select value={languageCode} onValueChange={setLanguageCode}>
-                  <SelectTrigger className="rounded-lg border-slate-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {languages.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.flag} {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Layout + Parent row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">Layout</Label>
+                  <Select value={layoutId || "auto"} onValueChange={(v) => setLayoutId(v === "auto" ? "" : v)}>
+                    <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                      <SelectValue placeholder="Auto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto (cascade)</SelectItem>
+                      {layouts.map((layout) => (
+                        <SelectItem key={layout.id} value={String(layout.id)}>
+                          {layout.name}
+                          {layout.source === "theme" ? " [theme]" : " [custom]"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">Parent ID</Label>
+                  <Input
+                    type="number"
+                    placeholder="None"
+                    value={parentId}
+                    onChange={(e) => setParentId(e.target.value)}
+                    className="h-9 rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Layout</Label>
-                <Select value={layoutId || "auto"} onValueChange={(v) => setLayoutId(v === "auto" ? "" : v)}>
-                  <SelectTrigger className="rounded-lg border-slate-300">
-                    <SelectValue placeholder="Auto (cascade)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto (cascade)</SelectItem>
-                    {layouts.map((layout) => (
-                      <SelectItem key={layout.id} value={String(layout.id)}>
-                        {layout.name}
-                        {layout.source === "theme" ? " [theme]" : " [custom]"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="parent-id" className="text-sm font-medium text-slate-700">Parent ID</Label>
-                <Input
-                  id="parent-id"
-                  type="number"
-                  placeholder="None"
-                  value={parentId}
-                  onChange={(e) => setParentId(e.target.value)}
-                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex flex-col gap-2">
+              {/* Save buttons */}
+              <div className="flex gap-2 pt-1">
                 <Button
                   type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
                   disabled={saving}
                 >
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
                   {saving ? "Saving..." : "Save"}
                 </Button>
                 {status !== "published" && (
                   <Button
                     type="button"
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg h-9 text-sm"
                     disabled={saving}
                     onClick={(e) => handleSave(e, "published")}
                   >
-                    <Globe className="mr-2 h-4 w-4" />
+                    <Globe className="mr-1.5 h-3.5 w-3.5" />
                     Publish
                   </Button>
                 )}
               </div>
+
+              {/* Actions (edit mode) */}
+              {isEdit && (
+                <>
+                  <Separator />
+                  <div className="flex gap-2">
+                    {nodeType === "page" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 rounded-lg font-medium h-8 text-xs"
+                        onClick={handleSetHomepage}
+                      >
+                        <Home className="mr-1.5 h-3.5 w-3.5" />
+                        Homepage
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
+                      onClick={() => setShowDelete(true)}
+                    >
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* Metadata (edit mode) */}
+              {isEdit && originalNode && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <div className="flex justify-between">
+                      <span>Version</span>
+                      <span className="font-mono text-slate-600">{originalNode.version}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Created</span>
+                      <span className="text-slate-600">{new Date(originalNode.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Updated</span>
+                      <span className="text-slate-600">{new Date(originalNode.updated_at).toLocaleDateString()}</span>
+                    </div>
+                    {originalNode.published_at && (
+                      <div className="flex justify-between">
+                        <span>Published</span>
+                        <span className="text-slate-600">{new Date(originalNode.published_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
-
-          {/* Actions (edit mode only) */}
-          {isEdit && (
-            <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 p-6 pt-0">
-                {nodeType === "page" && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 rounded-lg font-medium"
-                    onClick={handleSetHomepage}
-                  >
-                    <Home className="mr-2 h-4 w-4" />
-                    Set as Homepage
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium"
-                  onClick={() => setShowDelete(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete {label}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Node info (edit mode) */}
-          {isEdit && originalNode && (
-            <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <CardContent className="space-y-2 p-6 text-sm text-slate-500">
-                <div className="flex justify-between">
-                  <span>Version</span>
-                  <span className="font-mono">{originalNode.version}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Created</span>
-                  <span>
-                    {new Date(originalNode.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Updated</span>
-                  <span>
-                    {new Date(originalNode.updated_at).toLocaleDateString()}
-                  </span>
-                </div>
-                {originalNode.published_at && (
-                  <div className="flex justify-between">
-                    <span>Published</span>
-                    <span>
-                      {new Date(
-                        originalNode.published_at
-                      ).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </form>
 
@@ -960,6 +1023,92 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
               disabled={deleting}
             >
               {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load Page Template dialog */}
+      <Dialog open={showLoadTemplate} onOpenChange={setShowLoadTemplate}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Load from Template</DialogTitle>
+            <DialogDescription>
+              Select a page template to apply. This will replace all existing blocks.
+            </DialogDescription>
+          </DialogHeader>
+          {loadingPageTemplates ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+            </div>
+          ) : pageTemplates.length === 0 ? (
+            <p className="text-center text-sm text-slate-400 py-12">
+              No page templates available.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto py-2">
+              {pageTemplates.map((tpl) => (
+                <button
+                  key={tpl.slug}
+                  type="button"
+                  onClick={() => selectPageTemplate(tpl.slug)}
+                  className="flex flex-col items-start gap-2 rounded-lg border border-slate-200 bg-white p-4 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm"
+                >
+                  {tpl.thumbnail ? (
+                    <img
+                      src={tpl.thumbnail}
+                      alt={tpl.name}
+                      className="w-full h-24 object-cover rounded-md bg-slate-100"
+                    />
+                  ) : (
+                    <div className="w-full h-24 flex items-center justify-center rounded-md bg-slate-100">
+                      <LayoutTemplate className="h-8 w-8 text-slate-300" />
+                    </div>
+                  )}
+                  <div className="min-w-0 w-full">
+                    <p className="text-sm font-medium text-slate-800 truncate">{tpl.name}</p>
+                    {tpl.description && (
+                      <p className="text-xs text-slate-400 line-clamp-2 mt-0.5">{tpl.description}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm template replacement dialog */}
+      <Dialog open={showConfirmTemplate} onOpenChange={(open) => {
+        if (!open) {
+          setShowConfirmTemplate(false);
+          setSelectedPageTemplate(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace existing blocks?</DialogTitle>
+            <DialogDescription>
+              This will replace all existing blocks with the template&apos;s blocks. Any unsaved block content will be lost. Continue?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmTemplate(false);
+                setSelectedPageTemplate(null);
+              }}
+              disabled={applyingTemplate}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={applyPageTemplate}
+              disabled={applyingTemplate}
+            >
+              {applyingTemplate ? "Applying..." : "Apply Template"}
             </Button>
           </DialogFooter>
         </DialogContent>

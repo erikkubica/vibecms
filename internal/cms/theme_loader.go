@@ -219,6 +219,11 @@ func (tl *ThemeLoader) LoadTheme(themeDir string) error {
 		tl.registerBlock(manifest.Name, def, themeDir)
 	}
 
+	// Register page templates.
+	for _, def := range manifest.Templates {
+		tl.registerTemplate(manifest.Name, def, themeDir)
+	}
+
 	// Clean up stale partial records from the layouts table.
 	// Partials belong in layout_blocks, not layouts. Earlier versions
 	// incorrectly created them in layouts — remove those orphans.
@@ -267,6 +272,78 @@ func (tl *ThemeLoader) upsertThemeRecord(manifest ThemeManifest, themeDir string
 		}
 		if err := tl.db.Create(&theme).Error; err != nil {
 			log.Printf("WARN: failed to create theme record %s: %v", slug, err)
+		}
+	}
+}
+
+// themeTemplateFile represents the JSON structure of a theme template file.
+type themeTemplateFile struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Blocks      []struct {
+		Type   string                 `json:"type"`
+		Fields map[string]interface{} `json:"fields"`
+	} `json:"blocks"`
+}
+
+// registerTemplate reads a theme template file and upserts it into the templates table.
+func (tl *ThemeLoader) registerTemplate(themeName string, def ThemeTemplateDef, themeDir string) {
+	filePath := filepath.Join(themeDir, "templates", def.File)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("WARN: template file not found %s: %v", filePath, err)
+		return
+	}
+
+	var tmplFile themeTemplateFile
+	if err := json.Unmarshal(data, &tmplFile); err != nil {
+		log.Printf("WARN: failed to parse template %s: %v", def.Slug, err)
+		return
+	}
+
+	// Convert {type, fields} to {block_type_slug, default_values}
+	blockConfig := make([]map[string]interface{}, 0, len(tmplFile.Blocks))
+	for _, b := range tmplFile.Blocks {
+		blockConfig = append(blockConfig, map[string]interface{}{
+			"block_type_slug": b.Type,
+			"default_values":  b.Fields,
+		})
+	}
+
+	configJSON, err := json.Marshal(blockConfig)
+	if err != nil {
+		log.Printf("WARN: failed to marshal template block_config for %s: %v", def.Slug, err)
+		return
+	}
+
+	label := tmplFile.Name
+	if label == "" {
+		label = def.Slug
+	}
+
+	var existing models.Template
+	result := tl.db.Where("slug = ?", def.Slug).First(&existing)
+
+	if result.Error == nil {
+		existing.Label = label
+		existing.Description = tmplFile.Description
+		existing.BlockConfig = models.JSONB(configJSON)
+		existing.Source = "theme"
+		existing.ThemeName = &themeName
+		if err := tl.db.Save(&existing).Error; err != nil {
+			log.Printf("WARN: failed to update theme template %s: %v", def.Slug, err)
+		}
+	} else {
+		tmpl := models.Template{
+			Slug:        def.Slug,
+			Label:       label,
+			Description: tmplFile.Description,
+			BlockConfig: models.JSONB(configJSON),
+			Source:      "theme",
+			ThemeName:   &themeName,
+		}
+		if err := tl.db.Create(&tmpl).Error; err != nil {
+			log.Printf("WARN: failed to create theme template %s: %v", def.Slug, err)
 		}
 	}
 }

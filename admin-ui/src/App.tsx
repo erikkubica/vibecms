@@ -18,6 +18,18 @@ import LayoutBlocksListPage from "@/pages/layout-blocks-list";
 import LayoutBlockEditorPage from "@/pages/layout-block-editor";
 import MenusListPage from "@/pages/menus-list";
 import MenuEditorPage from "@/pages/menu-editor";
+import UsersPage from "@/pages/users";
+import UserEditorPage from "@/pages/user-editor";
+import RolesPage from "@/pages/roles";
+import RoleEditorPage from "@/pages/role-editor";
+import EmailTemplatesPage from "@/pages/email-templates";
+import EmailTemplateEditorPage from "@/pages/email-template-editor";
+import EmailRulesPage from "@/pages/email-rules";
+import EmailRuleEditorPage from "@/pages/email-rule-editor";
+import EmailLogsPage from "@/pages/email-logs";
+import EmailSettingsPage from "@/pages/email-settings";
+import ThemesPage from "@/pages/themes";
+import PageTemplatesPage from "@/pages/page-templates";
 import { AdminLanguageProvider } from "@/hooks/use-admin-language";
 import { Loader2 } from "lucide-react";
 
@@ -108,6 +120,22 @@ function AppRoutes() {
         <Route path="menus/new" element={<MenuEditorPage />} />
         <Route path="menus/:id" element={<MenuEditorPage />} />
         <Route path="languages" element={<LanguagesPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="users/new" element={<UserEditorPage />} />
+        <Route path="users/:id/edit" element={<UserEditorPage />} />
+        <Route path="roles" element={<RolesPage />} />
+        <Route path="roles/new" element={<RoleEditorPage />} />
+        <Route path="roles/:id/edit" element={<RoleEditorPage />} />
+        <Route path="email-templates" element={<EmailTemplatesPage />} />
+        <Route path="email-templates/new" element={<EmailTemplateEditorPage />} />
+        <Route path="email-templates/:id/edit" element={<EmailTemplateEditorPage />} />
+        <Route path="email-rules" element={<EmailRulesPage />} />
+        <Route path="email-rules/new" element={<EmailRuleEditorPage />} />
+        <Route path="email-rules/:id/edit" element={<EmailRuleEditorPage />} />
+        <Route path="email-logs" element={<EmailLogsPage />} />
+        <Route path="email-settings" element={<EmailSettingsPage />} />
+        <Route path="themes" element={<ThemesPage />} />
+        <Route path="page-templates" element={<PageTemplatesPage />} />
         <Route
           path="content/:nodeType"
           element={<DynamicNodeList />}

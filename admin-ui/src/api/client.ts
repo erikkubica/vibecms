@@ -2,8 +2,10 @@ export interface User {
   id: number;
   email: string;
   full_name: string;
-  role: string;
+  role_id: number;
+  role: { id: number; slug: string; name: string; is_system: boolean } | string;
   last_login_at: string;
+  created_at: string;
 }
 
 export interface ContentNode {
@@ -373,6 +375,20 @@ export async function deleteBlockType(id: number | string): Promise<void> {
   await api<void>(`/admin/api/block-types/${id}`, { method: "DELETE" });
 }
 
+export async function detachBlockType(id: number | string): Promise<BlockType> {
+  const res = await api<ApiResponse<BlockType>>(`/admin/api/block-types/${id}/detach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
+export async function reattachBlockType(id: number | string): Promise<BlockType> {
+  const res = await api<ApiResponse<BlockType>>(`/admin/api/block-types/${id}/reattach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
 export async function previewBlockTemplate(htmlTemplate: string, testData: Record<string, unknown>): Promise<string> {
   const res = await api<{ html: string }>(`/admin/api/block-types/preview`, {
     method: "POST",
@@ -468,6 +484,13 @@ export async function detachLayout(id: number | string): Promise<Layout> {
   return res.data;
 }
 
+export async function reattachLayout(id: number | string): Promise<Layout> {
+  const res = await api<ApiResponse<Layout>>(`/admin/api/layouts/${id}/reattach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
 // --- Layout Blocks ---
 
 export interface LayoutBlock {
@@ -519,6 +542,13 @@ export async function deleteLayoutBlock(id: number | string): Promise<void> {
 
 export async function detachLayoutBlock(id: number | string): Promise<LayoutBlock> {
   const res = await api<ApiResponse<LayoutBlock>>(`/admin/api/layout-blocks/${id}/detach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
+export async function reattachLayoutBlock(id: number | string): Promise<LayoutBlock> {
+  const res = await api<ApiResponse<LayoutBlock>>(`/admin/api/layout-blocks/${id}/reattach`, {
     method: "POST",
   });
   return res.data;
@@ -587,4 +617,330 @@ export async function replaceMenuItems(id: number | string, version: number, ite
     body: JSON.stringify({ version, items }),
   });
   return res.data;
+}
+
+// --- Roles ---
+
+export interface Role {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  is_system: boolean;
+  capabilities: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getRoles(): Promise<Role[]> {
+  const res = await api<ApiResponse<Role[]>>("/admin/api/roles");
+  return res.data;
+}
+
+export async function getRole(id: number): Promise<Role> {
+  const res = await api<ApiResponse<Role>>(`/admin/api/roles/${id}`);
+  return res.data;
+}
+
+export async function createRole(data: Partial<Role>): Promise<Role> {
+  const res = await api<ApiResponse<Role>>("/admin/api/roles", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateRole(id: number, data: Partial<Role>): Promise<Role> {
+  const res = await api<ApiResponse<Role>>(`/admin/api/roles/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteRole(id: number): Promise<void> {
+  await api<void>(`/admin/api/roles/${id}`, { method: "DELETE" });
+}
+
+// --- System Actions ---
+
+export interface SystemAction {
+  id: number;
+  slug: string;
+  label: string;
+  category: string;
+  description: string;
+}
+
+export async function getSystemActions(): Promise<SystemAction[]> {
+  const res = await api<ApiResponse<SystemAction[]>>("/admin/api/system-actions");
+  return res.data;
+}
+
+// --- Email Templates ---
+
+export interface EmailTemplate {
+  id: number;
+  slug: string;
+  name: string;
+  language_id: number | null;
+  subject_template: string;
+  body_template: string;
+  test_data: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getEmailTemplates(): Promise<EmailTemplate[]> {
+  const res = await api<ApiResponse<EmailTemplate[]>>("/admin/api/email-templates");
+  return res.data;
+}
+
+export async function getEmailTemplate(id: number): Promise<EmailTemplate> {
+  const res = await api<ApiResponse<EmailTemplate>>(`/admin/api/email-templates/${id}`);
+  return res.data;
+}
+
+export async function createEmailTemplate(data: Partial<EmailTemplate>): Promise<EmailTemplate> {
+  const res = await api<ApiResponse<EmailTemplate>>("/admin/api/email-templates", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateEmailTemplate(id: number, data: Partial<EmailTemplate>): Promise<EmailTemplate> {
+  const res = await api<ApiResponse<EmailTemplate>>(`/admin/api/email-templates/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteEmailTemplate(id: number): Promise<void> {
+  await api<void>(`/admin/api/email-templates/${id}`, { method: "DELETE" });
+}
+
+// --- Email Rules ---
+
+export interface EmailRule {
+  id: number;
+  action: string;
+  node_type: string | null;
+  template_id: number;
+  template?: EmailTemplate;
+  recipient_type: string;
+  recipient_value: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getEmailRules(): Promise<EmailRule[]> {
+  const res = await api<ApiResponse<EmailRule[]>>("/admin/api/email-rules");
+  return res.data;
+}
+
+export async function getEmailRule(id: number): Promise<EmailRule> {
+  const res = await api<ApiResponse<EmailRule>>(`/admin/api/email-rules/${id}`);
+  return res.data;
+}
+
+export async function createEmailRule(data: Partial<EmailRule>): Promise<EmailRule> {
+  const res = await api<ApiResponse<EmailRule>>("/admin/api/email-rules", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function updateEmailRule(id: number, data: Partial<EmailRule>): Promise<EmailRule> {
+  const res = await api<ApiResponse<EmailRule>>(`/admin/api/email-rules/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function deleteEmailRule(id: number): Promise<void> {
+  await api<void>(`/admin/api/email-rules/${id}`, { method: "DELETE" });
+}
+
+// --- Email Logs ---
+
+export interface EmailLog {
+  id: number;
+  rule_id: number | null;
+  template_slug: string;
+  action: string;
+  recipient_email: string;
+  subject: string;
+  rendered_body: string;
+  status: string;
+  error_message: string | null;
+  provider: string | null;
+  created_at: string;
+}
+
+export async function getEmailLogs(params?: {
+  status?: string;
+  action?: string;
+  recipient?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  per_page?: number;
+}): Promise<{ data: EmailLog[]; total: number; page: number; per_page: number }> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.action) searchParams.set("action", params.action);
+  if (params?.recipient) searchParams.set("recipient", params.recipient);
+  if (params?.date_from) searchParams.set("date_from", params.date_from);
+  if (params?.date_to) searchParams.set("date_to", params.date_to);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.per_page) searchParams.set("per_page", String(params.per_page));
+  const qs = searchParams.toString();
+  const res = await api<{ data: EmailLog[]; total: number; page: number; per_page: number }>(
+    `/admin/api/email-logs${qs ? `?${qs}` : ""}`
+  );
+  return res;
+}
+
+export async function getEmailLog(id: number): Promise<EmailLog> {
+  const res = await api<ApiResponse<EmailLog>>(`/admin/api/email-logs/${id}`);
+  return res.data;
+}
+
+export async function resendEmail(id: number): Promise<void> {
+  await api<void>(`/admin/api/email-logs/${id}/resend`, { method: "POST" });
+}
+
+// --- Email Settings ---
+
+export async function getEmailSettings(): Promise<Record<string, string>> {
+  const res = await api<ApiResponse<Record<string, string>>>("/admin/api/email-settings");
+  return res.data;
+}
+
+export async function saveEmailSettings(data: Record<string, string>): Promise<void> {
+  await api<void>("/admin/api/email-settings", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function sendTestEmail(): Promise<void> {
+  await api<void>("/admin/api/email-settings/test", { method: "POST" });
+}
+
+// --- Themes ---
+
+export interface Theme {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  version: string;
+  author: string;
+  source: string;
+  git_url: string | null;
+  git_branch: string;
+  has_git_token: boolean;
+  is_active: boolean;
+  path: string;
+  thumbnail: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getThemes(): Promise<Theme[]> {
+  const res = await api<ApiResponse<Theme[]>>("/admin/api/themes");
+  return res.data;
+}
+
+export async function getTheme(id: number): Promise<Theme> {
+  const res = await api<ApiResponse<Theme>>(`/admin/api/themes/${id}`);
+  return res.data;
+}
+
+export async function uploadTheme(file: File): Promise<Theme> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/admin/api/themes/upload", {
+    method: "POST",
+    body: form,
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json();
+    throw new ApiClientError(
+      body.error?.message || "Upload failed",
+      body.error?.code || "upload_failed",
+      res.status
+    );
+  }
+  const body = await res.json();
+  return (body as ApiResponse<Theme>).data;
+}
+
+export async function installThemeFromGit(data: {
+  git_url: string;
+  git_branch: string;
+  git_token?: string;
+}): Promise<Theme> {
+  const res = await api<ApiResponse<Theme>>("/admin/api/themes/git", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+export async function activateTheme(id: number): Promise<void> {
+  await api<void>(`/admin/api/themes/${id}/activate`, { method: "POST" });
+}
+
+export async function deactivateTheme(id: number): Promise<void> {
+  await api<void>(`/admin/api/themes/${id}/deactivate`, { method: "POST" });
+}
+
+export async function pullTheme(id: number): Promise<Theme> {
+  const res = await api<ApiResponse<Theme>>(`/admin/api/themes/${id}/pull`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
+export async function deleteTheme(id: number): Promise<void> {
+  await api<void>(`/admin/api/themes/${id}`, { method: "DELETE" });
+}
+
+export async function updateThemeGitConfig(
+  id: number,
+  data: { git_url?: string; git_branch?: string; git_token?: string }
+): Promise<void> {
+  await api<void>(`/admin/api/themes/${id}/git-config`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// --- Page Templates ---
+
+export interface PageTemplate {
+  slug: string;
+  name: string;
+  description: string;
+  thumbnail: string;
+}
+
+export interface PageTemplateDetail extends PageTemplate {
+  blocks: Array<{ type: string; fields: Record<string, unknown> }>;
+}
+
+export async function listPageTemplates(): Promise<PageTemplate[]> {
+  return api<ApiResponse<PageTemplate[]>>("/admin/api/page-templates").then(r => r.data);
+}
+
+export async function getPageTemplate(slug: string): Promise<PageTemplateDetail> {
+  return api<ApiResponse<PageTemplateDetail>>(`/admin/api/page-templates/${slug}`).then(r => r.data);
 }

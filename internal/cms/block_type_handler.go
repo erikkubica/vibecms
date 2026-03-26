@@ -31,6 +31,8 @@ func (h *BlockTypeHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/block-types", h.Create)
 	router.Patch("/block-types/:id", h.Update)
 	router.Delete("/block-types/:id", h.Delete)
+	router.Post("/block-types/:id/detach", h.Detach)
+	router.Post("/block-types/:id/reattach", h.Reattach)
 }
 
 // List handles GET /block-types to retrieve all block types.
@@ -217,4 +219,40 @@ func (h *BlockTypeHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// Detach handles POST /block-types/:id/detach to convert a theme block type to custom.
+func (h *BlockTypeHandler) Detach(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Block type ID must be a valid integer")
+	}
+
+	bt, err := h.svc.Detach(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Block type not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "DETACH_FAILED", "Failed to detach block type")
+	}
+
+	return api.Success(c, bt)
+}
+
+// Reattach handles POST /block-types/:id/reattach to restore a block type to its theme version.
+func (h *BlockTypeHandler) Reattach(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Block type ID must be a valid integer")
+	}
+
+	bt, err := h.svc.Reattach(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Block type not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "REATTACH_FAILED", "Failed to reattach block type")
+	}
+
+	return api.Success(c, bt)
 }

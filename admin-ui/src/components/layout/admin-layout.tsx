@@ -8,6 +8,7 @@ import {
   Square,
   LayoutTemplate,
   PanelTop,
+  Palette,
   Component,
   ListTree,
   Globe,
@@ -17,7 +18,11 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronDown,
   User,
+  Users as UsersIcon,
+  Shield,
+  Mail,
   ShoppingBag,
   Calendar,
   Users,
@@ -63,20 +68,64 @@ interface NavItem {
   disabled?: boolean;
 }
 
+interface NavGroup {
+  label: string;
+  icon: LucideIcon;
+  children: NavItem[];
+}
+
+type NavEntry = NavItem | NavGroup;
+
+function isNavGroup(entry: NavEntry): entry is NavGroup {
+  return "children" in entry;
+}
+
 const staticNavTop: NavItem[] = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/pages", label: "Pages", icon: FileText },
   { to: "/admin/posts", label: "Posts", icon: Newspaper },
+  { to: "/admin/page-templates", label: "Page Templates", icon: LayoutTemplate },
 ];
 
-const staticNavBottom: NavItem[] = [
-  { to: "/admin/layouts", label: "Layouts", icon: PanelTop },
-  { to: "/admin/layout-blocks", label: "Layout Blocks", icon: Component },
+const staticNavBottom: NavEntry[] = [
+  {
+    label: "Users",
+    icon: UsersIcon,
+    children: [
+      { to: "/admin/users", label: "Users", icon: UsersIcon },
+      { to: "/admin/roles", label: "Roles", icon: Shield },
+    ],
+  },
   { to: "/admin/menus", label: "Menus", icon: ListTree },
-  { to: "/admin/block-types", label: "Block Types", icon: Square },
-  { to: "/admin/templates", label: "Templates", icon: LayoutTemplate },
+  {
+    label: "Design",
+    icon: Palette,
+    children: [
+      { to: "/admin/themes", label: "Themes", icon: Palette },
+      { to: "/admin/layouts", label: "Layouts", icon: PanelTop },
+      { to: "/admin/layout-blocks", label: "Layout Blocks", icon: Component },
+      { to: "/admin/templates", label: "Templates", icon: LayoutTemplate },
+    ],
+  },
+  {
+    label: "Schema",
+    icon: Boxes,
+    children: [
+      { to: "/admin/content-types", label: "Content Types", icon: Boxes },
+      { to: "/admin/block-types", label: "Block Types", icon: Square },
+    ],
+  },
+  {
+    label: "Email",
+    icon: Mail,
+    children: [
+      { to: "/admin/email-templates", label: "Templates", icon: LayoutTemplate },
+      { to: "/admin/email-rules", label: "Rules", icon: ListTree },
+      { to: "/admin/email-logs", label: "Logs", icon: FileText },
+      { to: "/admin/email-settings", label: "Settings", icon: Settings },
+    ],
+  },
   { to: "/admin/languages", label: "Languages", icon: Globe },
-  { to: "/admin/content-types", label: "Content Types", icon: Boxes },
   { to: "/admin/media", label: "Media", icon: Image, disabled: true },
   { to: "/admin/settings", label: "Settings", icon: Settings, disabled: true },
 ];
@@ -90,10 +139,15 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [customTypes, setCustomTypes] = useState<NodeType[]>([]);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const { user, logout } = useAuth();
   const { languages: adminLangs, currentCode, currentLanguage, setCurrentCode } = useAdminLanguage();
   const location = useLocation();
   const breadcrumbs = getBreadcrumb(location.pathname);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   useEffect(() => {
     getNodeTypes()
@@ -103,13 +157,28 @@ export default function AdminLayout() {
       .catch(() => {});
   }, []);
 
+  // Auto-expand groups whose children match current path
+  useEffect(() => {
+    const updates: Record<string, boolean> = {};
+    for (const entry of staticNavBottom) {
+      if (isNavGroup(entry)) {
+        if (entry.children.some((child) => location.pathname.startsWith(child.to))) {
+          updates[entry.label] = true;
+        }
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      setOpenGroups((prev) => ({ ...prev, ...updates }));
+    }
+  }, [location.pathname]);
+
   const customNavItems: NavItem[] = customTypes.map((t) => ({
     to: `/admin/content/${t.slug}`,
     label: t.label,
     icon: iconMap[t.icon] || FileText,
   }));
 
-  const navItems: NavItem[] = [...staticNavTop, ...customNavItems, ...staticNavBottom];
+  const navEntries: NavEntry[] = [...staticNavTop, ...customNavItems, ...staticNavBottom];
 
   const sidebarWidth = collapsed ? "w-16" : "w-64";
 
@@ -165,34 +234,78 @@ export default function AdminLayout() {
         <Separator className="bg-slate-700" />
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 px-2 py-4">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.disabled ? "#" : item.to}
-              onClick={(e) => {
-                if (item.disabled) e.preventDefault();
-                else setSidebarOpen(false);
-              }}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  item.disabled
-                    ? "cursor-not-allowed text-slate-500"
-                    : isActive
-                      ? "bg-slate-700/50 text-white"
-                      : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
-                } ${collapsed ? "justify-center" : ""}`
-              }
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-              {!collapsed && item.disabled && (
-                <span className="ml-auto rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
-                  Soon
-                </span>
-              )}
-            </NavLink>
-          ))}
+        <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
+          {navEntries.map((entry) =>
+            isNavGroup(entry) ? (
+              <div key={entry.label}>
+                <button
+                  onClick={() => toggleGroup(entry.label)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700/50 hover:text-white ${
+                    collapsed ? "justify-center" : ""
+                  }`}
+                >
+                  <entry.icon className="h-5 w-5 shrink-0" />
+                  {!collapsed && (
+                    <>
+                      <span>{entry.label}</span>
+                      <ChevronDown
+                        className={`ml-auto h-4 w-4 transition-transform duration-200 ${
+                          openGroups[entry.label] ? "rotate-0" : "-rotate-90"
+                        }`}
+                      />
+                    </>
+                  )}
+                </button>
+                {(openGroups[entry.label] || collapsed) && (
+                  <div className={collapsed ? "space-y-1" : "space-y-0.5 ml-3 border-l border-slate-700 pl-2 mt-0.5 mb-1"}>
+                    {entry.children.map((child) => (
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                            isActive
+                              ? "bg-slate-700/50 text-white"
+                              : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                          } ${collapsed ? "justify-center" : ""}`
+                        }
+                      >
+                        <child.icon className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span>{child.label}</span>}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <NavLink
+                key={entry.to}
+                to={entry.disabled ? "#" : entry.to}
+                onClick={(e) => {
+                  if (entry.disabled) e.preventDefault();
+                  else setSidebarOpen(false);
+                }}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    entry.disabled
+                      ? "cursor-not-allowed text-slate-500"
+                      : isActive
+                        ? "bg-slate-700/50 text-white"
+                        : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                  } ${collapsed ? "justify-center" : ""}`
+                }
+              >
+                <entry.icon className="h-5 w-5 shrink-0" />
+                {!collapsed && <span>{entry.label}</span>}
+                {!collapsed && entry.disabled && (
+                  <span className="ml-auto rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-400">
+                    Soon
+                  </span>
+                )}
+              </NavLink>
+            )
+          )}
         </nav>
 
         {/* Bottom */}

@@ -54,8 +54,9 @@ func (e *ScriptEngine) hooksAdd(args ...tengo.Object) (tengo.Object, error) {
 
 // RunAction executes all hook scripts registered for the named action
 // and returns their concatenated HTML output. This is called by the
-// {{action "name"}} template function during layout rendering.
-func (e *ScriptEngine) RunAction(name string) template.HTML {
+// {{action "name" .}} template function during layout rendering.
+// The ctx parameter receives the current template data (node, app, user).
+func (e *ScriptEngine) RunAction(name string, ctx interface{}) template.HTML {
 	e.mu.RLock()
 	scripts, ok := e.hookHandlers[name]
 	if !ok || len(scripts) == 0 {
@@ -67,9 +68,14 @@ func (e *ScriptEngine) RunAction(name string) template.HTML {
 	copy(paths, scripts)
 	e.mu.RUnlock()
 
+	// Build context variables for the hook script
+	vars := map[string]interface{}{
+		"page": ctx,
+	}
+
 	var sb strings.Builder
 	for _, scriptPath := range paths {
-		result, err := e.runScript(scriptPath, nil)
+		result, err := e.runScript(scriptPath, vars)
 		if err != nil {
 			log.Printf("[script] hook error: %s (%s): %v", name, scriptPath, err)
 			continue

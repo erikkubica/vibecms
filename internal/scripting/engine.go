@@ -131,9 +131,11 @@ func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{})
 	script.SetImports(e.buildModuleMap())
 	script.SetMaxAllocs(50000)
 
-	// Inject context variables
+	// Inject context variables — convert to Tengo objects first to handle
+	// types that Tengo's FromInterface can't auto-convert (e.g. map[string]string).
 	for k, v := range vars {
-		if err := script.Add(k, v); err != nil {
+		obj := goToTengo(normalizeForTengo(v))
+		if err := script.Add(k, obj); err != nil {
 			log.Printf("[script] warning: failed to inject variable %q: %v", k, err)
 		}
 	}

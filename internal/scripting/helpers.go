@@ -122,6 +122,42 @@ func tengoToStringMap(obj tengo.Object) map[string]string {
 	return result
 }
 
+// normalizeForTengo recursively converts Go values to types that Tengo can handle.
+// Specifically converts map[string]string and other typed maps to map[string]interface{}.
+func normalizeForTengo(v interface{}) interface{} {
+	if v == nil {
+		return nil
+	}
+	switch val := v.(type) {
+	case map[string]interface{}:
+		result := make(map[string]interface{}, len(val))
+		for k, v := range val {
+			result[k] = normalizeForTengo(v)
+		}
+		return result
+	case map[string]string:
+		result := make(map[string]interface{}, len(val))
+		for k, v := range val {
+			result[k] = v
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(val))
+		for i, v := range val {
+			result[i] = normalizeForTengo(v)
+		}
+		return result
+	case []map[string]interface{}:
+		result := make([]interface{}, len(val))
+		for i, v := range val {
+			result[i] = normalizeForTengo(v)
+		}
+		return result
+	default:
+		return v
+	}
+}
+
 // getString extracts a string from a Tengo object, returning "" if not a string.
 func getString(obj tengo.Object) string {
 	if s, ok := obj.(*tengo.String); ok {

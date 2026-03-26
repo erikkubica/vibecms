@@ -39,6 +39,34 @@ type TemplateData struct {
 	Node NodeData
 }
 
+// ToMap converts TemplateData to a map with lowercase keys for template access.
+// This allows templates to use {{.app.headStyles}} instead of {{.App.HeadStyles}}.
+func (td TemplateData) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"app": map[string]interface{}{
+			"menus":        td.App.Menus,
+			"settings":     td.App.Settings,
+			"languages":    td.App.Languages,
+			"currentLang":  td.App.CurrentLang,
+			"headStyles":   td.App.HeadStyles,
+			"headScripts":  td.App.HeadScripts,
+			"footScripts":  td.App.FootScripts,
+			"blockStyles":  td.App.BlockStyles,
+			"blockScripts": td.App.BlockScripts,
+		},
+		"node": map[string]interface{}{
+			"title":         td.Node.Title,
+			"slug":          td.Node.Slug,
+			"full_url":      td.Node.FullURL,
+			"blocks_html":   td.Node.BlocksHTML,
+			"fields":        td.Node.Fields,
+			"seo":           td.Node.SEO,
+			"node_type":     td.Node.NodeType,
+			"language_code": td.Node.LanguageCode,
+		},
+	}
+}
+
 // RenderContext builds template data for layout rendering.
 type RenderContext struct {
 	layoutSvc      *LayoutService

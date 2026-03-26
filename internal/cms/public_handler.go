@@ -243,7 +243,7 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 
 	// Render via the layout engine
 	var buf bytes.Buffer
-	if err := h.renderer.RenderLayout(&buf, layout.TemplateCode, templateData, blockResolver); err != nil {
+	if err := h.renderer.RenderLayout(&buf, layout.TemplateCode, templateData.ToMap(), blockResolver); err != nil {
 		log.Printf("WARN: layout render failed, falling back: %v", err)
 		return "", false
 	}

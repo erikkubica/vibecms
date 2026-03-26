@@ -146,7 +146,7 @@ export default function LayoutsListPage() {
                   <TableRow key={layout.id} className="hover:bg-slate-50">
                     <TableCell className="px-6 py-4 text-sm">
                       <Link
-                        to={`/admin/layouts/${layout.id}/edit`}
+                        to={`/admin/layouts/${layout.id}`}
                         className="font-medium text-slate-800 hover:text-indigo-600"
                       >
                         {layout.name}
@@ -181,7 +181,7 @@ export default function LayoutsListPage() {
                           asChild
                           className="h-8 w-8"
                         >
-                          <Link to={`/admin/layouts/${layout.id}/edit`}>
+                          <Link to={`/admin/layouts/${layout.id}`}>
                             <Pencil className="h-4 w-4" />
                           </Link>
                         </Button>

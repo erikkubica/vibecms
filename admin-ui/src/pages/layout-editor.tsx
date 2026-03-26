@@ -167,7 +167,7 @@ export default function LayoutEditorPage() {
       } else {
         const created = await createLayout(data);
         toast.success("Layout created successfully");
-        navigate(`/admin/layouts/${created.id}/edit`, { replace: true });
+        navigate(`/admin/layouts/${created.id}`, { replace: true });
       }
     } catch (err) {
       const message =

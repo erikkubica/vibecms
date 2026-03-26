@@ -51,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   getTemplate,
@@ -402,60 +403,54 @@ export default function TemplateEditorPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Save</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <CardContent className="space-y-4 p-5">
+              {/* Blocks count */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-500">Blocks</Label>
+                <p className="text-sm text-slate-700">{blockConfig.length} block{blockConfig.length !== 1 ? "s" : ""}</p>
+              </div>
+
+              {/* Dates (edit mode) */}
+              {isEdit && originalTemplate && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-500">Created</Label>
+                    <p className="text-sm text-slate-700">{new Date(originalTemplate.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-500">Updated</Label>
+                    <p className="text-sm text-slate-700">{new Date(originalTemplate.updated_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Save button */}
               <Button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
                 disabled={saving}
               >
-                <Save className="mr-2 h-4 w-4" />
-                {saving ? "Saving..." : isEdit ? "Update Template" : "Create Template"}
+                <Save className="mr-1.5 h-3.5 w-3.5" />
+                {saving ? "Saving..." : "Save"}
               </Button>
+
+              {/* Actions (edit mode) */}
+              {isEdit && (
+                <>
+                  <Separator />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-red-600 border-red-200 hover:bg-red-50 rounded-lg h-9 text-sm"
+                    onClick={() => setShowDelete(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
-
-          {/* Actions (edit mode only) */}
-          {isEdit && (
-            <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 p-6 pt-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium"
-                  onClick={() => setShowDelete(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Template
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Info (edit mode) */}
-          {isEdit && originalTemplate && (
-            <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <CardContent className="space-y-2 p-6 text-sm text-slate-500">
-                <div className="flex justify-between">
-                  <span>Created</span>
-                  <span>
-                    {new Date(originalTemplate.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Updated</span>
-                  <span>
-                    {new Date(originalTemplate.updated_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </form>
 

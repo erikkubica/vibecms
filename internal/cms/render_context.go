@@ -44,15 +44,36 @@ type RenderContext struct {
 	layoutSvc      *LayoutService
 	layoutBlockSvc *LayoutBlockService
 	menuSvc        *MenuService
+	themeAssets    *ThemeAssetRegistry
 }
 
 // NewRenderContext creates a new RenderContext.
-func NewRenderContext(layoutSvc *LayoutService, lbSvc *LayoutBlockService, menuSvc *MenuService) *RenderContext {
+func NewRenderContext(layoutSvc *LayoutService, lbSvc *LayoutBlockService, menuSvc *MenuService, themeAssets *ThemeAssetRegistry) *RenderContext {
 	return &RenderContext{
 		layoutSvc:      layoutSvc,
 		layoutBlockSvc: lbSvc,
 		menuSvc:        menuSvc,
+		themeAssets:    themeAssets,
 	}
+}
+
+// BuildAppData populates the AppData struct with theme assets and other app-level data.
+func (rc *RenderContext) BuildAppData(settings map[string]string, languages []models.Language, currentLang *models.Language) AppData {
+	app := AppData{
+		Settings:    settings,
+		Languages:   languages,
+		CurrentLang: currentLang,
+	}
+
+	if rc.themeAssets != nil {
+		app.HeadStyles = rc.themeAssets.GetHeadStyles()
+		app.HeadScripts = rc.themeAssets.GetHeadScripts()
+		app.FootScripts = rc.themeAssets.GetFootScripts()
+		app.BlockStyles = rc.themeAssets.BuildBlockStyleTags()
+		app.BlockScripts = rc.themeAssets.BuildBlockScriptTags()
+	}
+
+	return app
 }
 
 // BuildNodeData creates the .Node namespace from a content node and its rendered blocks HTML.

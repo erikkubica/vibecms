@@ -1,0 +1,476 @@
+package cms
+
+import (
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"vibecms/internal/models"
+
+	"gorm.io/gorm"
+)
+
+// ThemeManifest represents the parsed theme.json file.
+type ThemeManifest struct {
+	Name        string            `json:"name"`
+	Version     string            `json:"version"`
+	Description string            `json:"description"`
+	Author      string            `json:"author"`
+	Styles      []ThemeAssetDef   `json:"styles"`
+	Scripts     []ThemeAssetDef   `json:"scripts"`
+	Layouts     []ThemeLayoutDef  `json:"layouts"`
+	Partials    []ThemePartialDef `json:"partials"`
+	Blocks      []ThemeBlockDef   `json:"blocks"`
+}
+
+// ThemeAssetDef defines a CSS or JS asset declared in theme.json.
+type ThemeAssetDef struct {
+	Handle   string   `json:"handle"`
+	Src      string   `json:"src"`
+	Position string   `json:"position"` // "head" or "footer", default "footer"
+	Defer    bool     `json:"defer"`
+	Deps     []string `json:"deps"`
+}
+
+// ThemeLayoutDef defines a layout declared in theme.json.
+type ThemeLayoutDef struct {
+	Slug      string `json:"slug"`
+	Name      string `json:"name"`
+	File      string `json:"file"`
+	IsDefault bool   `json:"is_default"`
+}
+
+// ThemePartialDef defines a partial declared in theme.json.
+type ThemePartialDef struct {
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+	File string `json:"file"`
+}
+
+// ThemeBlockDef defines a block type declared in theme.json.
+type ThemeBlockDef struct {
+	Slug string `json:"slug"`
+	Dir  string `json:"dir"`
+}
+
+// BlockAsset holds scoped CSS and JS for a block type.
+type BlockAsset struct {
+	CSS string
+	JS  string
+}
+
+// ThemeAssetRegistry is an in-memory store for resolved theme assets.
+type ThemeAssetRegistry struct {
+	mu          sync.RWMutex
+	headStyles  []string
+	headScripts []string
+	footScripts []string
+	blockAssets map[string]*BlockAsset
+	themeDir    string
+}
+
+// NewThemeAssetRegistry creates a new ThemeAssetRegistry.
+func NewThemeAssetRegistry() *ThemeAssetRegistry {
+	return &ThemeAssetRegistry{
+		blockAssets: make(map[string]*BlockAsset),
+	}
+}
+
+// GetHeadStyles returns the resolved head style URLs.
+func (r *ThemeAssetRegistry) GetHeadStyles() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, len(r.headStyles))
+	copy(out, r.headStyles)
+	return out
+}
+
+// GetHeadScripts returns the resolved head script URLs.
+func (r *ThemeAssetRegistry) GetHeadScripts() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, len(r.headScripts))
+	copy(out, r.headScripts)
+	return out
+}
+
+// GetFootScripts returns the resolved footer script URLs.
+func (r *ThemeAssetRegistry) GetFootScripts() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, len(r.footScripts))
+	copy(out, r.footScripts)
+	return out
+}
+
+// GetBlockAssets returns the scoped CSS/JS for a block slug.
+func (r *ThemeAssetRegistry) GetBlockAssets(slug string) (*BlockAsset, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	ba, ok := r.blockAssets[slug]
+	return ba, ok
+}
+
+// BuildBlockStyleTags returns inline <style> tags for all block assets.
+func (r *ThemeAssetRegistry) BuildBlockStyleTags() template.HTML {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var sb strings.Builder
+	for slug, ba := range r.blockAssets {
+		if ba.CSS != "" {
+			sb.WriteString(fmt.Sprintf("<style data-block=\"%s\">\n%s\n</style>\n", slug, ba.CSS))
+		}
+	}
+	return template.HTML(sb.String())
+}
+
+// BuildBlockScriptTags returns inline <script> tags for all block assets.
+func (r *ThemeAssetRegistry) BuildBlockScriptTags() template.HTML {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var sb strings.Builder
+	for slug, ba := range r.blockAssets {
+		if ba.JS != "" {
+			sb.WriteString(fmt.Sprintf("<script data-block=\"%s\">\n%s\n</script>\n", slug, ba.JS))
+		}
+	}
+	return template.HTML(sb.String())
+}
+
+// ThemeLoader reads theme.json and registers layouts, partials, blocks, and assets.
+type ThemeLoader struct {
+	db       *gorm.DB
+	registry *ThemeAssetRegistry
+}
+
+// NewThemeLoader creates a new ThemeLoader.
+func NewThemeLoader(db *gorm.DB, registry *ThemeAssetRegistry) *ThemeLoader {
+	return &ThemeLoader{
+		db:       db,
+		registry: registry,
+	}
+}
+
+// LoadTheme reads theme.json from themeDir and registers everything.
+func (tl *ThemeLoader) LoadTheme(themeDir string) error {
+	manifestPath := filepath.Join(themeDir, "theme.json")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("WARN: theme.json not found at %s, skipping theme load", manifestPath)
+			return nil
+		}
+		log.Printf("WARN: failed to read theme.json at %s: %v", manifestPath, err)
+		return nil
+	}
+
+	var manifest ThemeManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		log.Printf("ERROR: failed to parse theme.json at %s: %v", manifestPath, err)
+		return nil
+	}
+
+	log.Printf("loading theme: %s v%s", manifest.Name, manifest.Version)
+
+	// Get default language from DB.
+	var defaultLang models.Language
+	if err := tl.db.Where("is_default = ?", true).First(&defaultLang).Error; err != nil {
+		log.Printf("WARN: no default language found, using 'en': %v", err)
+		defaultLang.Code = "en"
+	}
+
+	// Store theme dir in registry.
+	tl.registry.mu.Lock()
+	tl.registry.themeDir = themeDir
+	tl.registry.mu.Unlock()
+
+	// Register assets.
+	tl.registerAssets(manifest)
+
+	// Register layouts.
+	for _, def := range manifest.Layouts {
+		filePath := filepath.Join(themeDir, "layouts", def.File)
+		code, err := os.ReadFile(filePath)
+		if err != nil {
+			log.Printf("WARN: layout file not found %s: %v", filePath, err)
+			continue
+		}
+		tl.upsertLayout(manifest.Name, def, string(code), defaultLang.Code)
+	}
+
+	// Register partials.
+	for _, def := range manifest.Partials {
+		filePath := filepath.Join(themeDir, "partials", def.File)
+		code, err := os.ReadFile(filePath)
+		if err != nil {
+			log.Printf("WARN: partial file not found %s: %v", filePath, err)
+			continue
+		}
+		tl.upsertPartial(manifest.Name, def, string(code), defaultLang.Code)
+	}
+
+	// Register blocks.
+	for _, def := range manifest.Blocks {
+		tl.registerBlock(manifest.Name, def, themeDir)
+	}
+
+	log.Printf("theme loaded: %s (%d layouts, %d partials, %d blocks, %d styles, %d scripts)",
+		manifest.Name, len(manifest.Layouts), len(manifest.Partials), len(manifest.Blocks),
+		len(manifest.Styles), len(manifest.Scripts))
+
+	return nil
+}
+
+// registerAssets resolves dependency order and populates the registry.
+func (tl *ThemeLoader) registerAssets(manifest ThemeManifest) {
+	tl.registry.mu.Lock()
+	defer tl.registry.mu.Unlock()
+
+	// Resolve styles (styles typically don't have deps but support it).
+	for _, s := range manifest.Styles {
+		url := "/theme/assets/" + s.Src
+		tl.registry.headStyles = append(tl.registry.headStyles, url)
+	}
+
+	// Resolve scripts with dependency ordering.
+	sorted := tl.resolveDeps(manifest.Scripts)
+	for _, s := range sorted {
+		url := "/theme/assets/" + s.Src
+		pos := s.Position
+		if pos == "" {
+			pos = "footer"
+		}
+		if pos == "head" {
+			tl.registry.headScripts = append(tl.registry.headScripts, url)
+		} else {
+			tl.registry.footScripts = append(tl.registry.footScripts, url)
+		}
+	}
+}
+
+// upsertLayout creates or updates a layout from a theme definition.
+func (tl *ThemeLoader) upsertLayout(themeName string, def ThemeLayoutDef, code string, langCode string) {
+	var existing models.Layout
+	result := tl.db.Where("slug = ? AND language_code = ? AND source = ?", def.Slug, langCode, "theme").First(&existing)
+
+	if result.Error == nil {
+		// Update existing.
+		existing.Name = def.Name
+		existing.TemplateCode = code
+		existing.ThemeName = &themeName
+		existing.IsDefault = def.IsDefault
+		if err := tl.db.Save(&existing).Error; err != nil {
+			log.Printf("WARN: failed to update theme layout %s: %v", def.Slug, err)
+		}
+	} else {
+		// Create new.
+		layout := models.Layout{
+			Slug:         def.Slug,
+			Name:         def.Name,
+			LanguageCode: langCode,
+			TemplateCode: code,
+			Source:       "theme",
+			ThemeName:    &themeName,
+			IsDefault:    def.IsDefault,
+		}
+		if err := tl.db.Create(&layout).Error; err != nil {
+			log.Printf("WARN: failed to create theme layout %s: %v", def.Slug, err)
+		}
+	}
+}
+
+// upsertPartial creates or updates a layout (used as partial) from a theme definition.
+func (tl *ThemeLoader) upsertPartial(themeName string, def ThemePartialDef, code string, langCode string) {
+	var existing models.Layout
+	result := tl.db.Where("slug = ? AND language_code = ? AND source = ?", def.Slug, langCode, "theme").First(&existing)
+
+	if result.Error == nil {
+		existing.Name = def.Name
+		existing.TemplateCode = code
+		existing.ThemeName = &themeName
+		if err := tl.db.Save(&existing).Error; err != nil {
+			log.Printf("WARN: failed to update theme partial %s: %v", def.Slug, err)
+		}
+	} else {
+		layout := models.Layout{
+			Slug:         def.Slug,
+			Name:         def.Name,
+			LanguageCode: langCode,
+			TemplateCode: code,
+			Source:       "theme",
+			ThemeName:    &themeName,
+		}
+		if err := tl.db.Create(&layout).Error; err != nil {
+			log.Printf("WARN: failed to create theme partial %s: %v", def.Slug, err)
+		}
+	}
+}
+
+// blockManifest is the structure of a block's block.json file.
+type blockManifest struct {
+	Slug        string          `json:"slug"`
+	Label       string          `json:"label"`
+	Icon        string          `json:"icon"`
+	Description string          `json:"description"`
+	FieldSchema json.RawMessage `json:"field_schema"`
+	TestData    json.RawMessage `json:"test_data"`
+}
+
+// registerBlock reads block files and upserts the block type.
+func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeDir string) {
+	blockDir := filepath.Join(themeDir, "blocks", def.Dir)
+
+	// Read block.json.
+	bjData, err := os.ReadFile(filepath.Join(blockDir, "block.json"))
+	if err != nil {
+		log.Printf("WARN: block.json not found for block %s: %v", def.Slug, err)
+		return
+	}
+
+	var bm blockManifest
+	if err := json.Unmarshal(bjData, &bm); err != nil {
+		log.Printf("WARN: failed to parse block.json for %s: %v", def.Slug, err)
+		return
+	}
+
+	// Read view.html (the HTML template for the block).
+	viewData, err := os.ReadFile(filepath.Join(blockDir, "view.html"))
+	if err != nil {
+		log.Printf("WARN: view.html not found for block %s: %v", def.Slug, err)
+		return
+	}
+
+	// Read optional style.css and script.js.
+	var blockCSS, blockJS string
+	if cssData, err := os.ReadFile(filepath.Join(blockDir, "style.css")); err == nil {
+		blockCSS = string(cssData)
+	}
+	if jsData, err := os.ReadFile(filepath.Join(blockDir, "script.js")); err == nil {
+		blockJS = string(jsData)
+	}
+
+	// Prepare field_schema and test_data as JSONB.
+	fieldSchema := models.JSONB("[]")
+	if len(bm.FieldSchema) > 0 {
+		fieldSchema = models.JSONB(bm.FieldSchema)
+	}
+	testData := models.JSONB("{}")
+	if len(bm.TestData) > 0 {
+		testData = models.JSONB(bm.TestData)
+	}
+
+	// Set defaults.
+	label := bm.Label
+	if label == "" {
+		label = def.Slug
+	}
+	icon := bm.Icon
+	if icon == "" {
+		icon = "square"
+	}
+
+	// Upsert block type.
+	var existing models.BlockType
+	result := tl.db.Where("slug = ? AND source = ?", def.Slug, "theme").First(&existing)
+
+	viewFile := filepath.Join("blocks", def.Dir, "view.html")
+
+	if result.Error == nil {
+		existing.Label = label
+		existing.Icon = icon
+		existing.Description = bm.Description
+		existing.FieldSchema = fieldSchema
+		existing.HTMLTemplate = string(viewData)
+		existing.TestData = testData
+		existing.ThemeName = &themeName
+		existing.ViewFile = viewFile
+		existing.BlockCSS = blockCSS
+		existing.BlockJS = blockJS
+		if err := tl.db.Save(&existing).Error; err != nil {
+			log.Printf("WARN: failed to update theme block_type %s: %v", def.Slug, err)
+		}
+	} else {
+		bt := models.BlockType{
+			Slug:         def.Slug,
+			Label:        label,
+			Icon:         icon,
+			Description:  bm.Description,
+			FieldSchema:  fieldSchema,
+			HTMLTemplate: string(viewData),
+			TestData:     testData,
+			Source:       "theme",
+			ThemeName:    &themeName,
+			ViewFile:     viewFile,
+			BlockCSS:     blockCSS,
+			BlockJS:      blockJS,
+		}
+		if err := tl.db.Create(&bt).Error; err != nil {
+			log.Printf("WARN: failed to create theme block_type %s: %v", def.Slug, err)
+		}
+	}
+
+	// Store block assets in registry.
+	if blockCSS != "" || blockJS != "" {
+		tl.registry.mu.Lock()
+		tl.registry.blockAssets[def.Slug] = &BlockAsset{
+			CSS: blockCSS,
+			JS:  blockJS,
+		}
+		tl.registry.mu.Unlock()
+	}
+}
+
+// resolveDeps performs a topological sort of scripts by their deps field.
+func (tl *ThemeLoader) resolveDeps(scripts []ThemeAssetDef) []ThemeAssetDef {
+	if len(scripts) == 0 {
+		return scripts
+	}
+
+	// Build handle -> script map.
+	byHandle := make(map[string]ThemeAssetDef)
+	for _, s := range scripts {
+		byHandle[s.Handle] = s
+	}
+
+	// Kahn's algorithm for topological sort.
+	visited := make(map[string]bool)
+	visiting := make(map[string]bool)
+	var sorted []ThemeAssetDef
+
+	var visit func(handle string)
+	visit = func(handle string) {
+		if visited[handle] {
+			return
+		}
+		if visiting[handle] {
+			log.Printf("WARN: circular dependency detected for script handle %s", handle)
+			return
+		}
+		visiting[handle] = true
+
+		s, ok := byHandle[handle]
+		if !ok {
+			visiting[handle] = false
+			return
+		}
+
+		for _, dep := range s.Deps {
+			visit(dep)
+		}
+
+		visiting[handle] = false
+		visited[handle] = true
+		sorted = append(sorted, s)
+	}
+
+	for _, s := range scripts {
+		visit(s.Handle)
+	}
+
+	return sorted
+}

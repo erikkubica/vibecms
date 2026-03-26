@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"vibecms/internal/api"
@@ -95,7 +96,17 @@ func main() {
 	menuSvc := cms.NewMenuService(database)
 	menuHandler := cms.NewMenuHandler(menuSvc)
 	healthHandler := api.NewHealthHandler(database)
-	renderCtx := cms.NewRenderContext(layoutSvc, layoutBlockSvc, menuSvc)
+
+	// Theme loading.
+	themeAssets := cms.NewThemeAssetRegistry()
+	themeLoader := cms.NewThemeLoader(database, themeAssets)
+	themePath := os.Getenv("THEME_PATH")
+	if themePath == "" {
+		themePath = "themes/default"
+	}
+	themeLoader.LoadTheme(themePath)
+
+	renderCtx := cms.NewRenderContext(layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, renderer)
 
@@ -122,6 +133,9 @@ func main() {
 	layoutHandler.RegisterRoutes(adminAPI)
 	layoutBlockHandler.RegisterRoutes(adminAPI)
 	menuHandler.RegisterRoutes(adminAPI)
+
+	// --- Theme static assets ---
+	app.Static("/theme/assets", filepath.Join(themePath, "assets"))
 
 	// --- Admin SPA (serve built React app) ---
 	app.Static("/admin/assets", "./admin-ui/dist/assets")

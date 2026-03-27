@@ -192,6 +192,8 @@ func main() {
 
 	// --- Admin SPA ---
 	app.Static("/admin/assets", "./admin-ui/dist/assets")
+	app.Static("/admin/shims", "./admin-ui/dist/shims")
+	app.Static("/admin/previews", "./admin-ui/dist/previews")
 	app.Get("/admin/*", func(c *fiber.Ctx) error {
 		return c.SendFile("./admin-ui/dist/index.html")
 	})

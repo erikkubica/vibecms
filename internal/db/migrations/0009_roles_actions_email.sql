@@ -208,31 +208,31 @@ INSERT INTO email_templates (slug, name, subject_template, body_template, test_d
 SELECT 'welcome', 'Welcome Email', 'Welcome to {{.site.name}}',
     E'Hi {{.user.full_name}},\n\nWelcome to {{.site.name}}! Your account has been created.\n\nYou can log in at: {{.site.url}}/login',
     '{"user": {"full_name": "Jane Doe", "email": "jane@example.com"}, "site": {"name": "My Site", "url": "https://example.com"}}'::jsonb
-WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'welcome' AND language_id IS NULL);
+WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'welcome');
 
 INSERT INTO email_templates (slug, name, subject_template, body_template, test_data)
 SELECT 'user-registered-admin', 'Admin: New User Registered', 'New user registered: {{.user.full_name}}',
     E'A new user has registered on {{.site.name}}.\n\nName: {{.user.full_name}}\nEmail: {{.user.email}}',
     '{"user": {"full_name": "Jane Doe", "email": "jane@example.com"}, "site": {"name": "My Site"}}'::jsonb
-WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'user-registered-admin' AND language_id IS NULL);
+WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'user-registered-admin');
 
 INSERT INTO email_templates (slug, name, subject_template, body_template, test_data)
 SELECT 'password-reset', 'Password Reset', 'Reset your password',
     E'Hi {{.user.full_name}},\n\nYou requested a password reset for your account on {{.site.name}}.\n\nClick here to reset your password: {{.reset_url}}\n\nIf you didn''t request this, you can safely ignore this email.',
     '{"user": {"full_name": "Jane Doe"}, "site": {"name": "My Site"}, "reset_url": "https://example.com/reset?token=abc123"}'::jsonb
-WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'password-reset' AND language_id IS NULL);
+WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'password-reset');
 
 INSERT INTO email_templates (slug, name, subject_template, body_template, test_data)
 SELECT 'node-published', 'Node Published', '{{.node.title}} has been published',
     E'Hi {{.user.full_name}},\n\n"{{.node.title}}" ({{.node.node_type}}) has been published on {{.site.name}}.\n\nView it at: {{.site.url}}{{.node.full_url}}',
     '{"user": {"full_name": "Jane Doe"}, "node": {"title": "Hello World", "node_type": "post", "full_url": "/hello-world"}, "site": {"name": "My Site", "url": "https://example.com"}}'::jsonb
-WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'node-published' AND language_id IS NULL);
+WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'node-published');
 
 INSERT INTO email_templates (slug, name, subject_template, body_template, test_data)
 SELECT 'node-created-admin', 'Admin: New Node Created', 'New {{.node.node_type}} created: {{.node.title}}',
     E'A new {{.node.node_type}} has been created on {{.site.name}}.\n\nTitle: {{.node.title}}\nAuthor: {{.author.full_name}}\nURL: {{.site.url}}{{.node.full_url}}',
     '{"node": {"title": "Hello World", "node_type": "post", "full_url": "/hello-world"}, "author": {"full_name": "Jane Doe"}, "site": {"name": "My Site", "url": "https://example.com"}}'::jsonb
-WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'node-created-admin' AND language_id IS NULL);
+WHERE NOT EXISTS (SELECT 1 FROM email_templates WHERE slug = 'node-created-admin');
 
 -- ============================================================
 -- 6. Email Rules table

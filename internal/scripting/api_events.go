@@ -2,16 +2,34 @@ package scripting
 
 import (
 	"fmt"
+	"html/template"
 	"log"
+	"sort"
+	"strings"
 
 	"vibecms/internal/events"
 
 	"github.com/d5/tengo/v2"
 )
 
+// scriptHandler is a registered event handler with priority.
+type scriptHandler struct {
+	scriptPath string
+	priority   int
+}
+
 // eventsModule returns the cms/events built-in module.
-// During theme.tengo execution, on() registers handler script paths.
-// After initialization, the engine subscribes to the EventBus for each registered action.
+//
+// Unified event system — handles both lifecycle events (node.created, etc.)
+// and render-time events (before_main_content, etc.) through one API.
+//
+// Usage:
+//
+//	events := import("cms/events")
+//	events.on("node.created", "handlers/on_created")           // default priority 50
+//	events.on("before_main_content", "hooks/banner", 10)       // priority 10 (runs first)
+//	events.on("before_main_content", "hooks/hello_world", 20)  // priority 20 (runs second)
+//	events.emit("custom.action", {key: "value"})               // fire custom event
 func (e *ScriptEngine) eventsModule() map[string]tengo.Object {
 	return map[string]tengo.Object{
 		"on":   &tengo.UserFunction{Name: "on", Value: e.eventsOn},
@@ -19,48 +37,64 @@ func (e *ScriptEngine) eventsModule() map[string]tengo.Object {
 	}
 }
 
-// eventsOn handles events.on(action, script_path)
-// Registers a handler script to run when the given event action fires.
-// script_path is relative to the theme's scripts/ directory (without .tengo extension).
+// eventsOn handles events.on(name, script_path[, priority])
+// Registers a handler script for the given event name.
+// Priority is optional (default 50). Lower number = runs first.
 func (e *ScriptEngine) eventsOn(args ...tengo.Object) (tengo.Object, error) {
 	if len(args) < 2 {
-		return tengo.UndefinedValue, fmt.Errorf("events.on: requires action and script_path arguments")
+		return tengo.UndefinedValue, fmt.Errorf("events.on: requires name and script_path arguments")
 	}
 
-	action := getString(args[0])
+	name := getString(args[0])
 	scriptPath := getString(args[1])
 
-	if action == "" {
-		return tengo.UndefinedValue, fmt.Errorf("events.on: action cannot be empty")
+	if name == "" {
+		return tengo.UndefinedValue, fmt.Errorf("events.on: name cannot be empty")
 	}
 	if scriptPath == "" {
 		return tengo.UndefinedValue, fmt.Errorf("events.on: script_path cannot be empty")
 	}
 
-	// Strip leading "./" for consistency
+	// Strip leading "./"
 	if len(scriptPath) > 2 && scriptPath[:2] == "./" {
 		scriptPath = scriptPath[2:]
 	}
 
+	priority := 50
+	if len(args) > 2 {
+		if p := getInt(args[2]); p > 0 {
+			priority = p
+		}
+	}
+
+	handler := scriptHandler{
+		scriptPath: scriptPath,
+		priority:   priority,
+	}
+
 	e.mu.Lock()
-	e.eventHandlers[action] = append(e.eventHandlers[action], scriptPath)
+	e.eventHandlers[name] = append(e.eventHandlers[name], handler)
+	// Keep sorted by priority
+	sort.Slice(e.eventHandlers[name], func(i, j int) bool {
+		return e.eventHandlers[name][i].priority < e.eventHandlers[name][j].priority
+	})
 	e.mu.Unlock()
 
-	log.Printf("[script] registered event handler: %s -> %s", action, scriptPath)
+	log.Printf("[script] registered event: %s -> %s (priority %d)", name, scriptPath, priority)
 	return tengo.UndefinedValue, nil
 }
 
-// eventsEmit handles events.emit(action, payload)
+// eventsEmit handles events.emit(name, payload)
 // Publishes a custom event to the EventBus, triggering any registered handlers
 // (both script-based and Go-based like email rules).
 func (e *ScriptEngine) eventsEmit(args ...tengo.Object) (tengo.Object, error) {
 	if len(args) < 1 {
-		return tengo.UndefinedValue, fmt.Errorf("events.emit: requires action argument")
+		return tengo.UndefinedValue, fmt.Errorf("events.emit: requires name argument")
 	}
 
-	action := getString(args[0])
-	if action == "" {
-		return tengo.UndefinedValue, fmt.Errorf("events.emit: action cannot be empty")
+	name := getString(args[0])
+	if name == "" {
+		return tengo.UndefinedValue, fmt.Errorf("events.emit: name cannot be empty")
 	}
 
 	payload := events.Payload{}
@@ -72,12 +106,13 @@ func (e *ScriptEngine) eventsEmit(args ...tengo.Object) (tengo.Object, error) {
 		}
 	}
 
-	e.eventBus.Publish(action, payload)
+	e.eventBus.Publish(name, payload)
 	return tengo.UndefinedValue, nil
 }
 
-// subscribeEventHandlers wires all registered event handlers to the EventBus.
-// Called after theme.tengo finishes executing.
+// subscribeEventHandlers wires registered event handlers to the Go EventBus.
+// This connects script handlers to lifecycle events fired by Go services
+// (node.created, node.updated, etc.). Called after theme.tengo finishes.
 func (e *ScriptEngine) subscribeEventHandlers() {
 	if e.eventBus == nil {
 		return
@@ -86,12 +121,11 @@ func (e *ScriptEngine) subscribeEventHandlers() {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
-	for action, scripts := range e.eventHandlers {
-		for _, scriptPath := range scripts {
-			a := action     // capture for closure
-			sp := scriptPath // capture for closure
-			e.eventBus.Subscribe(a, func(act string, payload events.Payload) {
-				// Convert payload to map for script injection
+	for name, handlers := range e.eventHandlers {
+		for _, h := range handlers {
+			n := name          // capture for closure
+			sp := h.scriptPath // capture for closure
+			e.eventBus.Subscribe(n, func(act string, payload events.Payload) {
 				payloadMap := make(map[string]interface{}, len(payload))
 				for k, v := range payload {
 					payloadMap[k] = v
@@ -105,9 +139,49 @@ func (e *ScriptEngine) subscribeEventHandlers() {
 				}
 
 				if _, err := e.runScript(sp, vars, nil); err != nil {
-					log.Printf("[script] event handler error: %s (%s): %v", a, sp, err)
+					log.Printf("[script] event handler error: %s (%s): %v", n, sp, err)
 				}
 			})
 		}
 	}
+}
+
+// RunEvent executes all script handlers registered for the named event,
+// sorted by priority, and returns concatenated HTML output.
+// Called by {{event "name" .}} in templates. Also works for non-render events
+// (handlers that don't set response are simply ignored).
+func (e *ScriptEngine) RunEvent(name string, ctx interface{}) template.HTML {
+	e.mu.RLock()
+	handlers, ok := e.eventHandlers[name]
+	if !ok || len(handlers) == 0 {
+		e.mu.RUnlock()
+		return ""
+	}
+	// Copy to release lock during execution
+	sorted := make([]scriptHandler, len(handlers))
+	copy(sorted, handlers)
+	e.mu.RUnlock()
+
+	renderCtx := normalizeForTengo(ctx)
+
+	var sb strings.Builder
+	for _, h := range sorted {
+		result, err := e.runScript(h.scriptPath, nil, renderCtx)
+		if err != nil {
+			log.Printf("[script] event error: %s (%s): %v", name, h.scriptPath, err)
+			continue
+		}
+		if result == nil {
+			continue
+		}
+		if resp, ok := result.(map[string]interface{}); ok {
+			if html, ok := resp["html"].(string); ok {
+				sb.WriteString(html)
+			}
+		} else if s, ok := result.(string); ok {
+			sb.WriteString(s)
+		}
+	}
+
+	return template.HTML(sb.String())
 }

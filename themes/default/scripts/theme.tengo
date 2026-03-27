@@ -4,19 +4,14 @@
 log := import("cms/log")
 events := import("cms/events")
 http := import("cms/http")
-hooks := import("cms/hooks")
 
 log.info("Default theme scripts initializing...")
 
-// ─── Template Hooks ──────────────────────────────────────────────
-// Register scripts that inject HTML at {{action "name"}} points in layouts.
+// ─── Events ──────────────────────────────────────────────────────
+// Register scripts for any event — lifecycle, template, or custom.
+// Third argument is priority (default 50). Lower = runs first.
 
-hooks.add("before_main_content", "hooks/hello_world")
-
-// ─── Event Handlers ───────────────────────────────────────────────
-// Register scripts that run when CMS events fire.
-// Script paths are relative to this scripts/ directory (without .tengo).
-
+events.on("before_main_content", "hooks/hello_world", 10)
 events.on("node.published", "handlers/on_node_published")
 
 // ─── Theme REST API ───────────────────────────────────────────────

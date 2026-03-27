@@ -18,9 +18,9 @@
     {{renderLayoutBlock "site-header"}}
 
     <main class="flex-1">
-        {{action "before_main_content" .}}
+        {{event "before_main_content" .}}
         {{.node.blocks_html}}
-        {{action "after_main_content" .}}
+        {{event "after_main_content" .}}
     </main>
 
     {{renderLayoutBlock "site-footer"}}

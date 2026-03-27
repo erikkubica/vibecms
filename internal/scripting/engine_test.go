@@ -8,7 +8,7 @@ import (
 
 func TestRunScript_BasicExecution(t *testing.T) {
 	engine := &ScriptEngine{
-		eventHandlers: make(map[string][]string),
+		eventHandlers: make(map[string][]scriptHandler),
 	}
 
 	// Create temp scripts dir
@@ -42,7 +42,7 @@ response = {
 
 func TestRunScript_WithVariables(t *testing.T) {
 	engine := &ScriptEngine{
-		eventHandlers: make(map[string][]string),
+		eventHandlers: make(map[string][]scriptHandler),
 	}
 
 	tmpDir := t.TempDir()
@@ -83,7 +83,7 @@ response = {
 
 func TestRunScript_ImportThemeModule(t *testing.T) {
 	engine := &ScriptEngine{
-		eventHandlers: make(map[string][]string),
+		eventHandlers: make(map[string][]scriptHandler),
 	}
 
 	tmpDir := t.TempDir()
@@ -122,7 +122,7 @@ response = { result: helpers.double(21) }
 
 func TestRunScript_StdlibAccess(t *testing.T) {
 	engine := &ScriptEngine{
-		eventHandlers: make(map[string][]string),
+		eventHandlers: make(map[string][]scriptHandler),
 	}
 
 	tmpDir := t.TempDir()
@@ -154,7 +154,7 @@ response = {
 
 func TestRunScript_LogModule(t *testing.T) {
 	engine := &ScriptEngine{
-		eventHandlers: make(map[string][]string),
+		eventHandlers: make(map[string][]scriptHandler),
 	}
 
 	tmpDir := t.TempDir()
@@ -184,7 +184,7 @@ response = { logged: true }
 
 func TestLoadThemeScripts_NoScriptsDir(t *testing.T) {
 	engine := &ScriptEngine{
-		eventHandlers: make(map[string][]string),
+		eventHandlers: make(map[string][]scriptHandler),
 	}
 
 	// Non-existent theme dir — should not error
@@ -196,14 +196,14 @@ func TestLoadThemeScripts_NoScriptsDir(t *testing.T) {
 
 func TestLoadThemeScripts_EntryScript(t *testing.T) {
 	engine := &ScriptEngine{
-		eventHandlers: make(map[string][]string),
+		eventHandlers: make(map[string][]scriptHandler),
 	}
 
 	tmpDir := t.TempDir()
 	scriptsDir := filepath.Join(tmpDir, "scripts")
 	os.MkdirAll(scriptsDir, 0755)
 
-	// Write a minimal theme.tengo that registers an event handler
+	// Write a minimal theme.tengo that registers event handlers with priority
 	entryScript := `
 log := import("cms/log")
 events := import("cms/events")
@@ -211,6 +211,8 @@ http := import("cms/http")
 
 log.info("test theme loading")
 events.on("node.created", "handlers/on_created")
+events.on("before_main", "hooks/banner", 10)
+events.on("before_main", "hooks/hello", 20)
 http.get("/test", "api/test_endpoint")
 `
 	os.WriteFile(filepath.Join(scriptsDir, "theme.tengo"), []byte(entryScript), 0644)
@@ -226,8 +228,8 @@ http.get("/test", "api/test_endpoint")
 
 	if handlers, ok := engine.eventHandlers["node.created"]; !ok || len(handlers) != 1 {
 		t.Error("expected 1 event handler for node.created")
-	} else if handlers[0] != "handlers/on_created" {
-		t.Errorf("expected handler path 'handlers/on_created', got %q", handlers[0])
+	} else if handlers[0].scriptPath != "handlers/on_created" {
+		t.Errorf("expected handler path 'handlers/on_created', got %q", handlers[0].scriptPath)
 	}
 
 	if len(engine.httpRoutes) != 1 {
@@ -235,6 +237,18 @@ http.get("/test", "api/test_endpoint")
 	} else {
 		if engine.httpRoutes[0].method != "GET" || engine.httpRoutes[0].path != "/test" {
 			t.Errorf("unexpected route: %+v", engine.httpRoutes[0])
+		}
+	}
+
+	// Verify priority ordering
+	if handlers, ok := engine.eventHandlers["before_main"]; !ok || len(handlers) != 2 {
+		t.Error("expected 2 handlers for before_main")
+	} else {
+		if handlers[0].priority != 10 || handlers[1].priority != 20 {
+			t.Errorf("expected priorities [10, 20], got [%d, %d]", handlers[0].priority, handlers[1].priority)
+		}
+		if handlers[0].scriptPath != "hooks/banner" {
+			t.Errorf("expected first handler 'hooks/banner', got %q", handlers[0].scriptPath)
 		}
 	}
 }

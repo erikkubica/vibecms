@@ -19,14 +19,14 @@ type TemplateRenderer struct {
 	mu          sync.RWMutex
 	isDev        bool
 	funcMap      template.FuncMap
-	actionRunner func(string, interface{}) template.HTML
+	eventRunner func(string, interface{}) template.HTML
 }
 
-// SetActionRunner sets the function called by {{action "name" .}} in templates.
-// This connects the template engine to the scripting hook system.
+// SetEventRunner sets the function called by {{event "name" .}} in templates.
+// This connects the template engine to the scripting event system.
 // The second argument receives the current template context (node, app, user data).
-func (r *TemplateRenderer) SetActionRunner(fn func(string, interface{}) template.HTML) {
-	r.actionRunner = fn
+func (r *TemplateRenderer) SetEventRunner(fn func(string, interface{}) template.HTML) {
+	r.eventRunner = fn
 }
 
 // NewTemplateRenderer creates a new TemplateRenderer.
@@ -38,12 +38,12 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 		cache:       make(map[string]*template.Template),
 		isDev:       isDev,
 	}
-	// Default no-op action runner (replaced when scripting engine is loaded)
-	r.actionRunner = func(name string, ctx interface{}) template.HTML { return "" }
+	// Default no-op event runner (replaced when scripting engine is loaded)
+	r.eventRunner = func(name string, ctx interface{}) template.HTML { return "" }
 
 	r.funcMap = template.FuncMap{
-		"action": func(name string, ctx interface{}) template.HTML {
-			return r.actionRunner(name, ctx)
+		"event": func(name string, ctx interface{}) template.HTML {
+			return r.eventRunner(name, ctx)
 		},
 		"deref": func(v interface{}) interface{} {
 			if v == nil {

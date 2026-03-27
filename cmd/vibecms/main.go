@@ -125,7 +125,7 @@ func main() {
 	if err := scriptEngine.LoadThemeScripts(themePath); err != nil {
 		log.Printf("WARN: theme script loading failed: %v", err)
 	}
-	renderer.SetActionRunner(scriptEngine.RunAction)
+	renderer.SetEventRunner(scriptEngine.RunEvent)
 
 	renderCtx := cms.NewRenderContext(database, layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
 	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx)

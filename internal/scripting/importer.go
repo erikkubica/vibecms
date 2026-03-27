@@ -22,7 +22,6 @@ func (e *ScriptEngine) buildModuleMap(renderCtx interface{}) *tengo.ModuleMap {
 	modules.AddBuiltinModule("cms/email", e.emailModule())
 	modules.AddBuiltinModule("cms/menus", e.menusModule())
 	modules.AddBuiltinModule("cms/log", logModule())
-	modules.AddBuiltinModule("cms/hooks", e.hooksModule())
 	modules.AddBuiltinModule("cms/routing", e.routingModule(renderCtx))
 	modules.AddBuiltinModule("cms/helpers", helpersModule())
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -166,9 +167,21 @@ func main() {
 	emailHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)
 
+	// Plugin manager for gRPC extension plugins.
+	pluginManager := cms.NewPluginManager(eventBus)
+	defer pluginManager.StopAll()
+
+	// Start plugins for already-active extensions.
+	for _, ext := range activeExts {
+		if err := pluginManager.StartPlugins(ext.Path, ext.Slug, json.RawMessage(ext.Manifest)); err != nil {
+			log.Printf("WARN: extension %s plugin start failed: %v", ext.Slug, err)
+		}
+	}
+
 	// Extension admin handler.
 	extHandler := cms.NewExtensionHandler(database, extLoader)
 	extHandler.SetScriptLoader(scriptEngine)
+	extHandler.SetPluginManager(pluginManager)
 	extHandler.RegisterRoutes(adminAPI)
 
 	// Theme deploy webhook (public, authenticated by secret).

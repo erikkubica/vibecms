@@ -27,6 +27,7 @@ func (e *ScriptEngine) buildModuleMap(renderCtx interface{}, scriptsDir ...strin
 	modules.AddBuiltinModule("cms/log", logModule())
 	modules.AddBuiltinModule("cms/routing", e.routingModule(renderCtx))
 	modules.AddBuiltinModule("cms/helpers", helpersModule())
+	modules.AddBuiltinModule("cms/fetch",   e.fetchModule())
 
 	// Register standard Tengo stdlib modules (safe subset — no OS/file access)
 	safeModules := []string{"fmt", "math", "text", "times", "rand", "json", "base64", "hex", "enum"}

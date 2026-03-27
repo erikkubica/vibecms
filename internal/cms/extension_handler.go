@@ -27,9 +27,10 @@ type ExtensionScriptLoader interface {
 
 // ExtensionHandler provides HTTP handlers for extension management.
 type ExtensionHandler struct {
-	db           *gorm.DB
-	loader       *ExtensionLoader
-	scriptLoader ExtensionScriptLoader
+	db            *gorm.DB
+	loader        *ExtensionLoader
+	scriptLoader  ExtensionScriptLoader
+	pluginManager *PluginManager
 }
 
 // NewExtensionHandler creates a new ExtensionHandler.
@@ -40,6 +41,11 @@ func NewExtensionHandler(db *gorm.DB, loader *ExtensionLoader) *ExtensionHandler
 // SetScriptLoader sets the script engine for hot-reloading extension scripts.
 func (h *ExtensionHandler) SetScriptLoader(sl ExtensionScriptLoader) {
 	h.scriptLoader = sl
+}
+
+// SetPluginManager sets the plugin manager for starting/stopping gRPC plugins.
+func (h *ExtensionHandler) SetPluginManager(pm *PluginManager) {
+	h.pluginManager = pm
 }
 
 // RegisterRoutes registers all admin API extension routes on the provided router group.
@@ -210,12 +216,18 @@ func (h *ExtensionHandler) Activate(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "ACTIVATE_FAILED", "Failed to activate extension")
 	}
 
-	// Hot-load extension scripts if script engine is available
-	if h.scriptLoader != nil {
-		ext, err := h.loader.GetBySlug(slug)
-		if err == nil {
+	ext, err := h.loader.GetBySlug(slug)
+	if err == nil {
+		// Hot-load extension scripts
+		if h.scriptLoader != nil {
 			if loadErr := h.scriptLoader.LoadExtensionScripts(ext.Path, slug); loadErr != nil {
 				log.Printf("[extensions] warning: failed to hot-load scripts for %s: %v", slug, loadErr)
+			}
+		}
+		// Start gRPC plugins
+		if h.pluginManager != nil {
+			if startErr := h.pluginManager.StartPlugins(ext.Path, slug, json.RawMessage(ext.Manifest)); startErr != nil {
+				log.Printf("[extensions] warning: failed to start plugins for %s: %v", slug, startErr)
 			}
 		}
 	}
@@ -237,9 +249,15 @@ func (h *ExtensionHandler) Deactivate(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "DEACTIVATE_FAILED", "Failed to deactivate extension")
 	}
 
-	// Hot-unload extension scripts
-	if h.scriptLoader != nil && ext != nil {
-		h.scriptLoader.UnloadExtensionScripts(ext.Path, slug)
+	if ext != nil {
+		// Hot-unload extension scripts
+		if h.scriptLoader != nil {
+			h.scriptLoader.UnloadExtensionScripts(ext.Path, slug)
+		}
+		// Stop gRPC plugins
+		if h.pluginManager != nil {
+			h.pluginManager.StopPlugins(slug)
+		}
 	}
 
 	return api.Success(c, fiber.Map{"message": "Extension deactivated"})

@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Package,
   Trash2,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import FileBrowser from "@/components/file-browser";
 import {
   getExtensions,
   activateExtension,
@@ -37,6 +39,7 @@ export default function ExtensionsPage() {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
+  const [browseTarget, setBrowseTarget] = useState<Extension | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Extension | null>(null);
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -310,6 +313,16 @@ export default function ExtensionsPage() {
                     {ext.is_active ? "Deactivate" : "Activate"}
                   </Button>
 
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => setBrowseTarget(ext)}
+                  >
+                    <FolderOpen className="mr-1 h-3 w-3" />
+                    Files
+                  </Button>
+
                   <div className="flex-1" />
 
                   <Button
@@ -364,6 +377,16 @@ export default function ExtensionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* File browser dialog */}
+      {browseTarget && (
+        <FileBrowser
+          apiBase={`/admin/api/extensions/${browseTarget.slug}/files`}
+          title={browseTarget.name}
+          open={!!browseTarget}
+          onClose={() => setBrowseTarget(null)}
+        />
+      )}
     </div>
   );
 }

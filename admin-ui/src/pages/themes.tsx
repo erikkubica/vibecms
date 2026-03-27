@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Loader2,
   Settings,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import FileBrowser from "@/components/file-browser";
 import {
   getThemes,
   uploadTheme,
@@ -66,6 +68,9 @@ export default function ThemesPage() {
 
   // Pull state
   const [pullingId, setPullingId] = useState<number | null>(null);
+
+  // File browser
+  const [browseTarget, setBrowseTarget] = useState<Theme | null>(null);
 
   // Activate/deactivate state
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -508,6 +513,16 @@ export default function ThemesPage() {
                     </>
                   )}
 
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => setBrowseTarget(theme)}
+                  >
+                    <FolderOpen className="mr-1 h-3 w-3" />
+                    Files
+                  </Button>
+
                   <div className="flex-1" />
 
                   <Button
@@ -633,6 +648,16 @@ export default function ThemesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* File browser dialog */}
+      {browseTarget && (
+        <FileBrowser
+          apiBase={`/admin/api/themes/${browseTarget.id}/files`}
+          title={browseTarget.name}
+          open={!!browseTarget}
+          onClose={() => setBrowseTarget(null)}
+        />
+      )}
     </div>
   );
 }

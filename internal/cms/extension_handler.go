@@ -34,6 +34,7 @@ func NewExtensionHandler(db *gorm.DB, loader *ExtensionLoader) *ExtensionHandler
 func (h *ExtensionHandler) RegisterRoutes(router fiber.Router) {
 	g := router.Group("/extensions", auth.CapabilityRequired("manage_settings"))
 	g.Get("/", h.List)
+	g.Get("/:slug/files", h.BrowseFiles)
 	g.Get("/:slug", h.Get)
 	g.Post("/:slug/activate", h.Activate)
 	g.Post("/:slug/deactivate", h.Deactivate)
@@ -61,6 +62,33 @@ func (h *ExtensionHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch extension")
 	}
 	return api.Success(c, ext)
+}
+
+// BrowseFiles handles GET /extensions/:slug/files?path= — browse extension files.
+func (h *ExtensionHandler) BrowseFiles(c *fiber.Ctx) error {
+	slug := c.Params("slug")
+
+	var ext models.Extension
+	if err := h.db.Where("slug = ?", slug).First(&ext).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Extension not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch extension")
+	}
+
+	result, err := BrowseFilesInDir(ext.Path, c.Query("path", ""))
+	if err != nil {
+		msg := err.Error()
+		if msg == "INVALID_PATH" {
+			return api.Error(c, fiber.StatusBadRequest, "INVALID_PATH", "Path traversal is not allowed")
+		}
+		if msg == "NOT_FOUND" {
+			return api.Error(c, fiber.StatusNotFound, "PATH_NOT_FOUND", "The requested path was not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "BROWSE_FAILED", "Failed to browse files")
+	}
+
+	return api.Success(c, result)
 }
 
 // Activate handles POST /extensions/:slug/activate.

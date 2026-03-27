@@ -70,6 +70,7 @@ func NewThemeHandler(db *gorm.DB, mgmtSvc *ThemeMgmtService) *ThemeHandler {
 func (h *ThemeHandler) RegisterRoutes(router fiber.Router) {
 	g := router.Group("/themes", auth.CapabilityRequired("manage_settings"))
 	g.Get("/", h.List)
+	g.Get("/:id/files", h.BrowseFiles)
 	g.Get("/:id", h.Get)
 	g.Post("/upload", h.Upload)
 	g.Post("/git", h.InstallFromGit)
@@ -115,6 +116,36 @@ func (h *ThemeHandler) Get(c *fiber.Ctx) error {
 	}
 
 	return api.Success(c, toThemeResponse(&theme))
+}
+
+// BrowseFiles handles GET /themes/:id/files?path= — browse theme files.
+func (h *ThemeHandler) BrowseFiles(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Theme ID must be a valid integer")
+	}
+
+	var theme models.Theme
+	if err := h.db.First(&theme, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Theme not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch theme")
+	}
+
+	result, err := BrowseFilesInDir(theme.Path, c.Query("path", ""))
+	if err != nil {
+		msg := err.Error()
+		if msg == "INVALID_PATH" {
+			return api.Error(c, fiber.StatusBadRequest, "INVALID_PATH", "Path traversal is not allowed")
+		}
+		if msg == "NOT_FOUND" {
+			return api.Error(c, fiber.StatusNotFound, "PATH_NOT_FOUND", "The requested path was not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "BROWSE_FAILED", "Failed to browse files")
+	}
+
+	return api.Success(c, result)
 }
 
 // Upload handles POST /themes/upload — multipart zip upload.

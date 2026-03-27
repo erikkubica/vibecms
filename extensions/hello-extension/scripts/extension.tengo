@@ -1,0 +1,7 @@
+log := import("cms/log")
+events := import("cms/events")
+
+log.info("Hello Extension loaded!")
+
+// Register an event handler
+events.on("after_main_content", "handlers/powered_by", 99)

@@ -29,6 +29,10 @@ type ScriptEngine struct {
 	themeDir   string // path to active theme root
 	scriptsDir string // themeDir + "/scripts"
 
+	// activeScriptsDir is set during LoadThemeScripts/LoadExtensionScripts
+	// and used by registration functions to set baseDir on handlers.
+	activeScriptsDir string
+
 	// Registered handlers populated during theme.tengo execution
 	mu            sync.RWMutex
 	eventHandlers  map[string][]scriptHandler // event name -> handlers sorted by priority
@@ -75,6 +79,9 @@ func (e *ScriptEngine) LoadThemeScripts(themeDir string) error {
 
 	log.Printf("[script] loading theme scripts from %s", e.scriptsDir)
 
+	// Set activeScriptsDir so registration functions capture it on handlers.
+	e.activeScriptsDir = e.scriptsDir
+
 	// Compile and execute the entry script
 	script := tengo.NewScript(src)
 	script.SetImports(e.buildModuleMap(nil))
@@ -87,8 +94,11 @@ func (e *ScriptEngine) LoadThemeScripts(themeDir string) error {
 
 	_, err = script.RunContext(ctx)
 	if err != nil {
+		e.activeScriptsDir = ""
 		return fmt.Errorf("executing theme.tengo: %w", err)
 	}
+
+	e.activeScriptsDir = ""
 
 	// Wire event handlers to the EventBus
 	e.subscribeEventHandlers()
@@ -117,11 +127,17 @@ func (e *ScriptEngine) MountHTTPRoutes(app *fiber.App) {
 }
 
 // runScript compiles and executes a Tengo script file with the given context variables.
-// Script path is relative to the theme's scripts/ directory (without .tengo extension).
+// Script path is relative to the scripts/ directory (without .tengo extension).
 // renderCtx is the optional template render context (for cms/routing module); pass nil if not in a render.
+// baseDir is an optional scripts directory override; if empty or not provided, e.scriptsDir (theme default) is used.
 // Returns the value of the "response" variable after execution.
-func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{}, renderCtx interface{}) (interface{}, error) {
-	fullPath := filepath.Join(e.scriptsDir, scriptPath+".tengo")
+func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{}, renderCtx interface{}, baseDir ...string) (interface{}, error) {
+	scriptsDir := e.scriptsDir
+	if len(baseDir) > 0 && baseDir[0] != "" {
+		scriptsDir = baseDir[0]
+	}
+
+	fullPath := filepath.Join(scriptsDir, scriptPath+".tengo")
 
 	src, err := os.ReadFile(fullPath)
 	if err != nil {
@@ -129,7 +145,7 @@ func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{},
 	}
 
 	script := tengo.NewScript(src)
-	script.SetImports(e.buildModuleMap(renderCtx))
+	script.SetImports(e.buildModuleMap(renderCtx, scriptsDir))
 	script.SetMaxAllocs(50000)
 
 	// Inject context variables — convert to Tengo objects first to handle
@@ -164,4 +180,48 @@ func (e *ScriptEngine) runScript(scriptPath string, vars map[string]interface{},
 	}
 
 	return tengoToGo(obj), nil
+}
+
+// LoadExtensionScripts loads and executes an extension's entry script (scripts/extension.tengo).
+// This works like LoadThemeScripts but uses the extension's scripts/ directory for module resolution.
+// Returns nil if no scripts directory or entry script exists.
+func (e *ScriptEngine) LoadExtensionScripts(extDir string, slug string) error {
+	extScriptsDir := filepath.Join(extDir, "scripts")
+	entryScript := filepath.Join(extScriptsDir, "extension.tengo")
+
+	if _, err := os.Stat(entryScript); os.IsNotExist(err) {
+		log.Printf("[script] no extension.tengo found for %s at %s", slug, entryScript)
+		return nil
+	}
+
+	src, err := os.ReadFile(entryScript)
+	if err != nil {
+		return fmt.Errorf("reading extension.tengo for %s: %w", slug, err)
+	}
+
+	log.Printf("[script] loading extension scripts for %s from %s", slug, extScriptsDir)
+
+	// Set activeScriptsDir so registration functions capture it on handlers.
+	e.activeScriptsDir = extScriptsDir
+
+	script := tengo.NewScript(src)
+	script.SetImports(e.buildModuleMap(nil, extScriptsDir))
+	script.SetMaxAllocs(50000)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err = script.RunContext(ctx)
+	if err != nil {
+		e.activeScriptsDir = ""
+		return fmt.Errorf("executing extension.tengo for %s: %w", slug, err)
+	}
+
+	e.activeScriptsDir = ""
+
+	// Wire any new event handlers to the EventBus
+	e.subscribeEventHandlers()
+
+	log.Printf("[script] extension %s scripts loaded", slug)
+	return nil
 }

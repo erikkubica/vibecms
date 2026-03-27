@@ -125,6 +125,16 @@ func main() {
 	if err := scriptEngine.LoadThemeScripts(themePath); err != nil {
 		log.Printf("WARN: theme script loading failed: %v", err)
 	}
+	// Extension loading.
+	extLoader := cms.NewExtensionLoader(database, "extensions")
+	extLoader.ScanAndRegister()
+	activeExts, _ := extLoader.GetActive()
+	for _, ext := range activeExts {
+		if err := scriptEngine.LoadExtensionScripts(ext.Path, ext.Slug); err != nil {
+			log.Printf("WARN: extension %s script loading failed: %v", ext.Slug, err)
+		}
+	}
+
 	renderer.SetEventRunner(scriptEngine.RunEvent)
 	renderer.SetFilterRunner(scriptEngine.ApplyFilter)
 
@@ -155,6 +165,10 @@ func main() {
 	roleHandler.RegisterRoutes(adminAPI)
 	emailHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)
+
+	// Extension admin handler.
+	extHandler := cms.NewExtensionHandler(database, extLoader)
+	extHandler.RegisterRoutes(adminAPI)
 
 	// Theme deploy webhook (public, authenticated by secret).
 	themeHandler.RegisterWebhook(app)

@@ -9,9 +9,11 @@ import (
 	"github.com/d5/tengo/v2/stdlib"
 )
 
-// buildModuleMap creates a ModuleMap with all API modules and theme source modules.
+// buildModuleMap creates a ModuleMap with all API modules and source modules.
 // renderCtx is the optional template render context passed to cms/routing; nil outside renders.
-func (e *ScriptEngine) buildModuleMap(renderCtx interface{}) *tengo.ModuleMap {
+// scriptsDir is an optional override for the directory from which source modules are loaded;
+// if not provided, e.scriptsDir (theme default) is used.
+func (e *ScriptEngine) buildModuleMap(renderCtx interface{}, scriptsDir ...string) *tengo.ModuleMap {
 	modules := tengo.NewModuleMap()
 
 	// Register built-in API modules
@@ -37,8 +39,12 @@ func (e *ScriptEngine) buildModuleMap(renderCtx interface{}) *tengo.ModuleMap {
 		}
 	}
 
-	// Load theme source modules from scripts/ directory
-	e.loadSourceModules(modules)
+	// Load source modules from scripts/ directory
+	if len(scriptsDir) > 0 && scriptsDir[0] != "" {
+		e.loadSourceModules(modules, scriptsDir[0])
+	} else {
+		e.loadSourceModules(modules, "")
+	}
 
 	return modules
 }
@@ -46,12 +52,17 @@ func (e *ScriptEngine) buildModuleMap(renderCtx interface{}) *tengo.ModuleMap {
 // loadSourceModules recursively scans the scripts directory and adds all .tengo
 // files as source modules. Module names use paths relative to scripts/ with a
 // "./" prefix (e.g., "./lib/helpers" for scripts/lib/helpers.tengo).
-func (e *ScriptEngine) loadSourceModules(modules *tengo.ModuleMap) {
-	if e.scriptsDir == "" {
+// If dir is empty, e.scriptsDir (theme default) is used.
+func (e *ScriptEngine) loadSourceModules(modules *tengo.ModuleMap, dir string) {
+	scriptsDir := dir
+	if scriptsDir == "" {
+		scriptsDir = e.scriptsDir
+	}
+	if scriptsDir == "" {
 		return
 	}
 
-	filepath.Walk(e.scriptsDir, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(scriptsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}
@@ -59,13 +70,14 @@ func (e *ScriptEngine) loadSourceModules(modules *tengo.ModuleMap) {
 			return nil
 		}
 
-		// Skip the entry script itself — it's not importable
-		if filepath.Base(path) == "theme.tengo" && filepath.Dir(path) == e.scriptsDir {
+		// Skip entry scripts — they're not importable
+		base := filepath.Base(path)
+		if (base == "theme.tengo" || base == "extension.tengo") && filepath.Dir(path) == scriptsDir {
 			return nil
 		}
 
 		// Calculate relative path from scripts dir
-		relPath, err := filepath.Rel(e.scriptsDir, path)
+		relPath, err := filepath.Rel(scriptsDir, path)
 		if err != nil {
 			return nil
 		}

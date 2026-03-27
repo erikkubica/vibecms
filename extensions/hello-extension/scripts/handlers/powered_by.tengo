@@ -1,0 +1,7 @@
+routing := import("cms/routing")
+
+if !routing.is_404() {
+    response = {
+        html: `<div style="text-align: center; padding: 0.5rem; font-size: 0.75rem; color: #94a3b8;">Powered by VibeCMS</div>`
+    }
+}

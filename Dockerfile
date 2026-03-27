@@ -18,6 +18,7 @@ WORKDIR /app
 COPY --from=builder /app/vibecms .
 COPY --from=builder /app/ui/templates ./ui/templates
 COPY --from=builder /app/themes ./themes
+COPY --from=builder /app/extensions ./extensions
 COPY --from=frontend /app/admin-ui/dist ./admin-ui/dist
 EXPOSE 8099
 CMD ["./vibecms"]

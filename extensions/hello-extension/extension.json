@@ -1,0 +1,8 @@
+{
+    "name": "Hello Extension",
+    "slug": "hello-extension",
+    "version": "1.0.0",
+    "author": "VibeCMS",
+    "description": "Example extension demonstrating the extension API",
+    "priority": 50
+}

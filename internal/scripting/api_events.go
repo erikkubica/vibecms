@@ -16,6 +16,7 @@ import (
 type scriptHandler struct {
 	scriptPath string
 	priority   int
+	baseDir    string // scripts directory for this handler (extension or theme)
 }
 
 // eventsModule returns the cms/events built-in module.
@@ -70,6 +71,7 @@ func (e *ScriptEngine) eventsOn(args ...tengo.Object) (tengo.Object, error) {
 	handler := scriptHandler{
 		scriptPath: scriptPath,
 		priority:   priority,
+		baseDir:    e.activeScriptsDir,
 	}
 
 	e.mu.Lock()
@@ -134,6 +136,7 @@ func (e *ScriptEngine) subscribeEventHandlers() {
 		for _, h := range handlers {
 			n := name          // capture for closure
 			sp := h.scriptPath // capture for closure
+			bd := h.baseDir    // capture for closure
 			e.eventBus.Subscribe(n, func(act string, payload events.Payload) {
 				payloadMap := make(map[string]interface{}, len(payload))
 				for k, v := range payload {
@@ -147,7 +150,7 @@ func (e *ScriptEngine) subscribeEventHandlers() {
 					},
 				}
 
-				if _, err := e.runScript(sp, vars, nil); err != nil {
+				if _, err := e.runScript(sp, vars, nil, bd); err != nil {
 					log.Printf("[script] event handler error: %s (%s): %v", n, sp, err)
 				}
 			})
@@ -183,7 +186,7 @@ func (e *ScriptEngine) RunEvent(name string, ctx interface{}, args []interface{}
 
 	var sb strings.Builder
 	for _, h := range sorted {
-		result, err := e.runScript(h.scriptPath, vars, renderCtx)
+		result, err := e.runScript(h.scriptPath, vars, renderCtx, h.baseDir)
 		if err != nil {
 			log.Printf("[script] event error: %s (%s): %v", name, h.scriptPath, err)
 			continue

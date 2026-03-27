@@ -58,6 +58,7 @@ func (e *ScriptEngine) filtersAdd(args ...tengo.Object) (tengo.Object, error) {
 	handler := scriptHandler{
 		scriptPath: scriptPath,
 		priority:   priority,
+		baseDir:    e.activeScriptsDir,
 	}
 
 	e.mu.Lock()
@@ -93,7 +94,7 @@ func (e *ScriptEngine) ApplyFilter(name string, value interface{}, renderCtx int
 			"value": currentValue,
 		}
 
-		result, err := e.runScript(h.scriptPath, vars, renderCtx)
+		result, err := e.runScript(h.scriptPath, vars, renderCtx, h.baseDir)
 		if err != nil {
 			log.Printf("[script] filter error: %s (%s): %v", name, h.scriptPath, err)
 			continue // pass value through unchanged on error

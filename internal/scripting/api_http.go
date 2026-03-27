@@ -15,6 +15,7 @@ type httpRoute struct {
 	method     string
 	path       string
 	scriptPath string
+	baseDir    string // scripts directory for this route (extension or theme)
 }
 
 // httpModule returns the cms/http built-in module.
@@ -57,6 +58,7 @@ func (e *ScriptEngine) httpRegister(method string) tengo.CallableFunc {
 			method:     method,
 			path:       path,
 			scriptPath: scriptPath,
+			baseDir:    e.activeScriptsDir,
 		})
 		e.mu.Unlock()
 
@@ -80,7 +82,7 @@ func (e *ScriptEngine) MountRoutes(app *fiber.App) {
 	themeAPI := app.Group("/api/theme")
 
 	for _, route := range routes {
-		handler := e.makeHTTPHandler(route.scriptPath)
+		handler := e.makeHTTPHandler(route.scriptPath, route.baseDir)
 		fullPath := route.path
 
 		switch route.method {
@@ -101,7 +103,7 @@ func (e *ScriptEngine) MountRoutes(app *fiber.App) {
 }
 
 // makeHTTPHandler creates a Fiber handler that runs a Tengo script.
-func (e *ScriptEngine) makeHTTPHandler(scriptPath string) fiber.Handler {
+func (e *ScriptEngine) makeHTTPHandler(scriptPath string, baseDir string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Build request object for the script
 		query := make(map[string]interface{})
@@ -147,7 +149,7 @@ func (e *ScriptEngine) makeHTTPHandler(scriptPath string) fiber.Handler {
 			"request": reqMap,
 		}
 
-		result, err := e.runScript(scriptPath, vars, nil)
+		result, err := e.runScript(scriptPath, vars, nil, baseDir)
 		if err != nil {
 			log.Printf("[script] HTTP handler error: %s: %v", scriptPath, err)
 			return c.Status(500).JSON(fiber.Map{"error": "script execution error"})

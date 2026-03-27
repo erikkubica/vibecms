@@ -937,3 +937,55 @@ export async function updateThemeGitConfig(
     body: JSON.stringify(data),
   });
 }
+
+// --- Extensions ---
+
+export interface Extension {
+  id: number;
+  slug: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  path: string;
+  is_active: boolean;
+  priority: number;
+  settings: Record<string, unknown>;
+  installed_at: string;
+  updated_at: string;
+}
+
+export async function getExtensions(): Promise<Extension[]> {
+  const res = await api<ApiResponse<Extension[]>>("/admin/api/extensions");
+  return res.data;
+}
+
+export async function activateExtension(slug: string): Promise<void> {
+  await api<void>(`/admin/api/extensions/${slug}/activate`, { method: "POST" });
+}
+
+export async function deactivateExtension(slug: string): Promise<void> {
+  await api<void>(`/admin/api/extensions/${slug}/deactivate`, { method: "POST" });
+}
+
+export async function uploadExtension(file: File): Promise<void> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/admin/api/extensions/upload", {
+    method: "POST",
+    body: form,
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = await res.json();
+    throw new ApiClientError(
+      body.error?.message || "Upload failed",
+      body.error?.code || "upload_failed",
+      res.status
+    );
+  }
+}
+
+export async function deleteExtension(slug: string): Promise<void> {
+  await api<void>(`/admin/api/extensions/${slug}`, { method: "DELETE" });
+}

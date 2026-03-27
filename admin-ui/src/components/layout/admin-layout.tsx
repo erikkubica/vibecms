@@ -31,6 +31,7 @@ import {
   Tag,
   Star,
   Heart,
+  Puzzle,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,7 @@ const staticNavBottom: NavEntry[] = [
       { to: "/admin/templates", label: "Templates", icon: LayoutTemplate },
     ],
   },
+  { to: "/admin/extensions", label: "Extensions", icon: Puzzle },
   {
     label: "Schema",
     icon: Boxes,

@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ExtensionPlugin_GetSubscriptions_FullMethodName = "/plugin.ExtensionPlugin/GetSubscriptions"
-	ExtensionPlugin_HandleEvent_FullMethodName      = "/plugin.ExtensionPlugin/HandleEvent"
-	ExtensionPlugin_Shutdown_FullMethodName         = "/plugin.ExtensionPlugin/Shutdown"
+	ExtensionPlugin_GetSubscriptions_FullMethodName = "/vibecmsplugin.ExtensionPlugin/GetSubscriptions"
+	ExtensionPlugin_HandleEvent_FullMethodName      = "/vibecmsplugin.ExtensionPlugin/HandleEvent"
+	ExtensionPlugin_Shutdown_FullMethodName         = "/vibecmsplugin.ExtensionPlugin/Shutdown"
 )
 
 // ExtensionPluginClient is the client API for ExtensionPlugin service.
@@ -182,7 +182,7 @@ func _ExtensionPlugin_Shutdown_Handler(srv interface{}, ctx context.Context, dec
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ExtensionPlugin_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "plugin.ExtensionPlugin",
+	ServiceName: "vibecmsplugin.ExtensionPlugin",
 	HandlerType: (*ExtensionPluginServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

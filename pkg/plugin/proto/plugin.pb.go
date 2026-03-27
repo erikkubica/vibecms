@@ -269,25 +269,25 @@ var File_plugin_proto protoreflect.FileDescriptor
 
 const file_plugin_proto_rawDesc = "" +
 	"\n" +
-	"\fplugin.proto\x12\x06plugin\"\a\n" +
+	"\fplugin.proto\x12\rvibecmsplugin\"\a\n" +
 	"\x05Empty\"I\n" +
 	"\fSubscription\x12\x1d\n" +
 	"\n" +
 	"event_name\x18\x01 \x01(\tR\teventName\x12\x1a\n" +
-	"\bpriority\x18\x02 \x01(\x05R\bpriority\"N\n" +
-	"\x10SubscriptionList\x12:\n" +
-	"\rsubscriptions\x18\x01 \x03(\v2\x14.plugin.SubscriptionR\rsubscriptions\"@\n" +
+	"\bpriority\x18\x02 \x01(\x05R\bpriority\"U\n" +
+	"\x10SubscriptionList\x12A\n" +
+	"\rsubscriptions\x18\x01 \x03(\v2\x1b.vibecmsplugin.SubscriptionR\rsubscriptions\"@\n" +
 	"\fEventRequest\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12\x18\n" +
 	"\apayload\x18\x02 \x01(\fR\apayload\"W\n" +
 	"\rEventResponse\x12\x18\n" +
 	"\ahandled\x18\x01 \x01(\bR\ahandled\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\x12\x16\n" +
-	"\x06result\x18\x03 \x01(\fR\x06result2\xb4\x01\n" +
-	"\x0fExtensionPlugin\x12;\n" +
-	"\x10GetSubscriptions\x12\r.plugin.Empty\x1a\x18.plugin.SubscriptionList\x12:\n" +
-	"\vHandleEvent\x12\x14.plugin.EventRequest\x1a\x15.plugin.EventResponse\x12(\n" +
-	"\bShutdown\x12\r.plugin.Empty\x1a\r.plugin.EmptyB\x1aZ\x18vibecms/pkg/plugin/protob\x06proto3"
+	"\x06result\x18\x03 \x01(\fR\x06result2\xde\x01\n" +
+	"\x0fExtensionPlugin\x12I\n" +
+	"\x10GetSubscriptions\x12\x14.vibecmsplugin.Empty\x1a\x1f.vibecmsplugin.SubscriptionList\x12H\n" +
+	"\vHandleEvent\x12\x1b.vibecmsplugin.EventRequest\x1a\x1c.vibecmsplugin.EventResponse\x126\n" +
+	"\bShutdown\x12\x14.vibecmsplugin.Empty\x1a\x14.vibecmsplugin.EmptyB\x1aZ\x18vibecms/pkg/plugin/protob\x06proto3"
 
 var (
 	file_plugin_proto_rawDescOnce sync.Once
@@ -303,20 +303,20 @@ func file_plugin_proto_rawDescGZIP() []byte {
 
 var file_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_plugin_proto_goTypes = []any{
-	(*Empty)(nil),            // 0: plugin.Empty
-	(*Subscription)(nil),     // 1: plugin.Subscription
-	(*SubscriptionList)(nil), // 2: plugin.SubscriptionList
-	(*EventRequest)(nil),     // 3: plugin.EventRequest
-	(*EventResponse)(nil),    // 4: plugin.EventResponse
+	(*Empty)(nil),            // 0: vibecmsplugin.Empty
+	(*Subscription)(nil),     // 1: vibecmsplugin.Subscription
+	(*SubscriptionList)(nil), // 2: vibecmsplugin.SubscriptionList
+	(*EventRequest)(nil),     // 3: vibecmsplugin.EventRequest
+	(*EventResponse)(nil),    // 4: vibecmsplugin.EventResponse
 }
 var file_plugin_proto_depIdxs = []int32{
-	1, // 0: plugin.SubscriptionList.subscriptions:type_name -> plugin.Subscription
-	0, // 1: plugin.ExtensionPlugin.GetSubscriptions:input_type -> plugin.Empty
-	3, // 2: plugin.ExtensionPlugin.HandleEvent:input_type -> plugin.EventRequest
-	0, // 3: plugin.ExtensionPlugin.Shutdown:input_type -> plugin.Empty
-	2, // 4: plugin.ExtensionPlugin.GetSubscriptions:output_type -> plugin.SubscriptionList
-	4, // 5: plugin.ExtensionPlugin.HandleEvent:output_type -> plugin.EventResponse
-	0, // 6: plugin.ExtensionPlugin.Shutdown:output_type -> plugin.Empty
+	1, // 0: vibecmsplugin.SubscriptionList.subscriptions:type_name -> vibecmsplugin.Subscription
+	0, // 1: vibecmsplugin.ExtensionPlugin.GetSubscriptions:input_type -> vibecmsplugin.Empty
+	3, // 2: vibecmsplugin.ExtensionPlugin.HandleEvent:input_type -> vibecmsplugin.EventRequest
+	0, // 3: vibecmsplugin.ExtensionPlugin.Shutdown:input_type -> vibecmsplugin.Empty
+	2, // 4: vibecmsplugin.ExtensionPlugin.GetSubscriptions:output_type -> vibecmsplugin.SubscriptionList
+	4, // 5: vibecmsplugin.ExtensionPlugin.HandleEvent:output_type -> vibecmsplugin.EventResponse
+	0, // 6: vibecmsplugin.ExtensionPlugin.Shutdown:output_type -> vibecmsplugin.Empty
 	4, // [4:7] is the sub-list for method output_type
 	1, // [1:4] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

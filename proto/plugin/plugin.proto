@@ -1,5 +1,5 @@
 syntax = "proto3";
-package plugin;
+package vibecmsplugin;
 
 option go_package = "vibecms/pkg/plugin/proto";
 

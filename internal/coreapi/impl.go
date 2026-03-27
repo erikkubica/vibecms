@@ -16,6 +16,7 @@ type coreImpl struct {
 	eventBus   *events.EventBus
 	contentSvc *cms.ContentService
 	menuSvc    *cms.MenuService
+	mediaSvc   *cms.MediaService
 	emailDisp  *email.Dispatcher
 	app        *fiber.App
 	filters    map[string][]filterEntry
@@ -32,6 +33,7 @@ func NewCoreImpl(
 	eventBus *events.EventBus,
 	contentSvc *cms.ContentService,
 	menuSvc *cms.MenuService,
+	mediaSvc *cms.MediaService,
 	emailDisp *email.Dispatcher,
 	app *fiber.App,
 ) CoreAPI {
@@ -40,6 +42,7 @@ func NewCoreImpl(
 		eventBus:   eventBus,
 		contentSvc: contentSvc,
 		menuSvc:    menuSvc,
+		mediaSvc:   mediaSvc,
 		emailDisp:  emailDisp,
 		app:        app,
 		filters:    make(map[string][]filterEntry),

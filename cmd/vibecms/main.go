@@ -87,6 +87,7 @@ func main() {
 	layoutSvc := cms.NewLayoutService(database, eventBus, themeAssets)
 	layoutBlockSvc := cms.NewLayoutBlockService(database, eventBus, themeAssets)
 	menuSvc := cms.NewMenuService(database, eventBus)
+	mediaSvc := cms.NewMediaService(database, "storage/media")
 	isDev := cfg.AppEnv == "development"
 	renderer := rendering.NewTemplateRenderer("ui/templates", isDev)
 
@@ -125,7 +126,7 @@ func main() {
 	themeHandler := cms.NewThemeHandler(database, themeMgmtSvc)
 
 	// CoreAPI — unified API facade for extensions.
-	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, emailDispatcher, app)
+	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, mediaSvc, emailDispatcher, app)
 
 	// Theme scripting engine.
 	scriptEngine := scripting.NewScriptEngine(eventBus, coreAPI)
@@ -205,6 +206,9 @@ func main() {
 
 	// Theme deploy webhook (public, authenticated by secret).
 	themeHandler.RegisterWebhook(app)
+
+	// --- Media files ---
+	app.Static("/media", "./storage/media")
 
 	// --- Theme static assets ---
 	app.Static("/theme/assets", filepath.Join(themePath, "assets"))

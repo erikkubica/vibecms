@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
 	pb "vibecms/pkg/plugin/proto"
@@ -30,7 +29,7 @@ type ExtensionPlugin interface {
 
 // ExtensionGRPCPlugin implements plugin.GRPCPlugin for the extension interface.
 type ExtensionGRPCPlugin struct {
-	plugin.Plugin
+	plugin.NetRPCUnsupportedPlugin
 	Impl ExtensionPlugin // Only used on the plugin side
 }
 
@@ -41,16 +40,6 @@ func (p *ExtensionGRPCPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Serv
 
 func (p *ExtensionGRPCPlugin) GRPCClient(broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &GRPCClient{client: pb.NewExtensionPluginClient(c)}, nil
-}
-
-// Server is unused but required by the plugin.Plugin interface
-func (p *ExtensionGRPCPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return nil, nil
-}
-
-// Client is unused but required by the plugin.Plugin interface
-func (p *ExtensionGRPCPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return nil, nil
 }
 
 // --- GRPCClient (host side) ---

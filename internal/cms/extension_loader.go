@@ -13,14 +13,61 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// AdminUISlot describes a component injected into a named slot.
+type AdminUISlot struct {
+	Component string `json:"component"`
+	Label     string `json:"label"`
+}
+
+// AdminUIRoute describes a route registered by an extension.
+type AdminUIRoute struct {
+	Path      string `json:"path"`
+	Component string `json:"component"`
+}
+
+// AdminUIMenuItem describes a menu child item.
+type AdminUIMenuItem struct {
+	Label string `json:"label"`
+	Route string `json:"route"`
+}
+
+// AdminUIMenu describes a sidebar menu group registered by an extension.
+type AdminUIMenu struct {
+	Label    string            `json:"label"`
+	Icon     string            `json:"icon"`
+	Position string            `json:"position"`
+	Children []AdminUIMenuItem `json:"children"`
+}
+
+// AdminUIManifest describes the admin UI components an extension provides.
+type AdminUIManifest struct {
+	Entry  string                 `json:"entry"`
+	Slots  map[string]AdminUISlot `json:"slots"`
+	Routes []AdminUIRoute         `json:"routes"`
+	Menu   *AdminUIMenu           `json:"menu"`
+}
+
+// SettingsField describes a single setting field in the schema.
+type SettingsField struct {
+	Type      string   `json:"type"`
+	Label     string   `json:"label"`
+	Required  bool     `json:"required"`
+	Default   any      `json:"default"`
+	Sensitive bool     `json:"sensitive"`
+	Enum      []string `json:"enum"`
+}
+
 // ExtensionManifest represents the extension.json manifest file.
 type ExtensionManifest struct {
-	Name        string `json:"name"`
-	Slug        string `json:"slug"`
-	Version     string `json:"version"`
-	Author      string `json:"author"`
-	Description string `json:"description"`
-	Priority    int    `json:"priority"`
+	Name           string                   `json:"name"`
+	Slug           string                   `json:"slug"`
+	Version        string                   `json:"version"`
+	Author         string                   `json:"author"`
+	Description    string                   `json:"description"`
+	Priority       int                      `json:"priority"`
+	Provides       []string                 `json:"provides"`
+	AdminUI        *AdminUIManifest         `json:"admin_ui"`
+	SettingsSchema map[string]SettingsField `json:"settings_schema"`
 }
 
 // ExtensionLoader handles scanning, registering, and managing extensions.
@@ -85,6 +132,7 @@ func (l *ExtensionLoader) ScanAndRegister() {
 			Author:      manifest.Author,
 			Path:        extDir,
 			Priority:    manifest.Priority,
+			Manifest:    models.JSONB(data),
 		}
 
 		// Upsert: insert if new, update name/version/description/author/path/priority if exists.
@@ -92,7 +140,7 @@ func (l *ExtensionLoader) ScanAndRegister() {
 		result := l.db.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "slug"}},
 			DoUpdates: clause.AssignmentColumns([]string{
-				"name", "version", "description", "author", "path", "priority",
+				"name", "version", "description", "author", "path", "priority", "manifest",
 			}),
 		}).Create(&ext)
 

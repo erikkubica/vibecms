@@ -13,17 +13,20 @@ import (
 	"vibecms/internal/auth"
 	"vibecms/internal/cms"
 	"vibecms/internal/config"
+	"vibecms/internal/coreapi"
 	"vibecms/internal/db"
 	"vibecms/internal/email"
 	"vibecms/internal/events"
 	"vibecms/internal/rbac"
 	"vibecms/internal/rendering"
 	"vibecms/internal/scripting"
+	pb "vibecms/pkg/plugin/coreapipb"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -121,8 +124,11 @@ func main() {
 	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes")
 	themeHandler := cms.NewThemeHandler(database, themeMgmtSvc)
 
+	// CoreAPI — unified API facade for extensions.
+	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, emailDispatcher, app)
+
 	// Theme scripting engine.
-	scriptEngine := scripting.NewScriptEngine(database, eventBus, contentSvc, menuSvc)
+	scriptEngine := scripting.NewScriptEngine(eventBus, coreAPI)
 	if err := scriptEngine.LoadThemeScripts(themePath); err != nil {
 		log.Printf("WARN: theme script loading failed: %v", err)
 	}
@@ -131,7 +137,10 @@ func main() {
 	extLoader.ScanAndRegister()
 	activeExts, _ := extLoader.GetActive()
 	for _, ext := range activeExts {
-		if err := scriptEngine.LoadExtensionScripts(ext.Path, ext.Slug); err != nil {
+		var manifest cms.ExtensionManifest
+		_ = json.Unmarshal(ext.Manifest, &manifest)
+		caps := manifest.CapabilityMap()
+		if err := scriptEngine.LoadExtensionScripts(ext.Path, ext.Slug, caps); err != nil {
 			log.Printf("WARN: extension %s script loading failed: %v", ext.Slug, err)
 		}
 	}
@@ -168,12 +177,22 @@ func main() {
 	themeHandler.RegisterRoutes(adminAPI)
 
 	// Plugin manager for gRPC extension plugins.
-	pluginManager := cms.NewPluginManager(eventBus)
+	hostRegistrar := cms.HostServerRegistrar(func(slug string, capabilities map[string]bool) func(s *grpc.Server) {
+		caller := coreapi.CallerInfo{Slug: slug, Type: "grpc", Capabilities: capabilities}
+		hostServer := coreapi.NewGRPCHostServer(coreAPI, caller)
+		return func(s *grpc.Server) {
+			pb.RegisterVibeCMSHostServer(s, hostServer)
+		}
+	})
+	pluginManager := cms.NewPluginManager(eventBus, hostRegistrar)
 	defer pluginManager.StopAll()
 
 	// Start plugins for already-active extensions.
 	for _, ext := range activeExts {
-		if err := pluginManager.StartPlugins(ext.Path, ext.Slug, json.RawMessage(ext.Manifest)); err != nil {
+		var manifest cms.ExtensionManifest
+		_ = json.Unmarshal(ext.Manifest, &manifest)
+		caps := manifest.CapabilityMap()
+		if err := pluginManager.StartPlugins(ext.Path, ext.Slug, json.RawMessage(ext.Manifest), caps); err != nil {
 			log.Printf("WARN: extension %s plugin start failed: %v", ext.Slug, err)
 		}
 	}

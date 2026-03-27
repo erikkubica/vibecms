@@ -218,15 +218,20 @@ func (h *ExtensionHandler) Activate(c *fiber.Ctx) error {
 
 	ext, err := h.loader.GetBySlug(slug)
 	if err == nil {
+		// Parse manifest to get capabilities
+		var manifest ExtensionManifest
+		_ = json.Unmarshal(ext.Manifest, &manifest)
+		caps := manifest.CapabilityMap()
+
 		// Hot-load extension scripts
 		if h.scriptLoader != nil {
-			if loadErr := h.scriptLoader.LoadExtensionScripts(ext.Path, slug); loadErr != nil {
+			if loadErr := h.scriptLoader.LoadExtensionScripts(ext.Path, slug, caps); loadErr != nil {
 				log.Printf("[extensions] warning: failed to hot-load scripts for %s: %v", slug, loadErr)
 			}
 		}
 		// Start gRPC plugins
 		if h.pluginManager != nil {
-			if startErr := h.pluginManager.StartPlugins(ext.Path, slug, json.RawMessage(ext.Manifest)); startErr != nil {
+			if startErr := h.pluginManager.StartPlugins(ext.Path, slug, json.RawMessage(ext.Manifest), caps); startErr != nil {
 				log.Printf("[extensions] warning: failed to start plugins for %s: %v", slug, startErr)
 			}
 		}

@@ -66,9 +66,19 @@ type ExtensionManifest struct {
 	Description    string                  `json:"description"`
 	Priority       int                     `json:"priority"`
 	Provides       []string                `json:"provides"`
+	Capabilities   []string                `json:"capabilities"`
 	Plugins        []PluginManifestEntry   `json:"plugins"`
 	AdminUI        *AdminUIManifest        `json:"admin_ui"`
 	SettingsSchema map[string]SettingsField `json:"settings_schema"`
+}
+
+// CapabilityMap returns the Capabilities slice as a map for quick lookup.
+func (m *ExtensionManifest) CapabilityMap() map[string]bool {
+	caps := make(map[string]bool, len(m.Capabilities))
+	for _, c := range m.Capabilities {
+		caps[c] = true
+	}
+	return caps
 }
 
 // ExtensionLoader handles scanning, registering, and managing extensions.

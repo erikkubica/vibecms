@@ -21,6 +21,8 @@ var PluginMap = map[string]plugin.Plugin{
 }
 
 // ExtensionPlugin is the interface that plugin binaries must implement.
+// On the plugin side, Initialize receives a *grpc.ClientConn to the host.
+// On the host side, GRPCClient.InitializeHost provides the broker-based version.
 type ExtensionPlugin interface {
 	GetSubscriptions() ([]*pb.Subscription, error)
 	HandleEvent(action string, payload []byte) (*pb.EventResponse, error)
@@ -71,10 +73,15 @@ func (c *GRPCClient) Shutdown() error {
 	return err
 }
 
-// Initialize starts a gRPC host service on the broker and tells the plugin
+// Initialize satisfies the ExtensionPlugin interface (unused on the host side).
+func (c *GRPCClient) Initialize(hostConn *grpc.ClientConn) error {
+	return nil // host side uses InitializeHost instead
+}
+
+// InitializeHost starts a gRPC host service on the broker and tells the plugin
 // where to connect back. registerServer is called with the *grpc.Server so
 // the caller can register the VibeCMSHost service implementation.
-func (c *GRPCClient) Initialize(registerServer func(s *grpc.Server)) error {
+func (c *GRPCClient) InitializeHost(registerServer func(s *grpc.Server)) error {
 	hostServiceID := c.broker.NextId()
 	go c.broker.AcceptAndServe(hostServiceID, func(opts []grpc.ServerOption) *grpc.Server {
 		s := grpc.NewServer(opts...)

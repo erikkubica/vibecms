@@ -13,7 +13,14 @@ import (
 	vibeplugin "vibecms/pkg/plugin"
 
 	"vibecms/internal/events"
+
+	"google.golang.org/grpc"
 )
+
+// HostServerRegistrar is a function that registers the VibeCMSHost gRPC service
+// on a grpc.Server for a given extension slug with its capabilities.
+// This avoids an import cycle between cms and coreapi.
+type HostServerRegistrar func(slug string, capabilities map[string]bool) func(s *grpc.Server)
 
 // PluginManifestEntry represents a single plugin binary in an extension manifest.
 type PluginManifestEntry struct {
@@ -32,21 +39,25 @@ type runningPlugin struct {
 
 // PluginManager manages the lifecycle of gRPC plugin processes.
 type PluginManager struct {
-	mu       sync.RWMutex
-	plugins  map[string][]*runningPlugin // extension slug -> running plugins
-	eventBus *events.EventBus
+	mu            sync.RWMutex
+	plugins       map[string][]*runningPlugin // extension slug -> running plugins
+	eventBus      *events.EventBus
+	hostRegistrar HostServerRegistrar
 }
 
 // NewPluginManager creates a new PluginManager.
-func NewPluginManager(eventBus *events.EventBus) *PluginManager {
+// hostRegistrar may be nil if no CoreAPI is available (plugins won't get host callbacks).
+func NewPluginManager(eventBus *events.EventBus, hostRegistrar HostServerRegistrar) *PluginManager {
 	return &PluginManager{
-		plugins:  make(map[string][]*runningPlugin),
-		eventBus: eventBus,
+		plugins:       make(map[string][]*runningPlugin),
+		eventBus:      eventBus,
+		hostRegistrar: hostRegistrar,
 	}
 }
 
 // StartPlugins starts all plugin binaries declared in an extension's manifest.
-func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json.RawMessage) error {
+// capabilities is the set of permissions declared in the extension manifest.
+func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json.RawMessage, capabilities map[string]bool) error {
 	// Parse plugins from manifest
 	var m struct {
 		Plugins []PluginManifestEntry `json:"plugins"`
@@ -105,6 +116,18 @@ func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json
 			log.Printf("[plugins] plugin %s/%s does not implement ExtensionPlugin", slug, pe.Binary)
 			client.Kill()
 			continue
+		}
+
+		// Initialize: start gRPC host service so plugin can call back into VibeCMS.
+		if pm.hostRegistrar != nil {
+			if grpcClient, ok := impl.(*vibeplugin.GRPCClient); ok {
+				registerFn := pm.hostRegistrar(slug, capabilities)
+				if initErr := grpcClient.InitializeHost(registerFn); initErr != nil {
+					log.Printf("[plugins] failed to initialize host service for %s/%s: %v", slug, pe.Binary, initErr)
+					client.Kill()
+					continue
+				}
+			}
 		}
 
 		// Get subscriptions from the plugin

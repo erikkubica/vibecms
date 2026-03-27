@@ -14,6 +14,7 @@ type Extension struct {
 	IsActive    bool      `gorm:"not null;default:false" json:"is_active"`
 	Priority    int       `gorm:"not null;default:50" json:"priority"`
 	Settings    JSONB     `gorm:"type:jsonb;not null;default:'{}'" json:"settings"`
+	Manifest    JSONB     `gorm:"type:jsonb;not null;default:'{}'" json:"manifest"`
 	InstalledAt time.Time `gorm:"autoCreateTime" json:"installed_at"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }

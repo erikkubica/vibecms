@@ -12,6 +12,12 @@ RUN npm ci
 COPY extensions/media-manager/admin-ui/ .
 RUN npm run build
 
+WORKDIR /app/extensions/email-manager/admin-ui
+COPY extensions/email-manager/admin-ui/package*.json ./
+RUN npm ci
+COPY extensions/email-manager/admin-ui/ .
+RUN npm run build
+
 FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -31,5 +37,6 @@ COPY --from=builder /app/themes ./themes
 COPY --from=builder /app/extensions ./extensions
 COPY --from=frontend /app/admin-ui/dist ./admin-ui/dist
 COPY --from=frontend /app/extensions/media-manager/admin-ui/dist ./extensions/media-manager/admin-ui/dist
+COPY --from=frontend /app/extensions/email-manager/admin-ui/dist ./extensions/email-manager/admin-ui/dist
 EXPOSE 8099
 CMD ["./vibecms"]

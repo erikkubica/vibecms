@@ -16,6 +16,7 @@ import {
   FileCode2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import CodeViewer, { detectLanguage } from "@/components/ui/code-viewer";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -177,7 +178,7 @@ function TreeItem({
   return (
     <>
       <button
-        className={`flex w-full items-center gap-1.5 py-1.5 px-2 text-left text-sm transition-colors hover:bg-slate-100 ${
+        className={`flex w-full items-center gap-1.5 py-1.5 px-2 text-left text-sm cursor-pointer transition-colors hover:bg-slate-100 ${
           isSelected ? "bg-indigo-50 text-indigo-700 font-medium" : "text-slate-700"
         }`}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
@@ -364,8 +365,6 @@ export default function FileBrowser({ apiBase, title, backUrl, backLabel }: File
     [apiBase],
   );
 
-  const lines = fileContent?.split("\n") ?? [];
-
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Header */}
@@ -444,7 +443,7 @@ export default function FileBrowser({ apiBase, title, backUrl, backLabel }: File
               </div>
 
               {/* Content area */}
-              <div className="flex-1 overflow-auto">
+              <div className="flex-1 overflow-hidden">
                 {fileMeta?.binary ? (
                   <div className="flex items-center justify-center h-full text-slate-500 text-sm">
                     Binary file — cannot be previewed
@@ -454,22 +453,11 @@ export default function FileBrowser({ apiBase, title, backUrl, backLabel }: File
                     File too large to preview
                   </div>
                 ) : (
-                  <div className="flex min-w-fit">
-                    {/* Line numbers gutter */}
-                    <div className="shrink-0 sticky left-0 bg-slate-950 border-r border-slate-800/50 select-none pr-3 pl-4 py-3 text-right font-mono text-xs leading-5 text-slate-600">
-                      {lines.map((_, i) => (
-                        <div key={i}>{i + 1}</div>
-                      ))}
-                    </div>
-                    {/* Code */}
-                    <pre className="flex-1 py-3 pl-4 pr-6 font-mono text-sm leading-5 text-slate-200 whitespace-pre overflow-x-visible">
-                      {lines.map((line, i) => (
-                        <div key={i} className="hover:bg-slate-800/40">
-                          {line || "\n"}
-                        </div>
-                      ))}
-                    </pre>
-                  </div>
+                  <CodeViewer
+                    value={fileContent ?? ""}
+                    filename={fileMeta?.path}
+                    language={fileMeta?.language ? detectLanguage(fileMeta.path) : undefined}
+                  />
                 )}
               </div>
             </>

@@ -229,6 +229,8 @@ func (e *ScriptEngine) HTTPRegister(method, path, scriptPath string) {
 }
 
 // MountRoutes registers all script HTTP handlers on the Fiber app.
+// Routes with paths starting with "/" are mounted at the top level (e.g., /sitemap.xml).
+// Other routes are mounted under /api/theme (e.g., /api/theme/search).
 func (e *ScriptEngine) MountRoutes(app *fiber.App) {
 	e.mu.RLock()
 	routes := make([]httpRoute, len(e.httpRoutes))
@@ -240,26 +242,43 @@ func (e *ScriptEngine) MountRoutes(app *fiber.App) {
 	}
 
 	themeAPI := app.Group("/api/theme")
+	var topLevel, apiLevel int
 
 	for _, route := range routes {
 		handler := e.makeHTTPHandler(route.scriptPath, route.baseDir)
-		fullPath := route.path
+
+		// Routes with paths like /sitemap.xml mount at the app root.
+		// Routes with paths like /search mount under /api/theme.
+		isTopLevel := strings.Contains(route.path, ".")
+		var target fiber.Router
+		if isTopLevel {
+			target = app
+			topLevel++
+		} else {
+			target = themeAPI
+			apiLevel++
+		}
 
 		switch route.method {
 		case "GET":
-			themeAPI.Get(fullPath, handler)
+			target.Get(route.path, handler)
 		case "POST":
-			themeAPI.Post(fullPath, handler)
+			target.Post(route.path, handler)
 		case "PUT":
-			themeAPI.Put(fullPath, handler)
+			target.Put(route.path, handler)
 		case "PATCH":
-			themeAPI.Patch(fullPath, handler)
+			target.Patch(route.path, handler)
 		case "DELETE":
-			themeAPI.Delete(fullPath, handler)
+			target.Delete(route.path, handler)
 		}
 	}
 
-	log.Printf("[script] mounted %d HTTP routes under /api/theme", len(routes))
+	if topLevel > 0 {
+		log.Printf("[script] mounted %d top-level HTTP routes", topLevel)
+	}
+	if apiLevel > 0 {
+		log.Printf("[script] mounted %d HTTP routes under /api/theme", apiLevel)
+	}
 }
 
 // makeHTTPHandler creates a Fiber handler that runs a Tengo script.
@@ -330,7 +349,14 @@ func (e *ScriptEngine) makeHTTPHandler(scriptPath string, baseDir string) fiber.
 				}
 			}
 
+			if ct, ok := resp["content_type"].(string); ok && ct != "" {
+				c.Set("Content-Type", ct)
+			}
+
 			if body, ok := resp["body"]; ok {
+				if bodyStr, ok := body.(string); ok {
+					return c.Status(status).SendString(bodyStr)
+				}
 				return c.Status(status).JSON(body)
 			}
 			if html, ok := resp["html"].(string); ok {

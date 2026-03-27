@@ -53,6 +53,16 @@ func NewScriptEngine(
 	}
 }
 
+// scriptCallbacks returns a ScriptCallbacks that wires into the engine's
+// registration methods (EventsOn, FiltersAdd, HTTPRegister).
+func (e *ScriptEngine) scriptCallbacks() *coreapi.ScriptCallbacks {
+	return &coreapi.ScriptCallbacks{
+		OnEvent:  e.EventsOn,
+		OnFilter: e.FiltersAdd,
+		OnRoute:  e.HTTPRegister,
+	}
+}
+
 // LoadThemeScripts loads and executes the theme's entry script (scripts/theme.tengo).
 // This populates event handler and HTTP route registrations.
 // Returns nil if no scripts directory or entry script exists (scripts are optional).
@@ -82,7 +92,7 @@ func (e *ScriptEngine) LoadThemeScripts(themeDir string) error {
 	// Compile and execute the entry script
 	script := tengo.NewScript(src)
 	caller := coreapi.CallerInfo{Slug: "theme", Type: "tengo", Capabilities: nil}
-	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, e.scriptsDir))
+	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, e.scriptsDir, e.scriptCallbacks()))
 
 	// Set a max execution time for safety
 	script.SetMaxAllocs(50000)
@@ -214,7 +224,7 @@ func (e *ScriptEngine) LoadExtensionScripts(extDir string, slug string, capabili
 
 	caller := coreapi.CallerInfo{Slug: slug, Type: "tengo", Capabilities: caps}
 	script := tengo.NewScript(src)
-	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, extScriptsDir))
+	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, extScriptsDir, e.scriptCallbacks()))
 	script.SetMaxAllocs(50000)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

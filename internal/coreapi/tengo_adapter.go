@@ -12,6 +12,15 @@ import (
 	"github.com/d5/tengo/v2/stdlib"
 )
 
+// ScriptCallbacks allows the ScriptEngine to inject registration functions
+// into the Tengo modules. These are called when scripts use events.on(),
+// filters.add(), or routes.register().
+type ScriptCallbacks struct {
+	OnEvent  func(name, scriptPath string, priority int) // events.on()
+	OnFilter func(name, scriptPath string, priority int) // filters.add()
+	OnRoute  func(method, path, scriptPath string)       // routes.register()
+}
+
 // BuildTengoModules creates a ModuleMap with all core/* API modules, stdlib,
 // and source modules from the scripts directory. This replaces the old
 // cms/* modules with new CoreAPI-backed implementations.
@@ -21,7 +30,12 @@ import (
 //   - caller: identifies who is calling (theme, extension, etc.)
 //   - renderCtx: optional template render context (for core/routing); nil outside renders
 //   - scriptsDir: directory from which to load .tengo source modules
-func BuildTengoModules(api CoreAPI, caller CallerInfo, renderCtx interface{}, scriptsDir string) *tengo.ModuleMap {
+//   - callbacks: optional ScriptCallbacks for registration functions (nil = no-op)
+func BuildTengoModules(api CoreAPI, caller CallerInfo, renderCtx interface{}, scriptsDir string, callbacks ...*ScriptCallbacks) *tengo.ModuleMap {
+	var cb *ScriptCallbacks
+	if len(callbacks) > 0 {
+		cb = callbacks[0]
+	}
 	modules := tengo.NewModuleMap()
 
 	ctx := WithCaller(context.Background(), caller)
@@ -29,11 +43,11 @@ func BuildTengoModules(api CoreAPI, caller CallerInfo, renderCtx interface{}, sc
 	// Register core/* builtin modules
 	modules.AddBuiltinModule("core/nodes", nodesModule(api, ctx))
 	modules.AddBuiltinModule("core/settings", settingsModule(api, ctx))
-	modules.AddBuiltinModule("core/events", eventsModule(api, ctx))
+	modules.AddBuiltinModule("core/events", eventsModule(api, ctx, cb))
 	modules.AddBuiltinModule("core/email", emailModule(api, ctx))
 	modules.AddBuiltinModule("core/menus", menusModule(api, ctx))
-	modules.AddBuiltinModule("core/routes", routesModule())
-	modules.AddBuiltinModule("core/filters", filtersModule())
+	modules.AddBuiltinModule("core/routes", routesModule(cb))
+	modules.AddBuiltinModule("core/filters", filtersModule(cb))
 	modules.AddBuiltinModule("core/http", httpFetchModule(api, ctx))
 	modules.AddBuiltinModule("core/log", logModule(api, ctx))
 	modules.AddBuiltinModule("core/helpers", helpersModule())
@@ -239,7 +253,7 @@ func settingsModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 // core/events
 // ---------------------------------------------------------------------------
 
-func eventsModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
+func eventsModule(api CoreAPI, ctx context.Context, cb *ScriptCallbacks) map[string]tengo.Object {
 	return map[string]tengo.Object{
 		"emit": &tengo.UserFunction{Name: "emit", Value: func(args ...tengo.Object) (tengo.Object, error) {
 			if len(args) < 1 {
@@ -261,10 +275,21 @@ func eventsModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 			return tengo.UndefinedValue, nil
 		}},
 		"on": &tengo.UserFunction{Name: "on", Value: func(args ...tengo.Object) (tengo.Object, error) {
-			// Placeholder -- actual registration is handled by the ScriptEngine
-			// via the events module in engine.go. This exists so scripts can
-			// import("core/events") without error when running outside of the
-			// engine's registration phase.
+			// events.on(name, script_path[, priority])
+			if len(args) < 2 {
+				return tengo.UndefinedValue, fmt.Errorf("events.on: requires name and script_path")
+			}
+			name := tengoToString(args[0])
+			scriptPath := tengoToString(args[1])
+			priority := 10
+			if len(args) > 2 {
+				if p, ok := tengo.ToInt(args[2]); ok {
+					priority = p
+				}
+			}
+			if cb != nil && cb.OnEvent != nil {
+				cb.OnEvent(name, scriptPath, priority)
+			}
 			return tengo.UndefinedValue, nil
 		}},
 	}
@@ -365,9 +390,19 @@ func menusModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 // core/routes (placeholder -- engine handles registration)
 // ---------------------------------------------------------------------------
 
-func routesModule() map[string]tengo.Object {
+func routesModule(cb *ScriptCallbacks) map[string]tengo.Object {
 	return map[string]tengo.Object{
 		"register": &tengo.UserFunction{Name: "register", Value: func(args ...tengo.Object) (tengo.Object, error) {
+			// routes.register(method, path, script_path)
+			if len(args) < 3 {
+				return tengo.UndefinedValue, fmt.Errorf("routes.register: requires method, path, script_path")
+			}
+			method := tengoToString(args[0])
+			path := tengoToString(args[1])
+			scriptPath := tengoToString(args[2])
+			if cb != nil && cb.OnRoute != nil {
+				cb.OnRoute(method, path, scriptPath)
+			}
 			return tengo.UndefinedValue, nil
 		}},
 	}
@@ -377,9 +412,24 @@ func routesModule() map[string]tengo.Object {
 // core/filters (placeholder -- engine handles registration)
 // ---------------------------------------------------------------------------
 
-func filtersModule() map[string]tengo.Object {
+func filtersModule(cb *ScriptCallbacks) map[string]tengo.Object {
 	return map[string]tengo.Object{
 		"add": &tengo.UserFunction{Name: "add", Value: func(args ...tengo.Object) (tengo.Object, error) {
+			// filters.add(name, script_path[, priority])
+			if len(args) < 2 {
+				return tengo.UndefinedValue, fmt.Errorf("filters.add: requires name and script_path")
+			}
+			name := tengoToString(args[0])
+			scriptPath := tengoToString(args[1])
+			priority := 10
+			if len(args) > 2 {
+				if p, ok := tengo.ToInt(args[2]); ok {
+					priority = p
+				}
+			}
+			if cb != nil && cb.OnFilter != nil {
+				cb.OnFilter(name, scriptPath, priority)
+			}
 			return tengo.UndefinedValue, nil
 		}},
 	}

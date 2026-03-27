@@ -10,3 +10,4 @@ storage/backups/*
 .DS_Store
 tmp/
 .superpowers/
+node_modules/

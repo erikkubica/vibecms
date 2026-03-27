@@ -28,6 +28,7 @@ import EmailRulesPage from "@/pages/email-rules";
 import EmailRuleEditorPage from "@/pages/email-rule-editor";
 import EmailLogsPage from "@/pages/email-logs";
 import EmailSettingsPage from "@/pages/email-settings";
+import MediaLibraryPage from "@/pages/media-library";
 import ThemesPage from "@/pages/themes";
 import ThemeFilesPage from "@/pages/theme-files";
 import ExtensionsPage from "@/pages/extensions";
@@ -140,6 +141,7 @@ function AppRoutes() {
         <Route path="email-rules/:id/edit" element={<EmailRuleEditorPage />} />
         <Route path="email-logs" element={<EmailLogsPage />} />
         <Route path="email-settings" element={<EmailSettingsPage />} />
+        <Route path="media" element={<MediaLibraryPage />} />
         <Route path="themes" element={<ThemesPage />} />
         <Route path="themes/:id/files" element={<ThemeFilesPage />} />
         <Route path="extensions" element={<ExtensionsPage />} />

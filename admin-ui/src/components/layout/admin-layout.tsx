@@ -89,7 +89,7 @@ const staticNavTop: NavItem[] = [
 ];
 
 const staticNavBottom: NavEntry[] = [
-  { to: "/admin/media", label: "Media", icon: Image, disabled: true },
+  { to: "/admin/media", label: "Media", icon: Image },
   {
     label: "Appearance",
     icon: Palette,

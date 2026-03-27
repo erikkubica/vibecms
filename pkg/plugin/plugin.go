@@ -10,7 +10,7 @@ import (
 
 // Handshake is used to ensure the plugin and host are compatible.
 var Handshake = plugin.HandshakeConfig{
-	ProtocolVersion:  1,
+	ProtocolVersion:  2,
 	MagicCookieKey:   "VIBECMS_PLUGIN",
 	MagicCookieValue: "vibecms",
 }

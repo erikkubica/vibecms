@@ -11,3 +11,5 @@ storage/backups/*
 tmp/
 .superpowers/
 node_modules/
+extensions/*/admin-ui/node_modules/
+extensions/*/bin/

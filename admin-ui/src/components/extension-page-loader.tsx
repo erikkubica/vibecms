@@ -30,16 +30,26 @@ export function ExtensionPageLoader() {
   const adminUI = ext.entry.manifest.admin_ui;
   if (!adminUI?.routes) return null;
 
-  // Extract the path after /admin/ext/:slug/
-  const basePath = `/admin/ext/${slug}/`;
-  const subPath = location.pathname.startsWith(basePath)
+  // Extract the path after /admin/ext/:slug
+  const basePath = `/admin/ext/${slug}`;
+  let subPath = location.pathname.startsWith(basePath)
     ? location.pathname.slice(basePath.length)
     : "";
+  // Ensure subPath starts with /
+  if (!subPath.startsWith("/")) {
+    subPath = "/" + subPath;
+  }
+  // Normalize: remove trailing slash (except for root /)
+  if (subPath.length > 1 && subPath.endsWith("/")) {
+    subPath = subPath.slice(0, -1);
+  }
 
   // Find the matching route
   const matchedRoute = adminUI.routes.find((r) => {
-    const routePath = r.path.replace(/:\w+/g, "[^/]+");
-    return new RegExp(`^${routePath}$`).test(subPath) || subPath === r.path;
+    const routePath = r.path.replace(/^\/+/, "/"); // normalize
+    // Convert :param patterns to regex
+    const pattern = routePath.replace(/:\w+/g, "[^/]+");
+    return new RegExp(`^${pattern}$`).test(subPath);
   });
 
   // Default to first route if no match

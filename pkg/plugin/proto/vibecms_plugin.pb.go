@@ -309,6 +309,158 @@ func (x *EventResponse) GetResult() []byte {
 	return nil
 }
 
+type PluginHTTPRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Method        string                 `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"` // path relative to /admin/api/ext/{slug}/
+	Headers       map[string]string      `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Body          []byte                 `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+	QueryParams   map[string]string      `protobuf:"bytes,5,rep,name=query_params,json=queryParams,proto3" json:"query_params,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	PathParams    map[string]string      `protobuf:"bytes,6,rep,name=path_params,json=pathParams,proto3" json:"path_params,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // e.g., :id from routes
+	UserId        uint64                 `protobuf:"varint,7,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`                                                                                      // authenticated user ID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PluginHTTPRequest) Reset() {
+	*x = PluginHTTPRequest{}
+	mi := &file_vibecms_plugin_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginHTTPRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginHTTPRequest) ProtoMessage() {}
+
+func (x *PluginHTTPRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_vibecms_plugin_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PluginHTTPRequest.ProtoReflect.Descriptor instead.
+func (*PluginHTTPRequest) Descriptor() ([]byte, []int) {
+	return file_vibecms_plugin_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *PluginHTTPRequest) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
+}
+
+func (x *PluginHTTPRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *PluginHTTPRequest) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *PluginHTTPRequest) GetBody() []byte {
+	if x != nil {
+		return x.Body
+	}
+	return nil
+}
+
+func (x *PluginHTTPRequest) GetQueryParams() map[string]string {
+	if x != nil {
+		return x.QueryParams
+	}
+	return nil
+}
+
+func (x *PluginHTTPRequest) GetPathParams() map[string]string {
+	if x != nil {
+		return x.PathParams
+	}
+	return nil
+}
+
+func (x *PluginHTTPRequest) GetUserId() uint64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type PluginHTTPResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StatusCode    int32                  `protobuf:"varint,1,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	Headers       map[string]string      `protobuf:"bytes,2,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Body          []byte                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PluginHTTPResponse) Reset() {
+	*x = PluginHTTPResponse{}
+	mi := &file_vibecms_plugin_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PluginHTTPResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PluginHTTPResponse) ProtoMessage() {}
+
+func (x *PluginHTTPResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_vibecms_plugin_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PluginHTTPResponse.ProtoReflect.Descriptor instead.
+func (*PluginHTTPResponse) Descriptor() ([]byte, []int) {
+	return file_vibecms_plugin_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *PluginHTTPResponse) GetStatusCode() int32 {
+	if x != nil {
+		return x.StatusCode
+	}
+	return 0
+}
+
+func (x *PluginHTTPResponse) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *PluginHTTPResponse) GetBody() []byte {
+	if x != nil {
+		return x.Body
+	}
+	return nil
+}
+
 var File_vibecms_plugin_proto protoreflect.FileDescriptor
 
 const file_vibecms_plugin_proto_rawDesc = "" +
@@ -329,13 +481,40 @@ const file_vibecms_plugin_proto_rawDesc = "" +
 	"\rEventResponse\x12\x18\n" +
 	"\ahandled\x18\x01 \x01(\bR\ahandled\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\x12\x16\n" +
-	"\x06result\x18\x03 \x01(\fR\x06result2\xa4\x02\n" +
+	"\x06result\x18\x03 \x01(\fR\x06result\"\x99\x04\n" +
+	"\x11PluginHTTPRequest\x12\x16\n" +
+	"\x06method\x18\x01 \x01(\tR\x06method\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12G\n" +
+	"\aheaders\x18\x03 \x03(\v2-.vibecmsplugin.PluginHTTPRequest.HeadersEntryR\aheaders\x12\x12\n" +
+	"\x04body\x18\x04 \x01(\fR\x04body\x12T\n" +
+	"\fquery_params\x18\x05 \x03(\v21.vibecmsplugin.PluginHTTPRequest.QueryParamsEntryR\vqueryParams\x12Q\n" +
+	"\vpath_params\x18\x06 \x03(\v20.vibecmsplugin.PluginHTTPRequest.PathParamsEntryR\n" +
+	"pathParams\x12\x17\n" +
+	"\auser_id\x18\a \x01(\x04R\x06userId\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
+	"\x10QueryParamsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a=\n" +
+	"\x0fPathParamsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xcf\x01\n" +
+	"\x12PluginHTTPResponse\x12\x1f\n" +
+	"\vstatus_code\x18\x01 \x01(\x05R\n" +
+	"statusCode\x12H\n" +
+	"\aheaders\x18\x02 \x03(\v2..vibecmsplugin.PluginHTTPResponse.HeadersEntryR\aheaders\x12\x12\n" +
+	"\x04body\x18\x03 \x01(\fR\x04body\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xfe\x02\n" +
 	"\x0fExtensionPlugin\x12I\n" +
 	"\x10GetSubscriptions\x12\x14.vibecmsplugin.Empty\x1a\x1f.vibecmsplugin.SubscriptionList\x12H\n" +
 	"\vHandleEvent\x12\x1b.vibecmsplugin.EventRequest\x1a\x1c.vibecmsplugin.EventResponse\x126\n" +
 	"\bShutdown\x12\x14.vibecmsplugin.Empty\x1a\x14.vibecmsplugin.Empty\x12D\n" +
 	"\n" +
-	"Initialize\x12 .vibecmsplugin.InitializeRequest\x1a\x14.vibecmsplugin.EmptyB\x1aZ\x18vibecms/pkg/plugin/protob\x06proto3"
+	"Initialize\x12 .vibecmsplugin.InitializeRequest\x1a\x14.vibecmsplugin.Empty\x12X\n" +
+	"\x11HandleHTTPRequest\x12 .vibecmsplugin.PluginHTTPRequest\x1a!.vibecmsplugin.PluginHTTPResponseB\x1aZ\x18vibecms/pkg/plugin/protob\x06proto3"
 
 var (
 	file_vibecms_plugin_proto_rawDescOnce sync.Once
@@ -349,30 +528,42 @@ func file_vibecms_plugin_proto_rawDescGZIP() []byte {
 	return file_vibecms_plugin_proto_rawDescData
 }
 
-var file_vibecms_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_vibecms_plugin_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_vibecms_plugin_proto_goTypes = []any{
-	(*Empty)(nil),             // 0: vibecmsplugin.Empty
-	(*InitializeRequest)(nil), // 1: vibecmsplugin.InitializeRequest
-	(*Subscription)(nil),      // 2: vibecmsplugin.Subscription
-	(*SubscriptionList)(nil),  // 3: vibecmsplugin.SubscriptionList
-	(*EventRequest)(nil),      // 4: vibecmsplugin.EventRequest
-	(*EventResponse)(nil),     // 5: vibecmsplugin.EventResponse
+	(*Empty)(nil),              // 0: vibecmsplugin.Empty
+	(*InitializeRequest)(nil),  // 1: vibecmsplugin.InitializeRequest
+	(*Subscription)(nil),       // 2: vibecmsplugin.Subscription
+	(*SubscriptionList)(nil),   // 3: vibecmsplugin.SubscriptionList
+	(*EventRequest)(nil),       // 4: vibecmsplugin.EventRequest
+	(*EventResponse)(nil),      // 5: vibecmsplugin.EventResponse
+	(*PluginHTTPRequest)(nil),  // 6: vibecmsplugin.PluginHTTPRequest
+	(*PluginHTTPResponse)(nil), // 7: vibecmsplugin.PluginHTTPResponse
+	nil,                        // 8: vibecmsplugin.PluginHTTPRequest.HeadersEntry
+	nil,                        // 9: vibecmsplugin.PluginHTTPRequest.QueryParamsEntry
+	nil,                        // 10: vibecmsplugin.PluginHTTPRequest.PathParamsEntry
+	nil,                        // 11: vibecmsplugin.PluginHTTPResponse.HeadersEntry
 }
 var file_vibecms_plugin_proto_depIdxs = []int32{
-	2, // 0: vibecmsplugin.SubscriptionList.subscriptions:type_name -> vibecmsplugin.Subscription
-	0, // 1: vibecmsplugin.ExtensionPlugin.GetSubscriptions:input_type -> vibecmsplugin.Empty
-	4, // 2: vibecmsplugin.ExtensionPlugin.HandleEvent:input_type -> vibecmsplugin.EventRequest
-	0, // 3: vibecmsplugin.ExtensionPlugin.Shutdown:input_type -> vibecmsplugin.Empty
-	1, // 4: vibecmsplugin.ExtensionPlugin.Initialize:input_type -> vibecmsplugin.InitializeRequest
-	3, // 5: vibecmsplugin.ExtensionPlugin.GetSubscriptions:output_type -> vibecmsplugin.SubscriptionList
-	5, // 6: vibecmsplugin.ExtensionPlugin.HandleEvent:output_type -> vibecmsplugin.EventResponse
-	0, // 7: vibecmsplugin.ExtensionPlugin.Shutdown:output_type -> vibecmsplugin.Empty
-	0, // 8: vibecmsplugin.ExtensionPlugin.Initialize:output_type -> vibecmsplugin.Empty
-	5, // [5:9] is the sub-list for method output_type
-	1, // [1:5] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2,  // 0: vibecmsplugin.SubscriptionList.subscriptions:type_name -> vibecmsplugin.Subscription
+	8,  // 1: vibecmsplugin.PluginHTTPRequest.headers:type_name -> vibecmsplugin.PluginHTTPRequest.HeadersEntry
+	9,  // 2: vibecmsplugin.PluginHTTPRequest.query_params:type_name -> vibecmsplugin.PluginHTTPRequest.QueryParamsEntry
+	10, // 3: vibecmsplugin.PluginHTTPRequest.path_params:type_name -> vibecmsplugin.PluginHTTPRequest.PathParamsEntry
+	11, // 4: vibecmsplugin.PluginHTTPResponse.headers:type_name -> vibecmsplugin.PluginHTTPResponse.HeadersEntry
+	0,  // 5: vibecmsplugin.ExtensionPlugin.GetSubscriptions:input_type -> vibecmsplugin.Empty
+	4,  // 6: vibecmsplugin.ExtensionPlugin.HandleEvent:input_type -> vibecmsplugin.EventRequest
+	0,  // 7: vibecmsplugin.ExtensionPlugin.Shutdown:input_type -> vibecmsplugin.Empty
+	1,  // 8: vibecmsplugin.ExtensionPlugin.Initialize:input_type -> vibecmsplugin.InitializeRequest
+	6,  // 9: vibecmsplugin.ExtensionPlugin.HandleHTTPRequest:input_type -> vibecmsplugin.PluginHTTPRequest
+	3,  // 10: vibecmsplugin.ExtensionPlugin.GetSubscriptions:output_type -> vibecmsplugin.SubscriptionList
+	5,  // 11: vibecmsplugin.ExtensionPlugin.HandleEvent:output_type -> vibecmsplugin.EventResponse
+	0,  // 12: vibecmsplugin.ExtensionPlugin.Shutdown:output_type -> vibecmsplugin.Empty
+	0,  // 13: vibecmsplugin.ExtensionPlugin.Initialize:output_type -> vibecmsplugin.Empty
+	7,  // 14: vibecmsplugin.ExtensionPlugin.HandleHTTPRequest:output_type -> vibecmsplugin.PluginHTTPResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_vibecms_plugin_proto_init() }
@@ -386,7 +577,7 @@ func file_vibecms_plugin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_vibecms_plugin_proto_rawDesc), len(file_vibecms_plugin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

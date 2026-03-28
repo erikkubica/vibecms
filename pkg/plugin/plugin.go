@@ -26,6 +26,7 @@ var PluginMap = map[string]plugin.Plugin{
 type ExtensionPlugin interface {
 	GetSubscriptions() ([]*pb.Subscription, error)
 	HandleEvent(action string, payload []byte) (*pb.EventResponse, error)
+	HandleHTTPRequest(req *pb.PluginHTTPRequest) (*pb.PluginHTTPResponse, error)
 	Shutdown() error
 	Initialize(hostConn *grpc.ClientConn) error
 }
@@ -66,6 +67,10 @@ func (c *GRPCClient) HandleEvent(action string, payload []byte) (*pb.EventRespon
 		Action:  action,
 		Payload: payload,
 	})
+}
+
+func (c *GRPCClient) HandleHTTPRequest(req *pb.PluginHTTPRequest) (*pb.PluginHTTPResponse, error) {
+	return c.client.HandleHTTPRequest(context.Background(), req)
 }
 
 func (c *GRPCClient) Shutdown() error {
@@ -114,6 +119,10 @@ func (s *GRPCServer) GetSubscriptions(ctx context.Context, _ *pb.Empty) (*pb.Sub
 
 func (s *GRPCServer) HandleEvent(ctx context.Context, req *pb.EventRequest) (*pb.EventResponse, error) {
 	return s.Impl.HandleEvent(req.Action, req.Payload)
+}
+
+func (s *GRPCServer) HandleHTTPRequest(ctx context.Context, req *pb.PluginHTTPRequest) (*pb.PluginHTTPResponse, error) {
+	return s.Impl.HandleHTTPRequest(req)
 }
 
 func (s *GRPCServer) Shutdown(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {

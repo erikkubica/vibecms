@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ExtensionPlugin_GetSubscriptions_FullMethodName = "/vibecmsplugin.ExtensionPlugin/GetSubscriptions"
-	ExtensionPlugin_HandleEvent_FullMethodName      = "/vibecmsplugin.ExtensionPlugin/HandleEvent"
-	ExtensionPlugin_Shutdown_FullMethodName         = "/vibecmsplugin.ExtensionPlugin/Shutdown"
-	ExtensionPlugin_Initialize_FullMethodName       = "/vibecmsplugin.ExtensionPlugin/Initialize"
+	ExtensionPlugin_GetSubscriptions_FullMethodName  = "/vibecmsplugin.ExtensionPlugin/GetSubscriptions"
+	ExtensionPlugin_HandleEvent_FullMethodName       = "/vibecmsplugin.ExtensionPlugin/HandleEvent"
+	ExtensionPlugin_Shutdown_FullMethodName          = "/vibecmsplugin.ExtensionPlugin/Shutdown"
+	ExtensionPlugin_Initialize_FullMethodName        = "/vibecmsplugin.ExtensionPlugin/Initialize"
+	ExtensionPlugin_HandleHTTPRequest_FullMethodName = "/vibecmsplugin.ExtensionPlugin/HandleHTTPRequest"
 )
 
 // ExtensionPluginClient is the client API for ExtensionPlugin service.
@@ -37,6 +38,8 @@ type ExtensionPluginClient interface {
 	Shutdown(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	// Initialize passes the host service broker ID so the plugin can call back.
 	Initialize(ctx context.Context, in *InitializeRequest, opts ...grpc.CallOption) (*Empty, error)
+	// HandleHTTPRequest proxies an admin API request to the plugin.
+	HandleHTTPRequest(ctx context.Context, in *PluginHTTPRequest, opts ...grpc.CallOption) (*PluginHTTPResponse, error)
 }
 
 type extensionPluginClient struct {
@@ -87,6 +90,16 @@ func (c *extensionPluginClient) Initialize(ctx context.Context, in *InitializeRe
 	return out, nil
 }
 
+func (c *extensionPluginClient) HandleHTTPRequest(ctx context.Context, in *PluginHTTPRequest, opts ...grpc.CallOption) (*PluginHTTPResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PluginHTTPResponse)
+	err := c.cc.Invoke(ctx, ExtensionPlugin_HandleHTTPRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ExtensionPluginServer is the server API for ExtensionPlugin service.
 // All implementations must embed UnimplementedExtensionPluginServer
 // for forward compatibility.
@@ -99,6 +112,8 @@ type ExtensionPluginServer interface {
 	Shutdown(context.Context, *Empty) (*Empty, error)
 	// Initialize passes the host service broker ID so the plugin can call back.
 	Initialize(context.Context, *InitializeRequest) (*Empty, error)
+	// HandleHTTPRequest proxies an admin API request to the plugin.
+	HandleHTTPRequest(context.Context, *PluginHTTPRequest) (*PluginHTTPResponse, error)
 	mustEmbedUnimplementedExtensionPluginServer()
 }
 
@@ -120,6 +135,9 @@ func (UnimplementedExtensionPluginServer) Shutdown(context.Context, *Empty) (*Em
 }
 func (UnimplementedExtensionPluginServer) Initialize(context.Context, *InitializeRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method Initialize not implemented")
+}
+func (UnimplementedExtensionPluginServer) HandleHTTPRequest(context.Context, *PluginHTTPRequest) (*PluginHTTPResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method HandleHTTPRequest not implemented")
 }
 func (UnimplementedExtensionPluginServer) mustEmbedUnimplementedExtensionPluginServer() {}
 func (UnimplementedExtensionPluginServer) testEmbeddedByValue()                         {}
@@ -214,6 +232,24 @@ func _ExtensionPlugin_Initialize_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ExtensionPlugin_HandleHTTPRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PluginHTTPRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExtensionPluginServer).HandleHTTPRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ExtensionPlugin_HandleHTTPRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExtensionPluginServer).HandleHTTPRequest(ctx, req.(*PluginHTTPRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ExtensionPlugin_ServiceDesc is the grpc.ServiceDesc for ExtensionPlugin service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -236,6 +272,10 @@ var ExtensionPlugin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Initialize",
 			Handler:    _ExtensionPlugin_Initialize_Handler,
+		},
+		{
+			MethodName: "HandleHTTPRequest",
+			Handler:    _ExtensionPlugin_HandleHTTPRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

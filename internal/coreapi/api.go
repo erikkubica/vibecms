@@ -56,6 +56,18 @@ type CoreAPI interface {
 
 	// Log
 	Log(ctx context.Context, level, message string, fields map[string]any) error
+
+	// Data Store — extension-scoped table operations
+	DataGet(ctx context.Context, table string, id uint) (map[string]any, error)
+	DataQuery(ctx context.Context, table string, query DataStoreQuery) (*DataStoreResult, error)
+	DataCreate(ctx context.Context, table string, data map[string]any) (map[string]any, error)
+	DataUpdate(ctx context.Context, table string, id uint, data map[string]any) error
+	DataDelete(ctx context.Context, table string, id uint) error
+	DataExec(ctx context.Context, sql string, args ...any) (int64, error)
+
+	// File Storage
+	StoreFile(ctx context.Context, path string, data []byte) (string, error)
+	DeleteFile(ctx context.Context, path string) error
 }
 
 type EventHandler func(action string, payload map[string]any)
@@ -195,4 +207,19 @@ type FetchResponse struct {
 	StatusCode int               `json:"status_code"`
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
+}
+
+type DataStoreQuery struct {
+	Where   map[string]any `json:"where,omitempty"`
+	Search  string         `json:"search,omitempty"`
+	OrderBy string         `json:"order_by,omitempty"`
+	Limit   int            `json:"limit,omitempty"`
+	Offset  int            `json:"offset,omitempty"`
+	Raw     string         `json:"raw,omitempty"`
+	Args    []any          `json:"args,omitempty"`
+}
+
+type DataStoreResult struct {
+	Rows  []map[string]any `json:"rows"`
+	Total int64            `json:"total"`
 }

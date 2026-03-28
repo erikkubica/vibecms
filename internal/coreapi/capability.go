@@ -242,3 +242,63 @@ func (g *capabilityGuard) Log(ctx context.Context, level, message string, fields
 	}
 	return g.inner.Log(ctx, level, message, fields)
 }
+
+// --- Data Store ---
+
+func (g *capabilityGuard) DataGet(ctx context.Context, table string, id uint) (map[string]any, error) {
+	if err := checkCapability(ctx, "data:read"); err != nil {
+		return nil, err
+	}
+	return g.inner.DataGet(ctx, table, id)
+}
+
+func (g *capabilityGuard) DataQuery(ctx context.Context, table string, query DataStoreQuery) (*DataStoreResult, error) {
+	if err := checkCapability(ctx, "data:read"); err != nil {
+		return nil, err
+	}
+	return g.inner.DataQuery(ctx, table, query)
+}
+
+func (g *capabilityGuard) DataCreate(ctx context.Context, table string, data map[string]any) (map[string]any, error) {
+	if err := checkCapability(ctx, "data:write"); err != nil {
+		return nil, err
+	}
+	return g.inner.DataCreate(ctx, table, data)
+}
+
+func (g *capabilityGuard) DataUpdate(ctx context.Context, table string, id uint, data map[string]any) error {
+	if err := checkCapability(ctx, "data:write"); err != nil {
+		return err
+	}
+	return g.inner.DataUpdate(ctx, table, id, data)
+}
+
+func (g *capabilityGuard) DataDelete(ctx context.Context, table string, id uint) error {
+	if err := checkCapability(ctx, "data:write"); err != nil {
+		return err
+	}
+	return g.inner.DataDelete(ctx, table, id)
+}
+
+func (g *capabilityGuard) DataExec(ctx context.Context, sql string, args ...any) (int64, error) {
+	if err := checkCapability(ctx, "data:write"); err != nil {
+		return 0, err
+	}
+	return g.inner.DataExec(ctx, sql, args...)
+}
+
+// --- File Storage ---
+
+func (g *capabilityGuard) StoreFile(ctx context.Context, path string, data []byte) (string, error) {
+	if err := checkCapability(ctx, "files:write"); err != nil {
+		return "", err
+	}
+	return g.inner.StoreFile(ctx, path, data)
+}
+
+func (g *capabilityGuard) DeleteFile(ctx context.Context, path string) error {
+	if err := checkCapability(ctx, "files:delete"); err != nil {
+		return err
+	}
+	return g.inner.DeleteFile(ctx, path)
+}

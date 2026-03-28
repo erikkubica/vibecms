@@ -19,6 +19,14 @@ service VibeCMSHost {
   rpc QueryUsers(QueryUsersRequest) returns (UserListResponse);
   rpc Fetch(FetchRequest) returns (FetchResponse);
   rpc Log(LogRequest) returns (Empty);
+  rpc DataGet(DataGetRequest) returns (DataRowResponse);
+  rpc DataQuery(DataQueryRequest) returns (DataQueryResponse);
+  rpc DataCreate(DataCreateRequest) returns (DataRowResponse);
+  rpc DataUpdate(DataUpdateRequest) returns (Empty);
+  rpc DataDelete(DataDeleteRequest) returns (Empty);
+  rpc DataExec(DataExecRequest) returns (DataExecResponse);
+  rpc StoreFile(StoreFileRequest) returns (StoreFileResponse);
+  rpc DeleteFile(DeleteFileRequest) returns (Empty);
 }
 
 message Empty {}
@@ -222,4 +230,71 @@ message LogRequest {
   string level = 1;
   string message = 2;
   string fields_json = 3; // JSON-encoded map[string]any
+}
+
+// --- Data Store messages ---
+
+message DataGetRequest {
+  string table = 1;
+  uint32 id = 2;
+}
+
+message DataRowResponse {
+  bytes row_json = 1; // JSON-encoded map[string]any
+}
+
+message DataQueryRequest {
+  string table = 1;
+  string where_json = 2;   // JSON-encoded map[string]any
+  string search = 3;
+  string order_by = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+  string raw = 7;
+  string args_json = 8;    // JSON-encoded []any
+}
+
+message DataQueryResponse {
+  repeated bytes rows_json = 1; // each entry is JSON-encoded map[string]any
+  int64 total = 2;
+}
+
+message DataCreateRequest {
+  string table = 1;
+  bytes data_json = 2;     // JSON-encoded map[string]any
+}
+
+message DataUpdateRequest {
+  string table = 1;
+  uint32 id = 2;
+  bytes data_json = 3;     // JSON-encoded map[string]any
+}
+
+message DataDeleteRequest {
+  string table = 1;
+  uint32 id = 2;
+}
+
+message DataExecRequest {
+  string sql = 1;
+  string args_json = 2;    // JSON-encoded []any
+}
+
+message DataExecResponse {
+  int64 rows_affected = 1;
+}
+
+// --- File Storage messages ---
+
+message StoreFileRequest {
+  string path = 1;
+  bytes data = 2;
+}
+
+message StoreFileResponse {
+  string url = 1;
+}
+
+message DeleteFileRequest {
+  string path = 1;
 }

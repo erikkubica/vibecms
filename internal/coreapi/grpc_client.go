@@ -295,6 +295,128 @@ func (c *GRPCHostClient) Log(ctx context.Context, level, message string, fields 
 	return nil
 }
 
+// --- Data Store ---
+
+func (c *GRPCHostClient) DataGet(ctx context.Context, table string, id uint) (map[string]any, error) {
+	resp, err := c.client.DataGet(ctx, &pb.DataGetRequest{Table: table, Id: uint32(id)})
+	if err != nil {
+		return nil, fromGRPCError(err)
+	}
+	var row map[string]any
+	if err := json.Unmarshal(resp.RowJson, &row); err != nil {
+		return nil, NewInternal("failed to unmarshal row: " + err.Error())
+	}
+	return row, nil
+}
+
+func (c *GRPCHostClient) DataQuery(ctx context.Context, table string, query DataStoreQuery) (*DataStoreResult, error) {
+	req := &pb.DataQueryRequest{
+		Table:   table,
+		Search:  query.Search,
+		OrderBy: query.OrderBy,
+		Limit:   int32(query.Limit),
+		Offset:  int32(query.Offset),
+		Raw:     query.Raw,
+	}
+	if query.Where != nil {
+		b, err := json.Marshal(query.Where)
+		if err != nil {
+			return nil, NewInternal("failed to marshal where: " + err.Error())
+		}
+		req.WhereJson = string(b)
+	}
+	if query.Args != nil {
+		b, err := json.Marshal(query.Args)
+		if err != nil {
+			return nil, NewInternal("failed to marshal args: " + err.Error())
+		}
+		req.ArgsJson = string(b)
+	}
+	resp, err := c.client.DataQuery(ctx, req)
+	if err != nil {
+		return nil, fromGRPCError(err)
+	}
+	rows := make([]map[string]any, len(resp.RowsJson))
+	for i, b := range resp.RowsJson {
+		var row map[string]any
+		if err := json.Unmarshal(b, &row); err != nil {
+			return nil, NewInternal("failed to unmarshal row: " + err.Error())
+		}
+		rows[i] = row
+	}
+	return &DataStoreResult{Rows: rows, Total: resp.Total}, nil
+}
+
+func (c *GRPCHostClient) DataCreate(ctx context.Context, table string, data map[string]any) (map[string]any, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, NewInternal("failed to marshal data: " + err.Error())
+	}
+	resp, err := c.client.DataCreate(ctx, &pb.DataCreateRequest{Table: table, DataJson: b})
+	if err != nil {
+		return nil, fromGRPCError(err)
+	}
+	var row map[string]any
+	if err := json.Unmarshal(resp.RowJson, &row); err != nil {
+		return nil, NewInternal("failed to unmarshal row: " + err.Error())
+	}
+	return row, nil
+}
+
+func (c *GRPCHostClient) DataUpdate(ctx context.Context, table string, id uint, data map[string]any) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return NewInternal("failed to marshal data: " + err.Error())
+	}
+	_, err = c.client.DataUpdate(ctx, &pb.DataUpdateRequest{Table: table, Id: uint32(id), DataJson: b})
+	if err != nil {
+		return fromGRPCError(err)
+	}
+	return nil
+}
+
+func (c *GRPCHostClient) DataDelete(ctx context.Context, table string, id uint) error {
+	_, err := c.client.DataDelete(ctx, &pb.DataDeleteRequest{Table: table, Id: uint32(id)})
+	if err != nil {
+		return fromGRPCError(err)
+	}
+	return nil
+}
+
+func (c *GRPCHostClient) DataExec(ctx context.Context, sqlStr string, args ...any) (int64, error) {
+	var argsJSON string
+	if len(args) > 0 {
+		b, err := json.Marshal(args)
+		if err != nil {
+			return 0, NewInternal("failed to marshal args: " + err.Error())
+		}
+		argsJSON = string(b)
+	}
+	resp, err := c.client.DataExec(ctx, &pb.DataExecRequest{Sql: sqlStr, ArgsJson: argsJSON})
+	if err != nil {
+		return 0, fromGRPCError(err)
+	}
+	return resp.RowsAffected, nil
+}
+
+// --- File Storage ---
+
+func (c *GRPCHostClient) StoreFile(ctx context.Context, path string, data []byte) (string, error) {
+	resp, err := c.client.StoreFile(ctx, &pb.StoreFileRequest{Path: path, Data: data})
+	if err != nil {
+		return "", fromGRPCError(err)
+	}
+	return resp.Url, nil
+}
+
+func (c *GRPCHostClient) DeleteFile(ctx context.Context, path string) error {
+	_, err := c.client.DeleteFile(ctx, &pb.DeleteFileRequest{Path: path})
+	if err != nil {
+		return fromGRPCError(err)
+	}
+	return nil
+}
+
 // --- Helper functions ---
 
 func nodeFromProto(msg *pb.NodeMessage) *Node {

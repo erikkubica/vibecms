@@ -15,6 +15,9 @@ service ExtensionPlugin {
 
   // Initialize passes the host service broker ID so the plugin can call back.
   rpc Initialize(InitializeRequest) returns (Empty);
+
+  // HandleHTTPRequest proxies an admin API request to the plugin.
+  rpc HandleHTTPRequest(PluginHTTPRequest) returns (PluginHTTPResponse);
 }
 
 message Empty {}
@@ -41,4 +44,20 @@ message EventResponse {
   bool handled = 1;
   string error = 2;
   bytes result = 3; // JSON-encoded result data (optional)
+}
+
+message PluginHTTPRequest {
+  string method = 1;
+  string path = 2;              // path relative to /admin/api/ext/{slug}/
+  map<string, string> headers = 3;
+  bytes body = 4;
+  map<string, string> query_params = 5;
+  map<string, string> path_params = 6;  // e.g., :id from routes
+  uint64 user_id = 7;           // authenticated user ID
+}
+
+message PluginHTTPResponse {
+  int32 status_code = 1;
+  map<string, string> headers = 2;
+  bytes body = 3;
 }

@@ -200,6 +200,10 @@ func main() {
 		}
 	}
 
+	// Extension HTTP proxy (forwards /admin/api/ext/:slug/* to gRPC plugins).
+	extensionProxy := cms.NewExtensionProxy(pluginManager)
+	extensionProxy.RegisterRoutes(adminAPI)
+
 	// Extension admin handler.
 	extHandler := cms.NewExtensionHandler(database, extLoader)
 	extHandler.SetScriptLoader(scriptEngine)

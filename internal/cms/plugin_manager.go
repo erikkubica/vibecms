@@ -214,6 +214,24 @@ func (pm *PluginManager) StopAll() {
 	}
 }
 
+// GetClient returns the first active GRPCClient for the given extension slug,
+// or nil if no plugin is running for that slug.
+func (pm *PluginManager) GetClient(slug string) *vibeplugin.GRPCClient {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+
+	plugins, exists := pm.plugins[slug]
+	if !exists || len(plugins) == 0 {
+		return nil
+	}
+
+	// Return the first plugin's impl cast to GRPCClient.
+	if client, ok := plugins[0].impl.(*vibeplugin.GRPCClient); ok {
+		return client
+	}
+	return nil
+}
+
 // RunningCount returns the number of running plugin processes.
 func (pm *PluginManager) RunningCount() int {
 	pm.mu.RLock()

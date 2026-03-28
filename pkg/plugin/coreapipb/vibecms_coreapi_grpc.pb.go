@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v3.21.12
-// source: vibecms_coreapi.proto
+// source: proto/coreapi/vibecms_coreapi.proto
 
 package coreapipb
 
@@ -35,6 +35,14 @@ const (
 	VibeCMSHost_QueryUsers_FullMethodName  = "/vibecms.coreapi.VibeCMSHost/QueryUsers"
 	VibeCMSHost_Fetch_FullMethodName       = "/vibecms.coreapi.VibeCMSHost/Fetch"
 	VibeCMSHost_Log_FullMethodName         = "/vibecms.coreapi.VibeCMSHost/Log"
+	VibeCMSHost_DataGet_FullMethodName     = "/vibecms.coreapi.VibeCMSHost/DataGet"
+	VibeCMSHost_DataQuery_FullMethodName   = "/vibecms.coreapi.VibeCMSHost/DataQuery"
+	VibeCMSHost_DataCreate_FullMethodName  = "/vibecms.coreapi.VibeCMSHost/DataCreate"
+	VibeCMSHost_DataUpdate_FullMethodName  = "/vibecms.coreapi.VibeCMSHost/DataUpdate"
+	VibeCMSHost_DataDelete_FullMethodName  = "/vibecms.coreapi.VibeCMSHost/DataDelete"
+	VibeCMSHost_DataExec_FullMethodName    = "/vibecms.coreapi.VibeCMSHost/DataExec"
+	VibeCMSHost_StoreFile_FullMethodName   = "/vibecms.coreapi.VibeCMSHost/StoreFile"
+	VibeCMSHost_DeleteFile_FullMethodName  = "/vibecms.coreapi.VibeCMSHost/DeleteFile"
 )
 
 // VibeCMSHostClient is the client API for VibeCMSHost service.
@@ -57,6 +65,14 @@ type VibeCMSHostClient interface {
 	QueryUsers(ctx context.Context, in *QueryUsersRequest, opts ...grpc.CallOption) (*UserListResponse, error)
 	Fetch(ctx context.Context, in *FetchRequest, opts ...grpc.CallOption) (*FetchResponse, error)
 	Log(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (*Empty, error)
+	DataGet(ctx context.Context, in *DataGetRequest, opts ...grpc.CallOption) (*DataRowResponse, error)
+	DataQuery(ctx context.Context, in *DataQueryRequest, opts ...grpc.CallOption) (*DataQueryResponse, error)
+	DataCreate(ctx context.Context, in *DataCreateRequest, opts ...grpc.CallOption) (*DataRowResponse, error)
+	DataUpdate(ctx context.Context, in *DataUpdateRequest, opts ...grpc.CallOption) (*Empty, error)
+	DataDelete(ctx context.Context, in *DataDeleteRequest, opts ...grpc.CallOption) (*Empty, error)
+	DataExec(ctx context.Context, in *DataExecRequest, opts ...grpc.CallOption) (*DataExecResponse, error)
+	StoreFile(ctx context.Context, in *StoreFileRequest, opts ...grpc.CallOption) (*StoreFileResponse, error)
+	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type vibeCMSHostClient struct {
@@ -227,6 +243,86 @@ func (c *vibeCMSHostClient) Log(ctx context.Context, in *LogRequest, opts ...grp
 	return out, nil
 }
 
+func (c *vibeCMSHostClient) DataGet(ctx context.Context, in *DataGetRequest, opts ...grpc.CallOption) (*DataRowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DataRowResponse)
+	err := c.cc.Invoke(ctx, VibeCMSHost_DataGet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vibeCMSHostClient) DataQuery(ctx context.Context, in *DataQueryRequest, opts ...grpc.CallOption) (*DataQueryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DataQueryResponse)
+	err := c.cc.Invoke(ctx, VibeCMSHost_DataQuery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vibeCMSHostClient) DataCreate(ctx context.Context, in *DataCreateRequest, opts ...grpc.CallOption) (*DataRowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DataRowResponse)
+	err := c.cc.Invoke(ctx, VibeCMSHost_DataCreate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vibeCMSHostClient) DataUpdate(ctx context.Context, in *DataUpdateRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, VibeCMSHost_DataUpdate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vibeCMSHostClient) DataDelete(ctx context.Context, in *DataDeleteRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, VibeCMSHost_DataDelete_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vibeCMSHostClient) DataExec(ctx context.Context, in *DataExecRequest, opts ...grpc.CallOption) (*DataExecResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DataExecResponse)
+	err := c.cc.Invoke(ctx, VibeCMSHost_DataExec_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vibeCMSHostClient) StoreFile(ctx context.Context, in *StoreFileRequest, opts ...grpc.CallOption) (*StoreFileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StoreFileResponse)
+	err := c.cc.Invoke(ctx, VibeCMSHost_StoreFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vibeCMSHostClient) DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, VibeCMSHost_DeleteFile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VibeCMSHostServer is the server API for VibeCMSHost service.
 // All implementations must embed UnimplementedVibeCMSHostServer
 // for forward compatibility.
@@ -247,6 +343,14 @@ type VibeCMSHostServer interface {
 	QueryUsers(context.Context, *QueryUsersRequest) (*UserListResponse, error)
 	Fetch(context.Context, *FetchRequest) (*FetchResponse, error)
 	Log(context.Context, *LogRequest) (*Empty, error)
+	DataGet(context.Context, *DataGetRequest) (*DataRowResponse, error)
+	DataQuery(context.Context, *DataQueryRequest) (*DataQueryResponse, error)
+	DataCreate(context.Context, *DataCreateRequest) (*DataRowResponse, error)
+	DataUpdate(context.Context, *DataUpdateRequest) (*Empty, error)
+	DataDelete(context.Context, *DataDeleteRequest) (*Empty, error)
+	DataExec(context.Context, *DataExecRequest) (*DataExecResponse, error)
+	StoreFile(context.Context, *StoreFileRequest) (*StoreFileResponse, error)
+	DeleteFile(context.Context, *DeleteFileRequest) (*Empty, error)
 	mustEmbedUnimplementedVibeCMSHostServer()
 }
 
@@ -304,6 +408,30 @@ func (UnimplementedVibeCMSHostServer) Fetch(context.Context, *FetchRequest) (*Fe
 }
 func (UnimplementedVibeCMSHostServer) Log(context.Context, *LogRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method Log not implemented")
+}
+func (UnimplementedVibeCMSHostServer) DataGet(context.Context, *DataGetRequest) (*DataRowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DataGet not implemented")
+}
+func (UnimplementedVibeCMSHostServer) DataQuery(context.Context, *DataQueryRequest) (*DataQueryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DataQuery not implemented")
+}
+func (UnimplementedVibeCMSHostServer) DataCreate(context.Context, *DataCreateRequest) (*DataRowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DataCreate not implemented")
+}
+func (UnimplementedVibeCMSHostServer) DataUpdate(context.Context, *DataUpdateRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DataUpdate not implemented")
+}
+func (UnimplementedVibeCMSHostServer) DataDelete(context.Context, *DataDeleteRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DataDelete not implemented")
+}
+func (UnimplementedVibeCMSHostServer) DataExec(context.Context, *DataExecRequest) (*DataExecResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DataExec not implemented")
+}
+func (UnimplementedVibeCMSHostServer) StoreFile(context.Context, *StoreFileRequest) (*StoreFileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StoreFile not implemented")
+}
+func (UnimplementedVibeCMSHostServer) DeleteFile(context.Context, *DeleteFileRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteFile not implemented")
 }
 func (UnimplementedVibeCMSHostServer) mustEmbedUnimplementedVibeCMSHostServer() {}
 func (UnimplementedVibeCMSHostServer) testEmbeddedByValue()                     {}
@@ -614,6 +742,150 @@ func _VibeCMSHost_Log_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VibeCMSHost_DataGet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DataGetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).DataGet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_DataGet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).DataGet(ctx, req.(*DataGetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VibeCMSHost_DataQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DataQueryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).DataQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_DataQuery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).DataQuery(ctx, req.(*DataQueryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VibeCMSHost_DataCreate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DataCreateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).DataCreate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_DataCreate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).DataCreate(ctx, req.(*DataCreateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VibeCMSHost_DataUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DataUpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).DataUpdate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_DataUpdate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).DataUpdate(ctx, req.(*DataUpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VibeCMSHost_DataDelete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DataDeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).DataDelete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_DataDelete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).DataDelete(ctx, req.(*DataDeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VibeCMSHost_DataExec_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DataExecRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).DataExec(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_DataExec_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).DataExec(ctx, req.(*DataExecRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VibeCMSHost_StoreFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StoreFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).StoreFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_StoreFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).StoreFile(ctx, req.(*StoreFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VibeCMSHost_DeleteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VibeCMSHostServer).DeleteFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VibeCMSHost_DeleteFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VibeCMSHostServer).DeleteFile(ctx, req.(*DeleteFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VibeCMSHost_ServiceDesc is the grpc.ServiceDesc for VibeCMSHost service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -685,7 +957,39 @@ var VibeCMSHost_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Log",
 			Handler:    _VibeCMSHost_Log_Handler,
 		},
+		{
+			MethodName: "DataGet",
+			Handler:    _VibeCMSHost_DataGet_Handler,
+		},
+		{
+			MethodName: "DataQuery",
+			Handler:    _VibeCMSHost_DataQuery_Handler,
+		},
+		{
+			MethodName: "DataCreate",
+			Handler:    _VibeCMSHost_DataCreate_Handler,
+		},
+		{
+			MethodName: "DataUpdate",
+			Handler:    _VibeCMSHost_DataUpdate_Handler,
+		},
+		{
+			MethodName: "DataDelete",
+			Handler:    _VibeCMSHost_DataDelete_Handler,
+		},
+		{
+			MethodName: "DataExec",
+			Handler:    _VibeCMSHost_DataExec_Handler,
+		},
+		{
+			MethodName: "StoreFile",
+			Handler:    _VibeCMSHost_StoreFile_Handler,
+		},
+		{
+			MethodName: "DeleteFile",
+			Handler:    _VibeCMSHost_DeleteFile_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "vibecms_coreapi.proto",
+	Metadata: "proto/coreapi/vibecms_coreapi.proto",
 }

@@ -9,8 +9,18 @@
         "media:read",
         "media:write",
         "media:delete",
+        "data:read",
+        "data:write",
+        "files:write",
+        "files:delete",
         "settings:read",
         "log:write"
+    ],
+    "plugins": [
+        {
+            "binary": "bin/media-manager",
+            "events": []
+        }
     ],
     "admin_ui": {
         "entry": "admin-ui/dist/index.js",

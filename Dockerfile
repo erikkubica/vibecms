@@ -27,6 +27,7 @@ RUN CGO_ENABLED=0 go build -o vibecms ./cmd/vibecms
 # Build extension plugin binaries
 RUN CGO_ENABLED=0 go build -o extensions/smtp-provider/bin/smtp-provider ./extensions/smtp-provider/cmd/plugin/
 RUN CGO_ENABLED=0 go build -o extensions/sitemap-generator/bin/sitemap-generator ./extensions/sitemap-generator/cmd/plugin/
+RUN CGO_ENABLED=0 go build -o extensions/media-manager/bin/media-manager ./extensions/media-manager/cmd/plugin/
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates

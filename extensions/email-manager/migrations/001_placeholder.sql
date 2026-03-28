@@ -1,0 +1,3 @@
+-- Email manager tables (email_templates, email_rules, email_logs) are created
+-- by core migrations. This file is a placeholder for future extension-specific
+-- schema changes.

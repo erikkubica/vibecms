@@ -6,11 +6,18 @@
     "description": "Manage email templates, rules, delivery logs, and provider settings.",
     "provides": ["email-management"],
     "capabilities": [
-        "email:send",
+        "data:read",
+        "data:write",
         "settings:read",
         "settings:write",
         "events:subscribe",
         "log:write"
+    ],
+    "plugins": [
+        {
+            "binary": "bin/email-manager",
+            "events": []
+        }
     ],
     "admin_ui": {
         "entry": "admin-ui/dist/index.js",

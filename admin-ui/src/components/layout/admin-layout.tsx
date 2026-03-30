@@ -145,9 +145,6 @@ const staticNavBottom: NavEntry[] = [
     children: [
       { to: "/admin/settings/site", label: "Site", icon: Settings },
       { to: "/admin/languages", label: "Languages", icon: Globe },
-      { to: "/admin/settings/api", label: "API", icon: Settings, disabled: true },
-      { to: "/admin/settings/ai", label: "AI", icon: Settings, disabled: true },
-      { to: "/admin/settings/mcp", label: "MCP", icon: Settings, disabled: true },
     ],
   },
 ];

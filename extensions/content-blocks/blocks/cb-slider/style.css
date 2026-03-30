@@ -1,0 +1,143 @@
+.vb-cb-slider {
+  position: relative;
+  overflow: hidden;
+}
+
+.vb-cb-slider__track {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+}
+
+.vb-cb-slider__slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.vb-cb-slider__slide--active {
+  position: relative;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vb-cb-slider__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.2) 100%);
+}
+
+.vb-cb-slider__content {
+  position: relative;
+  z-index: 1;
+  max-width: 40rem;
+  padding: 4rem 2rem;
+}
+
+.vb-cb-slider__heading {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.vb-cb-slider__description {
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.vb-cb-slider__button {
+  display: inline-block;
+  padding: 0.75rem 1.75rem;
+  background: var(--color-accent, #3b82f6);
+  color: var(--color-accent-text, #fff);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.vb-cb-slider__button:hover {
+  opacity: 0.9;
+}
+
+/* Arrows */
+.vb-cb-slider__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.vb-cb-slider__arrow:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.vb-cb-slider__arrow--prev {
+  left: 1rem;
+}
+
+.vb-cb-slider__arrow--next {
+  right: 1rem;
+}
+
+/* Dots */
+.vb-cb-slider__dots {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 2;
+}
+
+.vb-cb-slider__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.vb-cb-slider__dot--active {
+  background: #fff;
+}
+
+@media (max-width: 768px) {
+  .vb-cb-slider__track {
+    min-height: 300px;
+  }
+
+  .vb-cb-slider__heading {
+    font-size: 1.75rem;
+  }
+
+  .vb-cb-slider__content {
+    padding: 2rem 1rem;
+  }
+}

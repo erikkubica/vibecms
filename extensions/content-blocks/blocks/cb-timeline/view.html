@@ -1,0 +1,25 @@
+<section class="vb-cb-timeline" data-block="cb-timeline">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-16" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+
+    <div class="vb-cb-timeline__container vb-cb-timeline__container--{{.style}}">
+      <div class="vb-cb-timeline__line"></div>
+
+      {{range $i, $item := .items}}
+      <div class="vb-cb-timeline__item">
+        <div class="vb-cb-timeline__dot"></div>
+        <div class="vb-cb-timeline__content">
+          <span class="vb-cb-timeline__date">{{$item.date}}</span>
+          <h3 class="vb-cb-timeline__title">{{$item.title}}</h3>
+          <p class="vb-cb-timeline__description">{{$item.description}}</p>
+          {{if $item.image}}
+          <img src="{{$item.image}}" alt="{{$item.title}}" class="vb-cb-timeline__image" loading="lazy" />
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,57 @@
+{
+  "slug": "cb-cta-banner",
+  "label": "CTA Banner",
+  "icon": "megaphone",
+  "description": "A full-width call-to-action banner with bold heading, supporting text, and prominent button. Designed to capture attention and drive conversions. Use between content sections for sign-ups, downloads, or contact. Layout: colored background with centered heading, description, and large contrasting button. Optional background image with overlay.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea",
+      "required": false
+    },
+    {
+      "name": "button_text",
+      "label": "Button Text",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "button_url",
+      "label": "Button URL",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "background_image",
+      "label": "Background Image",
+      "type": "image",
+      "required": false
+    },
+    {
+      "name": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+        { "label": "Accent", "value": "accent" },
+        { "label": "Dark", "value": "dark" },
+        { "label": "Light", "value": "light" }
+      ],
+      "default": "accent"
+    }
+  ],
+  "test_data": {
+    "heading": "Ready to Get Started?",
+    "description": "Join thousands of creators who trust VibeCMS to power their websites. Start building something amazing today.",
+    "button_text": "Start Free Trial",
+    "button_url": "/signup",
+    "background_image": "",
+    "style": "accent"
+  }
+}

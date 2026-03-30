@@ -1,0 +1,58 @@
+{
+  "slug": "cb-newsletter",
+  "label": "Newsletter Signup",
+  "icon": "mail",
+  "description": "An email newsletter signup form with heading, description, and inline email input with submit button. For lead capture. Use on landing pages or footer areas. Layout: centered section with horizontal form (email input + submit), optional privacy note. Form POSTs to configurable action URL.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea",
+      "required": false
+    },
+    {
+      "name": "button_text",
+      "label": "Button Text",
+      "type": "text",
+      "required": false,
+      "default": "Subscribe"
+    },
+    {
+      "name": "form_action",
+      "label": "Form Action URL",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "privacy_note",
+      "label": "Privacy Note",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+        { "label": "Light", "value": "light" },
+        { "label": "Dark", "value": "dark" },
+        { "label": "Accent", "value": "accent" }
+      ],
+      "default": "light"
+    }
+  ],
+  "test_data": {
+    "heading": "Stay Updated",
+    "description": "Get the latest news, tips, and product updates delivered straight to your inbox. No spam, ever.",
+    "button_text": "Subscribe",
+    "form_action": "/api/newsletter",
+    "privacy_note": "We respect your privacy. Unsubscribe at any time.",
+    "style": "light"
+  }
+}

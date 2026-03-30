@@ -1,0 +1,62 @@
+{
+  "slug": "cb-text-columns",
+  "label": "Text Columns",
+  "icon": "columns",
+  "description": "A multi-column text layout block for splitting content into 2-4 parallel columns. Each column has its own heading and rich text body. Use for comparing features side-by-side, service descriptions, or breaking up dense content. Layout: equal-width responsive grid stacking to single column on mobile.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Section Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "columns",
+      "label": "Columns",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "title",
+          "label": "Column Title",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "content",
+          "label": "Column Content",
+          "type": "richtext",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "column_count",
+      "label": "Number of Columns",
+      "type": "select",
+      "options": [
+        { "label": "2 Columns", "value": "2" },
+        { "label": "3 Columns", "value": "3" },
+        { "label": "4 Columns", "value": "4" }
+      ],
+      "default": "3"
+    }
+  ],
+  "test_data": {
+    "heading": "Why Choose Us",
+    "columns": [
+      {
+        "title": "Expert Team",
+        "content": "<p>Our team brings decades of combined experience in software engineering, design, and product strategy to every project we undertake.</p>"
+      },
+      {
+        "title": "Proven Results",
+        "content": "<p>We have delivered over 200 successful projects for clients ranging from early-stage startups to Fortune 500 enterprises across multiple industries.</p>"
+      },
+      {
+        "title": "Ongoing Support",
+        "content": "<p>Our relationship does not end at launch. We provide dedicated support, monitoring, and continuous improvement to keep your product thriving.</p>"
+      }
+    ],
+    "column_count": "3"
+  }
+}

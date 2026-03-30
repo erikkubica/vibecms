@@ -1,0 +1,64 @@
+{
+  "name": "Blog Index Page",
+  "description": "Blog listing page with heading, recent posts grid, newsletter signup, and social share.",
+  "blocks": [
+    {
+      "type": "cb-heading",
+      "fields": {
+        "text": "The Apex Blog",
+        "subtitle": "Insights on engineering, design, and building products that scale",
+        "level": "h1",
+        "alignment": "center",
+        "divider": "dots"
+      }
+    },
+    {
+      "type": "cb-recent-posts",
+      "fields": {
+        "heading": "Latest Articles",
+        "node_type": "post",
+        "count": 9,
+        "layout": "grid",
+        "columns": 3,
+        "show_image": true,
+        "show_excerpt": true,
+        "show_date": true,
+        "link_text": "Read more"
+      }
+    },
+    {
+      "type": "cb-divider",
+      "fields": {
+        "style": "gradient",
+        "label": "",
+        "icon": "",
+        "spacing": "large",
+        "color": ""
+      }
+    },
+    {
+      "type": "cb-newsletter",
+      "fields": {
+        "heading": "Stay in the Loop",
+        "description": "Get our best articles delivered to your inbox every Thursday. No spam, no fluff — just actionable insights from our engineering and product teams.",
+        "button_text": "Subscribe",
+        "form_action": "/api/newsletter/subscribe",
+        "privacy_note": "We respect your privacy. Unsubscribe at any time.",
+        "style": "card"
+      }
+    },
+    {
+      "type": "cb-social-share",
+      "fields": {
+        "heading": "Follow Us",
+        "show_twitter": true,
+        "show_facebook": true,
+        "show_linkedin": true,
+        "show_email": true,
+        "show_copy_link": false,
+        "style": "filled",
+        "alignment": "center"
+      }
+    }
+  ]
+}

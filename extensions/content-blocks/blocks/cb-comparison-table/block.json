@@ -1,0 +1,80 @@
+{
+  "slug": "cb-comparison-table",
+  "label": "Comparison Table",
+  "icon": "table",
+  "description": "A feature comparison table for comparing plans or products using checkmarks and crosses. Use for plan comparisons, product spec tables. Layout: responsive table with sticky header, feature names left column, plan names across top. Cells show checkmarks, crosses, or custom text. Scrollable on mobile.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "columns",
+      "label": "Column Names",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "name",
+          "label": "Column Name",
+          "type": "text",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "rows",
+      "label": "Feature Rows",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "feature",
+          "label": "Feature Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "col1",
+          "label": "Column 1 Value",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "col2",
+          "label": "Column 2 Value",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "col3",
+          "label": "Column 3 Value",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "col4",
+          "label": "Column 4 Value",
+          "type": "text",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Compare Plans",
+    "columns": [
+      { "name": "Basic" },
+      { "name": "Pro" },
+      { "name": "Enterprise" }
+    ],
+    "rows": [
+      { "feature": "Projects", "col1": "5", "col2": "Unlimited", "col3": "Unlimited", "col4": "" },
+      { "feature": "Storage", "col1": "10 GB", "col2": "100 GB", "col3": "Unlimited", "col4": "" },
+      { "feature": "Custom Domain", "col1": "no", "col2": "yes", "col3": "yes", "col4": "" },
+      { "feature": "API Access", "col1": "no", "col2": "yes", "col3": "yes", "col4": "" },
+      { "feature": "Priority Support", "col1": "no", "col2": "yes", "col3": "yes", "col4": "" },
+      { "feature": "SSO / SAML", "col1": "no", "col2": "no", "col3": "yes", "col4": "" }
+    ]
+  }
+}

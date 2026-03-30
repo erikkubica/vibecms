@@ -1,0 +1,36 @@
+{
+  "slug": "cb-paragraph",
+  "label": "Paragraph",
+  "icon": "align-left",
+  "description": "A versatile rich text content block for long-form writing. Renders a body of rich HTML text with an optional heading above it. Use for article body text, about-us descriptions, policy content, or any free-form written content. Layout: full-width text column centered with configurable max-width for readability.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "body",
+      "label": "Body",
+      "type": "richtext",
+      "required": true
+    },
+    {
+      "name": "max_width",
+      "label": "Max Width",
+      "type": "select",
+      "options": [
+        { "label": "Narrow", "value": "narrow" },
+        { "label": "Medium", "value": "medium" },
+        { "label": "Wide", "value": "wide" }
+      ],
+      "default": "medium"
+    }
+  ],
+  "test_data": {
+    "heading": "About Our Company",
+    "body": "<p>We are a forward-thinking technology company dedicated to building tools that empower creators and businesses alike. Our mission is to simplify complex workflows and deliver <strong>exceptional experiences</strong> through innovative software solutions.</p><p>Founded in 2018, we have grown from a small startup to a team of over 50 passionate engineers, designers, and strategists. We believe in <em>transparency, collaboration, and relentless improvement</em> — values that guide every product we ship.</p>",
+    "max_width": "medium"
+  }
+}

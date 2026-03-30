@@ -1,0 +1,74 @@
+{
+  "slug": "cb-recent-posts",
+  "label": "Recent Posts",
+  "icon": "file-text",
+  "description": "A dynamic recent posts block that fetches and displays the latest content from the CMS via AJAX. Shows post cards with featured image, title, excerpt, date, and link. Use for blog sidebars, homepage sections, or news feeds. Layout: responsive card grid or list view showing latest posts, auto-loaded on page view.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "node_type",
+      "label": "Content Type",
+      "type": "text",
+      "default": "post"
+    },
+    {
+      "name": "count",
+      "label": "Number of Posts",
+      "type": "number",
+      "default": 6
+    },
+    {
+      "name": "layout",
+      "label": "Layout",
+      "type": "select",
+      "options": ["grid", "list"],
+      "default": "grid"
+    },
+    {
+      "name": "columns",
+      "label": "Columns",
+      "type": "select",
+      "options": ["2", "3", "4"],
+      "default": "3"
+    },
+    {
+      "name": "show_image",
+      "label": "Show Image",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "name": "show_excerpt",
+      "label": "Show Excerpt",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "name": "show_date",
+      "label": "Show Date",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "name": "link_text",
+      "label": "Link Text",
+      "type": "text",
+      "default": "Read More"
+    }
+  ],
+  "test_data": {
+    "heading": "Latest Articles",
+    "node_type": "post",
+    "count": 6,
+    "layout": "grid",
+    "columns": "3",
+    "show_image": true,
+    "show_excerpt": true,
+    "show_date": true,
+    "link_text": "Read More"
+  }
+}

@@ -1,0 +1,30 @@
+<section class="vb-comparison-table" data-block="cb-comparison-table">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <h2 class="vb-comparison-table__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-comparison-table__scroll">
+      <table class="vb-comparison-table__table">
+        <thead>
+          <tr>
+            <th class="vb-comparison-table__feature-header">Feature</th>
+            {{range .columns}}
+            <th class="vb-comparison-table__col-header">{{.name}}</th>
+            {{end}}
+          </tr>
+        </thead>
+        <tbody>
+          {{range .rows}}
+          <tr class="vb-comparison-table__row">
+            <td class="vb-comparison-table__feature-cell">{{.feature}}</td>
+            {{if .col1}}<td class="vb-comparison-table__value-cell" data-value="{{.col1}}">{{.col1}}</td>{{end}}
+            {{if .col2}}<td class="vb-comparison-table__value-cell" data-value="{{.col2}}">{{.col2}}</td>{{end}}
+            {{if .col3}}<td class="vb-comparison-table__value-cell" data-value="{{.col3}}">{{.col3}}</td>{{end}}
+            {{if .col4}}<td class="vb-comparison-table__value-cell" data-value="{{.col4}}">{{.col4}}</td>{{end}}
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

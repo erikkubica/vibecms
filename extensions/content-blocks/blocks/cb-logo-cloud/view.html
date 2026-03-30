@@ -1,0 +1,20 @@
+<section class="vb-logo-cloud vb-logo-cloud--{{.style}}" data-block="cb-logo-cloud">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <h2 class="vb-logo-cloud__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-logo-cloud__grid">
+      {{range .logos}}
+      <div class="vb-logo-cloud__item">
+        {{if .url}}
+        <a href="{{.url}}" class="vb-logo-cloud__link" target="_blank" rel="noopener noreferrer" title="{{.name}}">
+          <img src="{{.image}}" alt="{{.name}}" class="vb-logo-cloud__image" loading="lazy" />
+        </a>
+        {{else}}
+        <img src="{{.image}}" alt="{{.name}}" class="vb-logo-cloud__image" loading="lazy" />
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

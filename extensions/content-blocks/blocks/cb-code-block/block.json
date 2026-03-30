@@ -1,0 +1,32 @@
+{
+  "slug": "cb-code-block",
+  "label": "Code Block",
+  "icon": "code",
+  "description": "A code snippet display block with a language label header. Renders preformatted code in a dark-themed container. Use for docs, API examples, tutorials. Layout: rounded dark container with language header bar and horizontally-scrollable monospace content. CSS-only dark theme.",
+  "field_schema": [
+    {
+      "name": "language",
+      "label": "Language",
+      "type": "text",
+      "required": false,
+      "default": "text"
+    },
+    {
+      "name": "code",
+      "label": "Code",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "type": "text",
+      "required": false
+    }
+  ],
+  "test_data": {
+    "language": "go",
+    "code": "package main\n\nimport (\n\t\"fmt\"\n\t\"net/http\"\n)\n\nfunc handler(w http.ResponseWriter, r *http.Request) {\n\tfmt.Fprintf(w, \"Hello, %s!\", r.URL.Path[1:])\n}\n\nfunc main() {\n\thttp.HandleFunc(\"/\", handler)\n\thttp.ListenAndServe(\":8080\", nil)\n}",
+    "caption": "Basic Go server"
+  }
+}

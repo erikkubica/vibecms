@@ -1,0 +1,178 @@
+{
+  "name": "Services Page",
+  "description": "Professional services page with hero heading, services grid, detailed feature rows, stats, testimonials, and CTA.",
+  "blocks": [
+    {
+      "type": "cb-heading",
+      "fields": {
+        "text": "Our Services",
+        "subtitle": "Tailored solutions that drive measurable results for your business",
+        "level": "h1",
+        "alignment": "center",
+        "divider": "line"
+      }
+    },
+    {
+      "type": "cb-paragraph",
+      "fields": {
+        "heading": "",
+        "body": "<p>We combine deep industry expertise with cutting-edge technology to deliver services that transform how businesses operate. From strategy to execution, our team partners with you every step of the way.</p>",
+        "max_width": "narrow"
+      }
+    },
+    {
+      "type": "cb-features-grid",
+      "fields": {
+        "heading": "What We Offer",
+        "subheading": "Comprehensive solutions across every stage of your digital journey",
+        "columns": 3,
+        "features": [
+          {
+            "icon": "strategy",
+            "title": "Digital Strategy",
+            "description": "Data-driven roadmaps that align technology investments with business objectives and market opportunities.",
+            "category": "Strategy",
+            "link_text": "Learn more",
+            "link_url": "/services/digital-strategy"
+          },
+          {
+            "icon": "code",
+            "title": "Custom Development",
+            "description": "Scalable web and mobile applications built with modern frameworks and cloud-native architecture.",
+            "category": "Engineering",
+            "link_text": "Learn more",
+            "link_url": "/services/development"
+          },
+          {
+            "icon": "palette",
+            "title": "UX & Design",
+            "description": "User-centered design that balances aesthetics with usability, backed by research and testing.",
+            "category": "Design",
+            "link_text": "Learn more",
+            "link_url": "/services/design"
+          },
+          {
+            "icon": "cloud",
+            "title": "Cloud Infrastructure",
+            "description": "Reliable, secure cloud environments with automated deployments, monitoring, and cost optimization.",
+            "category": "Engineering",
+            "link_text": "Learn more",
+            "link_url": "/services/cloud"
+          },
+          {
+            "icon": "chart",
+            "title": "Analytics & BI",
+            "description": "Turn raw data into actionable insights with custom dashboards, reporting pipelines, and predictive models.",
+            "category": "Data",
+            "link_text": "Learn more",
+            "link_url": "/services/analytics"
+          },
+          {
+            "icon": "shield",
+            "title": "Security & Compliance",
+            "description": "Protect your digital assets with penetration testing, audit preparation, and ongoing vulnerability management.",
+            "category": "Security",
+            "link_text": "Learn more",
+            "link_url": "/services/security"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-divider",
+      "fields": {
+        "style": "gradient",
+        "label": "",
+        "icon": "",
+        "spacing": "large",
+        "color": ""
+      }
+    },
+    {
+      "type": "image-text",
+      "fields": {
+        "image": "https://picsum.photos/seed/strategy-meeting/800/600",
+        "heading": "Digital Strategy That Delivers",
+        "body": "<p>Our strategists work alongside your leadership team to identify growth opportunities, map customer journeys, and build technology roadmaps that deliver ROI within the first quarter.</p><ul><li>Competitive landscape analysis</li><li>Customer journey mapping</li><li>Technology stack evaluation</li><li>12-month execution roadmap</li></ul>",
+        "image_position": "left",
+        "button_text": "Book a Strategy Session",
+        "button_url": "/contact?service=strategy"
+      }
+    },
+    {
+      "type": "image-text",
+      "fields": {
+        "image": "https://picsum.photos/seed/dev-team/800/600",
+        "heading": "Engineering That Scales",
+        "body": "<p>From MVPs to enterprise platforms, our engineering teams build software that grows with your business. We follow agile methodologies with two-week sprints, continuous integration, and comprehensive test coverage.</p><ul><li>React, Go, Python, and Node.js expertise</li><li>Microservices and event-driven architecture</li><li>99.99% uptime SLA available</li><li>Dedicated technical lead per project</li></ul>",
+        "image_position": "right",
+        "button_text": "Start a Project",
+        "button_url": "/contact?service=development"
+      }
+    },
+    {
+      "type": "image-text",
+      "fields": {
+        "image": "https://picsum.photos/seed/ux-workshop/800/600",
+        "heading": "Design Users Love",
+        "body": "<p>Great design is invisible. Our UX team conducts user research, builds interactive prototypes, and validates every decision with real users before a single line of code is written.</p><ul><li>User interviews and persona development</li><li>Wireframing and interactive prototyping</li><li>Usability testing with real users</li><li>Design system creation and governance</li></ul>",
+        "image_position": "left",
+        "button_text": "See Our Portfolio",
+        "button_url": "/portfolio"
+      }
+    },
+    {
+      "type": "cb-stats-counter",
+      "fields": {
+        "heading": "By the Numbers",
+        "stats": [
+          { "icon": "briefcase", "number": 340, "label": "Projects Delivered", "prefix": "", "suffix": "+" },
+          { "icon": "users", "number": 98, "label": "Client Retention", "prefix": "", "suffix": "%" },
+          { "icon": "clock", "number": 12, "label": "Years in Business", "prefix": "", "suffix": "" },
+          { "icon": "globe", "number": 28, "label": "Countries Served", "prefix": "", "suffix": "" }
+        ],
+        "style": "default"
+      }
+    },
+    {
+      "type": "cb-testimonials",
+      "fields": {
+        "heading": "What Our Clients Say",
+        "testimonials": [
+          {
+            "quote": "They didn't just build our platform — they fundamentally changed how we think about technology as a competitive advantage.",
+            "author_name": "Sarah Chen",
+            "author_role": "CTO, Meridian Health",
+            "avatar": "https://picsum.photos/seed/avatar-sarah/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "The strategy engagement paid for itself within three months. Their team identified a market opportunity we had completely overlooked.",
+            "author_name": "James O'Brien",
+            "author_role": "CEO, Lakeview Capital",
+            "avatar": "https://picsum.photos/seed/avatar-james/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "Professional, responsive, and deeply technical. They delivered our cloud migration two weeks ahead of schedule with zero downtime.",
+            "author_name": "Maria Santos",
+            "author_role": "VP Engineering, TerraLogistics",
+            "avatar": "https://picsum.photos/seed/avatar-maria/200/200",
+            "rating": 5
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-cta-banner",
+      "fields": {
+        "heading": "Ready to Transform Your Business?",
+        "description": "Schedule a free 30-minute consultation with one of our senior strategists. No commitment, no sales pitch — just honest advice.",
+        "button_text": "Get Started",
+        "button_url": "/contact",
+        "background_image": "https://picsum.photos/seed/cta-services/1600/600",
+        "style": "dark"
+      }
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "name": "Pricing Page",
+  "description": "Pricing page with heading, subscription plans with toggle, comparison table, FAQ, testimonials, and CTA.",
+  "blocks": [
+    {
+      "type": "cb-heading",
+      "fields": {
+        "text": "Simple, Transparent Pricing",
+        "subtitle": "Start free, scale as you grow. No hidden fees, no surprises.",
+        "level": "h1",
+        "alignment": "center",
+        "divider": "none"
+      }
+    },
+    {
+      "type": "cb-subscription-plans",
+      "fields": {
+        "heading": "Choose Your Plan",
+        "subheading": "All plans include a 14-day free trial with full access",
+        "plans": [
+          {
+            "name": "Starter",
+            "monthly_price": "0",
+            "yearly_price": "0",
+            "description": "Perfect for individuals and small side projects",
+            "features": ["Up to 3 projects", "5 team members", "Basic integrations", "1 GB storage", "Community support", "API access"],
+            "button_text": "Get Started Free",
+            "button_url": "/signup?plan=starter",
+            "is_featured": false
+          },
+          {
+            "name": "Pro",
+            "monthly_price": "29",
+            "yearly_price": "24",
+            "description": "For growing teams that need power and flexibility",
+            "features": ["Unlimited projects", "50 team members", "All integrations", "100 GB storage", "Priority email support", "AI automation", "Custom workflows", "Advanced analytics"],
+            "button_text": "Start Free Trial",
+            "button_url": "/signup?plan=pro",
+            "is_featured": true
+          },
+          {
+            "name": "Enterprise",
+            "monthly_price": "99",
+            "yearly_price": "79",
+            "description": "For organizations with advanced security and scale needs",
+            "features": ["Unlimited everything", "Unlimited team members", "All integrations + custom", "Unlimited storage", "24/7 phone & chat support", "AI automation + custom models", "SSO / SAML / SCIM", "Dedicated account manager", "Custom SLA (99.99%)", "On-premise deployment option"],
+            "button_text": "Contact Sales",
+            "button_url": "/contact?plan=enterprise",
+            "is_featured": false
+          }
+        ],
+        "yearly_discount_label": "Save 20%"
+      }
+    },
+    {
+      "type": "cb-comparison-table",
+      "fields": {
+        "heading": "Detailed Plan Comparison",
+        "columns": [
+          { "name": "Starter" },
+          { "name": "Pro" },
+          { "name": "Enterprise" }
+        ],
+        "rows": [
+          { "feature": "Projects", "col1": "3", "col2": "Unlimited", "col3": "Unlimited", "col4": "" },
+          { "feature": "Team Members", "col1": "5", "col2": "50", "col3": "Unlimited", "col4": "" },
+          { "feature": "Storage", "col1": "1 GB", "col2": "100 GB", "col3": "Unlimited", "col4": "" },
+          { "feature": "AI Automation", "col1": "—", "col2": "Yes", "col3": "Yes + Custom", "col4": "" },
+          { "feature": "Custom Workflows", "col1": "—", "col2": "Yes", "col3": "Yes", "col4": "" },
+          { "feature": "SSO / SAML", "col1": "—", "col2": "—", "col3": "Yes", "col4": "" },
+          { "feature": "API Rate Limit", "col1": "1K/hr", "col2": "10K/hr", "col3": "Unlimited", "col4": "" },
+          { "feature": "Uptime SLA", "col1": "—", "col2": "99.9%", "col3": "99.99%", "col4": "" },
+          { "feature": "Support", "col1": "Community", "col2": "Priority Email", "col3": "24/7 Phone & Chat", "col4": "" },
+          { "feature": "Audit Logs", "col1": "30 days", "col2": "1 year", "col3": "2 years", "col4": "" }
+        ]
+      }
+    },
+    {
+      "type": "faq",
+      "fields": {
+        "heading": "Frequently Asked Questions",
+        "subheading": "Everything you need to know about our pricing",
+        "items": [
+          {
+            "question": "Can I switch plans at any time?",
+            "answer": "Yes, you can upgrade or downgrade your plan at any time. When upgrading, you'll get immediate access to new features. When downgrading, changes take effect at the end of your billing cycle."
+          },
+          {
+            "question": "What happens when my free trial ends?",
+            "answer": "Your account automatically moves to the free Starter plan. No charge, no data loss. You can upgrade to a paid plan whenever you're ready."
+          },
+          {
+            "question": "Do you offer discounts for nonprofits or education?",
+            "answer": "Absolutely. We offer 50% off all paid plans for registered nonprofits and educational institutions. Contact our sales team with proof of status to get set up."
+          },
+          {
+            "question": "What payment methods do you accept?",
+            "answer": "We accept all major credit cards (Visa, Mastercard, Amex), PayPal, and wire transfer for annual Enterprise plans. All payments are processed securely through Stripe."
+          },
+          {
+            "question": "Is there a long-term contract?",
+            "answer": "No. All plans are billed monthly or annually with no long-term commitment. You can cancel anytime, and your access continues through the end of the paid period."
+          },
+          {
+            "question": "Can I get a refund?",
+            "answer": "We offer a 30-day money-back guarantee on all paid plans. If you're not satisfied, contact support within 30 days of your first payment for a full refund."
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-testimonials",
+      "fields": {
+        "heading": "Trusted by Industry Leaders",
+        "testimonials": [
+          {
+            "quote": "We evaluated the enterprise plan against tools costing 3x more. FlowBoard delivered more value at a fraction of the price.",
+            "author_name": "Karen Walsh",
+            "author_role": "Head of IT, NovaBio",
+            "avatar": "https://picsum.photos/seed/avatar-karen/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "The Pro plan has everything a 30-person engineering team needs. We haven't hit a single limitation in 18 months.",
+            "author_name": "Ravi Patel",
+            "author_role": "Engineering Manager, PixelCraft",
+            "avatar": "https://picsum.photos/seed/avatar-ravi/200/200",
+            "rating": 5
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-cta-banner",
+      "fields": {
+        "heading": "Still Have Questions?",
+        "description": "Our team is here to help you find the right plan. Schedule a call and we'll walk you through the options.",
+        "button_text": "Talk to Sales",
+        "button_url": "/contact?subject=pricing",
+        "background_image": "",
+        "style": "accent"
+      }
+    }
+  ]
+}

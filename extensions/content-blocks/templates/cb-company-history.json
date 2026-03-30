@@ -1,0 +1,153 @@
+{
+  "name": "Company History",
+  "description": "Company about page with hero, timeline of key milestones, team members, stats counter, and CTA.",
+  "blocks": [
+    {
+      "type": "hero",
+      "fields": {
+        "heading": "Our Story",
+        "subheading": "From a two-person garage startup to a global team of 200+, we've spent fifteen years solving problems that matter.",
+        "background_image": "https://picsum.photos/seed/company-hero/1600/800",
+        "button_text": "Meet the Team",
+        "button_url": "#team",
+        "alignment": "center"
+      }
+    },
+    {
+      "type": "cb-paragraph",
+      "fields": {
+        "heading": "What Drives Us",
+        "body": "<p>Founded in 2010 by two engineers who believed technology should empower people — not complicate their lives — Apex Digital has grown into one of the most trusted names in enterprise software. We remain privately held, fiercely independent, and obsessively focused on building products our customers actually enjoy using.</p>",
+        "max_width": "narrow"
+      }
+    },
+    {
+      "type": "cb-timeline",
+      "fields": {
+        "heading": "Key Milestones",
+        "items": [
+          {
+            "date": "2010",
+            "title": "Founded in Portland",
+            "description": "Alex Rivera and Priya Sharma launch Apex Digital from a converted garage with one client and a bold vision for intuitive enterprise software.",
+            "image": "https://picsum.photos/seed/milestone-2010/600/400"
+          },
+          {
+            "date": "2012",
+            "title": "First Major Product Launch",
+            "description": "Released FlowBoard, a project management tool that gained 10,000 users in its first month and caught the attention of Y Combinator.",
+            "image": "https://picsum.photos/seed/milestone-2012/600/400"
+          },
+          {
+            "date": "2014",
+            "title": "Series A Funding",
+            "description": "Raised $8M in Series A funding led by Sequoia Capital, enabling the team to grow from 12 to 45 people and open a San Francisco office.",
+            "image": "https://picsum.photos/seed/milestone-2014/600/400"
+          },
+          {
+            "date": "2016",
+            "title": "Enterprise Expansion",
+            "description": "Signed first Fortune 500 client and launched the Enterprise Suite, marking our transition from startup tool to business-critical platform.",
+            "image": "https://picsum.photos/seed/milestone-2016/600/400"
+          },
+          {
+            "date": "2018",
+            "title": "International Growth",
+            "description": "Opened offices in London and Singapore, serving clients across 15 countries with localized support and data residency options.",
+            "image": "https://picsum.photos/seed/milestone-2018/600/400"
+          },
+          {
+            "date": "2020",
+            "title": "100,000 Active Users",
+            "description": "Crossed the 100K user milestone during a year that proved the value of reliable, remote-first collaboration tools.",
+            "image": "https://picsum.photos/seed/milestone-2020/600/400"
+          },
+          {
+            "date": "2023",
+            "title": "AI-Powered Platform",
+            "description": "Launched intelligent automation features that reduced manual workflow time by 60% for enterprise customers.",
+            "image": "https://picsum.photos/seed/milestone-2023/600/400"
+          },
+          {
+            "date": "2025",
+            "title": "Next Chapter",
+            "description": "With 200+ team members across four continents, we're building the next generation of AI-native enterprise tools.",
+            "image": "https://picsum.photos/seed/milestone-2025/600/400"
+          }
+        ],
+        "style": "alternating"
+      }
+    },
+    {
+      "type": "cb-stats-counter",
+      "fields": {
+        "heading": "Apex Digital Today",
+        "stats": [
+          { "icon": "users", "number": 200, "label": "Team Members", "prefix": "", "suffix": "+" },
+          { "icon": "globe", "number": 28, "label": "Countries", "prefix": "", "suffix": "" },
+          { "icon": "building", "number": 4, "label": "Global Offices", "prefix": "", "suffix": "" },
+          { "icon": "heart", "number": 100, "label": "Thousands of Users", "prefix": "", "suffix": "K+" }
+        ],
+        "style": "default"
+      }
+    },
+    {
+      "type": "cb-team-members",
+      "fields": {
+        "heading": "Leadership Team",
+        "subheading": "The people steering the ship",
+        "members": [
+          {
+            "photo": "https://picsum.photos/seed/team-alex/400/400",
+            "name": "Alex Rivera",
+            "role": "Co-Founder & CEO",
+            "bio": "Alex brings 20 years of product leadership experience from Google and Stripe. He's passionate about making enterprise software feel human.",
+            "linkedin": "https://linkedin.com/in/alexrivera",
+            "twitter": "https://twitter.com/alexrivera",
+            "email": "alex@apexdigital.com"
+          },
+          {
+            "photo": "https://picsum.photos/seed/team-priya/400/400",
+            "name": "Priya Sharma",
+            "role": "Co-Founder & CTO",
+            "bio": "Priya is a distributed systems expert who previously built infrastructure at AWS. She leads our engineering and security teams.",
+            "linkedin": "https://linkedin.com/in/priyasharma",
+            "twitter": "https://twitter.com/priyasharma",
+            "email": "priya@apexdigital.com"
+          },
+          {
+            "photo": "https://picsum.photos/seed/team-daniel/400/400",
+            "name": "Daniel Okafor",
+            "role": "VP of Product",
+            "bio": "Daniel spent a decade at Atlassian shaping the Jira product roadmap before joining Apex to lead product strategy and user research.",
+            "linkedin": "https://linkedin.com/in/danielokafor",
+            "twitter": "",
+            "email": "daniel@apexdigital.com"
+          },
+          {
+            "photo": "https://picsum.photos/seed/team-emma/400/400",
+            "name": "Emma Lindqvist",
+            "role": "VP of Design",
+            "bio": "An award-winning designer from Stockholm, Emma ensures every pixel has purpose. She previously led design at Spotify.",
+            "linkedin": "https://linkedin.com/in/emmalindqvist",
+            "twitter": "https://twitter.com/emmalindqvist",
+            "email": "emma@apexdigital.com"
+          }
+        ],
+        "columns": 4,
+        "photo_style": "rounded"
+      }
+    },
+    {
+      "type": "cb-cta-split",
+      "fields": {
+        "heading": "Join Us on the Journey",
+        "description": "We're always looking for curious, driven people who want to build products that matter. Check out our open positions and find your next adventure.",
+        "button_text": "View Open Roles",
+        "button_url": "/careers",
+        "image": "https://picsum.photos/seed/careers-cta/800/600",
+        "image_position": "right"
+      }
+    }
+  ]
+}

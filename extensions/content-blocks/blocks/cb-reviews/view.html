@@ -1,0 +1,38 @@
+<section class="vb-reviews" data-block="cb-reviews">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="vb-reviews__header">
+      {{if .heading}}
+      <h2 class="vb-reviews__heading">{{.heading}}</h2>
+      {{end}}
+      {{if .average_rating}}
+      <div class="vb-reviews__average">
+        <span class="vb-reviews__average-number">{{.average_rating}}</span>
+        <span class="vb-reviews__average-label">out of 5</span>
+      </div>
+      {{end}}
+    </div>
+    <div class="vb-reviews__grid">
+      {{range .reviews}}
+      <div class="vb-reviews__card">
+        <div class="vb-reviews__stars" data-rating="{{.rating}}">
+          <span class="vb-reviews__star">&#9733;</span>
+          <span class="vb-reviews__star">&#9733;</span>
+          <span class="vb-reviews__star">&#9733;</span>
+          <span class="vb-reviews__star">&#9733;</span>
+          <span class="vb-reviews__star">&#9733;</span>
+        </div>
+        {{if .title}}
+        <h3 class="vb-reviews__title">{{.title}}</h3>
+        {{end}}
+        <p class="vb-reviews__body">{{.body}}</p>
+        <div class="vb-reviews__author-row">
+          <span class="vb-reviews__author">{{.author}}</span>
+          {{if eq .verified "true"}}
+          <span class="vb-reviews__verified">&#10003; Verified</span>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

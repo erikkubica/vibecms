@@ -1,0 +1,81 @@
+{
+  "slug": "cb-slider",
+  "label": "Content Slider",
+  "icon": "gallery-horizontal",
+  "description": "An image and content carousel with navigation arrows and dot indicators. Each slide has image, heading, description, and optional CTA link. Use for hero rotators, feature showcases, announcement banners. Layout: full-width slides with overlaid text, arrow navigation, dot pagination, auto-advance with pause on hover.",
+  "field_schema": [
+    {
+      "name": "slides",
+      "label": "Slides",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "image",
+          "label": "Background Image",
+          "type": "image",
+          "required": true
+        },
+        {
+          "name": "heading",
+          "label": "Heading",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea",
+          "required": false
+        },
+        {
+          "name": "button_text",
+          "label": "Button Text",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "button_url",
+          "label": "Button URL",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "autoplay",
+      "label": "Autoplay",
+      "type": "select",
+      "options": [
+        { "label": "Yes", "value": "true" },
+        { "label": "No", "value": "false" }
+      ],
+      "default": "true"
+    }
+  ],
+  "test_data": {
+    "autoplay": "true",
+    "slides": [
+      {
+        "image": "https://picsum.photos/seed/slide-one/1400/600",
+        "heading": "Welcome to Our Platform",
+        "description": "Discover powerful tools designed to help you build, grow, and scale your business with confidence.",
+        "button_text": "Get Started",
+        "button_url": "/get-started"
+      },
+      {
+        "image": "https://picsum.photos/seed/slide-two/1400/600",
+        "heading": "Built for Performance",
+        "description": "Lightning-fast page loads and optimized delivery ensure your visitors get the best experience.",
+        "button_text": "Learn More",
+        "button_url": "/features"
+      },
+      {
+        "image": "https://picsum.photos/seed/slide-three/1400/600",
+        "heading": "Join Our Community",
+        "description": "Connect with thousands of creators, developers, and businesses using our platform every day.",
+        "button_text": "Join Now",
+        "button_url": "/community"
+      }
+    ]
+  }
+}

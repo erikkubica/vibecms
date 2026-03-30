@@ -1,0 +1,19 @@
+<section class="vb-newsletter vb-newsletter--{{.style}}" data-block="cb-newsletter">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="vb-newsletter__inner">
+      <h2 class="vb-newsletter__heading">{{.heading}}</h2>
+      {{if .description}}
+      <p class="vb-newsletter__description">{{.description}}</p>
+      {{end}}
+      <form class="vb-newsletter__form" action="{{.form_action}}" method="POST">
+        <div class="vb-newsletter__input-group">
+          <input type="email" name="email" placeholder="Enter your email" required class="vb-newsletter__input" />
+          <button type="submit" class="vb-newsletter__button">{{if .button_text}}{{.button_text}}{{else}}Subscribe{{end}}</button>
+        </div>
+      </form>
+      {{if .privacy_note}}
+      <p class="vb-newsletter__privacy">{{.privacy_note}}</p>
+      {{end}}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,12 @@
+<section class="vb-cta-banner vb-cta-banner--{{.style}}" data-block="cb-cta-banner"{{if .background_image}} style="background-image: url('{{.background_image}}')"{{end}}>
+  {{if .background_image}}<div class="vb-cta-banner__overlay"></div>{{end}}
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="vb-cta-banner__content">
+      <h2 class="vb-cta-banner__heading">{{.heading}}</h2>
+      {{if .description}}
+      <p class="vb-cta-banner__description">{{.description}}</p>
+      {{end}}
+      <a href="{{.button_url}}" class="vb-cta-banner__button">{{.button_text}}</a>
+    </div>
+  </div>
+</section>

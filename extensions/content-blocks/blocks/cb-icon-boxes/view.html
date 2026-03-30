@@ -1,0 +1,18 @@
+<section class="vb-icon-boxes vb-icon-boxes--{{.style}}" data-block="cb-icon-boxes">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <h2 class="vb-icon-boxes__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-icon-boxes__grid vb-icon-boxes__grid--cols-{{.columns}}">
+      {{range .items}}
+      <div class="vb-icon-boxes__box">
+        <span class="vb-icon-boxes__icon">{{.icon}}</span>
+        <h3 class="vb-icon-boxes__title">{{.title}}</h3>
+        {{if .description}}
+        <p class="vb-icon-boxes__description">{{.description}}</p>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,39 @@
+<section class="vb-testimonials" data-block="cb-testimonials">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <h2 class="vb-testimonials__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-testimonials__carousel">
+      <div class="vb-testimonials__track">
+        {{range .testimonials}}
+        <div class="vb-testimonials__slide">
+          <div class="vb-testimonials__card">
+            <div class="vb-testimonials__stars" data-rating="{{.rating}}">
+              <span class="vb-testimonials__star">&#9733;</span>
+              <span class="vb-testimonials__star">&#9733;</span>
+              <span class="vb-testimonials__star">&#9733;</span>
+              <span class="vb-testimonials__star">&#9733;</span>
+              <span class="vb-testimonials__star">&#9733;</span>
+            </div>
+            <blockquote class="vb-testimonials__quote">{{.quote}}</blockquote>
+            <div class="vb-testimonials__author">
+              {{if .avatar}}
+              <img src="{{.avatar}}" alt="{{.author_name}}" class="vb-testimonials__avatar" loading="lazy" />
+              {{end}}
+              <div class="vb-testimonials__author-info">
+                <span class="vb-testimonials__author-name">{{.author_name}}</span>
+                {{if .author_role}}
+                <span class="vb-testimonials__author-role">{{.author_role}}</span>
+                {{end}}
+              </div>
+            </div>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      <button class="vb-testimonials__arrow vb-testimonials__arrow--prev" aria-label="Previous testimonial">&#8592;</button>
+      <button class="vb-testimonials__arrow vb-testimonials__arrow--next" aria-label="Next testimonial">&#8594;</button>
+      <div class="vb-testimonials__dots"></div>
+    </div>
+  </div>
+</section>

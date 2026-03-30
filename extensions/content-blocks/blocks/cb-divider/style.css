@@ -1,0 +1,102 @@
+/* Spacing variants */
+.vb-cb-divider--spacing-sm {
+  padding: 1rem 0;
+}
+
+.vb-cb-divider--spacing-md {
+  padding: 2.5rem 0;
+}
+
+.vb-cb-divider--spacing-lg {
+  padding: 4rem 0;
+}
+
+.vb-cb-divider--spacing-xl {
+  padding: 6rem 0;
+}
+
+/* Wrapper layout */
+.vb-cb-divider__wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Line base */
+.vb-cb-divider__line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.vb-cb-divider__line--full {
+  width: 100%;
+}
+
+/* Style: thick */
+.vb-cb-divider__wrapper--thick .vb-cb-divider__line {
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* Style: dashed */
+.vb-cb-divider__wrapper--dashed .vb-cb-divider__line {
+  height: 0;
+  border-top: 2px dashed var(--color-border);
+  background: none;
+}
+
+/* Style: dotted */
+.vb-cb-divider__wrapper--dotted .vb-cb-divider__line {
+  height: 0;
+  border-top: 2px dotted var(--color-border);
+  background: none;
+}
+
+/* Style: gradient */
+.vb-cb-divider__wrapper--gradient .vb-cb-divider__line {
+  height: 2px;
+  border: none;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+}
+
+/* Color: accent */
+.vb-cb-divider__wrapper--accent .vb-cb-divider__line {
+  background: var(--color-accent);
+}
+
+.vb-cb-divider__wrapper--accent.vb-cb-divider__wrapper--dashed .vb-cb-divider__line,
+.vb-cb-divider__wrapper--accent.vb-cb-divider__wrapper--dotted .vb-cb-divider__line {
+  border-color: var(--color-accent);
+  background: none;
+}
+
+/* Color: muted */
+.vb-cb-divider__wrapper--muted .vb-cb-divider__line {
+  background: var(--color-text-muted);
+  opacity: 0.3;
+}
+
+.vb-cb-divider__wrapper--muted.vb-cb-divider__wrapper--dashed .vb-cb-divider__line,
+.vb-cb-divider__wrapper--muted.vb-cb-divider__wrapper--dotted .vb-cb-divider__line {
+  border-color: var(--color-text-muted);
+  opacity: 0.3;
+  background: none;
+}
+
+/* Label */
+.vb-cb-divider__label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  padding: 0 0.25rem;
+}
+
+.vb-cb-divider__icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}

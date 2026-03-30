@@ -1,0 +1,96 @@
+{
+  "slug": "cb-stats-counter",
+  "label": "Stats Counter",
+  "icon": "trending-up",
+  "description": "Animated number counters that count up from zero when scrolled into view. Use for company statistics, achievement metrics. Layout: 3-4 large numbers in a row with labels, optional prefix/suffix ($, +, %). Intersection Observer animation.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Section Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "stats",
+      "label": "Stats",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "icon",
+          "label": "Icon / Emoji",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "number",
+          "label": "Number",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "label",
+          "label": "Label",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "prefix",
+          "label": "Prefix",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "suffix",
+          "label": "Suffix",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+        { "label": "Light", "value": "light" },
+        { "label": "Dark", "value": "dark" },
+        { "label": "Accent", "value": "accent" }
+      ],
+      "default": "light"
+    }
+  ],
+  "test_data": {
+    "heading": "Our Impact in Numbers",
+    "style": "light",
+    "stats": [
+      {
+        "icon": "\ud83d\ude80",
+        "number": "150",
+        "label": "Projects Launched",
+        "prefix": "",
+        "suffix": "+"
+      },
+      {
+        "icon": "\ud83d\udcb0",
+        "number": "2.5",
+        "label": "Revenue Generated",
+        "prefix": "$",
+        "suffix": "M"
+      },
+      {
+        "icon": "\u2b50",
+        "number": "99",
+        "label": "Client Satisfaction",
+        "prefix": "",
+        "suffix": "%"
+      },
+      {
+        "icon": "\u23f0",
+        "number": "24",
+        "label": "Support Available",
+        "prefix": "",
+        "suffix": "/7"
+      }
+    ]
+  }
+}

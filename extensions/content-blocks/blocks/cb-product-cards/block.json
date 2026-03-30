@@ -1,0 +1,107 @@
+{
+  "slug": "cb-product-cards",
+  "label": "Product Cards",
+  "icon": "shopping-bag",
+  "description": "Product showcase cards with image, name, price, and CTA button. Use for e-commerce product listings, course catalogs, downloadable showcases. Layout: 2-4 column card grid with product image (hover zoom), name, optional category tag, price with optional strikethrough original, and CTA button.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "columns",
+      "label": "Columns",
+      "type": "select",
+      "options": [
+        { "label": "2 Columns", "value": "2" },
+        { "label": "3 Columns", "value": "3" },
+        { "label": "4 Columns", "value": "4" }
+      ],
+      "default": "3"
+    },
+    {
+      "name": "products",
+      "label": "Products",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "image",
+          "label": "Product Image",
+          "type": "image",
+          "required": true
+        },
+        {
+          "name": "name",
+          "label": "Product Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "category",
+          "label": "Category",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "price",
+          "label": "Price",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "original_price",
+          "label": "Original Price (strikethrough)",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "button_text",
+          "label": "Button Text",
+          "type": "text",
+          "default": "Buy Now"
+        },
+        {
+          "name": "button_url",
+          "label": "Button URL",
+          "type": "text",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Featured Products",
+    "columns": "3",
+    "products": [
+      {
+        "image": "https://picsum.photos/seed/product1/600/400",
+        "name": "Wireless Headphones Pro",
+        "category": "Electronics",
+        "price": "$79.99",
+        "original_price": "$129.99",
+        "button_text": "Buy Now",
+        "button_url": "/products/headphones"
+      },
+      {
+        "image": "https://picsum.photos/seed/product2/600/400",
+        "name": "Leather Messenger Bag",
+        "category": "Accessories",
+        "price": "$149.00",
+        "original_price": "",
+        "button_text": "Buy Now",
+        "button_url": "/products/bag"
+      },
+      {
+        "image": "https://picsum.photos/seed/product3/600/400",
+        "name": "Smart Fitness Watch",
+        "category": "Electronics",
+        "price": "$199.99",
+        "original_price": "$249.99",
+        "button_text": "Buy Now",
+        "button_url": "/products/watch"
+      }
+    ]
+  }
+}

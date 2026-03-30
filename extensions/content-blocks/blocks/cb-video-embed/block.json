@@ -1,0 +1,38 @@
+{
+  "slug": "cb-video-embed",
+  "label": "Video Embed",
+  "icon": "play-circle",
+  "description": "A responsive video embed block for YouTube/Vimeo with custom poster thumbnail. Displays a 16:9 aspect ratio container with play button overlay on poster image. Clicking loads the actual video iframe. Use for demos, tutorials, promotional videos. Layout: responsive 16:9 container with centered play button.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "video_url",
+      "label": "Video URL",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "poster_image",
+      "label": "Poster Image",
+      "type": "image",
+      "required": false
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "type": "text",
+      "required": false
+    }
+  ],
+  "test_data": {
+    "heading": "Watch Our Demo",
+    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "poster_image": "https://picsum.photos/seed/video-poster/1280/720",
+    "caption": "Product walkthrough"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "slug": "cb-features-list",
+  "label": "Alternating Features",
+  "icon": "layout-list",
+  "description": "Alternating zigzag rows of image + text for detailed feature presentations. Each row flips the image side creating visual rhythm. Use for product deep-dives, how-it-works sections. Layout: two-column rows alternating image position, stacks on mobile.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Section Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "features",
+      "label": "Features",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "image",
+          "label": "Image",
+          "type": "image",
+          "required": true
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "richtext",
+          "required": true
+        },
+        {
+          "name": "button_text",
+          "label": "Button Text",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "button_url",
+          "label": "Button URL",
+          "type": "text",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "How It Works",
+    "features": [
+      {
+        "image": "https://picsum.photos/seed/feature1/600/400",
+        "title": "Design Your Content",
+        "description": "Use our intuitive block editor to craft beautiful pages. Drag, drop, and customize every element to match your vision.",
+        "button_text": "See the Editor",
+        "button_url": "/editor"
+      },
+      {
+        "image": "https://picsum.photos/seed/feature2/600/400",
+        "title": "Extend with Plugins",
+        "description": "Browse hundreds of extensions to add any feature you need. From SEO to email marketing, there's a plugin for everything.",
+        "button_text": "Browse Extensions",
+        "button_url": "/extensions"
+      },
+      {
+        "image": "https://picsum.photos/seed/feature3/600/400",
+        "title": "Launch and Grow",
+        "description": "Deploy with one click and watch your site grow. Built-in analytics and performance monitoring keep you informed.",
+        "button_text": "Get Started",
+        "button_url": "/signup"
+      }
+    ]
+  }
+}

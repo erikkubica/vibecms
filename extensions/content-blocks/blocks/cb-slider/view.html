@@ -1,0 +1,31 @@
+<section class="vb-cb-slider" data-block="cb-slider" data-autoplay="{{.autoplay}}">
+  <div class="vb-cb-slider__track">
+    {{range $index, $slide := .slides}}
+      <div class="vb-cb-slider__slide {{if eq $index 0}}vb-cb-slider__slide--active{{end}}" style="background-image: url('{{$slide.image}}');">
+        <div class="vb-cb-slider__overlay"></div>
+        <div class="vb-cb-slider__content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {{if $slide.heading}}
+            <h2 class="vb-cb-slider__heading">{{$slide.heading}}</h2>
+          {{end}}
+          {{if $slide.description}}
+            <p class="vb-cb-slider__description">{{$slide.description}}</p>
+          {{end}}
+          {{if and $slide.button_text $slide.button_url}}
+            <a href="{{$slide.button_url}}" class="vb-cb-slider__button">{{$slide.button_text}}</a>
+          {{end}}
+        </div>
+      </div>
+    {{end}}
+  </div>
+  <button class="vb-cb-slider__arrow vb-cb-slider__arrow--prev" aria-label="Previous slide">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button class="vb-cb-slider__arrow vb-cb-slider__arrow--next" aria-label="Next slide">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <div class="vb-cb-slider__dots">
+    {{range $index, $slide := .slides}}
+      <button class="vb-cb-slider__dot {{if eq $index 0}}vb-cb-slider__dot--active{{end}}" data-slide="{{$index}}" aria-label="Go to slide {{$index}}"></button>
+    {{end}}
+  </div>
+</section>

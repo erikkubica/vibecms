@@ -1,0 +1,18 @@
+<section class="vb-stats-counter vb-stats-counter--{{.style}}" data-block="cb-stats-counter">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <h2 class="vb-stats-counter__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-stats-counter__grid">
+      {{range .stats}}
+      <div class="vb-stats-counter__item">
+        {{if .icon}}<span class="vb-stats-counter__icon">{{.icon}}</span>{{end}}
+        <div class="vb-stats-counter__number">
+          {{if .prefix}}<span class="vb-stats-counter__prefix">{{.prefix}}</span>{{end}}<span class="vb-stats-counter__value" data-target="{{.number}}">0</span>{{if .suffix}}<span class="vb-stats-counter__suffix">{{.suffix}}</span>{{end}}
+        </div>
+        <div class="vb-stats-counter__label">{{.label}}</div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

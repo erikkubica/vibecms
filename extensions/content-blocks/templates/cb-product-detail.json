@@ -1,0 +1,157 @@
+{
+  "name": "Product Detail Page",
+  "description": "Product showcase with hero image, feature highlights, tabbed content, before/after comparison, reviews, and related products CTA.",
+  "blocks": [
+    {
+      "type": "hero",
+      "fields": {
+        "heading": "FlowBoard Pro",
+        "subheading": "The project management platform that adapts to how your team actually works. Not the other way around.",
+        "background_image": "https://picsum.photos/seed/product-hero/1600/800",
+        "button_text": "Start Free Trial",
+        "button_url": "/signup?plan=pro-trial",
+        "alignment": "left"
+      }
+    },
+    {
+      "type": "cb-features-grid",
+      "fields": {
+        "heading": "Why Teams Choose FlowBoard Pro",
+        "subheading": "",
+        "columns": 3,
+        "features": [
+          {
+            "icon": "zap",
+            "title": "Instant Setup",
+            "description": "Import your existing projects from Jira, Asana, or Trello in under 5 minutes with our migration wizard.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "layers",
+            "title": "Flexible Views",
+            "description": "Kanban, Gantt, timeline, list, or calendar — switch views instantly without losing context or filters.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "cpu",
+            "title": "AI Automation",
+            "description": "Smart task routing, deadline prediction, and workload balancing powered by machine learning.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "lock",
+            "title": "Enterprise Security",
+            "description": "SOC 2 Type II certified with SSO, SCIM provisioning, and granular role-based access controls.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "plug",
+            "title": "200+ Integrations",
+            "description": "Connect with Slack, GitHub, Figma, Salesforce, and hundreds more through our native integration marketplace.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "bar-chart",
+            "title": "Real-Time Analytics",
+            "description": "Custom dashboards with velocity charts, burndown reports, and team health metrics updated in real time.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-tabs",
+      "fields": {
+        "heading": "Product Details",
+        "tabs": [
+          {
+            "label": "Description",
+            "content": "<h3>Built for Modern Teams</h3><p>FlowBoard Pro is the culmination of five years of research into how high-performing teams collaborate. Unlike traditional project management tools that force rigid workflows, FlowBoard adapts to your team's natural rhythm.</p><p>Whether you're running two-week sprints, continuous delivery, or a hybrid model, FlowBoard Pro provides the structure you need without the overhead you don't. Every feature was designed with one question in mind: does this help teams ship better work, faster?</p><h3>Key Capabilities</h3><ul><li><strong>Adaptive Workflows</strong> — Create custom stages, automations, and approval gates that match your process</li><li><strong>Cross-Project Dependencies</strong> — Visualize and manage dependencies across teams and projects</li><li><strong>Time Tracking</strong> — Built-in timers and manual entry with billable/non-billable categorization</li><li><strong>Document Hub</strong> — Rich text docs, wikis, and file attachments linked directly to tasks</li></ul>",
+            "icon": "file-text"
+          },
+          {
+            "label": "Specifications",
+            "content": "<h3>Technical Specifications</h3><table><tr><td><strong>Deployment</strong></td><td>Cloud (SaaS) or Self-hosted (Docker/Kubernetes)</td></tr><tr><td><strong>API</strong></td><td>REST and GraphQL with webhook support</td></tr><tr><td><strong>SSO</strong></td><td>SAML 2.0, OIDC, Google, Microsoft, Okta</td></tr><tr><td><strong>Data Residency</strong></td><td>US, EU, APAC regions available</td></tr><tr><td><strong>Uptime SLA</strong></td><td>99.99% for Enterprise plans</td></tr><tr><td><strong>Storage</strong></td><td>Unlimited file storage (Enterprise), 100GB (Pro)</td></tr><tr><td><strong>Users</strong></td><td>Unlimited (Enterprise), up to 500 (Pro)</td></tr><tr><td><strong>Audit Log</strong></td><td>Full activity log with 2-year retention</td></tr></table>",
+            "icon": "settings"
+          },
+          {
+            "label": "Reviews",
+            "content": "<h3>Customer Reviews</h3><p><strong>4.8 out of 5</strong> based on 2,340 reviews on G2</p><blockquote>\"FlowBoard Pro replaced three separate tools for us. Our team velocity increased 35% in the first quarter.\" — Director of Engineering, Series C Fintech</blockquote><blockquote>\"The AI automation features alone save our PMs about 6 hours per week. The ROI was immediate.\" — VP Product, Healthcare SaaS</blockquote><p><a href='/reviews'>Read all customer reviews →</a></p>",
+            "icon": "star"
+          }
+        ],
+        "style": "underline"
+      }
+    },
+    {
+      "type": "cb-before-after",
+      "fields": {
+        "before_image": "https://picsum.photos/seed/before-dashboard/1200/700",
+        "after_image": "https://picsum.photos/seed/after-dashboard/1200/700",
+        "before_label": "Legacy Tool",
+        "after_label": "FlowBoard Pro",
+        "heading": "See the Difference"
+      }
+    },
+    {
+      "type": "cb-reviews",
+      "fields": {
+        "heading": "Customer Reviews",
+        "average_rating": 4.8,
+        "reviews": [
+          {
+            "rating": 5,
+            "title": "Transformed our project delivery",
+            "body": "We migrated from Jira and haven't looked back. The onboarding was seamless, and our team adoption hit 95% within the first week. The AI task routing alone has saved us dozens of hours.",
+            "author": "Rachel Kim, Engineering Lead",
+            "verified": true
+          },
+          {
+            "rating": 5,
+            "title": "Best PM tool for distributed teams",
+            "body": "With team members across 4 time zones, async collaboration is critical. FlowBoard's smart notifications and timezone-aware scheduling have eliminated our meeting overhead.",
+            "author": "Tom Andersen, Product Manager",
+            "verified": true
+          },
+          {
+            "rating": 4,
+            "title": "Powerful but has a learning curve",
+            "body": "The depth of features is impressive — automation rules, custom fields, portfolio views — but it took our team about two weeks to fully explore everything. The onboarding guides helped a lot.",
+            "author": "Nina Petrova, Operations Director",
+            "verified": true
+          },
+          {
+            "rating": 5,
+            "title": "Worth every penny",
+            "body": "We evaluated 8 different tools before choosing FlowBoard Pro. The combination of flexibility, security certifications, and responsive support made it an easy decision for our security team.",
+            "author": "David Osei, CISO",
+            "verified": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-cta-banner",
+      "fields": {
+        "heading": "Try FlowBoard Pro Free for 14 Days",
+        "description": "No credit card required. Full access to all features. Cancel anytime.",
+        "button_text": "Start Free Trial",
+        "button_url": "/signup?plan=pro-trial",
+        "background_image": "https://picsum.photos/seed/product-cta/1600/500",
+        "style": "accent"
+      }
+    }
+  ]
+}

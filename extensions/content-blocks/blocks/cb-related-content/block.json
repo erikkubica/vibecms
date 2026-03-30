@@ -1,0 +1,38 @@
+{
+  "slug": "cb-related-content",
+  "label": "Related Content",
+  "icon": "link-2",
+  "description": "A dynamic related content block that fetches content nodes by type and displays them as linked cards. Unlike recent-posts, this is designed as a curated recommendation section. Use for 'You might also like' sections, related products, or cross-linked content. Layout: horizontal scrollable row of compact cards with image, title, and link.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "default": "You Might Also Like"
+    },
+    {
+      "name": "node_type",
+      "label": "Content Type",
+      "type": "text",
+      "default": "post"
+    },
+    {
+      "name": "count",
+      "label": "Number of Items",
+      "type": "number",
+      "default": 4
+    },
+    {
+      "name": "show_image",
+      "label": "Show Image",
+      "type": "toggle",
+      "default": true
+    }
+  ],
+  "test_data": {
+    "heading": "Related Articles",
+    "node_type": "post",
+    "count": 4,
+    "show_image": true
+  }
+}

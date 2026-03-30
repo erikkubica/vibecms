@@ -1,0 +1,110 @@
+.vb-cb-search__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.vb-cb-search__icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.vb-cb-search__input {
+  width: 100%;
+  padding: 1rem 3rem 1rem 3rem;
+  font-size: 1.1rem;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.vb-cb-search--bordered .vb-cb-search__input {
+  border: 2px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.vb-cb-search--bordered .vb-cb-search__input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(var(--color-accent), 0.1);
+}
+
+.vb-cb-search--floating .vb-cb-search__input {
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.vb-cb-search--floating .vb-cb-search__input:focus {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.vb-cb-search--minimal .vb-cb-search__input {
+  border-bottom: 2px solid var(--color-border);
+  border-radius: 0;
+  padding-left: 2.5rem;
+}
+
+.vb-cb-search--minimal .vb-cb-search__input:focus {
+  border-bottom-color: var(--color-accent);
+}
+
+.vb-cb-search__spinner {
+  position: absolute;
+  right: 1rem;
+  animation: vb-cb-search-spin 1s linear infinite;
+  color: var(--color-text-muted);
+}
+
+@keyframes vb-cb-search-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.vb-cb-search__results {
+  margin-top: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.vb-cb-search__result-item {
+  display: block;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: background 0.15s ease;
+}
+
+.vb-cb-search__result-item:last-child {
+  border-bottom: none;
+}
+
+.vb-cb-search__result-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.vb-cb-search__result-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.vb-cb-search__result-excerpt {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.vb-cb-search__no-results {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}

@@ -1,0 +1,30 @@
+<section class="vb-cb-search vb-cb-search--{{.style}}" data-block="cb-search" data-node-type="{{.node_type}}" data-limit="{{.results_limit}}">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-8" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+
+    <div class="max-w-2xl mx-auto">
+      <div class="vb-cb-search__input-wrap">
+        <svg class="vb-cb-search__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          class="vb-cb-search__input"
+          placeholder="{{.placeholder}}"
+          autocomplete="off"
+          aria-label="Search"
+        />
+        <div class="vb-cb-search__spinner" style="display: none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20"></circle>
+          </svg>
+        </div>
+      </div>
+
+      <div class="vb-cb-search__results" style="display: none;"></div>
+    </div>
+  </div>
+</section>

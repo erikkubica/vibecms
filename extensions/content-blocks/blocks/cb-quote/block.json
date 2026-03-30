@@ -1,0 +1,50 @@
+{
+  "slug": "cb-quote",
+  "label": "Blockquote",
+  "icon": "quote",
+  "description": "An elegant blockquote block for highlighting customer quotes, expert opinions, or notable excerpts. Displays a styled quotation with attribution and optional avatar. Use for pull quotes, endorsements, or key statements. Layout: large quote text with decorative left border or quotation marks, author info with circular avatar.",
+  "field_schema": [
+    {
+      "name": "quote",
+      "label": "Quote",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "author_name",
+      "label": "Author Name",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "author_role",
+      "label": "Author Role",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "avatar",
+      "label": "Avatar",
+      "type": "image",
+      "required": false
+    },
+    {
+      "name": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+        { "label": "Bordered", "value": "bordered" },
+        { "label": "Quote Marks", "value": "marks" },
+        { "label": "Minimal", "value": "minimal" }
+      ],
+      "default": "bordered"
+    }
+  ],
+  "test_data": {
+    "quote": "Innovation distinguishes between a leader and a follower. The people who are crazy enough to think they can change the world are the ones who do.",
+    "author_name": "Jane Cooper",
+    "author_role": "CEO, TechCorp",
+    "avatar": "https://picsum.photos/seed/janecooper/200/200",
+    "style": "bordered"
+  }
+}

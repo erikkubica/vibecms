@@ -1,0 +1,12 @@
+<section class="vb-cb-paragraph">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="{{if eq .max_width "narrow"}}max-w-2xl{{else if eq .max_width "wide"}}max-w-5xl{{else}}max-w-3xl{{end}} mx-auto">
+      {{if .heading}}
+        <h2 class="vb-cb-paragraph__heading">{{.heading}}</h2>
+      {{end}}
+      <div class="vb-cb-paragraph__body">
+        {{.body}}
+      </div>
+    </div>
+  </div>
+</section>

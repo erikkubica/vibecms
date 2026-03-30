@@ -1,0 +1,77 @@
+{
+  "slug": "cb-cta-cards",
+  "label": "CTA Cards",
+  "icon": "layout-grid",
+  "description": "Multiple call-to-action cards in a responsive row. Each card has icon/emoji, heading, description, and button. Use for service offerings, product categories. Layout: 2-4 cards with subtle borders and hover elevation.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Section Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "cards",
+      "label": "Cards",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "icon",
+          "label": "Icon / Emoji",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea",
+          "required": false
+        },
+        {
+          "name": "button_text",
+          "label": "Button Text",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "button_url",
+          "label": "Button URL",
+          "type": "text",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Choose Your Path",
+    "cards": [
+      {
+        "icon": "\ud83d\ude80",
+        "title": "For Startups",
+        "description": "Launch fast with our startup-friendly tools. Get your site live in minutes with zero config.",
+        "button_text": "Launch Now",
+        "button_url": "/startups"
+      },
+      {
+        "icon": "\ud83c\udfe2",
+        "title": "For Business",
+        "description": "Enterprise-grade features with the simplicity your team needs. Scale without limits.",
+        "button_text": "Learn More",
+        "button_url": "/business"
+      },
+      {
+        "icon": "\ud83c\udfa8",
+        "title": "For Creators",
+        "description": "Beautiful themes and powerful content tools designed for writers, artists, and makers.",
+        "button_text": "Start Creating",
+        "button_url": "/creators"
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+<section class="vb-cb-related-content" data-block="cb-related-content" data-node-type="{{.node_type}}" data-count="{{.count}}" data-show-image="{{.show_image}}">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-2xl sm:text-3xl font-bold mb-8" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+
+    <div class="vb-cb-related-content__track">
+      <!-- Cards rendered via JS -->
+      <div class="vb-cb-related-content__skeleton">
+        <div class="vb-cb-related-content__skeleton-card"></div>
+        <div class="vb-cb-related-content__skeleton-card"></div>
+        <div class="vb-cb-related-content__skeleton-card"></div>
+        <div class="vb-cb-related-content__skeleton-card"></div>
+      </div>
+    </div>
+  </div>
+</section>

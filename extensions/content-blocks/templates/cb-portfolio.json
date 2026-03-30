@@ -1,0 +1,148 @@
+{
+  "name": "Portfolio Showcase",
+  "description": "Portfolio page with hero, image grid gallery, client logo cloud, testimonial carousel, and contact CTA.",
+  "blocks": [
+    {
+      "type": "hero",
+      "fields": {
+        "heading": "Our Work",
+        "subheading": "A selection of projects that showcase our craft — from early-stage startups to Fortune 500 enterprises.",
+        "background_image": "https://picsum.photos/seed/portfolio-hero/1600/800",
+        "button_text": "Start a Project",
+        "button_url": "/contact",
+        "alignment": "center"
+      }
+    },
+    {
+      "type": "cb-image-grid",
+      "fields": {
+        "heading": "Featured Projects",
+        "columns": 3,
+        "images": [
+          {
+            "image": "https://picsum.photos/seed/project-fintech/600/450",
+            "caption": "Meridian — Fintech Dashboard Redesign",
+            "link": "/portfolio/meridian"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-health/600/450",
+            "caption": "VitaTrack — Healthcare Patient Portal",
+            "link": "/portfolio/vitatrack"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-ecommerce/600/450",
+            "caption": "Threadline — E-Commerce Platform",
+            "link": "/portfolio/threadline"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-logistics/600/450",
+            "caption": "TerraLogistics — Fleet Management System",
+            "link": "/portfolio/terralogistics"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-education/600/450",
+            "caption": "LearnPath — EdTech Learning Platform",
+            "link": "/portfolio/learnpath"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-saas/600/450",
+            "caption": "CloudPulse — SaaS Monitoring Dashboard",
+            "link": "/portfolio/cloudpulse"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-realestate/600/450",
+            "caption": "HomeScope — Real Estate Search App",
+            "link": "/portfolio/homescope"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-media/600/450",
+            "caption": "StreamCast — Media Streaming Platform",
+            "link": "/portfolio/streamcast"
+          },
+          {
+            "image": "https://picsum.photos/seed/project-nonprofit/600/450",
+            "caption": "GreenBridge — Nonprofit Donation Platform",
+            "link": "/portfolio/greenbridge"
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-stats-counter",
+      "fields": {
+        "heading": "Project Impact",
+        "stats": [
+          { "icon": "trending-up", "number": 340, "label": "Projects Shipped", "prefix": "", "suffix": "+" },
+          { "icon": "award", "number": 12, "label": "Design Awards", "prefix": "", "suffix": "" },
+          { "icon": "percent", "number": 98, "label": "Client Satisfaction", "prefix": "", "suffix": "%" },
+          { "icon": "repeat", "number": 85, "label": "Repeat Clients", "prefix": "", "suffix": "%" }
+        ],
+        "style": "default"
+      }
+    },
+    {
+      "type": "cb-logo-cloud",
+      "fields": {
+        "heading": "Trusted By",
+        "logos": [
+          { "image": "https://picsum.photos/seed/logo-meridian/200/80", "name": "Meridian Health", "url": "https://example.com" },
+          { "image": "https://picsum.photos/seed/logo-terra/200/80", "name": "TerraLogistics", "url": "https://example.com" },
+          { "image": "https://picsum.photos/seed/logo-nova/200/80", "name": "NovaBio", "url": "https://example.com" },
+          { "image": "https://picsum.photos/seed/logo-lakeview/200/80", "name": "Lakeview Capital", "url": "https://example.com" },
+          { "image": "https://picsum.photos/seed/logo-pixelcraft/200/80", "name": "PixelCraft", "url": "https://example.com" },
+          { "image": "https://picsum.photos/seed/logo-threadline/200/80", "name": "Threadline", "url": "https://example.com" },
+          { "image": "https://picsum.photos/seed/logo-cloudpulse/200/80", "name": "CloudPulse", "url": "https://example.com" },
+          { "image": "https://picsum.photos/seed/logo-greenbridge/200/80", "name": "GreenBridge", "url": "https://example.com" }
+        ],
+        "style": "grayscale"
+      }
+    },
+    {
+      "type": "cb-testimonials",
+      "fields": {
+        "heading": "What Clients Say",
+        "testimonials": [
+          {
+            "quote": "Apex took our vague brief and turned it into a product that exceeded every metric we set. Our user engagement tripled in the first quarter after launch.",
+            "author_name": "Sarah Chen",
+            "author_role": "CTO, Meridian Health",
+            "avatar": "https://picsum.photos/seed/client-sarah/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "Their design team has an incredible ability to simplify complex workflows. Our driver onboarding time dropped from 45 minutes to 8 minutes.",
+            "author_name": "Carlos Gutierrez",
+            "author_role": "Head of Product, TerraLogistics",
+            "avatar": "https://picsum.photos/seed/client-carlos/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "We've worked with agencies before, but Apex is different. They challenge your assumptions in the best way and deliver work you're genuinely proud of.",
+            "author_name": "Jessica Thornton",
+            "author_role": "CMO, Threadline",
+            "avatar": "https://picsum.photos/seed/client-jessica/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "From discovery to launch, the process was transparent, collaborative, and surprisingly fun. We're already planning our next project together.",
+            "author_name": "Ahmed Youssef",
+            "author_role": "Founder, LearnPath",
+            "avatar": "https://picsum.photos/seed/client-ahmed/200/200",
+            "rating": 5
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-cta-split",
+      "fields": {
+        "heading": "Have a Project in Mind?",
+        "description": "We'd love to hear about it. Tell us what you're building and we'll schedule a free 30-minute discovery call to explore how we can help.",
+        "button_text": "Get in Touch",
+        "button_url": "/contact",
+        "image": "https://picsum.photos/seed/portfolio-cta/800/600",
+        "image_position": "right"
+      }
+    }
+  ]
+}

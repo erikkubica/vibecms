@@ -1,0 +1,115 @@
+{
+  "slug": "cb-subscription-plans",
+  "label": "Subscription Plans",
+  "icon": "repeat",
+  "description": "Tiered subscription plans with monthly/yearly toggle switch. Like pricing table but with period switching that recalculates displayed prices. Use for SaaS pricing with annual discount. Layout: pill-style toggle at top, plan cards with dynamic pricing based on toggle state, featured plan with badge.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "subheading",
+      "label": "Subheading",
+      "type": "text"
+    },
+    {
+      "name": "yearly_discount_label",
+      "label": "Yearly Discount Label",
+      "type": "text",
+      "default": "Save 20%"
+    },
+    {
+      "name": "plans",
+      "label": "Plans",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "name",
+          "label": "Plan Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "monthly_price",
+          "label": "Monthly Price",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "yearly_price",
+          "label": "Yearly Price",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "text"
+        },
+        {
+          "name": "features",
+          "label": "Features (one per line)",
+          "type": "textarea"
+        },
+        {
+          "name": "button_text",
+          "label": "Button Text",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "button_url",
+          "label": "Button URL",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "is_featured",
+          "label": "Featured",
+          "type": "select",
+          "options": ["true", "false"],
+          "default": "false"
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Simple, Transparent Pricing",
+    "subheading": "Choose the plan that fits your needs. All plans include a 14-day free trial.",
+    "yearly_discount_label": "Save 20%",
+    "plans": [
+      {
+        "name": "Starter",
+        "monthly_price": "$9",
+        "yearly_price": "$7",
+        "description": "Perfect for individuals and small projects",
+        "features": "5 projects\n10GB storage\nEmail support\nBasic analytics\nAPI access",
+        "button_text": "Start Free Trial",
+        "button_url": "/signup?plan=starter",
+        "is_featured": "false"
+      },
+      {
+        "name": "Professional",
+        "monthly_price": "$29",
+        "yearly_price": "$23",
+        "description": "For growing teams and businesses",
+        "features": "Unlimited projects\n100GB storage\nPriority support\nAdvanced analytics\nAPI access\nCustom domains\nTeam collaboration",
+        "button_text": "Start Free Trial",
+        "button_url": "/signup?plan=pro",
+        "is_featured": "true"
+      },
+      {
+        "name": "Enterprise",
+        "monthly_price": "$99",
+        "yearly_price": "$79",
+        "description": "For large organizations with custom needs",
+        "features": "Unlimited everything\n1TB storage\nDedicated support\nCustom analytics\nAdvanced API\nSSO & SAML\nSLA guarantee\nCustom integrations",
+        "button_text": "Contact Sales",
+        "button_url": "/contact?plan=enterprise",
+        "is_featured": "false"
+      }
+    ]
+  }
+}

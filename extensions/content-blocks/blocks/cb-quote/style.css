@@ -1,0 +1,53 @@
+.vb-cb-quote {
+  padding: 3rem 0;
+}
+
+.vb-cb-quote__block {
+  position: relative;
+  margin: 0;
+  padding: 0;
+}
+
+.vb-cb-quote__block--bordered {
+  border-left: 4px solid var(--color-accent);
+  padding-left: 1.5rem;
+}
+
+.vb-cb-quote__block--marks {
+  padding-top: 2rem;
+}
+
+.vb-cb-quote__block--minimal {
+  padding: 0;
+}
+
+.vb-cb-quote__mark {
+  position: absolute;
+  top: -0.5rem;
+  left: -0.25rem;
+  font-size: 5rem;
+  line-height: 1;
+  color: var(--color-accent);
+  opacity: 0.3;
+  font-family: Georgia, serif;
+  pointer-events: none;
+}
+
+.vb-cb-quote__text {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: var(--color-text);
+  font-style: italic;
+  margin: 0;
+}
+
+.vb-cb-quote__attribution {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.vb-cb-quote__role {
+  margin: 0;
+}

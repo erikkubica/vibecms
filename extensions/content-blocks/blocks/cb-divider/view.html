@@ -1,0 +1,13 @@
+<section class="vb-cb-divider vb-cb-divider--spacing-{{.spacing}}" data-block="cb-divider">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="vb-cb-divider__wrapper vb-cb-divider__wrapper--{{.style}} vb-cb-divider__wrapper--{{.color}}">
+      {{if or .label .icon}}
+      <div class="vb-cb-divider__line"></div>
+      <span class="vb-cb-divider__label">{{if .icon}}<span class="vb-cb-divider__icon">{{.icon}}</span>{{end}}{{if .label}} {{.label}}{{end}}</span>
+      <div class="vb-cb-divider__line"></div>
+      {{else}}
+      <div class="vb-cb-divider__line vb-cb-divider__line--full"></div>
+      {{end}}
+    </div>
+  </div>
+</section>

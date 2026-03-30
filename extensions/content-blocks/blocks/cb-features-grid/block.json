@@ -1,0 +1,129 @@
+{
+  "slug": "cb-features-grid",
+  "label": "Features Grid",
+  "icon": "layout-grid",
+  "description": "Feature cards grid with icon, title, description, and optional link per feature. Use for service overviews, capability presentations. Layout: 2-4 column responsive grid, cards with icon/emoji, bold title, description, optional category tag, subtle shadows with hover lift.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "subheading",
+      "label": "Subheading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "columns",
+      "label": "Columns",
+      "type": "select",
+      "options": [
+        { "label": "2 Columns", "value": "2" },
+        { "label": "3 Columns", "value": "3" },
+        { "label": "4 Columns", "value": "4" }
+      ],
+      "default": "3"
+    },
+    {
+      "name": "features",
+      "label": "Features",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "icon",
+          "label": "Icon / Emoji",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "name": "category",
+          "label": "Category Tag",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "link_text",
+          "label": "Link Text",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "link_url",
+          "label": "Link URL",
+          "type": "text",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "What We Offer",
+    "subheading": "Everything you need to build and grow your online presence",
+    "columns": "3",
+    "features": [
+      {
+        "icon": "\u26a1",
+        "title": "Lightning Fast",
+        "description": "Sub-50ms response times with optimized rendering and smart caching.",
+        "category": "Performance",
+        "link_text": "Learn more",
+        "link_url": "/features/speed"
+      },
+      {
+        "icon": "\ud83d\udd12",
+        "title": "Secure by Default",
+        "description": "Built-in RBAC, capability-based permissions, and automatic security updates.",
+        "category": "Security",
+        "link_text": "Learn more",
+        "link_url": "/features/security"
+      },
+      {
+        "icon": "\ud83e\udde9",
+        "title": "Extensible",
+        "description": "Plugin architecture lets you add any feature without touching core code.",
+        "category": "Architecture",
+        "link_text": "Learn more",
+        "link_url": "/features/extensions"
+      },
+      {
+        "icon": "\ud83c\udfa8",
+        "title": "Beautiful Themes",
+        "description": "Professionally designed themes with full customization support.",
+        "category": "Design",
+        "link_text": "",
+        "link_url": ""
+      },
+      {
+        "icon": "\ud83d\udcf1",
+        "title": "Mobile First",
+        "description": "Every component is responsive and optimized for all screen sizes.",
+        "category": "Design",
+        "link_text": "",
+        "link_url": ""
+      },
+      {
+        "icon": "\ud83e\udd16",
+        "title": "AI Native",
+        "description": "AI-powered content suggestions and automated workflows built right in.",
+        "category": "Intelligence",
+        "link_text": "Learn more",
+        "link_url": "/features/ai"
+      }
+    ]
+  }
+}

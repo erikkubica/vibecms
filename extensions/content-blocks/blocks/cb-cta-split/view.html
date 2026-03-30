@@ -1,0 +1,16 @@
+<section class="vb-cta-split vb-cta-split--img-{{.image_position}}" data-block="cb-cta-split">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="vb-cta-split__grid">
+      <div class="vb-cta-split__image-col">
+        <img src="{{.image}}" alt="{{.heading}}" class="vb-cta-split__image" loading="lazy" />
+      </div>
+      <div class="vb-cta-split__content-col">
+        <h2 class="vb-cta-split__heading">{{.heading}}</h2>
+        {{if .description}}
+        <p class="vb-cta-split__description">{{.description}}</p>
+        {{end}}
+        <a href="{{.button_url}}" class="vb-cta-split__button">{{.button_text}}</a>
+      </div>
+    </div>
+  </div>
+</section>

@@ -135,6 +135,7 @@ func main() {
 	// Extension loading.
 	extLoader := cms.NewExtensionLoader(database, "extensions")
 	extLoader.ScanAndRegister()
+	extLoader.LoadBlocksForActiveExtensions(themeAssets)
 	activeExts, _ := extLoader.GetActive()
 	for _, ext := range activeExts {
 		var manifest cms.ExtensionManifest
@@ -237,6 +238,7 @@ func main() {
 	extHandler := cms.NewExtensionHandler(database, extLoader)
 	extHandler.SetScriptLoader(scriptEngine)
 	extHandler.SetPluginManager(pluginManager)
+	extHandler.SetAssetRegistry(themeAssets)
 	extHandler.RegisterRoutes(adminAPI)
 
 	// Theme deploy webhook (public, authenticated by secret).

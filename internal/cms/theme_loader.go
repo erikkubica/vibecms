@@ -297,19 +297,17 @@ type themeTemplateFile struct {
 	} `json:"blocks"`
 }
 
-// registerTemplate reads a theme template file and upserts it into the templates table.
-func (tl *ThemeLoader) registerTemplate(themeName string, def ThemeTemplateDef, themeDir string) {
-	filePath := filepath.Join(themeDir, "templates", def.File)
+// RegisterTemplateFromFile reads a template JSON file and upserts the template record.
+// Shared helper used by both ThemeLoader and ExtensionLoader.
+func RegisterTemplateFromFile(db *gorm.DB, filePath string, slug string, source string, sourceName string) error {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Printf("WARN: template file not found %s: %v", filePath, err)
-		return
+		return fmt.Errorf("template file not found %s: %w", filePath, err)
 	}
 
 	var tmplFile themeTemplateFile
 	if err := json.Unmarshal(data, &tmplFile); err != nil {
-		log.Printf("WARN: failed to parse template %s: %v", def.Slug, err)
-		return
+		return fmt.Errorf("failed to parse template %s: %w", slug, err)
 	}
 
 	// Convert {type, fields} to {block_type_slug, default_values}
@@ -323,39 +321,52 @@ func (tl *ThemeLoader) registerTemplate(themeName string, def ThemeTemplateDef, 
 
 	configJSON, err := json.Marshal(blockConfig)
 	if err != nil {
-		log.Printf("WARN: failed to marshal template block_config for %s: %v", def.Slug, err)
-		return
+		return fmt.Errorf("failed to marshal template block_config for %s: %w", slug, err)
 	}
 
 	label := tmplFile.Name
 	if label == "" {
-		label = def.Slug
+		label = slug
+	}
+
+	var sourceNamePtr *string
+	if sourceName != "" {
+		sourceNamePtr = &sourceName
 	}
 
 	var existing models.Template
-	result := tl.db.Where("slug = ?", def.Slug).First(&existing)
+	result := db.Where("slug = ?", slug).First(&existing)
 
 	if result.Error == nil {
 		existing.Label = label
 		existing.Description = tmplFile.Description
 		existing.BlockConfig = models.JSONB(configJSON)
-		existing.Source = "theme"
-		existing.ThemeName = &themeName
-		if err := tl.db.Save(&existing).Error; err != nil {
-			log.Printf("WARN: failed to update theme template %s: %v", def.Slug, err)
+		existing.Source = source
+		existing.ThemeName = sourceNamePtr
+		if err := db.Save(&existing).Error; err != nil {
+			return fmt.Errorf("failed to update template %s: %w", slug, err)
 		}
 	} else {
 		tmpl := models.Template{
-			Slug:        def.Slug,
+			Slug:        slug,
 			Label:       label,
 			Description: tmplFile.Description,
 			BlockConfig: models.JSONB(configJSON),
-			Source:      "theme",
-			ThemeName:   &themeName,
+			Source:      source,
+			ThemeName:   sourceNamePtr,
 		}
-		if err := tl.db.Create(&tmpl).Error; err != nil {
-			log.Printf("WARN: failed to create theme template %s: %v", def.Slug, err)
+		if err := db.Create(&tmpl).Error; err != nil {
+			return fmt.Errorf("failed to create template %s: %w", slug, err)
 		}
+	}
+	return nil
+}
+
+// registerTemplate reads a theme template file and upserts the template record.
+func (tl *ThemeLoader) registerTemplate(themeName string, def ThemeTemplateDef, themeDir string) {
+	filePath := filepath.Join(themeDir, "templates", def.File)
+	if err := RegisterTemplateFromFile(tl.db, filePath, def.Slug, "theme", themeName); err != nil {
+		log.Printf("WARN: %v", err)
 	}
 }
 
@@ -458,28 +469,24 @@ type blockManifest struct {
 	TestData    json.RawMessage `json:"test_data"`
 }
 
-// registerBlock reads block files and upserts the block type.
-func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeDir string) {
-	blockDir := filepath.Join(themeDir, "blocks", def.Dir)
-
+// RegisterBlockFromDir reads block files from blockDir and upserts the block type.
+// This is a shared helper used by both ThemeLoader and ExtensionLoader.
+func RegisterBlockFromDir(db *gorm.DB, registry *ThemeAssetRegistry, blockDir string, slug string, source string, sourceName string) error {
 	// Read block.json.
 	bjData, err := os.ReadFile(filepath.Join(blockDir, "block.json"))
 	if err != nil {
-		log.Printf("WARN: block.json not found for block %s: %v", def.Slug, err)
-		return
+		return fmt.Errorf("block.json not found for block %s: %w", slug, err)
 	}
 
 	var bm blockManifest
 	if err := json.Unmarshal(bjData, &bm); err != nil {
-		log.Printf("WARN: failed to parse block.json for %s: %v", def.Slug, err)
-		return
+		return fmt.Errorf("failed to parse block.json for %s: %w", slug, err)
 	}
 
 	// Read view.html (the HTML template for the block).
 	viewData, err := os.ReadFile(filepath.Join(blockDir, "view.html"))
 	if err != nil {
-		log.Printf("WARN: view.html not found for block %s: %v", def.Slug, err)
-		return
+		return fmt.Errorf("view.html not found for block %s: %w", slug, err)
 	}
 
 	// Read optional style.css and script.js.
@@ -504,18 +511,24 @@ func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeD
 	// Set defaults.
 	label := bm.Label
 	if label == "" {
-		label = def.Slug
+		label = slug
 	}
 	icon := bm.Icon
 	if icon == "" {
 		icon = "square"
 	}
 
+	// Source name pointer (nil for "custom").
+	var sourceNamePtr *string
+	if sourceName != "" {
+		sourceNamePtr = &sourceName
+	}
+
 	// Upsert block type.
 	var existing models.BlockType
-	result := tl.db.Where("slug = ?", def.Slug).First(&existing)
+	result := db.Where("slug = ?", slug).First(&existing)
 
-	viewFile := filepath.Join("blocks", def.Dir, "view.html")
+	viewFile := filepath.Join("blocks", filepath.Base(blockDir), "view.html")
 
 	if result.Error == nil {
 		existing.Label = label
@@ -524,42 +537,52 @@ func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeD
 		existing.FieldSchema = fieldSchema
 		existing.HTMLTemplate = string(viewData)
 		existing.TestData = testData
-		existing.Source = "theme"
-		existing.ThemeName = &themeName
+		existing.Source = source
+		existing.ThemeName = sourceNamePtr
 		existing.ViewFile = viewFile
 		existing.BlockCSS = blockCSS
 		existing.BlockJS = blockJS
-		if err := tl.db.Save(&existing).Error; err != nil {
-			log.Printf("WARN: failed to update theme block_type %s: %v", def.Slug, err)
+		if err := db.Save(&existing).Error; err != nil {
+			return fmt.Errorf("failed to update block_type %s: %w", slug, err)
 		}
 	} else {
 		bt := models.BlockType{
-			Slug:         def.Slug,
+			Slug:         slug,
 			Label:        label,
 			Icon:         icon,
 			Description:  bm.Description,
 			FieldSchema:  fieldSchema,
 			HTMLTemplate: string(viewData),
 			TestData:     testData,
-			Source:       "theme",
-			ThemeName:    &themeName,
+			Source:       source,
+			ThemeName:    sourceNamePtr,
 			ViewFile:     viewFile,
 			BlockCSS:     blockCSS,
 			BlockJS:      blockJS,
 		}
-		if err := tl.db.Create(&bt).Error; err != nil {
-			log.Printf("WARN: failed to create theme block_type %s: %v", def.Slug, err)
+		if err := db.Create(&bt).Error; err != nil {
+			return fmt.Errorf("failed to create block_type %s: %w", slug, err)
 		}
 	}
 
 	// Store block assets in registry.
 	if blockCSS != "" || blockJS != "" {
-		tl.registry.mu.Lock()
-		tl.registry.blockAssets[def.Slug] = &BlockAsset{
+		registry.mu.Lock()
+		registry.blockAssets[slug] = &BlockAsset{
 			CSS: blockCSS,
 			JS:  blockJS,
 		}
-		tl.registry.mu.Unlock()
+		registry.mu.Unlock()
+	}
+
+	return nil
+}
+
+// registerBlock reads block files and upserts the block type (theme source).
+func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeDir string) {
+	blockDir := filepath.Join(themeDir, "blocks", def.Dir)
+	if err := RegisterBlockFromDir(tl.db, tl.registry, blockDir, def.Slug, "theme", themeName); err != nil {
+		log.Printf("WARN: %v", err)
 	}
 }
 

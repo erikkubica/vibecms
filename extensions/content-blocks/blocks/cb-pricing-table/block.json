@@ -1,0 +1,115 @@
+{
+  "slug": "cb-pricing-table",
+  "label": "Pricing Table",
+  "icon": "credit-card",
+  "description": "Subscription pricing plan comparison cards with feature lists and CTA buttons. Displays 2-4 tiers side by side. Use for SaaS pricing, membership plans, service tier comparisons. Layout: side-by-side cards with plan name, price+period, feature list, and CTA button. Featured plan gets accent border and 'Recommended' badge.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "subheading",
+      "label": "Subheading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "plans",
+      "label": "Plans",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "name",
+          "label": "Plan Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "price",
+          "label": "Price",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "period",
+          "label": "Period",
+          "type": "text",
+          "default": "/mo"
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "features",
+          "label": "Features (one per line)",
+          "type": "textarea",
+          "required": false
+        },
+        {
+          "name": "button_text",
+          "label": "Button Text",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "button_url",
+          "label": "Button URL",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "is_featured",
+          "label": "Featured",
+          "type": "select",
+          "options": [
+            { "label": "No", "value": "false" },
+            { "label": "Yes", "value": "true" }
+          ],
+          "default": "false"
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Simple, Transparent Pricing",
+    "subheading": "Choose the plan that fits your needs. Upgrade or downgrade at any time.",
+    "plans": [
+      {
+        "name": "Starter",
+        "price": "$9",
+        "period": "/mo",
+        "description": "Perfect for individuals and small projects.",
+        "features": "5 Projects\n10 GB Storage\nEmail Support\nBasic Analytics\nAPI Access",
+        "button_text": "Get Started",
+        "button_url": "/signup/starter",
+        "is_featured": "false"
+      },
+      {
+        "name": "Professional",
+        "price": "$29",
+        "period": "/mo",
+        "description": "Best for growing teams and businesses.",
+        "features": "Unlimited Projects\n100 GB Storage\nPriority Support\nAdvanced Analytics\nAPI Access\nCustom Integrations\nTeam Collaboration",
+        "button_text": "Get Started",
+        "button_url": "/signup/professional",
+        "is_featured": "true"
+      },
+      {
+        "name": "Enterprise",
+        "price": "$99",
+        "period": "/mo",
+        "description": "For large organizations with custom needs.",
+        "features": "Unlimited Projects\nUnlimited Storage\n24/7 Phone Support\nEnterprise Analytics\nAPI Access\nCustom Integrations\nTeam Collaboration\nSSO & SAML\nDedicated Account Manager",
+        "button_text": "Contact Sales",
+        "button_url": "/contact",
+        "is_featured": "false"
+      }
+    ]
+  }
+}

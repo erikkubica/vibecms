@@ -1,0 +1,49 @@
+<section class="vb-cb-subscription-plans" data-block="cb-subscription-plans">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+    {{if .subheading}}
+    <p class="text-center text-lg mb-10" style="color: var(--color-text-muted); max-width: 600px; margin-left: auto; margin-right: auto;">{{.subheading}}</p>
+    {{end}}
+
+    <div class="vb-cb-subscription-plans__toggle-wrapper">
+      <span class="vb-cb-subscription-plans__toggle-label vb-cb-subscription-plans__toggle-label--monthly vb-cb-subscription-plans__toggle-label--active">Monthly</span>
+      <button class="vb-cb-subscription-plans__toggle" type="button" aria-label="Toggle billing period">
+        <span class="vb-cb-subscription-plans__toggle-knob"></span>
+      </button>
+      <span class="vb-cb-subscription-plans__toggle-label vb-cb-subscription-plans__toggle-label--yearly">
+        Yearly
+        {{if .yearly_discount_label}}
+        <span class="vb-cb-subscription-plans__discount-badge">{{.yearly_discount_label}}</span>
+        {{end}}
+      </span>
+    </div>
+
+    <div class="vb-cb-subscription-plans__grid">
+      {{range $i, $plan := .plans}}
+      <div class="vb-cb-subscription-plans__card{{if eq $plan.is_featured "true"}} vb-cb-subscription-plans__card--featured{{end}}">
+        {{if eq $plan.is_featured "true"}}
+        <div class="vb-cb-subscription-plans__badge">Most Popular</div>
+        {{end}}
+        <h3 class="vb-cb-subscription-plans__name">{{$plan.name}}</h3>
+        {{if $plan.description}}
+        <p class="vb-cb-subscription-plans__description">{{$plan.description}}</p>
+        {{end}}
+        <div class="vb-cb-subscription-plans__price">
+          <span class="vb-cb-subscription-plans__amount" data-monthly="{{$plan.monthly_price}}" data-yearly="{{$plan.yearly_price}}">{{$plan.monthly_price}}</span>
+          <span class="vb-cb-subscription-plans__period" data-monthly="/mo" data-yearly="/mo, billed yearly">/mo</span>
+        </div>
+        {{if $plan.features}}
+        <ul class="vb-cb-subscription-plans__features">
+          {{range $line := split $plan.features "\n"}}
+          {{if $line}}<li>{{$line}}</li>{{end}}
+          {{end}}
+        </ul>
+        {{end}}
+        <a href="{{$plan.button_url}}" class="vb-cb-subscription-plans__button{{if eq $plan.is_featured "true"}} vb-cb-subscription-plans__button--featured{{end}}">{{$plan.button_text}}</a>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

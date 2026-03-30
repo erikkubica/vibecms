@@ -1,0 +1,25 @@
+<section class="vb-cb-accordion" data-block="cb-accordion" data-allow-multiple="{{.allow_multiple}}">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+
+    <div class="max-w-3xl mx-auto">
+      {{range $i, $item := .items}}
+      <div class="vb-cb-accordion__item{{if eq $item.is_open "true"}} vb-cb-accordion__item--open{{end}}">
+        <button class="vb-cb-accordion__header" type="button" aria-expanded="{{$item.is_open}}">
+          <span class="vb-cb-accordion__header-text">{{$item.title}}</span>
+          <svg class="vb-cb-accordion__chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="vb-cb-accordion__panel"{{if eq $item.is_open "true"}} style="max-height: none;"{{end}}>
+          <div class="vb-cb-accordion__panel-inner">
+            {{$item.content}}
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

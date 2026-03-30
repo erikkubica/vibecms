@@ -1,0 +1,25 @@
+<section class="vb-cb-alert vb-cb-alert--{{.type}}" data-block="cb-alert" data-dismissible="{{.dismissible}}">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="vb-cb-alert__inner">
+      {{if .icon}}
+      <span class="vb-cb-alert__icon">{{.icon}}</span>
+      {{end}}
+
+      <div class="vb-cb-alert__content">
+        <div class="vb-cb-alert__message">{{.message}}</div>
+        {{if and .link_text .link_url}}
+        <a href="{{.link_url}}" class="vb-cb-alert__link">{{.link_text}} &rarr;</a>
+        {{end}}
+      </div>
+
+      {{if eq .dismissible true}}
+      <button class="vb-cb-alert__close" type="button" aria-label="Dismiss alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      {{end}}
+    </div>
+  </div>
+</section>

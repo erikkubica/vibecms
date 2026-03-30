@@ -1,0 +1,45 @@
+{
+  "slug": "cb-search",
+  "label": "Live Search",
+  "icon": "search",
+  "description": "A live search block that searches content in real-time as the user types. Uses AJAX to query the VibeCMS API and displays matching content nodes with title, excerpt, and link. Use for search pages or inline search widgets. Layout: search input with icon, results dropdown below showing matching pages with titles and excerpts.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "placeholder",
+      "label": "Placeholder Text",
+      "type": "text",
+      "default": "Search..."
+    },
+    {
+      "name": "node_type",
+      "label": "Content Type",
+      "type": "text",
+      "default": "page"
+    },
+    {
+      "name": "results_limit",
+      "label": "Results Limit",
+      "type": "number",
+      "default": 5
+    },
+    {
+      "name": "style",
+      "label": "Style",
+      "type": "select",
+      "options": ["minimal", "bordered", "floating"],
+      "default": "bordered"
+    }
+  ],
+  "test_data": {
+    "heading": "Search Our Site",
+    "placeholder": "Type to search...",
+    "node_type": "page",
+    "results_limit": 5,
+    "style": "bordered"
+  }
+}

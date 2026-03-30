@@ -1,0 +1,26 @@
+<section class="vb-cb-single-image" data-block="cb-single-image">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <figure class="vb-cb-single-image__figure {{if eq .size "small"}}max-w-md{{else if eq .size "full"}}max-w-full{{else}}max-w-2xl{{end}} mx-auto">
+      {{if .link}}
+        <a href="{{.link}}" class="vb-cb-single-image__link">
+          <img
+            src="{{.image}}"
+            alt="{{if .alt}}{{.alt}}{{else}}Image{{end}}"
+            class="vb-cb-single-image__img {{if eq .rounded "md"}}rounded-md{{else if eq .rounded "lg"}}rounded-lg{{else if eq .rounded "full"}}rounded-full{{else}}rounded-none{{end}}"
+            loading="lazy"
+          />
+        </a>
+      {{else}}
+        <img
+          src="{{.image}}"
+          alt="{{if .alt}}{{.alt}}{{else}}Image{{end}}"
+          class="vb-cb-single-image__img {{if eq .rounded "md"}}rounded-md{{else if eq .rounded "lg"}}rounded-lg{{else if eq .rounded "full"}}rounded-full{{else}}rounded-none{{end}}"
+          loading="lazy"
+        />
+      {{end}}
+      {{if .caption}}
+        <figcaption class="vb-cb-single-image__caption">{{.caption}}</figcaption>
+      {{end}}
+    </figure>
+  </div>
+</section>

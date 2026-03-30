@@ -1,0 +1,88 @@
+{
+  "name": "Contact Page",
+  "description": "Contact page with heading, map and contact info, contact form, FAQ accordion, and social share.",
+  "blocks": [
+    {
+      "type": "cb-heading",
+      "fields": {
+        "text": "Get in Touch",
+        "subtitle": "Whether you have a question, a project idea, or just want to say hello — we'd love to hear from you.",
+        "level": "h1",
+        "alignment": "center",
+        "divider": "line"
+      }
+    },
+    {
+      "type": "cb-map-embed",
+      "fields": {
+        "heading": "Visit Our Office",
+        "map_embed_url": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2795.3!2d-122.6765!3d45.5231!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDXCsDMxJzIzLjIiTiAxMjLCsDQwJzM1LjQiVw!5e0!3m2!1sen!2sus!4v1",
+        "address": "742 Evergreen Terrace, Suite 400\nPortland, OR 97201\nUnited States",
+        "phone": "+1 (503) 555-0142",
+        "email": "hello@apexdigital.com",
+        "hours": "Monday – Friday: 9:00 AM – 6:00 PM PST\nSaturday – Sunday: Closed",
+        "map_height": "400"
+      }
+    },
+    {
+      "type": "cb-contact-form",
+      "fields": {
+        "heading": "Send Us a Message",
+        "description": "Fill out the form below and we'll get back to you within one business day.",
+        "form_action": "/api/contact",
+        "success_message": "Thank you for reaching out! We'll respond within 24 hours.",
+        "show_phone": true,
+        "show_subject": true,
+        "button_text": "Send Message",
+        "style": "card"
+      }
+    },
+    {
+      "type": "cb-accordion",
+      "fields": {
+        "heading": "Common Questions",
+        "allow_multiple": false,
+        "items": [
+          {
+            "title": "What's the typical response time?",
+            "content": "<p>We respond to all inquiries within one business day. For urgent matters, call us directly at +1 (503) 555-0142.</p>",
+            "is_open": true
+          },
+          {
+            "title": "Do you offer free consultations?",
+            "content": "<p>Yes! We offer a free 30-minute discovery call where we learn about your project, discuss feasibility, and provide an initial recommendation — no strings attached.</p>",
+            "is_open": false
+          },
+          {
+            "title": "What information should I include in my message?",
+            "content": "<p>The more context the better. Include your project timeline, budget range if known, any technical requirements, and links to reference sites or documents. This helps us prepare a more useful response.</p>",
+            "is_open": false
+          },
+          {
+            "title": "Do you work with international clients?",
+            "content": "<p>Absolutely. We have offices in Portland, London, and Singapore, and regularly work with clients across North America, Europe, and Asia-Pacific. All meetings can be conducted remotely via video call.</p>",
+            "is_open": false
+          },
+          {
+            "title": "Can I visit your office?",
+            "content": "<p>Of course! We welcome in-person visits at our Portland headquarters. Please email or call ahead so we can prepare a meeting room and have the right team members available.</p>",
+            "is_open": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-social-share",
+      "fields": {
+        "heading": "Connect With Us",
+        "show_twitter": true,
+        "show_facebook": true,
+        "show_linkedin": true,
+        "show_email": true,
+        "show_copy_link": false,
+        "style": "outlined",
+        "alignment": "center"
+      }
+    }
+  ]
+}

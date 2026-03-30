@@ -1,0 +1,16 @@
+<section class="vb-cb-recent-posts" data-block="cb-recent-posts" data-node-type="{{.node_type}}" data-count="{{.count}}" data-layout="{{.layout}}" data-columns="{{.columns}}" data-show-image="{{.show_image}}" data-show-excerpt="{{.show_excerpt}}" data-show-date="{{.show_date}}" data-link-text="{{.link_text}}">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+
+    <div class="vb-cb-recent-posts__container" data-layout="{{.layout}}" data-columns="{{.columns}}">
+      <!-- Skeleton loading state -->
+      <div class="vb-cb-recent-posts__skeleton">
+        <div class="vb-cb-recent-posts__skeleton-card"></div>
+        <div class="vb-cb-recent-posts__skeleton-card"></div>
+        <div class="vb-cb-recent-posts__skeleton-card"></div>
+      </div>
+    </div>
+  </div>
+</section>

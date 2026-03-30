@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// ThemeBlockDef is defined in theme_loader.go — reused here for extension block definitions.
+
 // AdminUISlot describes a component injected into a named slot.
 type AdminUISlot struct {
 	Component string `json:"component"`
@@ -70,6 +72,8 @@ type ExtensionManifest struct {
 	Plugins        []PluginManifestEntry   `json:"plugins"`
 	AdminUI        *AdminUIManifest        `json:"admin_ui"`
 	SettingsSchema map[string]SettingsField `json:"settings_schema"`
+	Blocks         []ThemeBlockDef         `json:"blocks"`
+	Templates      []ThemeTemplateDef      `json:"templates"`
 }
 
 // CapabilityMap returns the Capabilities slice as a map for quick lookup.
@@ -213,3 +217,95 @@ func (l *ExtensionLoader) List() ([]models.Extension, error) {
 	err := l.db.Order("priority ASC, slug ASC").Find(&exts).Error
 	return exts, err
 }
+
+// LoadBlocksForActiveExtensions loads block types from all active extensions
+// that declare blocks in their manifest. This mirrors how ThemeLoader registers
+// theme blocks but uses source="extension" and stores the extension slug in theme_name.
+func (l *ExtensionLoader) LoadBlocksForActiveExtensions(registry *ThemeAssetRegistry) {
+	exts, err := l.GetActive()
+	if err != nil {
+		log.Printf("[extensions] failed to get active extensions for block loading: %v", err)
+		return
+	}
+
+	total := 0
+	for _, ext := range exts {
+		n := l.loadExtensionBlocks(ext, registry)
+		total += n
+	}
+	if total > 0 {
+		log.Printf("[extensions] loaded %d block types from active extensions", total)
+	}
+}
+
+// LoadBlocksForExtension loads block types for a single extension.
+func (l *ExtensionLoader) LoadBlocksForExtension(slug string, registry *ThemeAssetRegistry) {
+	ext, err := l.GetBySlug(slug)
+	if err != nil {
+		log.Printf("[extensions] cannot load blocks for %s: %v", slug, err)
+		return
+	}
+	n := l.loadExtensionBlocks(*ext, registry)
+	if n > 0 {
+		log.Printf("[extensions] loaded %d block types from extension %s", n, slug)
+	}
+}
+
+// UnloadExtensionBlocks removes all block types and templates owned by an extension
+// and clears their assets from the registry.
+func (l *ExtensionLoader) UnloadExtensionBlocks(slug string, registry *ThemeAssetRegistry) {
+	// Find all block slugs for this extension before deleting.
+	var blockTypes []models.BlockType
+	l.db.Where("source = ? AND theme_name = ?", "extension", slug).Find(&blockTypes)
+
+	// Delete blocks from DB.
+	result := l.db.Where("source = ? AND theme_name = ?", "extension", slug).Delete(&models.BlockType{})
+	if result.RowsAffected > 0 {
+		log.Printf("[extensions] removed %d block types from extension %s", result.RowsAffected, slug)
+	}
+
+	// Delete templates from DB.
+	tResult := l.db.Where("source = ? AND theme_name = ?", "extension", slug).Delete(&models.Template{})
+	if tResult.RowsAffected > 0 {
+		log.Printf("[extensions] removed %d templates from extension %s", tResult.RowsAffected, slug)
+	}
+
+	// Remove from asset registry.
+	registry.mu.Lock()
+	for _, bt := range blockTypes {
+		delete(registry.blockAssets, bt.Slug)
+	}
+	registry.mu.Unlock()
+}
+
+// loadExtensionBlocks loads blocks and templates for a single extension. Returns count loaded.
+func (l *ExtensionLoader) loadExtensionBlocks(ext models.Extension, registry *ThemeAssetRegistry) int {
+	var manifest ExtensionManifest
+	if err := json.Unmarshal(ext.Manifest, &manifest); err != nil {
+		return 0
+	}
+
+	loaded := 0
+
+	// Load blocks.
+	for _, def := range manifest.Blocks {
+		blockDir := filepath.Join(ext.Path, "blocks", def.Dir)
+		if err := RegisterBlockFromDir(l.db, registry, blockDir, def.Slug, "extension", ext.Slug); err != nil {
+			log.Printf("[extensions] block %s from %s: %v", def.Slug, ext.Slug, err)
+			continue
+		}
+		loaded++
+	}
+
+	// Load templates.
+	for _, def := range manifest.Templates {
+		filePath := filepath.Join(ext.Path, "templates", def.File)
+		if err := RegisterTemplateFromFile(l.db, filePath, def.Slug, "extension", ext.Slug); err != nil {
+			log.Printf("[extensions] template %s from %s: %v", def.Slug, ext.Slug, err)
+			continue
+		}
+	}
+
+	return loaded
+}
+

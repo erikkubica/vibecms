@@ -1,0 +1,17 @@
+.vb-cb-text-columns {
+  padding: 3rem 0;
+}
+
+.vb-cb-text-columns__content {
+  color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.vb-cb-text-columns__content p {
+  margin-bottom: 1rem;
+}
+
+.vb-cb-text-columns__content p:last-child {
+  margin-bottom: 0;
+}

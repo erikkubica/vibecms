@@ -1,0 +1,55 @@
+{
+  "slug": "cb-map-embed",
+  "label": "Map & Contact",
+  "icon": "map-pin",
+  "description": "An embedded map with contact info sidebar. Displays a map iframe alongside structured contact details. Use for contact pages, location pages. Layout: two-column — map embed (60%) plus contact card (40%) with address, phone, email, hours. Stacks on mobile.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "map_embed_url",
+      "label": "Map Embed URL",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "address",
+      "label": "Address",
+      "type": "textarea"
+    },
+    {
+      "name": "phone",
+      "label": "Phone",
+      "type": "text"
+    },
+    {
+      "name": "email",
+      "label": "Email",
+      "type": "text"
+    },
+    {
+      "name": "hours",
+      "label": "Business Hours",
+      "type": "textarea"
+    },
+    {
+      "name": "map_height",
+      "label": "Map Height",
+      "type": "select",
+      "options": ["300", "400", "500"],
+      "default": "400"
+    }
+  ],
+  "test_data": {
+    "heading": "Visit Our Office",
+    "map_embed_url": "https://www.openstreetmap.org/export/embed.html?bbox=-0.1318%2C51.4998%2C-0.0918%2C51.5198",
+    "address": "123 Innovation Street\nSuite 400\nLondon, EC2A 1NQ\nUnited Kingdom",
+    "phone": "+44 20 7946 0958",
+    "email": "hello@example.com",
+    "hours": "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 4:00 PM\nSunday: Closed",
+    "map_height": "400"
+  }
+}

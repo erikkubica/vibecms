@@ -1,0 +1,65 @@
+{
+  "slug": "cb-tabs",
+  "label": "Tabs",
+  "icon": "folder",
+  "description": "Tabbed content panels with clickable tab headers. Each tab has label and rich text content. Use for organizing content into switchable views — product details, documentation, comparisons. Layout: horizontal tab bar with active accent underline, content panel below. Three style variants.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "tabs",
+      "label": "Tabs",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "label",
+          "label": "Tab Label",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "content",
+          "label": "Tab Content",
+          "type": "richtext",
+          "required": true
+        },
+        {
+          "name": "icon",
+          "label": "Icon (emoji or text)",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "style",
+      "label": "Tab Style",
+      "type": "select",
+      "options": ["underline", "boxed", "pills"],
+      "default": "underline"
+    }
+  ],
+  "test_data": {
+    "heading": "Product Details",
+    "style": "underline",
+    "tabs": [
+      {
+        "label": "Description",
+        "icon": "📝",
+        "content": "<p>Our flagship product combines cutting-edge technology with intuitive design. Built for professionals who demand reliability and performance, it features a <strong>military-grade aluminum chassis</strong> and a stunning 4K display.</p><p>Every detail has been carefully crafted to deliver an exceptional user experience from the moment you open the box.</p>"
+      },
+      {
+        "label": "Specifications",
+        "icon": "⚙️",
+        "content": "<ul><li><strong>Processor:</strong> 12-core ARM architecture</li><li><strong>Memory:</strong> 32GB unified memory</li><li><strong>Storage:</strong> 1TB NVMe SSD</li><li><strong>Display:</strong> 15.6\" 4K OLED, 120Hz</li><li><strong>Battery:</strong> 100Wh, up to 18 hours</li><li><strong>Weight:</strong> 1.8 kg</li></ul>"
+      },
+      {
+        "label": "Reviews",
+        "icon": "⭐",
+        "content": "<p><strong>4.8 out of 5 stars</strong> (2,341 reviews)</p><blockquote>\"Best laptop I've ever owned. The display is incredible and battery life is outstanding.\" — Sarah K.</blockquote><blockquote>\"Perfect for creative professionals. Handles everything I throw at it.\" — Marcus T.</blockquote>"
+      }
+    ]
+  }
+}

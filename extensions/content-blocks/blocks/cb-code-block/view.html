@@ -1,0 +1,19 @@
+<section class="vb-cb-code-block">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+      <div class="vb-cb-code-block__container rounded-lg overflow-hidden">
+        {{if .language}}
+          <div class="vb-cb-code-block__header">
+            <span class="vb-cb-code-block__lang">{{.language}}</span>
+          </div>
+        {{end}}
+        <div class="vb-cb-code-block__body">
+          <pre class="vb-cb-code-block__pre"><code>{{.code}}</code></pre>
+        </div>
+      </div>
+      {{if .caption}}
+        <p class="vb-cb-code-block__caption text-sm mt-2 text-center" style="color: var(--color-text-muted);">{{.caption}}</p>
+      {{end}}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,46 @@
+{
+  "slug": "cb-divider",
+  "label": "Section Divider",
+  "icon": "minus",
+  "description": "A visual section divider for breathing space between content blocks. Supports line, thick, dashed, dotted, and gradient styles with optional centered text or icon label. Use between sections for visual separation. Layout: full-width horizontal element with configurable spacing and color.",
+  "field_schema": [
+    {
+      "name": "style",
+      "label": "Line Style",
+      "type": "select",
+      "options": ["line", "thick", "dashed", "dotted", "gradient"],
+      "default": "line"
+    },
+    {
+      "name": "label",
+      "label": "Center Label",
+      "type": "text"
+    },
+    {
+      "name": "icon",
+      "label": "Icon (emoji)",
+      "type": "text"
+    },
+    {
+      "name": "spacing",
+      "label": "Vertical Spacing",
+      "type": "select",
+      "options": ["sm", "md", "lg", "xl"],
+      "default": "md"
+    },
+    {
+      "name": "color",
+      "label": "Color",
+      "type": "select",
+      "options": ["default", "accent", "muted"],
+      "default": "default"
+    }
+  ],
+  "test_data": {
+    "style": "gradient",
+    "label": "",
+    "icon": "✦",
+    "spacing": "md",
+    "color": "default"
+  }
+}

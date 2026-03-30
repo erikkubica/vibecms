@@ -1,0 +1,65 @@
+{
+  "slug": "cb-contact-form",
+  "label": "Contact Form",
+  "icon": "send",
+  "description": "A contact form with configurable fields that submits via AJAX. Supports name, email, phone, subject, and message fields with validation. Shows success/error feedback inline. Use for contact pages, inquiry forms, support requests. Layout: clean form with labeled inputs, validation messages, and submit button with loading state.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea"
+    },
+    {
+      "name": "form_action",
+      "label": "Form Action URL",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "success_message",
+      "label": "Success Message",
+      "type": "text",
+      "default": "Thank you! We'll be in touch."
+    },
+    {
+      "name": "show_phone",
+      "label": "Show Phone Field",
+      "type": "toggle",
+      "default": false
+    },
+    {
+      "name": "show_subject",
+      "label": "Show Subject Field",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "name": "button_text",
+      "label": "Button Text",
+      "type": "text",
+      "default": "Send Message"
+    },
+    {
+      "name": "style",
+      "label": "Style",
+      "type": "select",
+      "options": ["simple", "card", "split"],
+      "default": "simple"
+    }
+  ],
+  "test_data": {
+    "heading": "Get in Touch",
+    "description": "We'd love to hear from you. Fill out the form below and we'll get back to you as soon as possible.",
+    "form_action": "/api/contact",
+    "success_message": "Thank you! We'll be in touch.",
+    "show_phone": false,
+    "show_subject": true,
+    "button_text": "Send Message",
+    "style": "card"
+  }
+}

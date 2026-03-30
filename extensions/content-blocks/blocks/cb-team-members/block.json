@@ -1,0 +1,135 @@
+{
+  "slug": "cb-team-members",
+  "label": "Team Members",
+  "icon": "users",
+  "description": "Team member profile cards with photo, name, role, bio, and social links. Use for about pages, team sections, leadership showcases. Layout: 2-4 column card grid with circular, rounded, or square photo, name, job title, bio, and social icon links.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "subheading",
+      "label": "Subheading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "columns",
+      "label": "Columns",
+      "type": "select",
+      "options": [
+        { "label": "2 Columns", "value": "2" },
+        { "label": "3 Columns", "value": "3" },
+        { "label": "4 Columns", "value": "4" }
+      ],
+      "default": "3"
+    },
+    {
+      "name": "photo_style",
+      "label": "Photo Style",
+      "type": "select",
+      "options": [
+        { "label": "Circle", "value": "circle" },
+        { "label": "Rounded", "value": "rounded" },
+        { "label": "Square", "value": "square" }
+      ],
+      "default": "circle"
+    },
+    {
+      "name": "members",
+      "label": "Team Members",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "photo",
+          "label": "Photo",
+          "type": "image",
+          "required": false
+        },
+        {
+          "name": "name",
+          "label": "Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "role",
+          "label": "Role / Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "bio",
+          "label": "Bio",
+          "type": "textarea",
+          "required": false
+        },
+        {
+          "name": "linkedin",
+          "label": "LinkedIn URL",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "twitter",
+          "label": "Twitter URL",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "email",
+          "label": "Email Address",
+          "type": "text",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Meet Our Team",
+    "subheading": "The people behind the product. We're a small, passionate team building something we believe in.",
+    "columns": "3",
+    "photo_style": "circle",
+    "members": [
+      {
+        "photo": "https://picsum.photos/seed/team1/400/400",
+        "name": "Alex Rivera",
+        "role": "CEO & Co-Founder",
+        "bio": "10+ years building developer tools. Previously led engineering at a Y Combinator startup.",
+        "linkedin": "https://linkedin.com/in/example",
+        "twitter": "https://twitter.com/example",
+        "email": "alex@example.com"
+      },
+      {
+        "photo": "https://picsum.photos/seed/team2/400/400",
+        "name": "Jordan Kim",
+        "role": "CTO & Co-Founder",
+        "bio": "Systems architect with a passion for performance. Open source contributor and Go enthusiast.",
+        "linkedin": "https://linkedin.com/in/example",
+        "twitter": "",
+        "email": "jordan@example.com"
+      },
+      {
+        "photo": "https://picsum.photos/seed/team3/400/400",
+        "name": "Priya Sharma",
+        "role": "Head of Design",
+        "bio": "Design leader focused on developer experience. Believes great tools should feel invisible.",
+        "linkedin": "https://linkedin.com/in/example",
+        "twitter": "https://twitter.com/example",
+        "email": ""
+      },
+      {
+        "photo": "https://picsum.photos/seed/team4/400/400",
+        "name": "Sam Okafor",
+        "role": "Lead Engineer",
+        "bio": "Full-stack developer specializing in Go and React. Contributor to multiple CMS projects.",
+        "linkedin": "",
+        "twitter": "https://twitter.com/example",
+        "email": "sam@example.com"
+      }
+    ]
+  }
+}

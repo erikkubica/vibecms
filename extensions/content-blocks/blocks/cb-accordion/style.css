@@ -1,0 +1,74 @@
+.vb-cb-accordion__item {
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.vb-cb-accordion__item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.vb-cb-accordion__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text);
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  gap: 1rem;
+}
+
+.vb-cb-accordion__header:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.vb-cb-accordion__header-text {
+  flex: 1;
+}
+
+.vb-cb-accordion__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.3s ease;
+}
+
+.vb-cb-accordion__item--open .vb-cb-accordion__chevron {
+  transform: rotate(180deg);
+}
+
+.vb-cb-accordion__panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+
+.vb-cb-accordion__panel-inner {
+  padding: 0 1.5rem 1.25rem;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.vb-cb-accordion__panel-inner p {
+  margin-bottom: 0.75rem;
+}
+
+.vb-cb-accordion__panel-inner ul,
+.vb-cb-accordion__panel-inner ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.vb-cb-accordion__panel-inner li {
+  margin-bottom: 0.25rem;
+}

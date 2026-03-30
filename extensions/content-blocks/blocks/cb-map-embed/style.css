@@ -1,0 +1,91 @@
+/* Grid layout */
+.vb-cb-map-embed__grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Map */
+.vb-cb-map-embed__map-wrapper {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.vb-cb-map-embed__iframe {
+  width: 100%;
+  border: none;
+  display: block;
+}
+
+/* Contact card */
+.vb-cb-map-embed__contact {
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.vb-cb-map-embed__info-group {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.vb-cb-map-embed__info-icon {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background: var(--color-accent);
+  color: var(--color-accent-text, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vb-cb-map-embed__info-icon svg {
+  stroke: currentColor;
+}
+
+.vb-cb-map-embed__info-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.vb-cb-map-embed__info-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.vb-cb-map-embed__info-value {
+  font-size: 0.95rem;
+  color: var(--color-text);
+  line-height: 1.6;
+  white-space: pre-line;
+  margin: 0;
+}
+
+.vb-cb-map-embed__info-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  display: block;
+}
+
+.vb-cb-map-embed__info-link:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vb-cb-map-embed__grid {
+    grid-template-columns: 1fr;
+  }
+}

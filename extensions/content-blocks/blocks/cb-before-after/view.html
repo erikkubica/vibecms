@@ -1,0 +1,24 @@
+<section class="vb-cb-before-after" data-block="cb-before-after">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+      <h2 class="vb-cb-before-after__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-cb-before-after__container max-w-3xl mx-auto">
+      <div class="vb-cb-before-after__wrapper">
+        <img src="{{.after_image}}" alt="{{if .after_label}}{{.after_label}}{{else}}After{{end}}" class="vb-cb-before-after__img vb-cb-before-after__img--after" draggable="false" />
+        <div class="vb-cb-before-after__before" style="clip-path: inset(0 50% 0 0);">
+          <img src="{{.before_image}}" alt="{{if .before_label}}{{.before_label}}{{else}}Before{{end}}" class="vb-cb-before-after__img vb-cb-before-after__img--before" draggable="false" />
+        </div>
+        <div class="vb-cb-before-after__handle" style="left: 50%;">
+          <div class="vb-cb-before-after__handle-line"></div>
+          <div class="vb-cb-before-after__handle-knob">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <span class="vb-cb-before-after__label vb-cb-before-after__label--before">{{if .before_label}}{{.before_label}}{{else}}Before{{end}}</span>
+        <span class="vb-cb-before-after__label vb-cb-before-after__label--after">{{if .after_label}}{{.after_label}}{{else}}After{{end}}</span>
+      </div>
+    </div>
+  </div>
+</section>

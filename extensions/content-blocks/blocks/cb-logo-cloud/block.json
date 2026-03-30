@@ -1,0 +1,86 @@
+{
+  "slug": "cb-logo-cloud",
+  "label": "Logo Cloud",
+  "icon": "building",
+  "description": "A client or partner logo grid for trust signals. Shows logos in grayscale that gain color on hover. Use for 'Trusted by' sections, partner showcases. Layout: centered section with heading, responsive grid of logos with consistent sizing, grayscale filter with hover color transition.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "style",
+      "label": "Logo Style",
+      "type": "select",
+      "options": [
+        { "label": "Grayscale", "value": "grayscale" },
+        { "label": "Color", "value": "color" },
+        { "label": "Monochrome", "value": "monochrome" }
+      ],
+      "default": "grayscale"
+    },
+    {
+      "name": "logos",
+      "label": "Logos",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "image",
+          "label": "Logo Image",
+          "type": "image",
+          "required": true
+        },
+        {
+          "name": "name",
+          "label": "Company Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "url",
+          "label": "Website URL",
+          "type": "text",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Trusted by Industry Leaders",
+    "style": "grayscale",
+    "logos": [
+      {
+        "image": "https://picsum.photos/seed/logo1/200/80",
+        "name": "Acme Corp",
+        "url": "https://example.com"
+      },
+      {
+        "image": "https://picsum.photos/seed/logo2/200/80",
+        "name": "Globex Industries",
+        "url": "https://example.com"
+      },
+      {
+        "image": "https://picsum.photos/seed/logo3/200/80",
+        "name": "Initech",
+        "url": "https://example.com"
+      },
+      {
+        "image": "https://picsum.photos/seed/logo4/200/80",
+        "name": "Soylent Corp",
+        "url": "https://example.com"
+      },
+      {
+        "image": "https://picsum.photos/seed/logo5/200/80",
+        "name": "Umbrella Inc",
+        "url": "https://example.com"
+      },
+      {
+        "image": "https://picsum.photos/seed/logo6/200/80",
+        "name": "Hooli",
+        "url": "https://example.com"
+      }
+    ]
+  }
+}

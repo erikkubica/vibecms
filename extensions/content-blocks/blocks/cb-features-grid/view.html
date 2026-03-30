@@ -1,0 +1,23 @@
+<section class="vb-features-grid" data-block="cb-features-grid">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if or .heading .subheading}}
+    <div class="vb-features-grid__header">
+      {{if .heading}}<h2 class="vb-features-grid__heading">{{.heading}}</h2>{{end}}
+      {{if .subheading}}<p class="vb-features-grid__subheading">{{.subheading}}</p>{{end}}
+    </div>
+    {{end}}
+    <div class="vb-features-grid__grid vb-features-grid__grid--cols-{{.columns}}">
+      {{range .features}}
+      <div class="vb-features-grid__card">
+        {{if .icon}}<span class="vb-features-grid__icon">{{.icon}}</span>{{end}}
+        {{if .category}}<span class="vb-features-grid__category">{{.category}}</span>{{end}}
+        <h3 class="vb-features-grid__title">{{.title}}</h3>
+        <p class="vb-features-grid__description">{{.description}}</p>
+        {{if and .link_text .link_url}}
+        <a href="{{.link_url}}" class="vb-features-grid__link">{{.link_text}} &rarr;</a>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

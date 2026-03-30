@@ -1,0 +1,70 @@
+{
+  "slug": "cb-list",
+  "label": "Styled List",
+  "icon": "list",
+  "description": "A styled list block for presenting items in bullet, numbered, or checklist format. Each item has a title and optional description. Use for feature lists, benefit highlights, requirements. Layout: vertical list with configurable markers, bold titles with optional description text.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "style",
+      "label": "List Style",
+      "type": "select",
+      "options": [
+        { "label": "Bullet", "value": "bullet" },
+        { "label": "Numbered", "value": "numbered" },
+        { "label": "Checklist", "value": "check" }
+      ],
+      "default": "bullet"
+    },
+    {
+      "name": "items",
+      "label": "List Items",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "text",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Key Benefits",
+    "style": "check",
+    "items": [
+      {
+        "title": "Lightning Fast Performance",
+        "description": "Optimized to deliver sub-50ms response times on every request."
+      },
+      {
+        "title": "Enterprise-Grade Security",
+        "description": "End-to-end encryption, RBAC, and regular penetration testing."
+      },
+      {
+        "title": "Seamless Integrations",
+        "description": "Connect with over 200 third-party tools and services out of the box."
+      },
+      {
+        "title": "24/7 Dedicated Support",
+        "description": "Our engineering team is available around the clock to assist you."
+      },
+      {
+        "title": "Scalable Architecture",
+        "description": "Grows effortlessly from hundreds to millions of users without re-platforming."
+      }
+    ]
+  }
+}

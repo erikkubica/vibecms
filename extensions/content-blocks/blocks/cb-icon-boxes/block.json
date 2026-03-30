@@ -1,0 +1,77 @@
+{
+  "slug": "cb-icon-boxes",
+  "label": "Icon Boxes",
+  "icon": "box",
+  "description": "Compact icon boxes for quick feature scanning. Smaller than feature cards. Use for tech stacks, benefit lists, amenities. Layout: 3-6 column grid of small boxes with centered icon, bold title, 1-2 line description. Three style variants: filled/outlined/minimal.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Section Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "items",
+      "label": "Items",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "icon",
+          "label": "Icon / Emoji",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "text",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "columns",
+      "label": "Columns",
+      "type": "select",
+      "options": [
+        { "label": "3 Columns", "value": "3" },
+        { "label": "4 Columns", "value": "4" },
+        { "label": "5 Columns", "value": "5" },
+        { "label": "6 Columns", "value": "6" }
+      ],
+      "default": "4"
+    },
+    {
+      "name": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+        { "label": "Filled", "value": "filled" },
+        { "label": "Outlined", "value": "outlined" },
+        { "label": "Minimal", "value": "minimal" }
+      ],
+      "default": "filled"
+    }
+  ],
+  "test_data": {
+    "heading": "Built With the Best",
+    "columns": "4",
+    "style": "filled",
+    "items": [
+      { "icon": "\u26a1", "title": "Go", "description": "High-performance backend" },
+      { "icon": "\u269b\ufe0f", "title": "React", "description": "Modern admin interface" },
+      { "icon": "\ud83d\udc18", "title": "PostgreSQL", "description": "Reliable data storage" },
+      { "icon": "\ud83d\udd27", "title": "gRPC", "description": "Fast plugin communication" },
+      { "icon": "\ud83c\udfa8", "title": "Tailwind", "description": "Utility-first CSS" },
+      { "icon": "\ud83d\udce6", "title": "Docker", "description": "Easy deployment" },
+      { "icon": "\ud83d\udd12", "title": "Ed25519", "description": "Cryptographic security" },
+      { "icon": "\ud83e\udde9", "title": "Tengo", "description": "Embedded scripting" }
+    ]
+  }
+}

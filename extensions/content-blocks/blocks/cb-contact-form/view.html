@@ -1,0 +1,58 @@
+<section class="vb-cb-contact-form vb-cb-contact-form--{{.style}}" data-block="cb-contact-form" data-action="{{.form_action}}" data-success="{{.success_message}}">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="vb-cb-contact-form__wrapper">
+      <div class="vb-cb-contact-form__header">
+        {{if .heading}}
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+        {{end}}
+        {{if .description}}
+        <p class="text-lg mb-8" style="color: var(--color-text-muted);">{{.description}}</p>
+        {{end}}
+      </div>
+
+      <form class="vb-cb-contact-form__form" novalidate>
+        <div class="vb-cb-contact-form__row">
+          <div class="vb-cb-contact-form__field">
+            <label class="vb-cb-contact-form__label" for="cf-name">Name <span class="vb-cb-contact-form__required">*</span></label>
+            <input type="text" id="cf-name" name="name" class="vb-cb-contact-form__input" required placeholder="Your name" />
+            <span class="vb-cb-contact-form__error" data-field="name"></span>
+          </div>
+          <div class="vb-cb-contact-form__field">
+            <label class="vb-cb-contact-form__label" for="cf-email">Email <span class="vb-cb-contact-form__required">*</span></label>
+            <input type="email" id="cf-email" name="email" class="vb-cb-contact-form__input" required placeholder="your@email.com" />
+            <span class="vb-cb-contact-form__error" data-field="email"></span>
+          </div>
+        </div>
+
+        {{if eq .show_phone true}}
+        <div class="vb-cb-contact-form__field">
+          <label class="vb-cb-contact-form__label" for="cf-phone">Phone</label>
+          <input type="tel" id="cf-phone" name="phone" class="vb-cb-contact-form__input" placeholder="Your phone number" />
+        </div>
+        {{end}}
+
+        {{if eq .show_subject true}}
+        <div class="vb-cb-contact-form__field">
+          <label class="vb-cb-contact-form__label" for="cf-subject">Subject</label>
+          <input type="text" id="cf-subject" name="subject" class="vb-cb-contact-form__input" placeholder="What is this about?" />
+        </div>
+        {{end}}
+
+        <div class="vb-cb-contact-form__field">
+          <label class="vb-cb-contact-form__label" for="cf-message">Message <span class="vb-cb-contact-form__required">*</span></label>
+          <textarea id="cf-message" name="message" class="vb-cb-contact-form__input vb-cb-contact-form__textarea" required placeholder="Your message..." rows="5"></textarea>
+          <span class="vb-cb-contact-form__error" data-field="message"></span>
+        </div>
+
+        <button type="submit" class="vb-cb-contact-form__button">
+          <span class="vb-cb-contact-form__button-text">{{.button_text}}</span>
+          <svg class="vb-cb-contact-form__button-spinner" style="display: none;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20"></circle>
+          </svg>
+        </button>
+
+        <div class="vb-cb-contact-form__feedback" style="display: none;"></div>
+      </form>
+    </div>
+  </div>
+</section>

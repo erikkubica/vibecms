@@ -1,0 +1,29 @@
+<section class="vb-cb-steps" data-block="cb-steps">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+    {{if .subheading}}
+    <p class="text-center text-lg mb-14" style="color: var(--color-text-muted); max-width: 600px; margin-left: auto; margin-right: auto;">{{.subheading}}</p>
+    {{end}}
+
+    <div class="vb-cb-steps__container vb-cb-steps__container--{{.style}}">
+      {{range $i, $step := .steps}}
+      <div class="vb-cb-steps__item">
+        <div class="vb-cb-steps__marker">
+          {{if $step.icon}}
+          <span class="vb-cb-steps__icon">{{$step.icon}}</span>
+          {{else}}
+          <span class="vb-cb-steps__number">{{add $i 1}}</span>
+          {{end}}
+        </div>
+        <div class="vb-cb-steps__connector"></div>
+        <div class="vb-cb-steps__content">
+          <h3 class="vb-cb-steps__title">{{$step.title}}</h3>
+          <p class="vb-cb-steps__description">{{$step.description}}</p>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

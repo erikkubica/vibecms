@@ -1,0 +1,203 @@
+{
+  "name": "Marketing Landing Page",
+  "description": "High-conversion landing page with slider hero, features grid, split CTA, stats, product cards, testimonials, newsletter, and final CTA.",
+  "blocks": [
+    {
+      "type": "cb-slider",
+      "fields": {
+        "slides": [
+          {
+            "image": "https://picsum.photos/seed/slide-1/1600/700",
+            "heading": "Ship Better Products, Faster",
+            "description": "The all-in-one platform for product teams who refuse to compromise on quality or speed.",
+            "button_text": "Start Free Trial",
+            "button_url": "/signup"
+          },
+          {
+            "image": "https://picsum.photos/seed/slide-2/1600/700",
+            "heading": "AI-Powered Workflows",
+            "description": "Automate repetitive tasks, predict bottlenecks, and keep your team focused on work that matters.",
+            "button_text": "See How It Works",
+            "button_url": "/features/ai"
+          },
+          {
+            "image": "https://picsum.photos/seed/slide-3/1600/700",
+            "heading": "Trusted by 10,000+ Teams",
+            "description": "From two-person startups to Fortune 500 enterprises, teams rely on FlowBoard every day.",
+            "button_text": "Read Case Studies",
+            "button_url": "/case-studies"
+          }
+        ],
+        "autoplay": true
+      }
+    },
+    {
+      "type": "cb-features-grid",
+      "fields": {
+        "heading": "Everything You Need to Ship",
+        "subheading": "One platform replaces your scattered stack of project tools",
+        "columns": 4,
+        "features": [
+          {
+            "icon": "layout",
+            "title": "Flexible Views",
+            "description": "Kanban, Gantt, list, calendar — see your work the way you think.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "git-branch",
+            "title": "Sprint Planning",
+            "description": "Backlog grooming, capacity planning, and velocity tracking built in.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "message-circle",
+            "title": "In-Context Chat",
+            "description": "Discuss tasks, share files, and make decisions without leaving the board.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          },
+          {
+            "icon": "cpu",
+            "title": "AI Copilot",
+            "description": "Smart suggestions for task assignment, deadline estimation, and risk flagging.",
+            "category": "",
+            "link_text": "",
+            "link_url": ""
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-cta-split",
+      "fields": {
+        "heading": "See FlowBoard in Action",
+        "description": "Watch a 3-minute demo that shows how FlowBoard streamlines your entire product development workflow — from backlog to deployment.",
+        "button_text": "Watch Demo",
+        "button_url": "/demo",
+        "image": "https://picsum.photos/seed/demo-screenshot/800/600",
+        "image_position": "right"
+      }
+    },
+    {
+      "type": "cb-stats-counter",
+      "fields": {
+        "heading": "Real Results from Real Teams",
+        "stats": [
+          { "icon": "trending-up", "number": 35, "label": "Faster Delivery", "prefix": "", "suffix": "%" },
+          { "icon": "clock", "number": 6, "label": "Hours Saved per PM per Week", "prefix": "", "suffix": "" },
+          { "icon": "users", "number": 10000, "label": "Active Teams", "prefix": "", "suffix": "+" },
+          { "icon": "star", "number": 4.8, "label": "Rating on G2", "prefix": "", "suffix": "/5" }
+        ],
+        "style": "default"
+      }
+    },
+    {
+      "type": "cb-product-cards",
+      "fields": {
+        "heading": "Plans for Every Team Size",
+        "products": [
+          {
+            "image": "https://picsum.photos/seed/plan-starter/400/300",
+            "name": "Starter",
+            "category": "For individuals",
+            "price": "Free",
+            "original_price": "",
+            "button_text": "Get Started",
+            "button_url": "/signup?plan=starter"
+          },
+          {
+            "image": "https://picsum.photos/seed/plan-pro/400/300",
+            "name": "Pro",
+            "category": "For growing teams",
+            "price": "$29/mo",
+            "original_price": "",
+            "button_text": "Start Trial",
+            "button_url": "/signup?plan=pro"
+          },
+          {
+            "image": "https://picsum.photos/seed/plan-enterprise/400/300",
+            "name": "Enterprise",
+            "category": "For large orgs",
+            "price": "Custom",
+            "original_price": "",
+            "button_text": "Contact Sales",
+            "button_url": "/contact?plan=enterprise"
+          }
+        ],
+        "columns": 3
+      }
+    },
+    {
+      "type": "cb-logo-cloud",
+      "fields": {
+        "heading": "Powering Teams At",
+        "logos": [
+          { "image": "https://picsum.photos/seed/brand-1/200/80", "name": "Meridian", "url": "" },
+          { "image": "https://picsum.photos/seed/brand-2/200/80", "name": "NovaBio", "url": "" },
+          { "image": "https://picsum.photos/seed/brand-3/200/80", "name": "TerraLogistics", "url": "" },
+          { "image": "https://picsum.photos/seed/brand-4/200/80", "name": "PixelCraft", "url": "" },
+          { "image": "https://picsum.photos/seed/brand-5/200/80", "name": "CloudPulse", "url": "" },
+          { "image": "https://picsum.photos/seed/brand-6/200/80", "name": "Threadline", "url": "" }
+        ],
+        "style": "grayscale"
+      }
+    },
+    {
+      "type": "cb-testimonials",
+      "fields": {
+        "heading": "Don't Take Our Word for It",
+        "testimonials": [
+          {
+            "quote": "FlowBoard replaced Jira, Notion, and Slack for our product team. One tool, one source of truth, zero context switching.",
+            "author_name": "Rachel Kim",
+            "author_role": "VP Engineering, ScaleAI",
+            "avatar": "https://picsum.photos/seed/landing-avatar-1/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "The AI copilot caught a resource conflict two sprints in advance. That feature alone justified the upgrade to Pro.",
+            "author_name": "Mark Sullivan",
+            "author_role": "Scrum Master, DataForge",
+            "avatar": "https://picsum.photos/seed/landing-avatar-2/200/200",
+            "rating": 5
+          },
+          {
+            "quote": "Our onboarding time for new engineers went from a full day to two hours. FlowBoard's project templates are incredibly well-designed.",
+            "author_name": "Ayumi Tanaka",
+            "author_role": "Head of Engineering, Brightside",
+            "avatar": "https://picsum.photos/seed/landing-avatar-3/200/200",
+            "rating": 5
+          }
+        ]
+      }
+    },
+    {
+      "type": "cb-newsletter",
+      "fields": {
+        "heading": "Get Product Management Tips Weekly",
+        "description": "Join 15,000+ product leaders who read our weekly newsletter for practical advice on shipping better products.",
+        "button_text": "Subscribe Free",
+        "form_action": "/api/newsletter/subscribe",
+        "privacy_note": "No spam. Unsubscribe anytime.",
+        "style": "card"
+      }
+    },
+    {
+      "type": "cb-cta-banner",
+      "fields": {
+        "heading": "Ready to Transform How Your Team Ships?",
+        "description": "Start your 14-day free trial today. No credit card required. Full access to all Pro features.",
+        "button_text": "Start Free Trial",
+        "button_url": "/signup",
+        "background_image": "https://picsum.photos/seed/landing-final-cta/1600/500",
+        "style": "accent"
+      }
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+.vb-team-members {
+  padding: 4rem 0;
+  color: var(--color-text);
+}
+
+.vb-team-members__header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.vb-team-members__heading {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  line-height: 1.2;
+}
+
+.vb-team-members__subheading {
+  font-size: 1.125rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.vb-team-members__grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.vb-team-members__grid--cols-2 { grid-template-columns: repeat(2, 1fr); }
+.vb-team-members__grid--cols-3 { grid-template-columns: repeat(3, 1fr); }
+.vb-team-members__grid--cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+.vb-team-members__card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vb-team-members__photo {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  margin-bottom: 1.25rem;
+}
+
+.vb-team-members__photo--circle {
+  border-radius: 9999px;
+}
+
+.vb-team-members__photo--rounded {
+  border-radius: 1rem;
+}
+
+.vb-team-members__photo--square {
+  border-radius: 0.25rem;
+}
+
+.vb-team-members__name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.vb-team-members__role {
+  font-size: 0.875rem;
+  color: var(--color-accent);
+  font-weight: 500;
+  margin: 0 0 0.75rem;
+}
+
+.vb-team-members__bio {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0 0 1rem;
+  max-width: 280px;
+}
+
+.vb-team-members__social {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.vb-team-members__social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  color: var(--color-text-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.vb-team-members__social-link:hover {
+  color: var(--color-accent);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 767px) {
+  .vb-team-members__grid--cols-3,
+  .vb-team-members__grid--cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .vb-team-members__grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .vb-team-members {
+    padding: 5rem 0;
+  }
+
+  .vb-team-members__heading {
+    font-size: 2.5rem;
+  }
+
+  .vb-team-members__photo {
+    width: 160px;
+    height: 160px;
+  }
+}

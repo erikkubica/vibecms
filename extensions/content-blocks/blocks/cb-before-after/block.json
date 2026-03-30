@@ -1,0 +1,47 @@
+{
+  "slug": "cb-before-after",
+  "label": "Before & After",
+  "icon": "flip-horizontal",
+  "description": "An interactive before/after image comparison with draggable divider. Displays two images with a vertical drag handle that reveals one over the other. Use for renovation showcases, photo editing results, design iterations, visual comparisons. Layout: overlapping images with vertical drag handle, 'Before'/'After' labels at bottom corners.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "before_image",
+      "label": "Before Image",
+      "type": "image",
+      "required": true
+    },
+    {
+      "name": "after_image",
+      "label": "After Image",
+      "type": "image",
+      "required": true
+    },
+    {
+      "name": "before_label",
+      "label": "Before Label",
+      "type": "text",
+      "required": false,
+      "default": "Before"
+    },
+    {
+      "name": "after_label",
+      "label": "After Label",
+      "type": "text",
+      "required": false,
+      "default": "After"
+    }
+  ],
+  "test_data": {
+    "heading": "See the Difference",
+    "before_image": "https://picsum.photos/seed/before-shot/800/500",
+    "after_image": "https://picsum.photos/seed/after-shot/800/500",
+    "before_label": "Before",
+    "after_label": "After"
+  }
+}

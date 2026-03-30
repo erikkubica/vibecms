@@ -1,0 +1,92 @@
+.vb-comparison-table {
+  padding: 4rem 0;
+  color: var(--color-text);
+}
+
+.vb-comparison-table__heading {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 2.5rem;
+  line-height: 1.2;
+}
+
+.vb-comparison-table__scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.vb-comparison-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 480px;
+}
+
+.vb-comparison-table__table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.vb-comparison-table__feature-header,
+.vb-comparison-table__col-header {
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  background: #f9fafb;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.vb-comparison-table__feature-header {
+  text-align: left;
+  min-width: 180px;
+}
+
+.vb-comparison-table__row {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.vb-comparison-table__row:last-child {
+  border-bottom: none;
+}
+
+.vb-comparison-table__row:hover {
+  background: #f9fafb;
+}
+
+.vb-comparison-table__feature-cell {
+  padding: 0.875rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.vb-comparison-table__value-cell {
+  padding: 0.875rem 1.25rem;
+  font-size: 0.9375rem;
+  text-align: center;
+}
+
+.vb-comparison-table__check {
+  color: #16a34a;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.vb-comparison-table__cross {
+  color: #d1d5db;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .vb-comparison-table {
+    padding: 5rem 0;
+  }
+
+  .vb-comparison-table__heading {
+    font-size: 2.5rem;
+  }
+}

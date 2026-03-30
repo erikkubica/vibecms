@@ -1,0 +1,84 @@
+{
+  "slug": "cb-testimonials",
+  "label": "Testimonial Carousel",
+  "icon": "message-circle",
+  "description": "A testimonial carousel displaying customer quotes with star ratings, names, roles, and avatars. Manual navigation with arrows and dots. Use for customer success stories, social proof near CTAs. Layout: large centered quote card with star rating, quote text, author info with avatar. Arrow and dot navigation.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "testimonials",
+      "label": "Testimonials",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "quote",
+          "label": "Quote",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "name": "author_name",
+          "label": "Author Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "author_role",
+          "label": "Author Role",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "avatar",
+          "label": "Avatar",
+          "type": "image",
+          "required": false
+        },
+        {
+          "name": "rating",
+          "label": "Rating",
+          "type": "select",
+          "options": [
+            { "label": "1 Star", "value": "1" },
+            { "label": "2 Stars", "value": "2" },
+            { "label": "3 Stars", "value": "3" },
+            { "label": "4 Stars", "value": "4" },
+            { "label": "5 Stars", "value": "5" }
+          ],
+          "default": "5"
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "What Our Customers Say",
+    "testimonials": [
+      {
+        "quote": "VibeCMS transformed how we manage our website. The speed and flexibility are unmatched. We migrated from WordPress and haven't looked back.",
+        "author_name": "Sarah Chen",
+        "author_role": "CTO at TechFlow",
+        "avatar": "https://picsum.photos/seed/avatar1/120/120",
+        "rating": "5"
+      },
+      {
+        "quote": "The extension system is brilliant. We built custom workflows in days that would have taken months with other platforms. Support team is incredibly responsive.",
+        "author_name": "Marcus Rodriguez",
+        "author_role": "Lead Developer at Buildcraft",
+        "avatar": "https://picsum.photos/seed/avatar2/120/120",
+        "rating": "5"
+      },
+      {
+        "quote": "Finally a CMS that developers and content teams both love. Clean API, great admin UI, and blazing fast page loads. Our bounce rate dropped 40%.",
+        "author_name": "Emily Nakamura",
+        "author_role": "VP of Marketing at GrowthLab",
+        "avatar": "https://picsum.photos/seed/avatar3/120/120",
+        "rating": "4"
+      }
+    ]
+  }
+}

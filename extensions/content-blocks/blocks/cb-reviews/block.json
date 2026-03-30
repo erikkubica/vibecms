@@ -1,0 +1,102 @@
+{
+  "slug": "cb-reviews",
+  "label": "Review Cards",
+  "icon": "star",
+  "description": "Star-rated review cards in a grid layout. Each card shows a star rating, review title, body text, reviewer name, and optional verified badge. Use for product reviews, app feedback, course reviews. Layout: 2-3 column grid of cards with filled and empty stars, review title, body text, and reviewer info.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "average_rating",
+      "label": "Average Rating",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "reviews",
+      "label": "Reviews",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "rating",
+          "label": "Rating",
+          "type": "select",
+          "options": [
+            { "label": "1 Star", "value": "1" },
+            { "label": "2 Stars", "value": "2" },
+            { "label": "3 Stars", "value": "3" },
+            { "label": "4 Stars", "value": "4" },
+            { "label": "5 Stars", "value": "5" }
+          ],
+          "required": true
+        },
+        {
+          "name": "title",
+          "label": "Review Title",
+          "type": "text",
+          "required": false
+        },
+        {
+          "name": "body",
+          "label": "Review Body",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "name": "author",
+          "label": "Reviewer Name",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "verified",
+          "label": "Verified Buyer",
+          "type": "select",
+          "options": [
+            { "label": "No", "value": "false" },
+            { "label": "Yes", "value": "true" }
+          ],
+          "default": "false"
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Customer Reviews",
+    "average_rating": "4.7",
+    "reviews": [
+      {
+        "rating": "5",
+        "title": "Absolutely love it!",
+        "body": "This exceeded all my expectations. Setup was a breeze and the performance is incredible. Highly recommended for anyone looking for a reliable solution.",
+        "author": "James Wilson",
+        "verified": "true"
+      },
+      {
+        "rating": "4",
+        "title": "Great product, minor issues",
+        "body": "Overall very satisfied with the purchase. The interface is intuitive and the features are comprehensive. Took off one star for the initial learning curve.",
+        "author": "Lisa Park",
+        "verified": "true"
+      },
+      {
+        "rating": "5",
+        "title": "Best in its class",
+        "body": "I've tried several alternatives and nothing comes close. The attention to detail and quality of support is outstanding.",
+        "author": "David Okonkwo",
+        "verified": "false"
+      },
+      {
+        "rating": "4",
+        "title": "Solid choice",
+        "body": "Does exactly what it promises. Clean design, fast performance, and good value for money. Would buy again without hesitation.",
+        "author": "Maria Santos",
+        "verified": "true"
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+<section class="vb-cb-embed" data-block="cb-embed">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    {{if .heading}}
+    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+    {{end}}
+
+    <div class="vb-cb-embed__container vb-cb-embed__container--{{.max_width}}" style="min-height: {{.min_height}}px;">
+      {{.embed_code}}
+    </div>
+
+    {{if .caption}}
+    <p class="vb-cb-embed__caption">{{.caption}}</p>
+    {{end}}
+  </div>
+</section>

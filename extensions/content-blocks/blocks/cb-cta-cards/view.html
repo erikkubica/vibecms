@@ -1,0 +1,21 @@
+<section class="vb-cta-cards" data-block="cb-cta-cards">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <h2 class="vb-cta-cards__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-cta-cards__grid">
+      {{range .cards}}
+      <div class="vb-cta-cards__card">
+        {{if .icon}}
+        <span class="vb-cta-cards__icon">{{.icon}}</span>
+        {{end}}
+        <h3 class="vb-cta-cards__title">{{.title}}</h3>
+        {{if .description}}
+        <p class="vb-cta-cards__description">{{.description}}</p>
+        {{end}}
+        <a href="{{.button_url}}" class="vb-cta-cards__button">{{.button_text}}</a>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

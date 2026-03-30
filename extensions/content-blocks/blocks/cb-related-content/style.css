@@ -1,0 +1,88 @@
+.vb-cb-related-content__track {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  padding-bottom: 0.5rem;
+}
+
+.vb-cb-related-content__track::-webkit-scrollbar {
+  height: 6px;
+}
+
+.vb-cb-related-content__track::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vb-cb-related-content__track::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.vb-cb-related-content__card {
+  flex: 0 0 280px;
+  scroll-snap-align: start;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.vb-cb-related-content__card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.vb-cb-related-content__card-image {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  display: block;
+}
+
+.vb-cb-related-content__card-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.vb-cb-related-content__card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.vb-cb-related-content__card-meta {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* Skeleton */
+.vb-cb-related-content__skeleton {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.vb-cb-related-content__skeleton-card {
+  flex: 0 0 280px;
+  height: 220px;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: vb-cb-related-shimmer 1.5s ease infinite;
+}
+
+@keyframes vb-cb-related-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

@@ -1,0 +1,56 @@
+{
+  "slug": "cb-cta-split",
+  "label": "Split CTA",
+  "icon": "layout",
+  "description": "A two-column CTA with image on one side and persuasive text with button on the other. Visually balanced for conversion. Use for product highlights, app download prompts. Layout: 50/50 split, image position configurable, stacks on mobile.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "textarea",
+      "required": false
+    },
+    {
+      "name": "button_text",
+      "label": "Button Text",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "button_url",
+      "label": "Button URL",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "image",
+      "label": "Image",
+      "type": "image",
+      "required": true
+    },
+    {
+      "name": "image_position",
+      "label": "Image Position",
+      "type": "select",
+      "options": [
+        { "label": "Left", "value": "left" },
+        { "label": "Right", "value": "right" }
+      ],
+      "default": "left"
+    }
+  ],
+  "test_data": {
+    "heading": "Take Your Workflow to the Next Level",
+    "description": "Our platform helps you build, manage, and scale your content with ease. Get started in minutes and see the difference.",
+    "button_text": "Get Started Now",
+    "button_url": "/signup",
+    "image": "https://picsum.photos/seed/ctasplit/600/400",
+    "image_position": "left"
+  }
+}

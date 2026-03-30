@@ -1,0 +1,35 @@
+.vb-cb-list {
+  padding: 3rem 0;
+}
+
+.vb-cb-list__items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vb-cb-list__bullet {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  margin-top: 0.35rem;
+}
+
+.vb-cb-list__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  color: var(--color-accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.vb-cb-list__check {
+  display: block;
+}

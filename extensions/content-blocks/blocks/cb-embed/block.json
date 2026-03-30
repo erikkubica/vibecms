@@ -1,0 +1,44 @@
+{
+  "slug": "cb-embed",
+  "label": "Custom Embed",
+  "icon": "code-2",
+  "description": "A flexible HTML/iframe embed block for embedding third-party widgets, forms, social posts, or custom HTML. Renders raw HTML within a sandboxed container. Use for embedding Calendly widgets, social feeds, Typeform forms, custom JavaScript widgets, or any third-party content. Layout: centered container with configurable max-width, optional heading and caption.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "embed_code",
+      "label": "Embed Code",
+      "type": "textarea",
+      "required": true
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "type": "text"
+    },
+    {
+      "name": "max_width",
+      "label": "Max Width",
+      "type": "select",
+      "options": ["small", "medium", "large", "full"],
+      "default": "medium"
+    },
+    {
+      "name": "min_height",
+      "label": "Minimum Height (px)",
+      "type": "number",
+      "default": 400
+    }
+  ],
+  "test_data": {
+    "heading": "Book a Meeting",
+    "embed_code": "<iframe src=\"https://calendar.google.com/calendar/embed\" style=\"border: 0; width: 100%; height: 100%;\" frameborder=\"0\" scrolling=\"no\"></iframe>",
+    "caption": "Choose a time that works",
+    "max_width": "medium",
+    "min_height": 400
+  }
+}

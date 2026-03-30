@@ -31,6 +31,7 @@ type ExtensionHandler struct {
 	loader        *ExtensionLoader
 	scriptLoader  ExtensionScriptLoader
 	pluginManager *PluginManager
+	assetRegistry *ThemeAssetRegistry
 }
 
 // NewExtensionHandler creates a new ExtensionHandler.
@@ -46,6 +47,11 @@ func (h *ExtensionHandler) SetScriptLoader(sl ExtensionScriptLoader) {
 // SetPluginManager sets the plugin manager for starting/stopping gRPC plugins.
 func (h *ExtensionHandler) SetPluginManager(pm *PluginManager) {
 	h.pluginManager = pm
+}
+
+// SetAssetRegistry sets the theme asset registry for extension block loading.
+func (h *ExtensionHandler) SetAssetRegistry(r *ThemeAssetRegistry) {
+	h.assetRegistry = r
 }
 
 // RegisterRoutes registers all admin API extension routes on the provided router group.
@@ -261,6 +267,10 @@ func (h *ExtensionHandler) Activate(c *fiber.Ctx) error {
 				log.Printf("[extensions] warning: failed to start plugins for %s: %v", slug, startErr)
 			}
 		}
+		// Load extension block types
+		if h.assetRegistry != nil {
+			h.loader.LoadBlocksForExtension(slug, h.assetRegistry)
+		}
 	}
 
 	return api.Success(c, fiber.Map{"message": "Extension activated"})
@@ -288,6 +298,10 @@ func (h *ExtensionHandler) Deactivate(c *fiber.Ctx) error {
 		// Stop gRPC plugins
 		if h.pluginManager != nil {
 			h.pluginManager.StopPlugins(slug)
+		}
+		// Unload extension block types
+		if h.assetRegistry != nil {
+			h.loader.UnloadExtensionBlocks(slug, h.assetRegistry)
 		}
 	}
 
@@ -436,6 +450,11 @@ func (h *ExtensionHandler) Delete(c *fiber.Ctx) error {
 	}
 	if ext.IsActive {
 		return api.Error(c, fiber.StatusBadRequest, "STILL_ACTIVE", "Deactivate extension before deleting")
+	}
+
+	// Remove extension block types
+	if h.assetRegistry != nil {
+		h.loader.UnloadExtensionBlocks(slug, h.assetRegistry)
 	}
 
 	// Remove files

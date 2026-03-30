@@ -1,0 +1,57 @@
+.vb-cb-code-block {
+  padding: 3rem 0;
+}
+
+.vb-cb-code-block__container {
+  background-color: #1e1e2e;
+  border: 1px solid #313244;
+}
+
+.vb-cb-code-block__header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: #181825;
+  border-bottom: 1px solid #313244;
+}
+
+.vb-cb-code-block__lang {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #a6adc8;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.vb-cb-code-block__body {
+  overflow-x: auto;
+  padding: 1.25rem 1.5rem;
+}
+
+.vb-cb-code-block__pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: #cdd6f4;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.vb-cb-code-block__body::-webkit-scrollbar {
+  height: 6px;
+}
+
+.vb-cb-code-block__body::-webkit-scrollbar-track {
+  background: #181825;
+}
+
+.vb-cb-code-block__body::-webkit-scrollbar-thumb {
+  background: #45475a;
+  border-radius: 3px;
+}
+
+.vb-cb-code-block__body::-webkit-scrollbar-thumb:hover {
+  background: #585b70;
+}

@@ -1,0 +1,80 @@
+{
+  "slug": "cb-timeline",
+  "label": "Timeline",
+  "icon": "clock",
+  "description": "A vertical timeline with alternating content connected by a center line. Each entry has date, heading, description, optional image. Use for company history, roadmaps, milestones, event chronologies. Layout: vertical center line with circular markers, content alternates left/right on desktop, single side on mobile.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "items",
+      "label": "Timeline Items",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "date",
+          "label": "Date",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "textarea",
+          "required": true
+        },
+        {
+          "name": "image",
+          "label": "Image",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "name": "style",
+      "label": "Layout Style",
+      "type": "select",
+      "options": ["alternating", "left", "right"],
+      "default": "alternating"
+    }
+  ],
+  "test_data": {
+    "heading": "Our Journey",
+    "style": "alternating",
+    "items": [
+      {
+        "date": "January 2020",
+        "title": "Company Founded",
+        "description": "Started with a small team of three passionate developers in a garage office. Our vision was to build tools that empower creators worldwide.",
+        "image": "https://picsum.photos/seed/timeline1/600/400"
+      },
+      {
+        "date": "March 2021",
+        "title": "Series A Funding",
+        "description": "Secured $5M in Series A funding, allowing us to expand the team to 20 people and open our first real office space downtown.",
+        "image": "https://picsum.photos/seed/timeline2/600/400"
+      },
+      {
+        "date": "August 2022",
+        "title": "Platform Launch",
+        "description": "Launched our flagship platform to the public, reaching 10,000 users within the first month. Featured in major tech publications.",
+        "image": "https://picsum.photos/seed/timeline3/600/400"
+      },
+      {
+        "date": "December 2023",
+        "title": "Global Expansion",
+        "description": "Expanded operations to Europe and Asia with localized teams. Crossed 100,000 active users and launched enterprise tier.",
+        "image": "https://picsum.photos/seed/timeline4/600/400"
+      }
+    ]
+  }
+}

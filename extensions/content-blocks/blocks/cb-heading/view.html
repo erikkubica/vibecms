@@ -1,0 +1,25 @@
+<section class="vb-cb-heading">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 {{if eq .alignment "center"}}text-center{{else if eq .alignment "right"}}text-right{{else}}text-left{{end}}">
+    {{if eq .level "h1"}}
+      <h1 class="vb-cb-heading__title vb-cb-heading__title--h1">{{.text}}</h1>
+    {{else if eq .level "h3"}}
+      <h3 class="vb-cb-heading__title vb-cb-heading__title--h3">{{.text}}</h3>
+    {{else if eq .level "h4"}}
+      <h4 class="vb-cb-heading__title vb-cb-heading__title--h4">{{.text}}</h4>
+    {{else if eq .level "h5"}}
+      <h5 class="vb-cb-heading__title vb-cb-heading__title--h5">{{.text}}</h5>
+    {{else if eq .level "h6"}}
+      <h6 class="vb-cb-heading__title vb-cb-heading__title--h6">{{.text}}</h6>
+    {{else}}
+      <h2 class="vb-cb-heading__title vb-cb-heading__title--h2">{{.text}}</h2>
+    {{end}}
+
+    {{if ne .divider "none"}}
+      <div class="vb-cb-heading__divider vb-cb-heading__divider--{{.divider}} {{if eq .alignment "center"}}mx-auto{{else if eq .alignment "right"}}ml-auto{{end}}"></div>
+    {{end}}
+
+    {{if .subtitle}}
+      <p class="vb-cb-heading__subtitle">{{.subtitle}}</p>
+    {{end}}
+  </div>
+</section>

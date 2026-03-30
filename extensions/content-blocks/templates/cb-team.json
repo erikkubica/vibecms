@@ -1,0 +1,195 @@
+{
+  "name": "Team Page",
+  "description": "Team page with hero, team member grid, company values icon boxes, timeline of milestones, and hiring CTA.",
+  "blocks": [
+    {
+      "type": "hero",
+      "fields": {
+        "heading": "Meet Our Team",
+        "subheading": "A diverse group of makers, thinkers, and problem-solvers united by a shared mission to build great products.",
+        "background_image": "https://picsum.photos/seed/team-hero/1600/800",
+        "button_text": "We're Hiring",
+        "button_url": "/careers",
+        "alignment": "center"
+      }
+    },
+    {
+      "type": "cb-team-members",
+      "fields": {
+        "heading": "Leadership",
+        "subheading": "",
+        "members": [
+          {
+            "photo": "https://picsum.photos/seed/leader-ceo/400/400",
+            "name": "Alex Rivera",
+            "role": "Chief Executive Officer",
+            "bio": "20 years in tech leadership. Previously VP Product at Stripe. Passionate about making complex tools feel simple.",
+            "linkedin": "https://linkedin.com/in/alexrivera",
+            "twitter": "https://twitter.com/alexrivera",
+            "email": "alex@apexdigital.com"
+          },
+          {
+            "photo": "https://picsum.photos/seed/leader-cto/400/400",
+            "name": "Priya Sharma",
+            "role": "Chief Technology Officer",
+            "bio": "Distributed systems architect and former AWS principal engineer. Leads engineering, security, and infrastructure.",
+            "linkedin": "https://linkedin.com/in/priyasharma",
+            "twitter": "https://twitter.com/priyasharma",
+            "email": "priya@apexdigital.com"
+          },
+          {
+            "photo": "https://picsum.photos/seed/leader-coo/400/400",
+            "name": "Marcus Chen",
+            "role": "Chief Operating Officer",
+            "bio": "Former McKinsey partner who scaled operations at two unicorn startups. Keeps the trains running on time.",
+            "linkedin": "https://linkedin.com/in/marcuschen",
+            "twitter": "",
+            "email": "marcus@apexdigital.com"
+          },
+          {
+            "photo": "https://picsum.photos/seed/leader-cmo/400/400",
+            "name": "Sofia Bergman",
+            "role": "Chief Marketing Officer",
+            "bio": "Brand strategist who built HubSpot's content engine. Believes the best marketing is just being genuinely helpful.",
+            "linkedin": "https://linkedin.com/in/sofiabergman",
+            "twitter": "https://twitter.com/sofiabergman",
+            "email": "sofia@apexdigital.com"
+          }
+        ],
+        "columns": 4,
+        "photo_style": "rounded"
+      }
+    },
+    {
+      "type": "cb-team-members",
+      "fields": {
+        "heading": "Engineering & Design",
+        "subheading": "",
+        "members": [
+          {
+            "photo": "https://picsum.photos/seed/eng-1/400/400",
+            "name": "Jordan Blake",
+            "role": "VP of Engineering",
+            "bio": "Full-stack polyglot who's shipped products at scale in Go, Rust, and TypeScript. Advocates for developer experience.",
+            "linkedin": "https://linkedin.com/in/jordanblake",
+            "twitter": "",
+            "email": ""
+          },
+          {
+            "photo": "https://picsum.photos/seed/eng-2/400/400",
+            "name": "Emma Lindqvist",
+            "role": "VP of Design",
+            "bio": "Award-winning product designer from Stockholm. Former design lead at Spotify. Champions accessibility-first design.",
+            "linkedin": "https://linkedin.com/in/emmalindqvist",
+            "twitter": "https://twitter.com/emmalindqvist",
+            "email": ""
+          },
+          {
+            "photo": "https://picsum.photos/seed/eng-3/400/400",
+            "name": "Daniel Okafor",
+            "role": "VP of Product",
+            "bio": "10 years shaping the Jira roadmap at Atlassian. Obsessed with understanding what users need before they know they need it.",
+            "linkedin": "https://linkedin.com/in/danielokafor",
+            "twitter": "",
+            "email": ""
+          },
+          {
+            "photo": "https://picsum.photos/seed/eng-4/400/400",
+            "name": "Lina Rossi",
+            "role": "Head of AI & ML",
+            "bio": "PhD in machine learning from MIT. Previously led the recommendations team at Netflix. Making automation feel magical.",
+            "linkedin": "https://linkedin.com/in/linarossi",
+            "twitter": "",
+            "email": ""
+          }
+        ],
+        "columns": 4,
+        "photo_style": "rounded"
+      }
+    },
+    {
+      "type": "cb-icon-boxes",
+      "fields": {
+        "heading": "Our Values",
+        "items": [
+          {
+            "icon": "compass",
+            "title": "Clarity Over Cleverness",
+            "description": "We write clear code, give direct feedback, and build products that explain themselves. Simple beats smart."
+          },
+          {
+            "icon": "users",
+            "title": "Users Come First",
+            "description": "Every decision starts with the question: how does this make our users' lives better? If it doesn't, we don't build it."
+          },
+          {
+            "icon": "refresh",
+            "title": "Iterate Relentlessly",
+            "description": "We ship early, learn fast, and improve constantly. Version one is just the beginning of the conversation."
+          },
+          {
+            "icon": "heart",
+            "title": "Take Care of Each Other",
+            "description": "Great work comes from people who feel supported. We invest in growth, celebrate wins, and show up for each other."
+          },
+          {
+            "icon": "target",
+            "title": "Own the Outcome",
+            "description": "We don't pass the buck. Every team member has the autonomy and accountability to drive results from start to finish."
+          },
+          {
+            "icon": "book-open",
+            "title": "Stay Curious",
+            "description": "The best ideas come from unexpected places. We read widely, experiment often, and never assume we have all the answers."
+          }
+        ],
+        "columns": 3,
+        "style": "outlined"
+      }
+    },
+    {
+      "type": "cb-timeline",
+      "fields": {
+        "heading": "Our Growth Story",
+        "items": [
+          {
+            "date": "2010",
+            "title": "2 Founders",
+            "description": "Alex and Priya start building in a Portland garage.",
+            "image": ""
+          },
+          {
+            "date": "2014",
+            "title": "45 People",
+            "description": "Series A fuels rapid hiring across engineering and design.",
+            "image": ""
+          },
+          {
+            "date": "2018",
+            "title": "120 People",
+            "description": "International expansion brings offices in London and Singapore.",
+            "image": ""
+          },
+          {
+            "date": "2025",
+            "title": "200+ People",
+            "description": "A global, remote-first team across four continents.",
+            "image": ""
+          }
+        ],
+        "style": "horizontal"
+      }
+    },
+    {
+      "type": "cb-cta-banner",
+      "fields": {
+        "heading": "Want to Join the Team?",
+        "description": "We're growing fast and always looking for talented people. Competitive pay, generous equity, and a culture that values your wellbeing.",
+        "button_text": "View Open Positions",
+        "button_url": "/careers",
+        "background_image": "https://picsum.photos/seed/hiring-cta/1600/500",
+        "style": "dark"
+      }
+    }
+  ]
+}

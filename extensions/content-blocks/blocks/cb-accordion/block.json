@@ -1,0 +1,72 @@
+{
+  "slug": "cb-accordion",
+  "label": "Accordion",
+  "icon": "chevrons-down",
+  "description": "Collapsible content sections with click-to-expand panels. More general than FAQ. Use for documentation, product specs, terms, course curricula. Layout: vertical stack of panels with clickable headers and chevron icon, smooth slide animation. Multiple panels can open simultaneously.",
+  "field_schema": [
+    {
+      "name": "heading",
+      "label": "Heading",
+      "type": "text"
+    },
+    {
+      "name": "allow_multiple",
+      "label": "Allow Multiple Open",
+      "type": "select",
+      "options": ["true", "false"],
+      "default": "true"
+    },
+    {
+      "name": "items",
+      "label": "Accordion Items",
+      "type": "repeater",
+      "sub_fields": [
+        {
+          "name": "title",
+          "label": "Title",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "content",
+          "label": "Content",
+          "type": "richtext",
+          "required": true
+        },
+        {
+          "name": "is_open",
+          "label": "Initially Open",
+          "type": "select",
+          "options": ["true", "false"],
+          "default": "false"
+        }
+      ]
+    }
+  ],
+  "test_data": {
+    "heading": "Frequently Asked Questions",
+    "allow_multiple": "true",
+    "items": [
+      {
+        "title": "What is included in the starter plan?",
+        "content": "<p>The starter plan includes <strong>5 projects</strong>, unlimited collaborators, and access to all core features. You also get 10GB of storage and priority email support.</p><ul><li>5 active projects</li><li>Unlimited team members</li><li>10GB cloud storage</li><li>Email support</li></ul>",
+        "is_open": "true"
+      },
+      {
+        "title": "How do I upgrade my subscription?",
+        "content": "<p>You can upgrade your subscription at any time from your account settings. Navigate to <strong>Settings &rarr; Billing</strong> and select your desired plan. The price difference will be prorated for the remainder of your billing cycle.</p>",
+        "is_open": "false"
+      },
+      {
+        "title": "Can I export my data?",
+        "content": "<p>Yes, you can export all your data at any time. We support multiple export formats including <strong>CSV</strong>, <strong>JSON</strong>, and <strong>PDF</strong>. Go to Settings &rarr; Data Management &rarr; Export to download your complete dataset.</p>",
+        "is_open": "false"
+      },
+      {
+        "title": "What happens when my trial ends?",
+        "content": "<p>When your 14-day trial ends, you will be prompted to select a paid plan. Your data and projects will be preserved for <strong>30 days</strong> after trial expiration. If you choose not to subscribe, you can still export your data during this grace period.</p>",
+        "is_open": "false"
+      }
+    ]
+  }
+}

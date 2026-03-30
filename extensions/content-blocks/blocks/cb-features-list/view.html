@@ -1,0 +1,23 @@
+<section class="vb-features-list" data-block="cb-features-list">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <h2 class="vb-features-list__heading">{{.heading}}</h2>
+    {{end}}
+    <div class="vb-features-list__rows">
+      {{range .features}}
+      <div class="vb-features-list__row">
+        <div class="vb-features-list__image-col">
+          <img src="{{.image}}" alt="{{.title}}" class="vb-features-list__image" loading="lazy" />
+        </div>
+        <div class="vb-features-list__content-col">
+          <h3 class="vb-features-list__title">{{.title}}</h3>
+          <div class="vb-features-list__description">{{.description}}</div>
+          {{if and .button_text .button_url}}
+          <a href="{{.button_url}}" class="vb-features-list__button">{{.button_text}} &rarr;</a>
+          {{end}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

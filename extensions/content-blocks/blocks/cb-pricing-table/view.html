@@ -1,0 +1,37 @@
+<section class="vb-pricing-table" data-block="cb-pricing-table">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {{if .heading}}
+    <div class="vb-pricing-table__header">
+      <h2 class="vb-pricing-table__heading">{{.heading}}</h2>
+      {{if .subheading}}
+      <p class="vb-pricing-table__subheading">{{.subheading}}</p>
+      {{end}}
+    </div>
+    {{end}}
+    <div class="vb-pricing-table__grid">
+      {{range .plans}}
+      <div class="vb-pricing-table__card{{if eq .is_featured "true"}} vb-pricing-table__card--featured{{end}}">
+        {{if eq .is_featured "true"}}
+        <div class="vb-pricing-table__badge">Recommended</div>
+        {{end}}
+        <div class="vb-pricing-table__card-header">
+          <h3 class="vb-pricing-table__plan-name">{{.name}}</h3>
+          {{if .description}}
+          <p class="vb-pricing-table__plan-desc">{{.description}}</p>
+          {{end}}
+        </div>
+        <div class="vb-pricing-table__price-wrap">
+          <span class="vb-pricing-table__price">{{.price}}</span>
+          {{if .period}}<span class="vb-pricing-table__period">{{.period}}</span>{{end}}
+        </div>
+        {{if .features}}
+        <div class="vb-pricing-table__features">{{.features}}</div>
+        {{end}}
+        <div class="vb-pricing-table__card-footer">
+          <a href="{{.button_url}}" class="vb-pricing-table__button">{{.button_text}}</a>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>

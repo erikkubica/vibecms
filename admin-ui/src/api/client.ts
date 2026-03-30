@@ -207,12 +207,12 @@ export async function createNodeTranslation(id: number | string, languageCode: s
 }
 
 export async function getHomepageId(): Promise<number> {
-  const res = await api<ApiResponse<{ homepage_node_id: number }>>("/admin/api/nodes/homepage");
-  return res.data.homepage_node_id;
+  const settings = await getSiteSettings();
+  return Number(settings.homepage_node_id) || 0;
 }
 
 export async function setHomepage(nodeId: number | string): Promise<void> {
-  await api<void>(`/admin/api/nodes/${nodeId}/homepage`, { method: "POST" });
+  await updateSiteSettings({ homepage_node_id: String(nodeId) });
 }
 
 export interface NodeTypeField {

@@ -29,14 +29,12 @@ func NewNodeHandler(svc *ContentService, db *gorm.DB, eventBus *events.EventBus)
 func (h *NodeHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/nodes", h.List)
 	router.Get("/nodes/search", h.Search)
-	router.Get("/nodes/homepage", h.GetHomepage)
 	router.Get("/nodes/:id", h.Get)
 	router.Post("/nodes", h.Create)
 	router.Patch("/nodes/:id", h.Update)
 	router.Delete("/nodes/:id", h.Delete)
 	router.Get("/nodes/:id/translations", h.GetTranslations)
 	router.Post("/nodes/:id/translations", h.CreateTranslation)
-	router.Post("/nodes/:id/homepage", auth.CapabilityRequired("manage_settings"), h.SetHomepage)
 }
 
 // GetTranslations handles GET /nodes/:id/translations.

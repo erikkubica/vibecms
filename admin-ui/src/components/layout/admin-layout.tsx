@@ -35,6 +35,8 @@ import {
   ScrollText,
   Gavel,
   Send,
+  RefreshCw,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +49,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { getNodeAccess } from "@/api/client";
+import { getNodeAccess, clearCache } from "@/api/client";
+import { toast } from "sonner";
 import { useAdminLanguage } from "@/hooks/use-admin-language";
 import { useExtensions } from "@/hooks/use-extensions";
 import { getNodeTypes, type NodeType } from "@/api/client";
@@ -159,10 +162,23 @@ export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [customTypes, setCustomTypes] = useState<NodeType[]>([]);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [clearingCache, setClearingCache] = useState(false);
   const { user, logout } = useAuth();
   const { languages: adminLangs, currentCode, currentLanguage, setCurrentCode } = useAdminLanguage();
   const location = useLocation();
   const breadcrumbs = getBreadcrumb(location.pathname);
+
+  async function handleClearCache() {
+    setClearingCache(true);
+    try {
+      await clearCache();
+      toast.success("All caches cleared");
+    } catch {
+      toast.error("Failed to clear caches");
+    } finally {
+      setClearingCache(false);
+    }
+  }
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -458,6 +474,29 @@ export default function AdminLayout() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Clear cache */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-400 hover:text-slate-600"
+              onClick={handleClearCache}
+              disabled={clearingCache}
+              title="Clear cache"
+            >
+              <RefreshCw className={`h-4 w-4 ${clearingCache ? "animate-spin" : ""}`} />
+            </Button>
+
+            {/* Visit site */}
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-accent transition-colors"
+              title="Visit site"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

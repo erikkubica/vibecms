@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Eye, PenLine, Users, Plus, Loader2, RefreshCw } from "lucide-react";
+import { FileText, Eye, PenLine, Users, Plus, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
-import { getNodes, getUsers, clearCache, type ContentNode } from "@/api/client";
-import { toast } from "sonner";
+import { getNodes, getUsers, type ContentNode } from "@/api/client";
 
 interface Stats {
   totalPages: number;
@@ -41,19 +40,6 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentNodes, setRecentNodes] = useState<ContentNode[]>([]);
   const [loading, setLoading] = useState(true);
-  const [clearing, setClearing] = useState(false);
-
-  const handleClearCache = useCallback(async () => {
-    setClearing(true);
-    try {
-      await clearCache();
-      toast.success("All caches cleared successfully");
-    } catch {
-      toast.error("Failed to clear caches");
-    } finally {
-      setClearing(false);
-    }
-  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -139,23 +125,12 @@ export default function DashboardPage() {
               Here is what is happening with your site.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              className="border border-white/30 bg-white/10 text-white hover:bg-white/20 shadow-sm rounded-lg font-medium"
-              onClick={handleClearCache}
-              disabled={clearing}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${clearing ? "animate-spin" : ""}`} />
-              {clearing ? "Clearing..." : "Clear Cache"}
-            </Button>
-            <Button asChild className="border border-white/30 bg-white/10 text-white hover:bg-white/20 shadow-sm rounded-lg font-medium">
-              <Link to="/admin/pages/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Create New Page
-              </Link>
-            </Button>
-          </div>
+          <Button asChild className="border border-white/30 bg-white/10 text-white hover:bg-white/20 shadow-sm rounded-lg font-medium">
+            <Link to="/admin/pages/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Page
+            </Link>
+          </Button>
         </div>
       </div>
 

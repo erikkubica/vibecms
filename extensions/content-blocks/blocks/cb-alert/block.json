@@ -5,38 +5,43 @@
   "description": "A dismissible alert/notification banner for important announcements, warnings, or informational messages. Supports info, success, warning, and error variants with optional icon and close button. Use for site-wide announcements, maintenance notices, or promotional banners. Layout: full-width colored banner with icon, message text, optional link, and dismiss button.",
   "field_schema": [
     {
-      "name": "message",
       "label": "Message",
       "type": "richtext",
-      "required": true
+      "required": true,
+      "key": "message"
     },
     {
-      "name": "type",
       "label": "Alert Type",
       "type": "select",
-      "options": ["info", "success", "warning", "error"],
-      "default": "info"
+      "options": [
+        "info",
+        "success",
+        "warning",
+        "error"
+      ],
+      "default": "info",
+      "key": "type"
     },
     {
-      "name": "dismissible",
       "label": "Dismissible",
       "type": "toggle",
-      "default": true
+      "default": true,
+      "key": "dismissible"
     },
     {
-      "name": "icon",
       "label": "Icon (emoji)",
-      "type": "text"
+      "type": "text",
+      "key": "icon"
     },
     {
-      "name": "link_text",
       "label": "Link Text",
-      "type": "text"
+      "type": "text",
+      "key": "link_text"
     },
     {
-      "name": "link_url",
       "label": "Link URL",
-      "type": "text"
+      "type": "text",
+      "key": "link_url"
     }
   ],
   "test_data": {

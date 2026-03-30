@@ -5,23 +5,23 @@
   "description": "A code snippet display block with a language label header. Renders preformatted code in a dark-themed container. Use for docs, API examples, tutorials. Layout: rounded dark container with language header bar and horizontally-scrollable monospace content. CSS-only dark theme.",
   "field_schema": [
     {
-      "name": "language",
       "label": "Language",
       "type": "text",
       "required": false,
-      "default": "text"
+      "default": "text",
+      "key": "language"
     },
     {
-      "name": "code",
       "label": "Code",
       "type": "textarea",
-      "required": true
+      "required": true,
+      "key": "code"
     },
     {
-      "name": "caption",
       "label": "Caption",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "caption"
     }
   ],
   "test_data": {

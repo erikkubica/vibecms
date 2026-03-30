@@ -5,40 +5,49 @@
   "description": "A multi-column text layout block for splitting content into 2-4 parallel columns. Each column has its own heading and rich text body. Use for comparing features side-by-side, service descriptions, or breaking up dense content. Layout: equal-width responsive grid stacking to single column on mobile.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Section Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "columns",
       "label": "Columns",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "title",
           "label": "Column Title",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "title"
         },
         {
-          "name": "content",
           "label": "Column Content",
           "type": "richtext",
-          "required": true
+          "required": true,
+          "key": "content"
         }
-      ]
+      ],
+      "key": "columns"
     },
     {
-      "name": "column_count",
       "label": "Number of Columns",
       "type": "select",
       "options": [
-        { "label": "2 Columns", "value": "2" },
-        { "label": "3 Columns", "value": "3" },
-        { "label": "4 Columns", "value": "4" }
+        {
+          "label": "2 Columns",
+          "value": "2"
+        },
+        {
+          "label": "3 Columns",
+          "value": "3"
+        },
+        {
+          "label": "4 Columns",
+          "value": "4"
+        }
       ],
-      "default": "3"
+      "default": "3",
+      "key": "column_count"
     }
   ],
   "test_data": {

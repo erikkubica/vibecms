@@ -5,36 +5,36 @@
   "description": "An interactive before/after image comparison with draggable divider. Displays two images with a vertical drag handle that reveals one over the other. Use for renovation showcases, photo editing results, design iterations, visual comparisons. Layout: overlapping images with vertical drag handle, 'Before'/'After' labels at bottom corners.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "before_image",
       "label": "Before Image",
       "type": "image",
-      "required": true
+      "required": true,
+      "key": "before_image"
     },
     {
-      "name": "after_image",
       "label": "After Image",
       "type": "image",
-      "required": true
+      "required": true,
+      "key": "after_image"
     },
     {
-      "name": "before_label",
       "label": "Before Label",
       "type": "text",
       "required": false,
-      "default": "Before"
+      "default": "Before",
+      "key": "before_label"
     },
     {
-      "name": "after_label",
       "label": "After Label",
       "type": "text",
       "required": false,
-      "default": "After"
+      "default": "After",
+      "key": "after_label"
     }
   ],
   "test_data": {

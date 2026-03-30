@@ -5,87 +5,105 @@
   "description": "Team member profile cards with photo, name, role, bio, and social links. Use for about pages, team sections, leadership showcases. Layout: 2-4 column card grid with circular, rounded, or square photo, name, job title, bio, and social icon links.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "subheading",
       "label": "Subheading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "subheading"
     },
     {
-      "name": "columns",
       "label": "Columns",
       "type": "select",
       "options": [
-        { "label": "2 Columns", "value": "2" },
-        { "label": "3 Columns", "value": "3" },
-        { "label": "4 Columns", "value": "4" }
+        {
+          "label": "2 Columns",
+          "value": "2"
+        },
+        {
+          "label": "3 Columns",
+          "value": "3"
+        },
+        {
+          "label": "4 Columns",
+          "value": "4"
+        }
       ],
-      "default": "3"
+      "default": "3",
+      "key": "columns"
     },
     {
-      "name": "photo_style",
       "label": "Photo Style",
       "type": "select",
       "options": [
-        { "label": "Circle", "value": "circle" },
-        { "label": "Rounded", "value": "rounded" },
-        { "label": "Square", "value": "square" }
+        {
+          "label": "Circle",
+          "value": "circle"
+        },
+        {
+          "label": "Rounded",
+          "value": "rounded"
+        },
+        {
+          "label": "Square",
+          "value": "square"
+        }
       ],
-      "default": "circle"
+      "default": "circle",
+      "key": "photo_style"
     },
     {
-      "name": "members",
       "label": "Team Members",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "photo",
           "label": "Photo",
           "type": "image",
-          "required": false
+          "required": false,
+          "key": "photo"
         },
         {
-          "name": "name",
           "label": "Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "name"
         },
         {
-          "name": "role",
           "label": "Role / Title",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "role"
         },
         {
-          "name": "bio",
           "label": "Bio",
           "type": "textarea",
-          "required": false
+          "required": false,
+          "key": "bio"
         },
         {
-          "name": "linkedin",
           "label": "LinkedIn URL",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "linkedin"
         },
         {
-          "name": "twitter",
           "label": "Twitter URL",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "twitter"
         },
         {
-          "name": "email",
           "label": "Email Address",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "email"
         }
-      ]
+      ],
+      "key": "members"
     }
   ],
   "test_data": {

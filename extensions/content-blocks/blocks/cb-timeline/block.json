@@ -5,46 +5,50 @@
   "description": "A vertical timeline with alternating content connected by a center line. Each entry has date, heading, description, optional image. Use for company history, roadmaps, milestones, event chronologies. Layout: vertical center line with circular markers, content alternates left/right on desktop, single side on mobile.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
-      "type": "text"
+      "type": "text",
+      "key": "heading"
     },
     {
-      "name": "items",
       "label": "Timeline Items",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "date",
           "label": "Date",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "date"
         },
         {
-          "name": "title",
           "label": "Title",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "title"
         },
         {
-          "name": "description",
           "label": "Description",
           "type": "textarea",
-          "required": true
+          "required": true,
+          "key": "description"
         },
         {
-          "name": "image",
           "label": "Image",
-          "type": "image"
+          "type": "image",
+          "key": "image"
         }
-      ]
+      ],
+      "key": "items"
     },
     {
-      "name": "style",
       "label": "Layout Style",
       "type": "select",
-      "options": ["alternating", "left", "right"],
-      "default": "alternating"
+      "options": [
+        "alternating",
+        "left",
+        "right"
+      ],
+      "default": "alternating",
+      "key": "style"
     }
   ],
   "test_data": {

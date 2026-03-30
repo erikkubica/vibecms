@@ -5,75 +5,81 @@
   "description": "Subscription pricing plan comparison cards with feature lists and CTA buttons. Displays 2-4 tiers side by side. Use for SaaS pricing, membership plans, service tier comparisons. Layout: side-by-side cards with plan name, price+period, feature list, and CTA button. Featured plan gets accent border and 'Recommended' badge.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "subheading",
       "label": "Subheading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "subheading"
     },
     {
-      "name": "plans",
       "label": "Plans",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "name",
           "label": "Plan Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "name"
         },
         {
-          "name": "price",
           "label": "Price",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "price"
         },
         {
-          "name": "period",
           "label": "Period",
           "type": "text",
-          "default": "/mo"
+          "default": "/mo",
+          "key": "period"
         },
         {
-          "name": "description",
           "label": "Description",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "description"
         },
         {
-          "name": "features",
           "label": "Features (one per line)",
           "type": "textarea",
-          "required": false
+          "required": false,
+          "key": "features"
         },
         {
-          "name": "button_text",
           "label": "Button Text",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "button_text"
         },
         {
-          "name": "button_url",
           "label": "Button URL",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "button_url"
         },
         {
-          "name": "is_featured",
           "label": "Featured",
           "type": "select",
           "options": [
-            { "label": "No", "value": "false" },
-            { "label": "Yes", "value": "true" }
+            {
+              "label": "No",
+              "value": "false"
+            },
+            {
+              "label": "Yes",
+              "value": "true"
+            }
           ],
-          "default": "false"
+          "default": "false",
+          "key": "is_featured"
         }
-      ]
+      ],
+      "key": "plans"
     }
   ],
   "test_data": {

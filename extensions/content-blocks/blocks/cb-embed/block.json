@@ -5,33 +5,38 @@
   "description": "A flexible HTML/iframe embed block for embedding third-party widgets, forms, social posts, or custom HTML. Renders raw HTML within a sandboxed container. Use for embedding Calendly widgets, social feeds, Typeform forms, custom JavaScript widgets, or any third-party content. Layout: centered container with configurable max-width, optional heading and caption.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
-      "type": "text"
+      "type": "text",
+      "key": "heading"
     },
     {
-      "name": "embed_code",
       "label": "Embed Code",
       "type": "textarea",
-      "required": true
+      "required": true,
+      "key": "embed_code"
     },
     {
-      "name": "caption",
       "label": "Caption",
-      "type": "text"
+      "type": "text",
+      "key": "caption"
     },
     {
-      "name": "max_width",
       "label": "Max Width",
       "type": "select",
-      "options": ["small", "medium", "large", "full"],
-      "default": "medium"
+      "options": [
+        "small",
+        "medium",
+        "large",
+        "full"
+      ],
+      "default": "medium",
+      "key": "max_width"
     },
     {
-      "name": "min_height",
       "label": "Minimum Height (px)",
       "type": "number",
-      "default": 400
+      "default": 400,
+      "key": "min_height"
     }
   ],
   "test_data": {

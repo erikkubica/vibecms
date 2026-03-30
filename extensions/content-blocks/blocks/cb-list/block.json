@@ -5,40 +5,49 @@
   "description": "A styled list block for presenting items in bullet, numbered, or checklist format. Each item has a title and optional description. Use for feature lists, benefit highlights, requirements. Layout: vertical list with configurable markers, bold titles with optional description text.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "style",
       "label": "List Style",
       "type": "select",
       "options": [
-        { "label": "Bullet", "value": "bullet" },
-        { "label": "Numbered", "value": "numbered" },
-        { "label": "Checklist", "value": "check" }
+        {
+          "label": "Bullet",
+          "value": "bullet"
+        },
+        {
+          "label": "Numbered",
+          "value": "numbered"
+        },
+        {
+          "label": "Checklist",
+          "value": "check"
+        }
       ],
-      "default": "bullet"
+      "default": "bullet",
+      "key": "style"
     },
     {
-      "name": "items",
       "label": "List Items",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "title",
           "label": "Title",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "title"
         },
         {
-          "name": "description",
           "label": "Description",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "description"
         }
-      ]
+      ],
+      "key": "items"
     }
   ],
   "test_data": {

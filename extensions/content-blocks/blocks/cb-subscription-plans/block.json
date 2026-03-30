@@ -5,74 +5,77 @@
   "description": "Tiered subscription plans with monthly/yearly toggle switch. Like pricing table but with period switching that recalculates displayed prices. Use for SaaS pricing with annual discount. Layout: pill-style toggle at top, plan cards with dynamic pricing based on toggle state, featured plan with badge.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
-      "type": "text"
+      "type": "text",
+      "key": "heading"
     },
     {
-      "name": "subheading",
       "label": "Subheading",
-      "type": "text"
+      "type": "text",
+      "key": "subheading"
     },
     {
-      "name": "yearly_discount_label",
       "label": "Yearly Discount Label",
       "type": "text",
-      "default": "Save 20%"
+      "default": "Save 20%",
+      "key": "yearly_discount_label"
     },
     {
-      "name": "plans",
       "label": "Plans",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "name",
           "label": "Plan Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "name"
         },
         {
-          "name": "monthly_price",
           "label": "Monthly Price",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "monthly_price"
         },
         {
-          "name": "yearly_price",
           "label": "Yearly Price",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "yearly_price"
         },
         {
-          "name": "description",
           "label": "Description",
-          "type": "text"
+          "type": "text",
+          "key": "description"
         },
         {
-          "name": "features",
           "label": "Features (one per line)",
-          "type": "textarea"
+          "type": "textarea",
+          "key": "features"
         },
         {
-          "name": "button_text",
           "label": "Button Text",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "button_text"
         },
         {
-          "name": "button_url",
           "label": "Button URL",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "button_url"
         },
         {
-          "name": "is_featured",
           "label": "Featured",
           "type": "select",
-          "options": ["true", "false"],
-          "default": "false"
+          "options": [
+            "true",
+            "false"
+          ],
+          "default": "false",
+          "key": "is_featured"
         }
-      ]
+      ],
+      "key": "plans"
     }
   ],
   "test_data": {

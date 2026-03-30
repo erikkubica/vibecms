@@ -5,46 +5,55 @@
   "description": "A client or partner logo grid for trust signals. Shows logos in grayscale that gain color on hover. Use for 'Trusted by' sections, partner showcases. Layout: centered section with heading, responsive grid of logos with consistent sizing, grayscale filter with hover color transition.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "style",
       "label": "Logo Style",
       "type": "select",
       "options": [
-        { "label": "Grayscale", "value": "grayscale" },
-        { "label": "Color", "value": "color" },
-        { "label": "Monochrome", "value": "monochrome" }
+        {
+          "label": "Grayscale",
+          "value": "grayscale"
+        },
+        {
+          "label": "Color",
+          "value": "color"
+        },
+        {
+          "label": "Monochrome",
+          "value": "monochrome"
+        }
       ],
-      "default": "grayscale"
+      "default": "grayscale",
+      "key": "style"
     },
     {
-      "name": "logos",
       "label": "Logos",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "image",
           "label": "Logo Image",
           "type": "image",
-          "required": true
+          "required": true,
+          "key": "image"
         },
         {
-          "name": "name",
           "label": "Company Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "name"
         },
         {
-          "name": "url",
           "label": "Website URL",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "url"
         }
-      ]
+      ],
+      "key": "logos"
     }
   ],
   "test_data": {

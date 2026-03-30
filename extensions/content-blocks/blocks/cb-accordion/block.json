@@ -5,42 +5,48 @@
   "description": "Collapsible content sections with click-to-expand panels. More general than FAQ. Use for documentation, product specs, terms, course curricula. Layout: vertical stack of panels with clickable headers and chevron icon, smooth slide animation. Multiple panels can open simultaneously.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
-      "type": "text"
+      "type": "text",
+      "key": "heading"
     },
     {
-      "name": "allow_multiple",
       "label": "Allow Multiple Open",
       "type": "select",
-      "options": ["true", "false"],
-      "default": "true"
+      "options": [
+        "true",
+        "false"
+      ],
+      "default": "true",
+      "key": "allow_multiple"
     },
     {
-      "name": "items",
       "label": "Accordion Items",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "title",
           "label": "Title",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "title"
         },
         {
-          "name": "content",
           "label": "Content",
           "type": "richtext",
-          "required": true
+          "required": true,
+          "key": "content"
         },
         {
-          "name": "is_open",
           "label": "Initially Open",
           "type": "select",
-          "options": ["true", "false"],
-          "default": "false"
+          "options": [
+            "true",
+            "false"
+          ],
+          "default": "false",
+          "key": "is_open"
         }
-      ]
+      ],
+      "key": "items"
     }
   ],
   "test_data": {

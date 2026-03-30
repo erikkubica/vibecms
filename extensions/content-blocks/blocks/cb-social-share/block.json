@@ -5,53 +5,61 @@
   "description": "A social media sharing bar with buttons for Twitter/X, Facebook, LinkedIn, and email. Generates share URLs automatically from the current page URL and title. Use at the end of blog posts, articles, or any shareable content. Layout: horizontal row of styled share buttons with optional share count label.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
-      "type": "text"
+      "type": "text",
+      "key": "heading"
     },
     {
-      "name": "show_twitter",
       "label": "Show Twitter/X",
       "type": "toggle",
-      "default": true
+      "default": true,
+      "key": "show_twitter"
     },
     {
-      "name": "show_facebook",
       "label": "Show Facebook",
       "type": "toggle",
-      "default": true
+      "default": true,
+      "key": "show_facebook"
     },
     {
-      "name": "show_linkedin",
       "label": "Show LinkedIn",
       "type": "toggle",
-      "default": true
+      "default": true,
+      "key": "show_linkedin"
     },
     {
-      "name": "show_email",
       "label": "Show Email",
       "type": "toggle",
-      "default": true
+      "default": true,
+      "key": "show_email"
     },
     {
-      "name": "show_copy_link",
       "label": "Show Copy Link",
       "type": "toggle",
-      "default": true
+      "default": true,
+      "key": "show_copy_link"
     },
     {
-      "name": "style",
       "label": "Style",
       "type": "select",
-      "options": ["icons", "buttons", "minimal"],
-      "default": "buttons"
+      "options": [
+        "icons",
+        "buttons",
+        "minimal"
+      ],
+      "default": "buttons",
+      "key": "style"
     },
     {
-      "name": "alignment",
       "label": "Alignment",
       "type": "select",
-      "options": ["left", "center", "right"],
-      "default": "center"
+      "options": [
+        "left",
+        "center",
+        "right"
+      ],
+      "default": "center",
+      "key": "alignment"
     }
   ],
   "test_data": {

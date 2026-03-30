@@ -17,7 +17,7 @@
       "type": "cb-paragraph",
       "fields": {
         "heading": "What Drives Us",
-        "body": "<p>Founded in 2010 by two engineers who believed technology should empower people — not complicate their lives — Apex Digital has grown into one of the most trusted names in enterprise software. We remain privately held, fiercely independent, and obsessively focused on building products our customers actually enjoy using.</p>",
+        "body": "<p>Founded in 2010 by two engineers who believed technology should empower people \u2014 not complicate their lives \u2014 Apex Digital has grown into one of the most trusted names in enterprise software. We remain privately held, fiercely independent, and obsessively focused on building products our customers actually enjoy using.</p>",
         "max_width": "narrow"
       }
     },
@@ -83,10 +83,34 @@
       "fields": {
         "heading": "Apex Digital Today",
         "stats": [
-          { "icon": "users", "number": 200, "label": "Team Members", "prefix": "", "suffix": "+" },
-          { "icon": "globe", "number": 28, "label": "Countries", "prefix": "", "suffix": "" },
-          { "icon": "building", "number": 4, "label": "Global Offices", "prefix": "", "suffix": "" },
-          { "icon": "heart", "number": 100, "label": "Thousands of Users", "prefix": "", "suffix": "K+" }
+          {
+            "icon": "users",
+            "number": 200,
+            "label": "Team Members",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "icon": "globe",
+            "number": 28,
+            "label": "Countries",
+            "prefix": "",
+            "suffix": ""
+          },
+          {
+            "icon": "building",
+            "number": 4,
+            "label": "Global Offices",
+            "prefix": "",
+            "suffix": ""
+          },
+          {
+            "icon": "heart",
+            "number": 100,
+            "label": "Thousands of Users",
+            "prefix": "",
+            "suffix": "K+"
+          }
         ],
         "style": "default"
       }
@@ -134,7 +158,7 @@
             "email": "emma@apexdigital.com"
           }
         ],
-        "columns": 4,
+        "columns": "4",
         "photo_style": "rounded"
       }
     },

@@ -56,7 +56,7 @@
             "email": "sofia@apexdigital.com"
           }
         ],
-        "columns": 4,
+        "columns": "4",
         "photo_style": "rounded"
       }
     },
@@ -103,7 +103,7 @@
             "email": ""
           }
         ],
-        "columns": 4,
+        "columns": "4",
         "photo_style": "rounded"
       }
     },
@@ -143,7 +143,7 @@
             "description": "The best ideas come from unexpected places. We read widely, experiment often, and never assume we have all the answers."
           }
         ],
-        "columns": 3,
+        "columns": "3",
         "style": "outlined"
       }
     },

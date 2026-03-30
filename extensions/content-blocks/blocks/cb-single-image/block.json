@@ -5,51 +5,72 @@
   "description": "A single image display block with optional caption, link, and size controls. Renders one image centered with configurable width and rounding. Use for hero images, product photos, infographics, or standalone visuals. Layout: centered image with optional caption text below.",
   "field_schema": [
     {
-      "name": "image",
       "label": "Image",
       "type": "image",
-      "required": true
+      "required": true,
+      "key": "image"
     },
     {
-      "name": "alt",
       "label": "Alt Text",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "alt"
     },
     {
-      "name": "caption",
       "label": "Caption",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "caption"
     },
     {
-      "name": "link",
       "label": "Link URL",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "link"
     },
     {
-      "name": "size",
       "label": "Size",
       "type": "select",
       "options": [
-        { "label": "Small", "value": "small" },
-        { "label": "Medium", "value": "medium" },
-        { "label": "Full", "value": "full" }
+        {
+          "label": "Small",
+          "value": "small"
+        },
+        {
+          "label": "Medium",
+          "value": "medium"
+        },
+        {
+          "label": "Full",
+          "value": "full"
+        }
       ],
-      "default": "medium"
+      "default": "medium",
+      "key": "size"
     },
     {
-      "name": "rounded",
       "label": "Rounded",
       "type": "select",
       "options": [
-        { "label": "None", "value": "none" },
-        { "label": "Medium", "value": "md" },
-        { "label": "Large", "value": "lg" },
-        { "label": "Full", "value": "full" }
+        {
+          "label": "None",
+          "value": "none"
+        },
+        {
+          "label": "Medium",
+          "value": "md"
+        },
+        {
+          "label": "Large",
+          "value": "lg"
+        },
+        {
+          "label": "Full",
+          "value": "full"
+        }
       ],
-      "default": "md"
+      "default": "md",
+      "key": "rounded"
     }
   ],
   "test_data": {

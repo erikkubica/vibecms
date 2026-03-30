@@ -5,41 +5,56 @@
   "description": "A visual section divider for breathing space between content blocks. Supports line, thick, dashed, dotted, and gradient styles with optional centered text or icon label. Use between sections for visual separation. Layout: full-width horizontal element with configurable spacing and color.",
   "field_schema": [
     {
-      "name": "style",
       "label": "Line Style",
       "type": "select",
-      "options": ["line", "thick", "dashed", "dotted", "gradient"],
-      "default": "line"
+      "options": [
+        "line",
+        "thick",
+        "dashed",
+        "dotted",
+        "gradient"
+      ],
+      "default": "line",
+      "key": "style"
     },
     {
-      "name": "label",
       "label": "Center Label",
-      "type": "text"
+      "type": "text",
+      "key": "label"
     },
     {
-      "name": "icon",
       "label": "Icon (emoji)",
-      "type": "text"
+      "type": "text",
+      "key": "icon"
     },
     {
-      "name": "spacing",
       "label": "Vertical Spacing",
       "type": "select",
-      "options": ["sm", "md", "lg", "xl"],
-      "default": "md"
+      "options": [
+        "sm",
+        "md",
+        "lg",
+        "xl"
+      ],
+      "default": "md",
+      "key": "spacing"
     },
     {
-      "name": "color",
       "label": "Color",
       "type": "select",
-      "options": ["default", "accent", "muted"],
-      "default": "default"
+      "options": [
+        "default",
+        "accent",
+        "muted"
+      ],
+      "default": "default",
+      "key": "color"
     }
   ],
   "test_data": {
     "style": "gradient",
     "label": "",
-    "icon": "✦",
+    "icon": "\u2726",
     "spacing": "md",
     "color": "default"
   }

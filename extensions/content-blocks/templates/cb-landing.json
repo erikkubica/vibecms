@@ -36,12 +36,12 @@
       "fields": {
         "heading": "Everything You Need to Ship",
         "subheading": "One platform replaces your scattered stack of project tools",
-        "columns": 4,
+        "columns": "4",
         "features": [
           {
             "icon": "layout",
             "title": "Flexible Views",
-            "description": "Kanban, Gantt, list, calendar — see your work the way you think.",
+            "description": "Kanban, Gantt, list, calendar \u2014 see your work the way you think.",
             "category": "",
             "link_text": "",
             "link_url": ""
@@ -77,7 +77,7 @@
       "type": "cb-cta-split",
       "fields": {
         "heading": "See FlowBoard in Action",
-        "description": "Watch a 3-minute demo that shows how FlowBoard streamlines your entire product development workflow — from backlog to deployment.",
+        "description": "Watch a 3-minute demo that shows how FlowBoard streamlines your entire product development workflow \u2014 from backlog to deployment.",
         "button_text": "Watch Demo",
         "button_url": "/demo",
         "image": "https://picsum.photos/seed/demo-screenshot/800/600",
@@ -89,10 +89,34 @@
       "fields": {
         "heading": "Real Results from Real Teams",
         "stats": [
-          { "icon": "trending-up", "number": 35, "label": "Faster Delivery", "prefix": "", "suffix": "%" },
-          { "icon": "clock", "number": 6, "label": "Hours Saved per PM per Week", "prefix": "", "suffix": "" },
-          { "icon": "users", "number": 10000, "label": "Active Teams", "prefix": "", "suffix": "+" },
-          { "icon": "star", "number": 4.8, "label": "Rating on G2", "prefix": "", "suffix": "/5" }
+          {
+            "icon": "trending-up",
+            "number": 35,
+            "label": "Faster Delivery",
+            "prefix": "",
+            "suffix": "%"
+          },
+          {
+            "icon": "clock",
+            "number": 6,
+            "label": "Hours Saved per PM per Week",
+            "prefix": "",
+            "suffix": ""
+          },
+          {
+            "icon": "users",
+            "number": 10000,
+            "label": "Active Teams",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "icon": "star",
+            "number": 4.8,
+            "label": "Rating on G2",
+            "prefix": "",
+            "suffix": "/5"
+          }
         ],
         "style": "default"
       }
@@ -130,7 +154,7 @@
             "button_url": "/contact?plan=enterprise"
           }
         ],
-        "columns": 3
+        "columns": "3"
       }
     },
     {
@@ -138,12 +162,36 @@
       "fields": {
         "heading": "Powering Teams At",
         "logos": [
-          { "image": "https://picsum.photos/seed/brand-1/200/80", "name": "Meridian", "url": "" },
-          { "image": "https://picsum.photos/seed/brand-2/200/80", "name": "NovaBio", "url": "" },
-          { "image": "https://picsum.photos/seed/brand-3/200/80", "name": "TerraLogistics", "url": "" },
-          { "image": "https://picsum.photos/seed/brand-4/200/80", "name": "PixelCraft", "url": "" },
-          { "image": "https://picsum.photos/seed/brand-5/200/80", "name": "CloudPulse", "url": "" },
-          { "image": "https://picsum.photos/seed/brand-6/200/80", "name": "Threadline", "url": "" }
+          {
+            "image": "https://picsum.photos/seed/brand-1/200/80",
+            "name": "Meridian",
+            "url": ""
+          },
+          {
+            "image": "https://picsum.photos/seed/brand-2/200/80",
+            "name": "NovaBio",
+            "url": ""
+          },
+          {
+            "image": "https://picsum.photos/seed/brand-3/200/80",
+            "name": "TerraLogistics",
+            "url": ""
+          },
+          {
+            "image": "https://picsum.photos/seed/brand-4/200/80",
+            "name": "PixelCraft",
+            "url": ""
+          },
+          {
+            "image": "https://picsum.photos/seed/brand-5/200/80",
+            "name": "CloudPulse",
+            "url": ""
+          },
+          {
+            "image": "https://picsum.photos/seed/brand-6/200/80",
+            "name": "Threadline",
+            "url": ""
+          }
         ],
         "style": "grayscale"
       }
@@ -185,7 +233,7 @@
         "button_text": "Subscribe Free",
         "form_action": "/api/newsletter/subscribe",
         "privacy_note": "No spam. Unsubscribe anytime.",
-        "style": "card"
+        "style": "dark"
       }
     },
     {

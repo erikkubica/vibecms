@@ -5,70 +5,79 @@
   "description": "Feature cards grid with icon, title, description, and optional link per feature. Use for service overviews, capability presentations. Layout: 2-4 column responsive grid, cards with icon/emoji, bold title, description, optional category tag, subtle shadows with hover lift.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "subheading",
       "label": "Subheading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "subheading"
     },
     {
-      "name": "columns",
       "label": "Columns",
       "type": "select",
       "options": [
-        { "label": "2 Columns", "value": "2" },
-        { "label": "3 Columns", "value": "3" },
-        { "label": "4 Columns", "value": "4" }
+        {
+          "label": "2 Columns",
+          "value": "2"
+        },
+        {
+          "label": "3 Columns",
+          "value": "3"
+        },
+        {
+          "label": "4 Columns",
+          "value": "4"
+        }
       ],
-      "default": "3"
+      "default": "3",
+      "key": "columns"
     },
     {
-      "name": "features",
       "label": "Features",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "icon",
           "label": "Icon / Emoji",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "icon"
         },
         {
-          "name": "title",
           "label": "Title",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "title"
         },
         {
-          "name": "description",
           "label": "Description",
           "type": "textarea",
-          "required": true
+          "required": true,
+          "key": "description"
         },
         {
-          "name": "category",
           "label": "Category Tag",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "category"
         },
         {
-          "name": "link_text",
           "label": "Link Text",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "link_text"
         },
         {
-          "name": "link_url",
           "label": "Link URL",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "link_url"
         }
-      ]
+      ],
+      "key": "features"
     }
   ],
   "test_data": {

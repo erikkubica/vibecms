@@ -25,7 +25,7 @@
       "fields": {
         "heading": "What We Offer",
         "subheading": "Comprehensive solutions across every stage of your digital journey",
-        "columns": 3,
+        "columns": "3",
         "features": [
           {
             "icon": "strategy",
@@ -84,7 +84,7 @@
         "style": "gradient",
         "label": "",
         "icon": "",
-        "spacing": "large",
+        "spacing": "lg",
         "color": ""
       }
     },
@@ -126,10 +126,34 @@
       "fields": {
         "heading": "By the Numbers",
         "stats": [
-          { "icon": "briefcase", "number": 340, "label": "Projects Delivered", "prefix": "", "suffix": "+" },
-          { "icon": "users", "number": 98, "label": "Client Retention", "prefix": "", "suffix": "%" },
-          { "icon": "clock", "number": 12, "label": "Years in Business", "prefix": "", "suffix": "" },
-          { "icon": "globe", "number": 28, "label": "Countries Served", "prefix": "", "suffix": "" }
+          {
+            "icon": "briefcase",
+            "number": 340,
+            "label": "Projects Delivered",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "icon": "users",
+            "number": 98,
+            "label": "Client Retention",
+            "prefix": "",
+            "suffix": "%"
+          },
+          {
+            "icon": "clock",
+            "number": 12,
+            "label": "Years in Business",
+            "prefix": "",
+            "suffix": ""
+          },
+          {
+            "icon": "globe",
+            "number": 28,
+            "label": "Countries Served",
+            "prefix": "",
+            "suffix": ""
+          }
         ],
         "style": "default"
       }
@@ -140,7 +164,7 @@
         "heading": "What Our Clients Say",
         "testimonials": [
           {
-            "quote": "They didn't just build our platform — they fundamentally changed how we think about technology as a competitive advantage.",
+            "quote": "They didn't just build our platform \u2014 they fundamentally changed how we think about technology as a competitive advantage.",
             "author_name": "Sarah Chen",
             "author_role": "CTO, Meridian Health",
             "avatar": "https://picsum.photos/seed/avatar-sarah/200/200",
@@ -167,7 +191,7 @@
       "type": "cb-cta-banner",
       "fields": {
         "heading": "Ready to Transform Your Business?",
-        "description": "Schedule a free 30-minute consultation with one of our senior strategists. No commitment, no sales pitch — just honest advice.",
+        "description": "Schedule a free 30-minute consultation with one of our senior strategists. No commitment, no sales pitch \u2014 just honest advice.",
         "button_text": "Get Started",
         "button_url": "/contact",
         "background_image": "https://picsum.photos/seed/cta-services/1600/600",

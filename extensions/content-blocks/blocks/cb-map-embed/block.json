@@ -2,45 +2,49 @@
   "slug": "cb-map-embed",
   "label": "Map & Contact",
   "icon": "map-pin",
-  "description": "An embedded map with contact info sidebar. Displays a map iframe alongside structured contact details. Use for contact pages, location pages. Layout: two-column — map embed (60%) plus contact card (40%) with address, phone, email, hours. Stacks on mobile.",
+  "description": "An embedded map with contact info sidebar. Displays a map iframe alongside structured contact details. Use for contact pages, location pages. Layout: two-column \u2014 map embed (60%) plus contact card (40%) with address, phone, email, hours. Stacks on mobile.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
-      "type": "text"
+      "type": "text",
+      "key": "heading"
     },
     {
-      "name": "map_embed_url",
       "label": "Map Embed URL",
       "type": "text",
-      "required": true
+      "required": true,
+      "key": "map_embed_url"
     },
     {
-      "name": "address",
       "label": "Address",
-      "type": "textarea"
+      "type": "textarea",
+      "key": "address"
     },
     {
-      "name": "phone",
       "label": "Phone",
-      "type": "text"
+      "type": "text",
+      "key": "phone"
     },
     {
-      "name": "email",
       "label": "Email",
-      "type": "text"
+      "type": "text",
+      "key": "email"
     },
     {
-      "name": "hours",
       "label": "Business Hours",
-      "type": "textarea"
+      "type": "textarea",
+      "key": "hours"
     },
     {
-      "name": "map_height",
       "label": "Map Height",
       "type": "select",
-      "options": ["300", "400", "500"],
-      "default": "400"
+      "options": [
+        "300",
+        "400",
+        "500"
+      ],
+      "default": "400",
+      "key": "map_height"
     }
   ],
   "test_data": {

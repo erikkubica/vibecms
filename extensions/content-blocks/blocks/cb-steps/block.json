@@ -5,45 +5,48 @@
   "description": "Numbered process steps displayed in a horizontal flow with connecting lines. Each step has number circle, title, and description. Use for onboarding flows, how-it-works, checkout processes. Layout: horizontal numbered circles connected by lines on desktop, vertical on mobile.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
-      "type": "text"
+      "type": "text",
+      "key": "heading"
     },
     {
-      "name": "subheading",
       "label": "Subheading",
-      "type": "text"
+      "type": "text",
+      "key": "subheading"
     },
     {
-      "name": "steps",
       "label": "Steps",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "icon",
           "label": "Icon (emoji)",
-          "type": "text"
+          "type": "text",
+          "key": "icon"
         },
         {
-          "name": "title",
           "label": "Title",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "title"
         },
         {
-          "name": "description",
           "label": "Description",
           "type": "textarea",
-          "required": true
+          "required": true,
+          "key": "description"
         }
-      ]
+      ],
+      "key": "steps"
     },
     {
-      "name": "style",
       "label": "Layout Style",
       "type": "select",
-      "options": ["horizontal", "vertical"],
-      "default": "horizontal"
+      "options": [
+        "horizontal",
+        "vertical"
+      ],
+      "default": "horizontal",
+      "key": "style"
     }
   ],
   "test_data": {
@@ -52,22 +55,22 @@
     "style": "horizontal",
     "steps": [
       {
-        "icon": "📋",
+        "icon": "\ud83d\udccb",
         "title": "Create Account",
         "description": "Sign up with your email and choose a plan that fits your needs. No credit card required for the free trial."
       },
       {
-        "icon": "⚙️",
+        "icon": "\u2699\ufe0f",
         "title": "Configure Settings",
         "description": "Customize your workspace, invite team members, and set up integrations with your existing tools."
       },
       {
-        "icon": "🚀",
+        "icon": "\ud83d\ude80",
         "title": "Launch Project",
         "description": "Create your first project, import data, and start building with our intuitive drag-and-drop interface."
       },
       {
-        "icon": "📊",
+        "icon": "\ud83d\udcca",
         "title": "Track Results",
         "description": "Monitor performance with real-time analytics and optimize your workflow based on actionable insights."
       }

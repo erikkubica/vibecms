@@ -5,46 +5,55 @@
   "description": "An email newsletter signup form with heading, description, and inline email input with submit button. For lead capture. Use on landing pages or footer areas. Layout: centered section with horizontal form (email input + submit), optional privacy note. Form POSTs to configurable action URL.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": true
+      "required": true,
+      "key": "heading"
     },
     {
-      "name": "description",
       "label": "Description",
       "type": "textarea",
-      "required": false
+      "required": false,
+      "key": "description"
     },
     {
-      "name": "button_text",
       "label": "Button Text",
       "type": "text",
       "required": false,
-      "default": "Subscribe"
+      "default": "Subscribe",
+      "key": "button_text"
     },
     {
-      "name": "form_action",
       "label": "Form Action URL",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "form_action"
     },
     {
-      "name": "privacy_note",
       "label": "Privacy Note",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "privacy_note"
     },
     {
-      "name": "style",
       "label": "Style",
       "type": "select",
       "options": [
-        { "label": "Light", "value": "light" },
-        { "label": "Dark", "value": "dark" },
-        { "label": "Accent", "value": "accent" }
+        {
+          "label": "Light",
+          "value": "light"
+        },
+        {
+          "label": "Dark",
+          "value": "dark"
+        },
+        {
+          "label": "Accent",
+          "value": "accent"
+        }
       ],
-      "default": "light"
+      "default": "light",
+      "key": "style"
     }
   ],
   "test_data": {

@@ -18,7 +18,7 @@
       "fields": {
         "heading": "Why Teams Choose FlowBoard Pro",
         "subheading": "",
-        "columns": 3,
+        "columns": "3",
         "features": [
           {
             "icon": "zap",
@@ -31,7 +31,7 @@
           {
             "icon": "layers",
             "title": "Flexible Views",
-            "description": "Kanban, Gantt, timeline, list, or calendar — switch views instantly without losing context or filters.",
+            "description": "Kanban, Gantt, timeline, list, or calendar \u2014 switch views instantly without losing context or filters.",
             "category": "",
             "link_text": "",
             "link_url": ""
@@ -78,7 +78,7 @@
         "tabs": [
           {
             "label": "Description",
-            "content": "<h3>Built for Modern Teams</h3><p>FlowBoard Pro is the culmination of five years of research into how high-performing teams collaborate. Unlike traditional project management tools that force rigid workflows, FlowBoard adapts to your team's natural rhythm.</p><p>Whether you're running two-week sprints, continuous delivery, or a hybrid model, FlowBoard Pro provides the structure you need without the overhead you don't. Every feature was designed with one question in mind: does this help teams ship better work, faster?</p><h3>Key Capabilities</h3><ul><li><strong>Adaptive Workflows</strong> — Create custom stages, automations, and approval gates that match your process</li><li><strong>Cross-Project Dependencies</strong> — Visualize and manage dependencies across teams and projects</li><li><strong>Time Tracking</strong> — Built-in timers and manual entry with billable/non-billable categorization</li><li><strong>Document Hub</strong> — Rich text docs, wikis, and file attachments linked directly to tasks</li></ul>",
+            "content": "<h3>Built for Modern Teams</h3><p>FlowBoard Pro is the culmination of five years of research into how high-performing teams collaborate. Unlike traditional project management tools that force rigid workflows, FlowBoard adapts to your team's natural rhythm.</p><p>Whether you're running two-week sprints, continuous delivery, or a hybrid model, FlowBoard Pro provides the structure you need without the overhead you don't. Every feature was designed with one question in mind: does this help teams ship better work, faster?</p><h3>Key Capabilities</h3><ul><li><strong>Adaptive Workflows</strong> \u2014 Create custom stages, automations, and approval gates that match your process</li><li><strong>Cross-Project Dependencies</strong> \u2014 Visualize and manage dependencies across teams and projects</li><li><strong>Time Tracking</strong> \u2014 Built-in timers and manual entry with billable/non-billable categorization</li><li><strong>Document Hub</strong> \u2014 Rich text docs, wikis, and file attachments linked directly to tasks</li></ul>",
             "icon": "file-text"
           },
           {
@@ -88,7 +88,7 @@
           },
           {
             "label": "Reviews",
-            "content": "<h3>Customer Reviews</h3><p><strong>4.8 out of 5</strong> based on 2,340 reviews on G2</p><blockquote>\"FlowBoard Pro replaced three separate tools for us. Our team velocity increased 35% in the first quarter.\" — Director of Engineering, Series C Fintech</blockquote><blockquote>\"The AI automation features alone save our PMs about 6 hours per week. The ROI was immediate.\" — VP Product, Healthcare SaaS</blockquote><p><a href='/reviews'>Read all customer reviews →</a></p>",
+            "content": "<h3>Customer Reviews</h3><p><strong>4.8 out of 5</strong> based on 2,340 reviews on G2</p><blockquote>\"FlowBoard Pro replaced three separate tools for us. Our team velocity increased 35% in the first quarter.\" \u2014 Director of Engineering, Series C Fintech</blockquote><blockquote>\"The AI automation features alone save our PMs about 6 hours per week. The ROI was immediate.\" \u2014 VP Product, Healthcare SaaS</blockquote><p><a href='/reviews'>Read all customer reviews \u2192</a></p>",
             "icon": "star"
           }
         ],
@@ -128,7 +128,7 @@
           {
             "rating": 4,
             "title": "Powerful but has a learning curve",
-            "body": "The depth of features is impressive — automation rules, custom fields, portfolio views — but it took our team about two weeks to fully explore everything. The onboarding guides helped a lot.",
+            "body": "The depth of features is impressive \u2014 automation rules, custom fields, portfolio views \u2014 but it took our team about two weeks to fully explore everything. The onboarding guides helped a lot.",
             "author": "Nina Petrova, Operations Director",
             "verified": true
           },

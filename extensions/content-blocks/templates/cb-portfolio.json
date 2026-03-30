@@ -6,7 +6,7 @@
       "type": "hero",
       "fields": {
         "heading": "Our Work",
-        "subheading": "A selection of projects that showcase our craft — from early-stage startups to Fortune 500 enterprises.",
+        "subheading": "A selection of projects that showcase our craft \u2014 from early-stage startups to Fortune 500 enterprises.",
         "background_image": "https://picsum.photos/seed/portfolio-hero/1600/800",
         "button_text": "Start a Project",
         "button_url": "/contact",
@@ -17,51 +17,51 @@
       "type": "cb-image-grid",
       "fields": {
         "heading": "Featured Projects",
-        "columns": 3,
+        "columns": "3",
         "images": [
           {
             "image": "https://picsum.photos/seed/project-fintech/600/450",
-            "caption": "Meridian — Fintech Dashboard Redesign",
+            "caption": "Meridian \u2014 Fintech Dashboard Redesign",
             "link": "/portfolio/meridian"
           },
           {
             "image": "https://picsum.photos/seed/project-health/600/450",
-            "caption": "VitaTrack — Healthcare Patient Portal",
+            "caption": "VitaTrack \u2014 Healthcare Patient Portal",
             "link": "/portfolio/vitatrack"
           },
           {
             "image": "https://picsum.photos/seed/project-ecommerce/600/450",
-            "caption": "Threadline — E-Commerce Platform",
+            "caption": "Threadline \u2014 E-Commerce Platform",
             "link": "/portfolio/threadline"
           },
           {
             "image": "https://picsum.photos/seed/project-logistics/600/450",
-            "caption": "TerraLogistics — Fleet Management System",
+            "caption": "TerraLogistics \u2014 Fleet Management System",
             "link": "/portfolio/terralogistics"
           },
           {
             "image": "https://picsum.photos/seed/project-education/600/450",
-            "caption": "LearnPath — EdTech Learning Platform",
+            "caption": "LearnPath \u2014 EdTech Learning Platform",
             "link": "/portfolio/learnpath"
           },
           {
             "image": "https://picsum.photos/seed/project-saas/600/450",
-            "caption": "CloudPulse — SaaS Monitoring Dashboard",
+            "caption": "CloudPulse \u2014 SaaS Monitoring Dashboard",
             "link": "/portfolio/cloudpulse"
           },
           {
             "image": "https://picsum.photos/seed/project-realestate/600/450",
-            "caption": "HomeScope — Real Estate Search App",
+            "caption": "HomeScope \u2014 Real Estate Search App",
             "link": "/portfolio/homescope"
           },
           {
             "image": "https://picsum.photos/seed/project-media/600/450",
-            "caption": "StreamCast — Media Streaming Platform",
+            "caption": "StreamCast \u2014 Media Streaming Platform",
             "link": "/portfolio/streamcast"
           },
           {
             "image": "https://picsum.photos/seed/project-nonprofit/600/450",
-            "caption": "GreenBridge — Nonprofit Donation Platform",
+            "caption": "GreenBridge \u2014 Nonprofit Donation Platform",
             "link": "/portfolio/greenbridge"
           }
         ]
@@ -72,10 +72,34 @@
       "fields": {
         "heading": "Project Impact",
         "stats": [
-          { "icon": "trending-up", "number": 340, "label": "Projects Shipped", "prefix": "", "suffix": "+" },
-          { "icon": "award", "number": 12, "label": "Design Awards", "prefix": "", "suffix": "" },
-          { "icon": "percent", "number": 98, "label": "Client Satisfaction", "prefix": "", "suffix": "%" },
-          { "icon": "repeat", "number": 85, "label": "Repeat Clients", "prefix": "", "suffix": "%" }
+          {
+            "icon": "trending-up",
+            "number": 340,
+            "label": "Projects Shipped",
+            "prefix": "",
+            "suffix": "+"
+          },
+          {
+            "icon": "award",
+            "number": 12,
+            "label": "Design Awards",
+            "prefix": "",
+            "suffix": ""
+          },
+          {
+            "icon": "percent",
+            "number": 98,
+            "label": "Client Satisfaction",
+            "prefix": "",
+            "suffix": "%"
+          },
+          {
+            "icon": "repeat",
+            "number": 85,
+            "label": "Repeat Clients",
+            "prefix": "",
+            "suffix": "%"
+          }
         ],
         "style": "default"
       }
@@ -85,14 +109,46 @@
       "fields": {
         "heading": "Trusted By",
         "logos": [
-          { "image": "https://picsum.photos/seed/logo-meridian/200/80", "name": "Meridian Health", "url": "https://example.com" },
-          { "image": "https://picsum.photos/seed/logo-terra/200/80", "name": "TerraLogistics", "url": "https://example.com" },
-          { "image": "https://picsum.photos/seed/logo-nova/200/80", "name": "NovaBio", "url": "https://example.com" },
-          { "image": "https://picsum.photos/seed/logo-lakeview/200/80", "name": "Lakeview Capital", "url": "https://example.com" },
-          { "image": "https://picsum.photos/seed/logo-pixelcraft/200/80", "name": "PixelCraft", "url": "https://example.com" },
-          { "image": "https://picsum.photos/seed/logo-threadline/200/80", "name": "Threadline", "url": "https://example.com" },
-          { "image": "https://picsum.photos/seed/logo-cloudpulse/200/80", "name": "CloudPulse", "url": "https://example.com" },
-          { "image": "https://picsum.photos/seed/logo-greenbridge/200/80", "name": "GreenBridge", "url": "https://example.com" }
+          {
+            "image": "https://picsum.photos/seed/logo-meridian/200/80",
+            "name": "Meridian Health",
+            "url": "https://example.com"
+          },
+          {
+            "image": "https://picsum.photos/seed/logo-terra/200/80",
+            "name": "TerraLogistics",
+            "url": "https://example.com"
+          },
+          {
+            "image": "https://picsum.photos/seed/logo-nova/200/80",
+            "name": "NovaBio",
+            "url": "https://example.com"
+          },
+          {
+            "image": "https://picsum.photos/seed/logo-lakeview/200/80",
+            "name": "Lakeview Capital",
+            "url": "https://example.com"
+          },
+          {
+            "image": "https://picsum.photos/seed/logo-pixelcraft/200/80",
+            "name": "PixelCraft",
+            "url": "https://example.com"
+          },
+          {
+            "image": "https://picsum.photos/seed/logo-threadline/200/80",
+            "name": "Threadline",
+            "url": "https://example.com"
+          },
+          {
+            "image": "https://picsum.photos/seed/logo-cloudpulse/200/80",
+            "name": "CloudPulse",
+            "url": "https://example.com"
+          },
+          {
+            "image": "https://picsum.photos/seed/logo-greenbridge/200/80",
+            "name": "GreenBridge",
+            "url": "https://example.com"
+          }
         ],
         "style": "grayscale"
       }

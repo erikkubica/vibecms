@@ -5,54 +5,69 @@
   "description": "A testimonial carousel displaying customer quotes with star ratings, names, roles, and avatars. Manual navigation with arrows and dots. Use for customer success stories, social proof near CTAs. Layout: large centered quote card with star rating, quote text, author info with avatar. Arrow and dot navigation.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "testimonials",
       "label": "Testimonials",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "quote",
           "label": "Quote",
           "type": "textarea",
-          "required": true
+          "required": true,
+          "key": "quote"
         },
         {
-          "name": "author_name",
           "label": "Author Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "author_name"
         },
         {
-          "name": "author_role",
           "label": "Author Role",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "author_role"
         },
         {
-          "name": "avatar",
           "label": "Avatar",
           "type": "image",
-          "required": false
+          "required": false,
+          "key": "avatar"
         },
         {
-          "name": "rating",
           "label": "Rating",
           "type": "select",
           "options": [
-            { "label": "1 Star", "value": "1" },
-            { "label": "2 Stars", "value": "2" },
-            { "label": "3 Stars", "value": "3" },
-            { "label": "4 Stars", "value": "4" },
-            { "label": "5 Stars", "value": "5" }
+            {
+              "label": "1 Star",
+              "value": "1"
+            },
+            {
+              "label": "2 Stars",
+              "value": "2"
+            },
+            {
+              "label": "3 Stars",
+              "value": "3"
+            },
+            {
+              "label": "4 Stars",
+              "value": "4"
+            },
+            {
+              "label": "5 Stars",
+              "value": "5"
+            }
           ],
-          "default": "5"
+          "default": "5",
+          "key": "rating"
         }
-      ]
+      ],
+      "key": "testimonials"
     }
   ],
   "test_data": {

@@ -5,58 +5,67 @@
   "description": "Animated number counters that count up from zero when scrolled into view. Use for company statistics, achievement metrics. Layout: 3-4 large numbers in a row with labels, optional prefix/suffix ($, +, %). Intersection Observer animation.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Section Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "stats",
       "label": "Stats",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "icon",
           "label": "Icon / Emoji",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "icon"
         },
         {
-          "name": "number",
           "label": "Number",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "number"
         },
         {
-          "name": "label",
           "label": "Label",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "label"
         },
         {
-          "name": "prefix",
           "label": "Prefix",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "prefix"
         },
         {
-          "name": "suffix",
           "label": "Suffix",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "suffix"
         }
-      ]
+      ],
+      "key": "stats"
     },
     {
-      "name": "style",
       "label": "Style",
       "type": "select",
       "options": [
-        { "label": "Light", "value": "light" },
-        { "label": "Dark", "value": "dark" },
-        { "label": "Accent", "value": "accent" }
+        {
+          "label": "Light",
+          "value": "light"
+        },
+        {
+          "label": "Dark",
+          "value": "dark"
+        },
+        {
+          "label": "Accent",
+          "value": "accent"
+        }
       ],
-      "default": "light"
+      "default": "light",
+      "key": "style"
     }
   ],
   "test_data": {

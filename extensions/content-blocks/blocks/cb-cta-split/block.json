@@ -5,44 +5,50 @@
   "description": "A two-column CTA with image on one side and persuasive text with button on the other. Visually balanced for conversion. Use for product highlights, app download prompts. Layout: 50/50 split, image position configurable, stacks on mobile.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": true
+      "required": true,
+      "key": "heading"
     },
     {
-      "name": "description",
       "label": "Description",
       "type": "textarea",
-      "required": false
+      "required": false,
+      "key": "description"
     },
     {
-      "name": "button_text",
       "label": "Button Text",
       "type": "text",
-      "required": true
+      "required": true,
+      "key": "button_text"
     },
     {
-      "name": "button_url",
       "label": "Button URL",
       "type": "text",
-      "required": true
+      "required": true,
+      "key": "button_url"
     },
     {
-      "name": "image",
       "label": "Image",
       "type": "image",
-      "required": true
+      "required": true,
+      "key": "image"
     },
     {
-      "name": "image_position",
       "label": "Image Position",
       "type": "select",
       "options": [
-        { "label": "Left", "value": "left" },
-        { "label": "Right", "value": "right" }
+        {
+          "label": "Left",
+          "value": "left"
+        },
+        {
+          "label": "Right",
+          "value": "right"
+        }
       ],
-      "default": "left"
+      "default": "left",
+      "key": "image_position"
     }
   ],
   "test_data": {

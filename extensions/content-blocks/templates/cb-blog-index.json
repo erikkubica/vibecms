@@ -17,9 +17,9 @@
       "fields": {
         "heading": "Latest Articles",
         "node_type": "post",
-        "count": 9,
+        "count": "9",
         "layout": "grid",
-        "columns": 3,
+        "columns": "3",
         "show_image": true,
         "show_excerpt": true,
         "show_date": true,
@@ -32,7 +32,7 @@
         "style": "gradient",
         "label": "",
         "icon": "",
-        "spacing": "large",
+        "spacing": "lg",
         "color": ""
       }
     },
@@ -40,11 +40,11 @@
       "type": "cb-newsletter",
       "fields": {
         "heading": "Stay in the Loop",
-        "description": "Get our best articles delivered to your inbox every Thursday. No spam, no fluff — just actionable insights from our engineering and product teams.",
+        "description": "Get our best articles delivered to your inbox every Thursday. No spam, no fluff \u2014 just actionable insights from our engineering and product teams.",
         "button_text": "Subscribe",
         "form_action": "/api/newsletter/subscribe",
         "privacy_note": "We respect your privacy. Unsubscribe at any time.",
-        "style": "card"
+        "style": "dark"
       }
     },
     {
@@ -56,7 +56,7 @@
         "show_linkedin": true,
         "show_email": true,
         "show_copy_link": false,
-        "style": "filled",
+        "style": "buttons",
         "alignment": "center"
       }
     }

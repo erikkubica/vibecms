@@ -5,59 +5,95 @@
   "description": "A responsive image gallery grid with hover overlay captions. Displays multiple images in a configurable grid with consistent aspect ratio. Use for portfolios, project galleries, product collections. Layout: CSS grid with hover overlay showing caption text and optional link.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "columns",
       "label": "Columns",
       "type": "select",
       "options": [
-        { "label": "2 Columns", "value": "2" },
-        { "label": "3 Columns", "value": "3" },
-        { "label": "4 Columns", "value": "4" },
-        { "label": "Auto Fit", "value": "auto" }
+        {
+          "label": "2 Columns",
+          "value": "2"
+        },
+        {
+          "label": "3 Columns",
+          "value": "3"
+        },
+        {
+          "label": "4 Columns",
+          "value": "4"
+        },
+        {
+          "label": "Auto Fit",
+          "value": "auto"
+        }
       ],
-      "default": "3"
+      "default": "3",
+      "key": "columns"
     },
     {
-      "name": "images",
       "label": "Images",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "image",
           "label": "Image",
           "type": "image",
-          "required": true
+          "required": true,
+          "key": "image"
         },
         {
-          "name": "caption",
           "label": "Caption",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "caption"
         },
         {
-          "name": "link",
           "label": "Link URL",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "link"
         }
-      ]
+      ],
+      "key": "images"
     }
   ],
   "test_data": {
     "heading": "Our Work",
     "columns": "3",
     "images": [
-      { "image": "https://picsum.photos/seed/grid-one/600/400", "caption": "Brand Identity Design", "link": "" },
-      { "image": "https://picsum.photos/seed/grid-two/600/400", "caption": "Mobile App UI", "link": "" },
-      { "image": "https://picsum.photos/seed/grid-three/600/400", "caption": "Website Redesign", "link": "" },
-      { "image": "https://picsum.photos/seed/grid-four/600/400", "caption": "Product Photography", "link": "" },
-      { "image": "https://picsum.photos/seed/grid-five/600/400", "caption": "Social Media Campaign", "link": "" },
-      { "image": "https://picsum.photos/seed/grid-six/600/400", "caption": "Package Design", "link": "" }
+      {
+        "image": "https://picsum.photos/seed/grid-one/600/400",
+        "caption": "Brand Identity Design",
+        "link": ""
+      },
+      {
+        "image": "https://picsum.photos/seed/grid-two/600/400",
+        "caption": "Mobile App UI",
+        "link": ""
+      },
+      {
+        "image": "https://picsum.photos/seed/grid-three/600/400",
+        "caption": "Website Redesign",
+        "link": ""
+      },
+      {
+        "image": "https://picsum.photos/seed/grid-four/600/400",
+        "caption": "Product Photography",
+        "link": ""
+      },
+      {
+        "image": "https://picsum.photos/seed/grid-five/600/400",
+        "caption": "Social Media Campaign",
+        "link": ""
+      },
+      {
+        "image": "https://picsum.photos/seed/grid-six/600/400",
+        "caption": "Package Design",
+        "link": ""
+      }
     ]
   }
 }

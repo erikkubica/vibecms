@@ -5,47 +5,47 @@
   "description": "Alternating zigzag rows of image + text for detailed feature presentations. Each row flips the image side creating visual rhythm. Use for product deep-dives, how-it-works sections. Layout: two-column rows alternating image position, stacks on mobile.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Section Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "features",
       "label": "Features",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "image",
           "label": "Image",
           "type": "image",
-          "required": true
+          "required": true,
+          "key": "image"
         },
         {
-          "name": "title",
           "label": "Title",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "title"
         },
         {
-          "name": "description",
           "label": "Description",
           "type": "richtext",
-          "required": true
+          "required": true,
+          "key": "description"
         },
         {
-          "name": "button_text",
           "label": "Button Text",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "button_text"
         },
         {
-          "name": "button_url",
           "label": "Button URL",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "button_url"
         }
-      ]
+      ],
+      "key": "features"
     }
   ],
   "test_data": {

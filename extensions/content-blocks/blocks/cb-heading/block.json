@@ -5,52 +5,88 @@
   "description": "A standalone heading block for creating visual section breaks and hierarchy. Renders a configurable heading (h1-h6) with optional subtitle and decorative divider. Use to introduce new page sections or add prominent titles. Layout: heading text with optional subtitle, configurable alignment, optional decorative element.",
   "field_schema": [
     {
-      "name": "text",
       "label": "Heading Text",
       "type": "text",
-      "required": true
+      "required": true,
+      "key": "text"
     },
     {
-      "name": "subtitle",
       "label": "Subtitle",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "subtitle"
     },
     {
-      "name": "level",
       "label": "Heading Level",
       "type": "select",
       "options": [
-        { "label": "H1", "value": "h1" },
-        { "label": "H2", "value": "h2" },
-        { "label": "H3", "value": "h3" },
-        { "label": "H4", "value": "h4" },
-        { "label": "H5", "value": "h5" },
-        { "label": "H6", "value": "h6" }
+        {
+          "label": "H1",
+          "value": "h1"
+        },
+        {
+          "label": "H2",
+          "value": "h2"
+        },
+        {
+          "label": "H3",
+          "value": "h3"
+        },
+        {
+          "label": "H4",
+          "value": "h4"
+        },
+        {
+          "label": "H5",
+          "value": "h5"
+        },
+        {
+          "label": "H6",
+          "value": "h6"
+        }
       ],
-      "default": "h2"
+      "default": "h2",
+      "key": "level"
     },
     {
-      "name": "alignment",
       "label": "Alignment",
       "type": "select",
       "options": [
-        { "label": "Left", "value": "left" },
-        { "label": "Center", "value": "center" },
-        { "label": "Right", "value": "right" }
+        {
+          "label": "Left",
+          "value": "left"
+        },
+        {
+          "label": "Center",
+          "value": "center"
+        },
+        {
+          "label": "Right",
+          "value": "right"
+        }
       ],
-      "default": "center"
+      "default": "center",
+      "key": "alignment"
     },
     {
-      "name": "divider",
       "label": "Divider Style",
       "type": "select",
       "options": [
-        { "label": "Line", "value": "line" },
-        { "label": "Dots", "value": "dots" },
-        { "label": "None", "value": "none" }
+        {
+          "label": "Line",
+          "value": "line"
+        },
+        {
+          "label": "Dots",
+          "value": "dots"
+        },
+        {
+          "label": "None",
+          "value": "none"
+        }
       ],
-      "default": "line"
+      "default": "line",
+      "key": "divider"
     }
   ],
   "test_data": {

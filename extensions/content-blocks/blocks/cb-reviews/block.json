@@ -5,64 +5,85 @@
   "description": "Star-rated review cards in a grid layout. Each card shows a star rating, review title, body text, reviewer name, and optional verified badge. Use for product reviews, app feedback, course reviews. Layout: 2-3 column grid of cards with filled and empty stars, review title, body text, and reviewer info.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "average_rating",
       "label": "Average Rating",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "average_rating"
     },
     {
-      "name": "reviews",
       "label": "Reviews",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "rating",
           "label": "Rating",
           "type": "select",
           "options": [
-            { "label": "1 Star", "value": "1" },
-            { "label": "2 Stars", "value": "2" },
-            { "label": "3 Stars", "value": "3" },
-            { "label": "4 Stars", "value": "4" },
-            { "label": "5 Stars", "value": "5" }
+            {
+              "label": "1 Star",
+              "value": "1"
+            },
+            {
+              "label": "2 Stars",
+              "value": "2"
+            },
+            {
+              "label": "3 Stars",
+              "value": "3"
+            },
+            {
+              "label": "4 Stars",
+              "value": "4"
+            },
+            {
+              "label": "5 Stars",
+              "value": "5"
+            }
           ],
-          "required": true
+          "required": true,
+          "key": "rating"
         },
         {
-          "name": "title",
           "label": "Review Title",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "title"
         },
         {
-          "name": "body",
           "label": "Review Body",
           "type": "textarea",
-          "required": true
+          "required": true,
+          "key": "body"
         },
         {
-          "name": "author",
           "label": "Reviewer Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "author"
         },
         {
-          "name": "verified",
           "label": "Verified Buyer",
           "type": "select",
           "options": [
-            { "label": "No", "value": "false" },
-            { "label": "Yes", "value": "true" }
+            {
+              "label": "No",
+              "value": "false"
+            },
+            {
+              "label": "Yes",
+              "value": "true"
+            }
           ],
-          "default": "false"
+          "default": "false",
+          "key": "verified"
         }
-      ]
+      ],
+      "key": "reviews"
     }
   ],
   "test_data": {

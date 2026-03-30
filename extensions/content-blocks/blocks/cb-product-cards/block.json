@@ -5,70 +5,79 @@
   "description": "Product showcase cards with image, name, price, and CTA button. Use for e-commerce product listings, course catalogs, downloadable showcases. Layout: 2-4 column card grid with product image (hover zoom), name, optional category tag, price with optional strikethrough original, and CTA button.",
   "field_schema": [
     {
-      "name": "heading",
       "label": "Heading",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "heading"
     },
     {
-      "name": "columns",
       "label": "Columns",
       "type": "select",
       "options": [
-        { "label": "2 Columns", "value": "2" },
-        { "label": "3 Columns", "value": "3" },
-        { "label": "4 Columns", "value": "4" }
+        {
+          "label": "2 Columns",
+          "value": "2"
+        },
+        {
+          "label": "3 Columns",
+          "value": "3"
+        },
+        {
+          "label": "4 Columns",
+          "value": "4"
+        }
       ],
-      "default": "3"
+      "default": "3",
+      "key": "columns"
     },
     {
-      "name": "products",
       "label": "Products",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "image",
           "label": "Product Image",
           "type": "image",
-          "required": true
+          "required": true,
+          "key": "image"
         },
         {
-          "name": "name",
           "label": "Product Name",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "name"
         },
         {
-          "name": "category",
           "label": "Category",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "category"
         },
         {
-          "name": "price",
           "label": "Price",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "price"
         },
         {
-          "name": "original_price",
           "label": "Original Price (strikethrough)",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "original_price"
         },
         {
-          "name": "button_text",
           "label": "Button Text",
           "type": "text",
-          "default": "Buy Now"
+          "default": "Buy Now",
+          "key": "button_text"
         },
         {
-          "name": "button_url",
           "label": "Button URL",
           "type": "text",
-          "required": true
+          "required": true,
+          "key": "button_url"
         }
-      ]
+      ],
+      "key": "products"
     }
   ],
   "test_data": {

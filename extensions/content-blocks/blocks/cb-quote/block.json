@@ -5,39 +5,48 @@
   "description": "An elegant blockquote block for highlighting customer quotes, expert opinions, or notable excerpts. Displays a styled quotation with attribution and optional avatar. Use for pull quotes, endorsements, or key statements. Layout: large quote text with decorative left border or quotation marks, author info with circular avatar.",
   "field_schema": [
     {
-      "name": "quote",
       "label": "Quote",
       "type": "textarea",
-      "required": true
+      "required": true,
+      "key": "quote"
     },
     {
-      "name": "author_name",
       "label": "Author Name",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "author_name"
     },
     {
-      "name": "author_role",
       "label": "Author Role",
       "type": "text",
-      "required": false
+      "required": false,
+      "key": "author_role"
     },
     {
-      "name": "avatar",
       "label": "Avatar",
       "type": "image",
-      "required": false
+      "required": false,
+      "key": "avatar"
     },
     {
-      "name": "style",
       "label": "Style",
       "type": "select",
       "options": [
-        { "label": "Bordered", "value": "bordered" },
-        { "label": "Quote Marks", "value": "marks" },
-        { "label": "Minimal", "value": "minimal" }
+        {
+          "label": "Bordered",
+          "value": "bordered"
+        },
+        {
+          "label": "Quote Marks",
+          "value": "marks"
+        },
+        {
+          "label": "Minimal",
+          "value": "minimal"
+        }
       ],
-      "default": "bordered"
+      "default": "bordered",
+      "key": "style"
     }
   ],
   "test_data": {

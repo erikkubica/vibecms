@@ -5,51 +5,57 @@
   "description": "An image and content carousel with navigation arrows and dot indicators. Each slide has image, heading, description, and optional CTA link. Use for hero rotators, feature showcases, announcement banners. Layout: full-width slides with overlaid text, arrow navigation, dot pagination, auto-advance with pause on hover.",
   "field_schema": [
     {
-      "name": "slides",
       "label": "Slides",
       "type": "repeater",
       "sub_fields": [
         {
-          "name": "image",
           "label": "Background Image",
           "type": "image",
-          "required": true
+          "required": true,
+          "key": "image"
         },
         {
-          "name": "heading",
           "label": "Heading",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "heading"
         },
         {
-          "name": "description",
           "label": "Description",
           "type": "textarea",
-          "required": false
+          "required": false,
+          "key": "description"
         },
         {
-          "name": "button_text",
           "label": "Button Text",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "button_text"
         },
         {
-          "name": "button_url",
           "label": "Button URL",
           "type": "text",
-          "required": false
+          "required": false,
+          "key": "button_url"
         }
-      ]
+      ],
+      "key": "slides"
     },
     {
-      "name": "autoplay",
       "label": "Autoplay",
       "type": "select",
       "options": [
-        { "label": "Yes", "value": "true" },
-        { "label": "No", "value": "false" }
+        {
+          "label": "Yes",
+          "value": "true"
+        },
+        {
+          "label": "No",
+          "value": "false"
+        }
       ],
-      "default": "true"
+      "default": "true",
+      "key": "autoplay"
     }
   ],
   "test_data": {

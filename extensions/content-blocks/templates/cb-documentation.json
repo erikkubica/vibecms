@@ -18,7 +18,7 @@
         "heading": "Search the Docs",
         "placeholder": "Search for guides, API references, tutorials...",
         "node_type": "doc",
-        "results_limit": 10,
+        "results_limit": "10",
         "style": "large"
       }
     },
@@ -70,12 +70,12 @@
           },
           {
             "label": "Tasks",
-            "content": "<h3>Managing Tasks</h3><p>Tasks are the atomic unit of work in FlowBoard. Each task belongs to a project and moves through your workflow stages.</p><h4>Task Fields</h4><ul><li><strong>Title</strong> — A clear, actionable description</li><li><strong>Assignee</strong> — Who's responsible for this task</li><li><strong>Priority</strong> — Critical, High, Medium, Low</li><li><strong>Labels</strong> — Custom tags for filtering and grouping</li><li><strong>Due Date</strong> — Deadline with optional time</li><li><strong>Story Points</strong> — Effort estimation for sprint planning</li></ul><h4>Subtasks & Checklists</h4><p>Break down complex tasks into subtasks (which appear on the board) or checklists (which live inside the task detail view).</p>",
+            "content": "<h3>Managing Tasks</h3><p>Tasks are the atomic unit of work in FlowBoard. Each task belongs to a project and moves through your workflow stages.</p><h4>Task Fields</h4><ul><li><strong>Title</strong> \u2014 A clear, actionable description</li><li><strong>Assignee</strong> \u2014 Who's responsible for this task</li><li><strong>Priority</strong> \u2014 Critical, High, Medium, Low</li><li><strong>Labels</strong> \u2014 Custom tags for filtering and grouping</li><li><strong>Due Date</strong> \u2014 Deadline with optional time</li><li><strong>Story Points</strong> \u2014 Effort estimation for sprint planning</li></ul><h4>Subtasks & Checklists</h4><p>Break down complex tasks into subtasks (which appear on the board) or checklists (which live inside the task detail view).</p>",
             "icon": "check-square"
           },
           {
             "label": "Automations",
-            "content": "<h3>Automation Rules</h3><p>Automations eliminate repetitive work by executing actions when specific conditions are met.</p><h4>Anatomy of a Rule</h4><p>Every automation has three parts:</p><ol><li><strong>Trigger</strong> — The event that starts the rule (e.g., task moved to Review)</li><li><strong>Condition</strong> — Optional filter (e.g., only if priority is Critical)</li><li><strong>Action</strong> — What happens (e.g., assign to QA lead, post to Slack)</li></ol><h4>Common Recipes</h4><ul><li>Auto-assign tasks based on label</li><li>Send Slack notification when a blocker is created</li><li>Move task to Done when all subtasks complete</li><li>Set due date to 5 business days after creation</li></ul>",
+            "content": "<h3>Automation Rules</h3><p>Automations eliminate repetitive work by executing actions when specific conditions are met.</p><h4>Anatomy of a Rule</h4><p>Every automation has three parts:</p><ol><li><strong>Trigger</strong> \u2014 The event that starts the rule (e.g., task moved to Review)</li><li><strong>Condition</strong> \u2014 Optional filter (e.g., only if priority is Critical)</li><li><strong>Action</strong> \u2014 What happens (e.g., assign to QA lead, post to Slack)</li></ol><h4>Common Recipes</h4><ul><li>Auto-assign tasks based on label</li><li>Send Slack notification when a blocker is created</li><li>Move task to Done when all subtasks complete</li><li>Set due date to 5 business days after creation</li></ul>",
             "icon": "cpu"
           }
         ],
@@ -98,12 +98,12 @@
         "items": [
           {
             "title": "How do I reset my API key?",
-            "content": "<p>Go to <strong>Settings → API Keys</strong> and click <strong>Regenerate</strong> next to the key you want to reset. Note that this immediately invalidates the old key — update your integrations before regenerating.</p>",
+            "content": "<p>Go to <strong>Settings \u2192 API Keys</strong> and click <strong>Regenerate</strong> next to the key you want to reset. Note that this immediately invalidates the old key \u2014 update your integrations before regenerating.</p>",
             "is_open": false
           },
           {
             "title": "Can I import data from Jira?",
-            "content": "<p>Yes. Use our built-in migration tool at <strong>Settings → Import</strong>. We support Jira Cloud and Jira Server (7.x+). The migration preserves projects, tasks, comments, attachments, and custom fields. Typical migration takes 5-15 minutes depending on volume.</p>",
+            "content": "<p>Yes. Use our built-in migration tool at <strong>Settings \u2192 Import</strong>. We support Jira Cloud and Jira Server (7.x+). The migration preserves projects, tasks, comments, attachments, and custom fields. Typical migration takes 5-15 minutes depending on volume.</p>",
             "is_open": false
           },
           {
@@ -113,12 +113,12 @@
           },
           {
             "title": "How do webhooks work?",
-            "content": "<p>Webhooks send real-time HTTP POST notifications to your endpoint when events occur in FlowBoard. Supported events include task creation, status changes, comments, and sprint completions. Configure webhooks at <strong>Settings → Webhooks</strong>. Each webhook includes an HMAC signature for verification.</p>",
+            "content": "<p>Webhooks send real-time HTTP POST notifications to your endpoint when events occur in FlowBoard. Supported events include task creation, status changes, comments, and sprint completions. Configure webhooks at <strong>Settings \u2192 Webhooks</strong>. Each webhook includes an HMAC signature for verification.</p>",
             "is_open": false
           },
           {
             "title": "Is there a sandbox environment?",
-            "content": "<p>Yes. Every account includes a free sandbox workspace that mirrors your production setup. Use it for testing integrations, automation rules, and API calls without affecting live data. Access it at <strong>Settings → Sandbox</strong>.</p>",
+            "content": "<p>Yes. Every account includes a free sandbox workspace that mirrors your production setup. Use it for testing integrations, automation rules, and API calls without affecting live data. Access it at <strong>Settings \u2192 Sandbox</strong>.</p>",
             "is_open": false
           }
         ]
@@ -139,14 +139,14 @@
       "fields": {
         "heading": "Related Resources",
         "node_type": "doc",
-        "count": 4,
+        "count": "4",
         "show_image": true
       }
     },
     {
       "type": "cb-alert",
       "fields": {
-        "message": "Need help? Our support team is available Monday – Friday, 9 AM – 6 PM PST. Average response time: under 2 hours.",
+        "message": "Need help? Our support team is available Monday \u2013 Friday, 9 AM \u2013 6 PM PST. Average response time: under 2 hours.",
         "type": "info",
         "dismissible": false,
         "icon": "headphones",

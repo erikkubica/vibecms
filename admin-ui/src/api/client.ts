@@ -424,6 +424,18 @@ export async function reattachBlockType(id: number | string): Promise<BlockType>
   return res.data;
 }
 
+export async function getSiteSettings(): Promise<Record<string, string>> {
+  const res = await api<ApiResponse<Record<string, string>>>("/admin/api/settings");
+  return res.data;
+}
+
+export async function updateSiteSettings(settings: Record<string, string>): Promise<void> {
+  await api<ApiResponse<{ message: string }>>("/admin/api/settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
+}
+
 export async function clearCache(): Promise<{ message: string }> {
   const res = await api<ApiResponse<{ message: string }>>("/admin/api/cache/clear", {
     method: "POST",

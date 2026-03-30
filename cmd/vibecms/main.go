@@ -109,6 +109,7 @@ func main() {
 	menuHandler := cms.NewMenuHandler(menuSvc)
 	healthHandler := api.NewHealthHandler(database)
 	roleHandler := rbac.NewRoleHandler(database)
+	settingsHandler := cms.NewSettingsHandler(database, eventBus)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, eventBus)
 
 	// Theme loading.
@@ -172,6 +173,7 @@ func main() {
 	layoutBlockHandler.RegisterRoutes(adminAPI)
 	menuHandler.RegisterRoutes(adminAPI)
 	roleHandler.RegisterRoutes(adminAPI)
+	settingsHandler.RegisterRoutes(adminAPI)
 	cacheHandler := cms.NewCacheHandler(publicHandler)
 	cacheHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)

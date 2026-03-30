@@ -27,6 +27,7 @@ import ThemesPage from "@/pages/themes";
 import ThemeFilesPage from "@/pages/theme-files";
 import ExtensionsPage from "@/pages/extensions";
 import ExtensionFilesPage from "@/pages/extension-files";
+import SiteSettingsPage from "@/pages/site-settings";
 import { AdminLanguageProvider } from "@/hooks/use-admin-language";
 import { ExtensionsProvider } from "@/hooks/use-extensions";
 import { ExtensionPageLoader } from "@/components/extension-page-loader";
@@ -148,6 +149,7 @@ function AppRoutes() {
         <Route path="menus" element={<MenusListPage />} />
         <Route path="menus/new" element={<MenuEditorPage />} />
         <Route path="menus/:id" element={<MenuEditorPage />} />
+        <Route path="settings/site" element={<SiteSettingsPage />} />
         <Route path="languages" element={<LanguagesPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/new" element={<UserEditorPage />} />

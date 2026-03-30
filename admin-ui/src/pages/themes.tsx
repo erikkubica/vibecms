@@ -8,7 +8,6 @@ import {
   Trash2,
   Check,
   Package,
-  ExternalLink,
   Loader2,
   Settings,
   FolderOpen,
@@ -16,7 +15,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -263,170 +261,139 @@ export default function ThemesPage() {
           {themes.map((theme) => (
             <Card
               key={theme.id}
-              className={`rounded-xl shadow-sm overflow-hidden transition-all ${
+              className={`group rounded-xl overflow-hidden transition-all duration-200 ${
                 theme.is_active
-                  ? "border-2 border-indigo-500 ring-2 ring-indigo-500/20"
-                  : "border border-slate-200 hover:border-slate-300"
+                  ? "border-2 border-indigo-500/70 shadow-md shadow-indigo-500/5"
+                  : "border border-slate-200/80 shadow-sm hover:shadow-md hover:border-slate-300"
               }`}
             >
-              {/* Card header */}
-              <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Palette className="h-4 w-4 text-indigo-400 shrink-0" />
-                  <span className="text-xs font-medium text-slate-500 truncate">
-                    {theme.source === "git" ? "Git Theme" : "Uploaded Theme"}
-                  </span>
-                </div>
-                {theme.is_active ? (
-                  <Badge className="bg-emerald-500 text-white hover:bg-emerald-500 border-0 text-xs shadow-sm">
-                    <Check className="mr-1 h-3 w-3" />
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge className="bg-slate-400 text-white hover:bg-slate-400 border-0 text-xs">
-                    Inactive
-                  </Badge>
-                )}
-              </div>
-
-              {/* Thumbnail area */}
-              <div className="relative h-36 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-3 rounded-lg overflow-hidden">
+              {/* Preview area — fixed aspect with graceful fallback */}
+              <div className="relative bg-slate-100 overflow-hidden">
                 <img
                   src={theme.thumbnail || `/admin/api/themes/${theme.id}/preview`}
                   alt={theme.name}
-                  className="h-full w-full object-cover"
+                  className="w-full h-auto block"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
+                {/* Status + source overlays */}
+                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                  {theme.source === "git" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/50 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                      <GitBranch className="h-2.5 w-2.5" />
+                      Git
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/50 px-2 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                      <Upload className="h-2.5 w-2.5" />
+                      Upload
+                    </span>
+                  )}
+                </div>
+                <div className="absolute top-2.5 right-2.5">
+                  {theme.is_active ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm">
+                      <Check className="h-3 w-3" />
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-slate-900/50 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur-sm">
+                      Inactive
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <CardContent className="p-4 space-y-3">
-                {/* Name & version */}
-                <div className="flex items-start justify-between gap-2">
+              {/* Content */}
+              <div className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">
-                      {theme.name}
-                    </h3>
-                    {theme.author && (
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        by {theme.author}
-                      </p>
-                    )}
+                    <h3 className="font-semibold text-[15px] text-slate-900 truncate leading-tight">{theme.name}</h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {theme.author ? `by ${theme.author}` : theme.slug}
+                    </p>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="shrink-0 text-xs font-mono"
-                  >
-                    v{theme.version}
-                  </Badge>
+                  <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-500 tracking-wide">
+                    {theme.version}
+                  </span>
                 </div>
 
-                {/* Description */}
                 {theme.description && (
-                  <p className="text-xs text-slate-500 line-clamp-2">
-                    {theme.description}
-                  </p>
+                  <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-2">{theme.description}</p>
                 )}
 
-                {/* Source badge */}
-                <div className="flex items-center gap-2">
-                  {theme.source === "git" ? (
-                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-xs">
-                      <GitBranch className="mr-1 h-3 w-3" />
-                      Git
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-0 text-xs">
-                      <Upload className="mr-1 h-3 w-3" />
-                      Upload
-                    </Badge>
-                  )}
-                  {theme.source === "git" && theme.git_url && (
-                    <a
-                      href={theme.git_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-slate-400 hover:text-slate-600"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  )}
-                </div>
-
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 pt-2">
                   <Button
                     size="sm"
-                    variant={theme.is_active ? "outline" : "default"}
-                    className={
+                    className={`text-xs h-8 rounded-lg flex-1 ${
                       theme.is_active
-                        ? "text-xs"
-                        : "text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-                    }
+                        ? "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-none"
+                        : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                    }`}
                     disabled={togglingId === theme.id}
                     onClick={() => handleToggleActive(theme)}
                   >
                     {togglingId === theme.id ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                     ) : theme.is_active ? null : (
-                      <Check className="mr-1 h-3 w-3" />
+                      <Check className="mr-1.5 h-3 w-3" />
                     )}
                     {theme.is_active ? "Deactivate" : "Activate"}
                   </Button>
 
                   {theme.source === "git" && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs"
-                        disabled={pullingId === theme.id}
-                        onClick={() => handlePull(theme)}
-                      >
-                        {pullingId === theme.id ? (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                        ) : (
-                          <RefreshCw className="mr-1 h-3 w-3" />
-                        )}
-                        Pull
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs text-slate-500"
-                        onClick={() => openGitConfig(theme)}
-                      >
-                        <Settings className="h-3 w-3" />
-                      </Button>
-                    </>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-8 rounded-lg border-slate-200"
+                      disabled={pullingId === theme.id}
+                      onClick={() => handlePull(theme)}
+                    >
+                      {pullingId === theme.id ? (
+                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-1.5 h-3 w-3" />
+                      )}
+                      Pull
+                    </Button>
                   )}
 
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs"
+                    className="text-xs h-8 rounded-lg border-slate-200"
                     onClick={() => navigate(`/admin/themes/${theme.id}/files`)}
                   >
-                    <FolderOpen className="mr-1 h-3 w-3" />
+                    <FolderOpen className="mr-1.5 h-3 w-3" />
                     Files
                   </Button>
+
+                  {theme.source === "git" && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 rounded-lg"
+                      onClick={() => openGitConfig(theme)}
+                      title="Git settings"
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
 
                   <div className="flex-1" />
 
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                    className="h-8 w-8 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
                     disabled={theme.is_active}
                     onClick={() => setDeleteTarget(theme)}
-                    title={
-                      theme.is_active
-                        ? "Deactivate theme before deleting"
-                        : "Delete theme"
-                    }
+                    title={theme.is_active ? "Deactivate theme before deleting" : "Delete theme"}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>

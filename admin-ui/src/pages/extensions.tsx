@@ -7,14 +7,12 @@ import {
   Power,
   PowerOff,
   Loader2,
-  Package,
   Trash2,
   FolderOpen,
   Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -169,114 +167,96 @@ export default function ExtensionsPage() {
           {extensions.map((ext) => (
             <Card
               key={ext.slug}
-              className={`rounded-xl shadow-sm overflow-hidden transition-all ${
+              className={`group rounded-xl overflow-hidden transition-all duration-200 ${
                 ext.is_active
-                  ? "border-2 border-emerald-500 ring-2 ring-emerald-500/20"
-                  : "border border-slate-200 hover:border-slate-300"
+                  ? "border-2 border-emerald-500/70 shadow-md shadow-emerald-500/5"
+                  : "border border-slate-200/80 shadow-sm hover:shadow-md hover:border-slate-300"
               }`}
             >
-              {/* Card header */}
-              <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Puzzle className="h-4 w-4 text-emerald-400 shrink-0" />
-                  <span className="text-xs font-medium text-slate-500 truncate">
-                    {ext.priority !== 50 ? `Extension \u00b7 Priority ${ext.priority}` : "Extension"}
-                  </span>
-                </div>
-                {ext.is_active ? (
-                  <Badge className="bg-emerald-500 text-white hover:bg-emerald-500 border-0 text-xs shadow-sm">
-                    <Check className="mr-1 h-3 w-3" />
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge className="bg-slate-400 text-white hover:bg-slate-400 border-0 text-xs">
-                    Inactive
-                  </Badge>
-                )}
-              </div>
-
-              <div className="relative h-28 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-3 rounded-lg overflow-hidden">
+              {/* Preview area — fixed aspect with graceful fallback */}
+              <div className="relative bg-slate-100 overflow-hidden">
                 <img
                   src={`/admin/api/extensions/${ext.slug}/preview`}
                   alt={ext.name}
-                  className="h-full w-full object-cover"
+                  className="w-full h-auto block"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
+                {/* Status overlay */}
+                <div className="absolute top-2.5 right-2.5">
+                  {ext.is_active ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm">
+                      <Check className="h-3 w-3" />
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-slate-900/50 px-2.5 py-1 text-[11px] font-medium text-white/80 backdrop-blur-sm">
+                      Inactive
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
+              {/* Content */}
+              <div className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate">{ext.name}</h3>
-                    {ext.author && (
-                      <p className="text-xs text-slate-500 mt-0.5">by {ext.author}</p>
-                    )}
+                    <h3 className="font-semibold text-[15px] text-slate-900 truncate leading-tight">{ext.name}</h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {ext.author ? `by ${ext.author}` : ext.slug}
+                      {ext.priority !== 50 && ` · Priority ${ext.priority}`}
+                    </p>
                   </div>
-                  <Badge variant="outline" className="shrink-0 text-xs font-mono">
-                    v{ext.version}
-                  </Badge>
+                  <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-500 tracking-wide">
+                    {ext.version}
+                  </span>
                 </div>
 
                 {ext.description && (
-                  <p className="text-xs text-slate-500 line-clamp-2">{ext.description}</p>
+                  <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-2">{ext.description}</p>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-0 text-xs font-mono">
-                    <Package className="mr-1 h-3 w-3" />
-                    {ext.slug}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 pt-2">
                   <Button
                     size="sm"
-                    variant={ext.is_active ? "outline" : "default"}
-                    className={
+                    className={`text-xs h-8 rounded-lg flex-1 ${
                       ext.is_active
-                        ? "text-xs"
-                        : "text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                    }
+                        ? "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-none"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                    }`}
                     disabled={togglingSlug === ext.slug}
                     onClick={() => handleToggle(ext)}
                   >
                     {togglingSlug === ext.slug ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                     ) : ext.is_active ? (
-                      <PowerOff className="mr-1 h-3 w-3" />
+                      <PowerOff className="mr-1.5 h-3 w-3" />
                     ) : (
-                      <Power className="mr-1 h-3 w-3" />
+                      <Power className="mr-1.5 h-3 w-3" />
                     )}
                     {ext.is_active ? "Deactivate" : "Activate"}
                   </Button>
-
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs"
+                    className="text-xs h-8 rounded-lg border-slate-200"
                     onClick={() => navigate(`/admin/extensions/${ext.slug}/files`)}
                   >
-                    <FolderOpen className="mr-1 h-3 w-3" />
+                    <FolderOpen className="mr-1.5 h-3 w-3" />
                     Files
                   </Button>
-
-                  <div className="flex-1" />
-
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                    className="h-8 w-8 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
                     disabled={ext.is_active}
                     onClick={() => setDeleteTarget(ext)}
-                    title={
-                      ext.is_active
-                        ? "Deactivate extension before deleting"
-                        : "Delete extension"
-                    }
+                    title={ext.is_active ? "Deactivate extension before deleting" : "Delete extension"}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>

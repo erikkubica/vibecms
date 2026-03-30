@@ -28,19 +28,27 @@ func NewLayoutBlockService(db *gorm.DB, eventBus *events.EventBus, themeAssets *
 }
 
 // List retrieves layout blocks with optional filters for language_id and source.
-func (s *LayoutBlockService) List(languageID *int, source string) ([]models.LayoutBlock, error) {
+// Supports pagination via page and perPage parameters.
+func (s *LayoutBlockService) List(languageID *int, source string, page, perPage int) ([]models.LayoutBlock, int64, error) {
 	var blocks []models.LayoutBlock
-	q := s.db.Order("name ASC")
+	q := s.db.Model(&models.LayoutBlock{})
 	if languageID != nil {
 		q = q.Where("language_id = ?", *languageID)
 	}
 	if source != "" {
 		q = q.Where("source = ?", source)
 	}
-	if err := q.Find(&blocks).Error; err != nil {
-		return nil, fmt.Errorf("failed to list layout blocks: %w", err)
+
+	var total int64
+	q.Count(&total)
+
+	if err := q.Select("id, slug, name, description, language_id, source, theme_name, created_at, updated_at").
+		Order("name ASC").
+		Offset((page - 1) * perPage).Limit(perPage).
+		Find(&blocks).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to list layout blocks: %w", err)
 	}
-	return blocks, nil
+	return blocks, total, nil
 }
 
 // GetByID retrieves a single layout block by its ID.

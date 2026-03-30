@@ -30,14 +30,23 @@ func (h *NodeTypeHandler) RegisterRoutes(router fiber.Router) {
 	router.Delete("/node-types/:id", h.Delete)
 }
 
-// List handles GET /node-types to retrieve all node types.
+// List handles GET /node-types to retrieve paginated node types.
 func (h *NodeTypeHandler) List(c *fiber.Ctx) error {
-	nodeTypes, err := h.svc.List()
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 50
+	}
+
+	nodeTypes, total, err := h.svc.List(page, perPage)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list node types")
 	}
 
-	return api.Success(c, nodeTypes)
+	return api.Paginated(c, nodeTypes, total, page, perPage)
 }
 
 // Get handles GET /node-types/:id to retrieve a single node type.

@@ -35,14 +35,23 @@ func (h *BlockTypeHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/block-types/:id/reattach", h.Reattach)
 }
 
-// List handles GET /block-types to retrieve all block types.
+// List handles GET /block-types to retrieve paginated block types.
 func (h *BlockTypeHandler) List(c *fiber.Ctx) error {
-	blockTypes, err := h.svc.List()
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 50
+	}
+
+	blockTypes, total, err := h.svc.List(page, perPage)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list block types")
 	}
 
-	return api.Success(c, blockTypes)
+	return api.Paginated(c, blockTypes, total, page, perPage)
 }
 
 // Get handles GET /block-types/:id to retrieve a single block type.

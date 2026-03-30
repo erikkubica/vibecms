@@ -32,7 +32,7 @@ func (h *LayoutBlockHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/layout-blocks/:id/reattach", h.Reattach)
 }
 
-// List handles GET /layout-blocks to retrieve all layout blocks with optional filters.
+// List handles GET /layout-blocks to retrieve all layout blocks with optional filters and pagination.
 func (h *LayoutBlockHandler) List(c *fiber.Ctx) error {
 	var languageID *int
 	if langIDStr := c.Query("language_id"); langIDStr != "" {
@@ -44,12 +44,21 @@ func (h *LayoutBlockHandler) List(c *fiber.Ctx) error {
 	}
 	source := c.Query("source")
 
-	blocks, err := h.svc.List(languageID, source)
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 50
+	}
+
+	blocks, total, err := h.svc.List(languageID, source, page, perPage)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list layout blocks")
 	}
 
-	return api.Success(c, blocks)
+	return api.Paginated(c, blocks, total, page, perPage)
 }
 
 // Get handles GET /layout-blocks/:id to retrieve a single layout block.

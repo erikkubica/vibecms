@@ -20,8 +20,27 @@ func NewNodeTypeService(db *gorm.DB) *NodeTypeService {
 	return &NodeTypeService{db: db}
 }
 
-// List retrieves all node types ordered by label.
-func (s *NodeTypeService) List() ([]models.NodeType, error) {
+// List retrieves a paginated list of node types ordered by label.
+func (s *NodeTypeService) List(page, perPage int) ([]models.NodeType, int64, error) {
+	var total int64
+	if err := s.db.Model(&models.NodeType{}).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("counting node types: %w", err)
+	}
+
+	var nodeTypes []models.NodeType
+	err := s.db.
+		Order("label ASC").
+		Offset((page - 1) * perPage).
+		Limit(perPage).
+		Find(&nodeTypes).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing node types: %w", err)
+	}
+	return nodeTypes, total, nil
+}
+
+// ListAll retrieves all node types ordered by label (for internal use).
+func (s *NodeTypeService) ListAll() ([]models.NodeType, error) {
 	var nodeTypes []models.NodeType
 	if err := s.db.Order("label ASC").Find(&nodeTypes).Error; err != nil {
 		return nil, fmt.Errorf("listing node types: %w", err)

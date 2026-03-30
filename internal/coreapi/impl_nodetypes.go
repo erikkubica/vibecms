@@ -56,7 +56,7 @@ func (c *coreImpl) GetNodeType(_ context.Context, slug string) (*NodeType, error
 }
 
 func (c *coreImpl) ListNodeTypes(_ context.Context) ([]*NodeType, error) {
-	list, err := c.nodeTypeSvc.List()
+	list, err := c.nodeTypeSvc.ListAll()
 	if err != nil {
 		return nil, NewInternal(err.Error())
 	}

@@ -28,19 +28,27 @@ func NewLayoutService(db *gorm.DB, eventBus *events.EventBus, themeAssets *Theme
 }
 
 // List retrieves layouts with optional filters for language_id and source.
-func (s *LayoutService) List(languageID *int, source string) ([]models.Layout, error) {
+// Supports pagination via page and perPage parameters.
+func (s *LayoutService) List(languageID *int, source string, page, perPage int) ([]models.Layout, int64, error) {
 	var layouts []models.Layout
-	q := s.db.Order("name ASC")
+	q := s.db.Model(&models.Layout{})
 	if languageID != nil {
 		q = q.Where("language_id = ?", *languageID)
 	}
 	if source != "" {
 		q = q.Where("source = ?", source)
 	}
-	if err := q.Find(&layouts).Error; err != nil {
-		return nil, fmt.Errorf("failed to list layouts: %w", err)
+
+	var total int64
+	q.Count(&total)
+
+	if err := q.Select("id, slug, name, description, language_id, is_default, source, theme_name, created_at, updated_at").
+		Order("name ASC").
+		Offset((page - 1) * perPage).Limit(perPage).
+		Find(&layouts).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to list layouts: %w", err)
 	}
-	return layouts, nil
+	return layouts, total, nil
 }
 
 // GetByID retrieves a single layout by its ID.

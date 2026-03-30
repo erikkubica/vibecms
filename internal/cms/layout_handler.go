@@ -32,7 +32,7 @@ func (h *LayoutHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/layouts/:id/reattach", h.Reattach)
 }
 
-// List handles GET /layouts to retrieve all layouts with optional filters.
+// List handles GET /layouts to retrieve all layouts with optional filters and pagination.
 func (h *LayoutHandler) List(c *fiber.Ctx) error {
 	var languageID *int
 	if langIDStr := c.Query("language_id"); langIDStr != "" {
@@ -44,12 +44,21 @@ func (h *LayoutHandler) List(c *fiber.Ctx) error {
 	}
 	source := c.Query("source")
 
-	layouts, err := h.svc.List(languageID, source)
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 50
+	}
+
+	layouts, total, err := h.svc.List(languageID, source, page, perPage)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list layouts")
 	}
 
-	return api.Success(c, layouts)
+	return api.Paginated(c, layouts, total, page, perPage)
 }
 
 // Get handles GET /layouts/:id to retrieve a single layout.

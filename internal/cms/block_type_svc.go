@@ -25,8 +25,29 @@ func NewBlockTypeService(db *gorm.DB, eventBus *events.EventBus, themeAssets *Th
 	return &BlockTypeService{db: db, eventBus: eventBus, themeAssets: themeAssets}
 }
 
-// List retrieves all block types ordered by label.
-func (s *BlockTypeService) List() ([]models.BlockType, error) {
+// List retrieves a paginated list of block types ordered by label,
+// excluding heavy fields (html_template, block_css, block_js).
+func (s *BlockTypeService) List(page, perPage int) ([]models.BlockType, int64, error) {
+	var total int64
+	if err := s.db.Model(&models.BlockType{}).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("counting block types: %w", err)
+	}
+
+	var blockTypes []models.BlockType
+	err := s.db.
+		Select("id, slug, label, icon, description, field_schema, source, theme_name, view_file, test_data, created_at, updated_at").
+		Order("label ASC").
+		Offset((page - 1) * perPage).
+		Limit(perPage).
+		Find(&blockTypes).Error
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing block types: %w", err)
+	}
+	return blockTypes, total, nil
+}
+
+// ListAll retrieves all block types ordered by label (for internal use).
+func (s *BlockTypeService) ListAll() ([]models.BlockType, error) {
 	var blockTypes []models.BlockType
 	if err := s.db.Order("label ASC").Find(&blockTypes).Error; err != nil {
 		return nil, fmt.Errorf("listing block types: %w", err)

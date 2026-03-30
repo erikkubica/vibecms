@@ -25,7 +25,7 @@
         "columns": "3",
         "features": [
           {
-            "icon": "⚡",
+            "icon": "zap",
             "title": "Instant Setup",
             "description": "Import your existing projects from Jira, Asana, or Trello in under 5 minutes with our migration wizard.",
             "category": "",
@@ -33,7 +33,7 @@
             "link_url": ""
           },
           {
-            "icon": "📚",
+            "icon": "layers",
             "title": "Flexible Views",
             "description": "Kanban, Gantt, timeline, list, or calendar — switch views instantly without losing context or filters.",
             "category": "",
@@ -41,7 +41,7 @@
             "link_url": ""
           },
           {
-            "icon": "⚙️",
+            "icon": "settings",
             "title": "AI Automation",
             "description": "Smart task routing, deadline prediction, and workload balancing powered by machine learning.",
             "category": "",
@@ -49,7 +49,7 @@
             "link_url": ""
           },
           {
-            "icon": "🔒",
+            "icon": "lock",
             "title": "Enterprise Security",
             "description": "SOC 2 Type II certified with SSO, SCIM provisioning, and granular role-based access controls.",
             "category": "",
@@ -57,7 +57,7 @@
             "link_url": ""
           },
           {
-            "icon": "🔌",
+            "icon": "plug",
             "title": "200+ Integrations",
             "description": "Connect with Slack, GitHub, Figma, Salesforce, and hundreds more through our native integration marketplace.",
             "category": "",
@@ -65,7 +65,7 @@
             "link_url": ""
           },
           {
-            "icon": "📊",
+            "icon": "bar-chart",
             "title": "Real-Time Analytics",
             "description": "Custom dashboards with velocity charts, burndown reports, and team health metrics updated in real time.",
             "category": "",
@@ -88,12 +88,12 @@
           {
             "label": "Specifications",
             "content": "<h3>Technical Specifications</h3><table><tr><td><strong>Deployment</strong></td><td>Cloud (SaaS) or Self-hosted (Docker/Kubernetes)</td></tr><tr><td><strong>API</strong></td><td>REST and GraphQL with webhook support</td></tr><tr><td><strong>SSO</strong></td><td>SAML 2.0, OIDC, Google, Microsoft, Okta</td></tr><tr><td><strong>Data Residency</strong></td><td>US, EU, APAC regions available</td></tr><tr><td><strong>Uptime SLA</strong></td><td>99.99% for Enterprise plans</td></tr><tr><td><strong>Storage</strong></td><td>Unlimited file storage (Enterprise), 100GB (Pro)</td></tr><tr><td><strong>Users</strong></td><td>Unlimited (Enterprise), up to 500 (Pro)</td></tr><tr><td><strong>Audit Log</strong></td><td>Full activity log with 2-year retention</td></tr></table>",
-            "icon": "⚙️"
+            "icon": "settings"
           },
           {
             "label": "Reviews",
             "content": "<h3>Customer Reviews</h3><p><strong>4.8 out of 5</strong> based on 2,340 reviews on G2</p><blockquote>\"FlowBoard Pro replaced three separate tools for us. Our team velocity increased 35% in the first quarter.\" — Director of Engineering, Series C Fintech</blockquote><blockquote>\"The AI automation features alone save our PMs about 6 hours per week. The ROI was immediate.\" — VP Product, Healthcare SaaS</blockquote><p><a href='/reviews'>Read all customer reviews →</a></p>",
-            "icon": "⭐"
+            "icon": "star"
           }
         ],
         "style": "underline"

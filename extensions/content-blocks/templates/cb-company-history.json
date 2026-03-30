@@ -88,14 +88,14 @@
         "heading": "Apex Digital Today",
         "stats": [
           {
-            "icon": "👥",
+            "icon": "users",
             "number": 200,
             "label": "Team Members",
             "prefix": "",
             "suffix": "+"
           },
           {
-            "icon": "🌍",
+            "icon": "globe",
             "number": 28,
             "label": "Countries",
             "prefix": "",
@@ -109,7 +109,7 @@
             "suffix": ""
           },
           {
-            "icon": "❤️",
+            "icon": "heart",
             "number": 100,
             "label": "Thousands of Users",
             "prefix": "",

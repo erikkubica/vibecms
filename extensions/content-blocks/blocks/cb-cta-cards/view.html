@@ -7,7 +7,7 @@
       {{range .cards}}
       <div class="vb-cta-cards__card">
         {{if .icon}}
-        <span class="vb-cta-cards__icon">{{.icon}}</span>
+        <span class="vb-cta-cards__icon"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>
         {{end}}
         <h3 class="vb-cta-cards__title">{{.title}}</h3>
         {{if .description}}

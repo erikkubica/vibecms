@@ -28,7 +28,7 @@
         "heading": "Quick Start Guides",
         "cards": [
           {
-            "icon": "🚀",
+            "icon": "rocket",
             "title": "Getting Started",
             "description": "Set up your account, create your first project, and invite your team in under 10 minutes.",
             "button": {
@@ -39,7 +39,7 @@
             }
           },
           {
-            "icon": "💻",
+            "icon": "code",
             "title": "API Reference",
             "description": "Complete REST and GraphQL API documentation with examples in cURL, Python, and JavaScript.",
             "button": {
@@ -50,7 +50,7 @@
             }
           },
           {
-            "icon": "🔌",
+            "icon": "plug",
             "title": "Integrations",
             "description": "Connect FlowBoard with your existing tools: Slack, GitHub, Jira, Figma, and 200+ more.",
             "button": {
@@ -61,7 +61,7 @@
             }
           },
           {
-            "icon": "🛡️",
+            "icon": "shield",
             "title": "Security & SSO",
             "description": "Configure SAML SSO, SCIM provisioning, IP allowlists, and audit log exports.",
             "button": {
@@ -82,17 +82,17 @@
           {
             "label": "Projects",
             "content": "<h3>Working with Projects</h3><p>Projects are the top-level container for all your work. Each project has its own board, backlog, timeline, and settings.</p><h4>Creating a Project</h4><ol><li>Click <strong>New Project</strong> from the sidebar</li><li>Choose a template or start from scratch</li><li>Configure your workflow stages (e.g., To Do, In Progress, Review, Done)</li><li>Invite team members and set permissions</li></ol><h4>Project Templates</h4><p>Templates save your workflow configuration, custom fields, and automations so you can reuse them. We provide built-in templates for Scrum, Kanban, Bug Tracking, and Product Launch.</p>",
-            "icon": "📁"
+            "icon": "folder"
           },
           {
             "label": "Tasks",
             "content": "<h3>Managing Tasks</h3><p>Tasks are the atomic unit of work in FlowBoard. Each task belongs to a project and moves through your workflow stages.</p><h4>Task Fields</h4><ul><li><strong>Title</strong> — A clear, actionable description</li><li><strong>Assignee</strong> — Who's responsible for this task</li><li><strong>Priority</strong> — Critical, High, Medium, Low</li><li><strong>Labels</strong> — Custom tags for filtering and grouping</li><li><strong>Due Date</strong> — Deadline with optional time</li><li><strong>Story Points</strong> — Effort estimation for sprint planning</li></ul><h4>Subtasks & Checklists</h4><p>Break down complex tasks into subtasks (which appear on the board) or checklists (which live inside the task detail view).</p>",
-            "icon": "✅"
+            "icon": "check-square"
           },
           {
             "label": "Automations",
             "content": "<h3>Automation Rules</h3><p>Automations eliminate repetitive work by executing actions when specific conditions are met.</p><h4>Anatomy of a Rule</h4><p>Every automation has three parts:</p><ol><li><strong>Trigger</strong> — The event that starts the rule (e.g., task moved to Review)</li><li><strong>Condition</strong> — Optional filter (e.g., only if priority is Critical)</li><li><strong>Action</strong> — What happens (e.g., assign to QA lead, post to Slack)</li></ol><h4>Common Recipes</h4><ul><li>Auto-assign tasks based on label</li><li>Send Slack notification when a blocker is created</li><li>Move task to Done when all subtasks complete</li><li>Set due date to 5 business days after creation</li></ul>",
-            "icon": "⚙️"
+            "icon": "settings"
           }
         ],
         "style": "pills"
@@ -165,7 +165,7 @@
         "message": "Need help? Our support team is available Monday – Friday, 9 AM – 6 PM PST. Average response time: under 2 hours.",
         "type": "info",
         "dismissible": false,
-        "icon": "🎧",
+        "icon": "headphones",
         "link_text": "Contact Support",
         "link_url": "/support"
       }

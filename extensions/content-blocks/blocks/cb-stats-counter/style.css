@@ -28,6 +28,14 @@
   margin-bottom: 0.25rem;
 }
 
+.vb-stats-counter__icon .vb-icon svg,
+.vb-stats-counter__icon [data-lucide] svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+}
+
 .vb-stats-counter__number {
   font-size: 2.75rem;
   font-weight: 800;

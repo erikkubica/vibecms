@@ -9,7 +9,7 @@
     <div class="vb-features-grid__grid vb-features-grid__grid--cols-{{.columns}}">
       {{range .features}}
       <div class="vb-features-grid__card">
-        {{if .icon}}<span class="vb-features-grid__icon">{{.icon}}</span>{{end}}
+        {{if .icon}}<span class="vb-features-grid__icon"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>{{end}}
         {{if .category}}<span class="vb-features-grid__category">{{.category}}</span>{{end}}
         <h3 class="vb-features-grid__title">{{.title}}</h3>
         <p class="vb-features-grid__description">{{.description}}</p>

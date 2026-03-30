@@ -6,7 +6,7 @@
       "type": "cb-heading",
       "fields": {
         "text": "Get in Touch",
-        "subtitle": "Whether you have a question, a project idea, or just want to say hello \u2014 we'd love to hear from you.",
+        "subtitle": "Whether you have a question, a project idea, or just want to say hello — we'd love to hear from you.",
         "level": "h1",
         "alignment": "center",
         "divider": "line"
@@ -20,7 +20,7 @@
         "address": "742 Evergreen Terrace, Suite 400\nPortland, OR 97201\nUnited States",
         "phone": "+1 (503) 555-0142",
         "email": "hello@apexdigital.com",
-        "hours": "Monday \u2013 Friday: 9:00 AM \u2013 6:00 PM PST\nSaturday \u2013 Sunday: Closed",
+        "hours": "Monday – Friday: 9:00 AM – 6:00 PM PST\nSaturday – Sunday: Closed",
         "map_height": "400"
       }
     },
@@ -55,7 +55,7 @@
           },
           {
             "title": "Do you offer free consultations?",
-            "content": "<p>Yes! We offer a free 30-minute discovery call where we learn about your project, discuss feasibility, and provide an initial recommendation \u2014 no strings attached.</p>",
+            "content": "<p>Yes! We offer a free 30-minute discovery call where we learn about your project, discuss feasibility, and provide an initial recommendation — no strings attached.</p>",
             "is_open": false
           },
           {

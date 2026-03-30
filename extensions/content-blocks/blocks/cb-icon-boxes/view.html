@@ -6,7 +6,7 @@
     <div class="vb-icon-boxes__grid vb-icon-boxes__grid--cols-{{.columns}}">
       {{range .items}}
       <div class="vb-icon-boxes__box">
-        <span class="vb-icon-boxes__icon">{{.icon}}</span>
+        <span class="vb-icon-boxes__icon"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>
         <h3 class="vb-icon-boxes__title">{{.title}}</h3>
         {{if .description}}
         <p class="vb-icon-boxes__description">{{.description}}</p>

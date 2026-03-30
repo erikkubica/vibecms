@@ -36,7 +36,7 @@
             "link_url": "/services/digital-strategy"
           },
           {
-            "icon": "💻",
+            "icon": "code",
             "title": "Custom Development",
             "description": "Scalable web and mobile applications built with modern frameworks and cloud-native architecture.",
             "category": "Engineering",
@@ -44,7 +44,7 @@
             "link_url": "/services/development"
           },
           {
-            "icon": "🎨",
+            "icon": "palette",
             "title": "UX & Design",
             "description": "User-centered design that balances aesthetics with usability, backed by research and testing.",
             "category": "Design",
@@ -52,7 +52,7 @@
             "link_url": "/services/design"
           },
           {
-            "icon": "☁️",
+            "icon": "cloud",
             "title": "Cloud Infrastructure",
             "description": "Reliable, secure cloud environments with automated deployments, monitoring, and cost optimization.",
             "category": "Engineering",
@@ -68,7 +68,7 @@
             "link_url": "/services/analytics"
           },
           {
-            "icon": "🛡️",
+            "icon": "shield",
             "title": "Security & Compliance",
             "description": "Protect your digital assets with penetration testing, audit preparation, and ongoing vulnerability management.",
             "category": "Security",
@@ -139,28 +139,28 @@
         "heading": "By the Numbers",
         "stats": [
           {
-            "icon": "💼",
+            "icon": "briefcase",
             "number": 340,
             "label": "Projects Delivered",
             "prefix": "",
             "suffix": "+"
           },
           {
-            "icon": "👥",
+            "icon": "users",
             "number": 98,
             "label": "Client Retention",
             "prefix": "",
             "suffix": "%"
           },
           {
-            "icon": "🕐",
+            "icon": "clock",
             "number": 12,
             "label": "Years in Business",
             "prefix": "",
             "suffix": ""
           },
           {
-            "icon": "🌍",
+            "icon": "globe",
             "number": 28,
             "label": "Countries Served",
             "prefix": "",

@@ -51,7 +51,7 @@
         "columns": "4",
         "features": [
           {
-            "icon": "📐",
+            "icon": "ruler",
             "title": "Flexible Views",
             "description": "Kanban, Gantt, list, calendar — see your work the way you think.",
             "category": "",
@@ -67,7 +67,7 @@
             "link_url": ""
           },
           {
-            "icon": "💬",
+            "icon": "message-circle",
             "title": "In-Context Chat",
             "description": "Discuss tasks, share files, and make decisions without leaving the board.",
             "category": "",
@@ -75,7 +75,7 @@
             "link_url": ""
           },
           {
-            "icon": "⚙️",
+            "icon": "settings",
             "title": "AI Copilot",
             "description": "Smart suggestions for task assignment, deadline estimation, and risk flagging.",
             "category": "",
@@ -106,28 +106,28 @@
         "heading": "Real Results from Real Teams",
         "stats": [
           {
-            "icon": "📈",
+            "icon": "trending-up",
             "number": 35,
             "label": "Faster Delivery",
             "prefix": "",
             "suffix": "%"
           },
           {
-            "icon": "🕐",
+            "icon": "clock",
             "number": 6,
             "label": "Hours Saved per PM per Week",
             "prefix": "",
             "suffix": ""
           },
           {
-            "icon": "👥",
+            "icon": "users",
             "number": 10000,
             "label": "Active Teams",
             "prefix": "",
             "suffix": "+"
           },
           {
-            "icon": "⭐",
+            "icon": "star",
             "number": 4.8,
             "label": "Rating on G2",
             "prefix": "",

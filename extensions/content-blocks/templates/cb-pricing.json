@@ -130,22 +130,22 @@
           },
           {
             "feature": "AI Automation",
-            "col1": "\u2014",
+            "col1": "—",
             "col2": "Yes",
             "col3": "Yes + Custom",
             "col4": ""
           },
           {
             "feature": "Custom Workflows",
-            "col1": "\u2014",
+            "col1": "—",
             "col2": "Yes",
             "col3": "Yes",
             "col4": ""
           },
           {
             "feature": "SSO / SAML",
-            "col1": "\u2014",
-            "col2": "\u2014",
+            "col1": "—",
+            "col2": "—",
             "col3": "Yes",
             "col4": ""
           },
@@ -158,7 +158,7 @@
           },
           {
             "feature": "Uptime SLA",
-            "col1": "\u2014",
+            "col1": "—",
             "col2": "99.9%",
             "col3": "99.99%",
             "col4": ""

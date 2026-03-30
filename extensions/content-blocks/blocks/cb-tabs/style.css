@@ -34,6 +34,14 @@
   font-size: 1.1rem;
 }
 
+.vb-cb-tabs__tab-icon .vb-icon svg,
+.vb-cb-tabs__tab-icon [data-lucide] svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+}
+
 /* Underline style */
 .vb-cb-tabs__nav--underline {
   border-bottom: 2px solid var(--color-border);

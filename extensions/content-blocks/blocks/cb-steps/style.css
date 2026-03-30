@@ -88,6 +88,14 @@
   line-height: 1;
 }
 
+.vb-cb-steps__icon .vb-icon svg,
+.vb-cb-steps__icon [data-lucide] svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+}
+
 /* Content */
 .vb-cb-steps__content {
   padding-top: 1rem;

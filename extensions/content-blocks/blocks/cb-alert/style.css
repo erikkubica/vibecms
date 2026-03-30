@@ -68,6 +68,14 @@
   line-height: 1;
 }
 
+.vb-cb-alert__icon .vb-icon svg,
+.vb-cb-alert__icon [data-lucide] svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+}
+
 .vb-cb-alert__content {
   flex: 1;
   display: flex;

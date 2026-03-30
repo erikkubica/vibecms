@@ -77,14 +77,14 @@
         "heading": "Project Impact",
         "stats": [
           {
-            "icon": "📈",
+            "icon": "trending-up",
             "number": 340,
             "label": "Projects Shipped",
             "prefix": "",
             "suffix": "+"
           },
           {
-            "icon": "🏆",
+            "icon": "award",
             "number": 12,
             "label": "Design Awards",
             "prefix": "",

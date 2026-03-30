@@ -15,7 +15,7 @@
       "type": "repeater",
       "sub_fields": [
         {
-          "label": "Icon / Emoji",
+          "label": "Icon (Lucide icon name, e.g. rocket, shield, code, users)",
           "type": "text",
           "required": false,
           "key": "icon"
@@ -64,28 +64,28 @@
     "style": "light",
     "stats": [
       {
-        "icon": "\ud83d\ude80",
+        "icon": "rocket",
         "number": "150",
         "label": "Projects Launched",
         "prefix": "",
         "suffix": "+"
       },
       {
-        "icon": "\ud83d\udcb0",
+        "icon": "banknote",
         "number": "2.5",
         "label": "Revenue Generated",
         "prefix": "$",
         "suffix": "M"
       },
       {
-        "icon": "\u2b50",
+        "icon": "star",
         "number": "99",
         "label": "Client Satisfaction",
         "prefix": "",
         "suffix": "%"
       },
       {
-        "icon": "\u23f0",
+        "icon": "clock",
         "number": "24",
         "label": "Support Available",
         "prefix": "",

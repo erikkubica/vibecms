@@ -29,7 +29,7 @@
       "key": "dismissible"
     },
     {
-      "label": "Icon (emoji)",
+      "label": "Icon (Lucide icon name, e.g. rocket, shield, code, users)",
       "type": "text",
       "key": "icon"
     },
@@ -48,7 +48,7 @@
     "message": "We're launching a new feature next week! Stay tuned for exciting updates.",
     "type": "info",
     "dismissible": true,
-    "icon": "\ud83c\udf89",
+    "icon": "party-popper",
     "link_text": "Learn more",
     "link_url": "/updates"
   }

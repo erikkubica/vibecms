@@ -26,7 +26,7 @@
           "key": "content"
         },
         {
-          "label": "Icon (emoji or text)",
+          "label": "Icon (Lucide icon name, e.g. rocket, shield, code, users)",
           "type": "text",
           "key": "icon"
         }
@@ -51,17 +51,17 @@
     "tabs": [
       {
         "label": "Description",
-        "icon": "\ud83d\udcdd",
+        "icon": "file-text",
         "content": "<p>Our flagship product combines cutting-edge technology with intuitive design. Built for professionals who demand reliability and performance, it features a <strong>military-grade aluminum chassis</strong> and a stunning 4K display.</p><p>Every detail has been carefully crafted to deliver an exceptional user experience from the moment you open the box.</p>"
       },
       {
         "label": "Specifications",
-        "icon": "\u2699\ufe0f",
+        "icon": "settings",
         "content": "<ul><li><strong>Processor:</strong> 12-core ARM architecture</li><li><strong>Memory:</strong> 32GB unified memory</li><li><strong>Storage:</strong> 1TB NVMe SSD</li><li><strong>Display:</strong> 15.6\" 4K OLED, 120Hz</li><li><strong>Battery:</strong> 100Wh, up to 18 hours</li><li><strong>Weight:</strong> 1.8 kg</li></ul>"
       },
       {
         "label": "Reviews",
-        "icon": "\u2b50",
+        "icon": "star",
         "content": "<p><strong>4.8 out of 5 stars</strong> (2,341 reviews)</p><blockquote>\"Best laptop I've ever owned. The display is incredible and battery life is outstanding.\" \u2014 Sarah K.</blockquote><blockquote>\"Perfect for creative professionals. Handles everything I throw at it.\" \u2014 Marcus T.</blockquote>"
       }
     ]

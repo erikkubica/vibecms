@@ -49,6 +49,14 @@
   margin-bottom: 0.75rem;
 }
 
+.vb-features-grid__icon .vb-icon svg,
+.vb-features-grid__icon [data-lucide] svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+}
+
 .vb-features-grid__category {
   display: inline-block;
   align-self: flex-start;

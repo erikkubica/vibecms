@@ -32,7 +32,7 @@
       "type": "repeater",
       "sub_fields": [
         {
-          "label": "Icon / Emoji",
+          "label": "Icon (Lucide icon name, e.g. rocket, shield, code, users)",
           "type": "text",
           "required": false,
           "key": "icon"
@@ -77,7 +77,7 @@
     "columns": "3",
     "features": [
       {
-        "icon": "\u26a1",
+        "icon": "zap",
         "title": "Lightning Fast",
         "description": "Sub-50ms response times with optimized rendering and smart caching.",
         "category": "Performance",
@@ -85,7 +85,7 @@
         "link_url": "/features/speed"
       },
       {
-        "icon": "\ud83d\udd12",
+        "icon": "lock",
         "title": "Secure by Default",
         "description": "Built-in RBAC, capability-based permissions, and automatic security updates.",
         "category": "Security",
@@ -93,7 +93,7 @@
         "link_url": "/features/security"
       },
       {
-        "icon": "\ud83e\udde9",
+        "icon": "puzzle",
         "title": "Extensible",
         "description": "Plugin architecture lets you add any feature without touching core code.",
         "category": "Architecture",
@@ -101,7 +101,7 @@
         "link_url": "/features/extensions"
       },
       {
-        "icon": "\ud83c\udfa8",
+        "icon": "palette",
         "title": "Beautiful Themes",
         "description": "Professionally designed themes with full customization support.",
         "category": "Design",
@@ -109,7 +109,7 @@
         "link_url": ""
       },
       {
-        "icon": "\ud83d\udcf1",
+        "icon": "smartphone",
         "title": "Mobile First",
         "description": "Every component is responsive and optimized for all screen sizes.",
         "category": "Design",
@@ -117,7 +117,7 @@
         "link_url": ""
       },
       {
-        "icon": "\ud83e\udd16",
+        "icon": "bot",
         "title": "AI Native",
         "description": "AI-powered content suggestions and automated workflows built right in.",
         "category": "Intelligence",

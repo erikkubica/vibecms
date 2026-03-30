@@ -19,7 +19,7 @@
       "type": "repeater",
       "sub_fields": [
         {
-          "label": "Icon (emoji)",
+          "label": "Icon (Lucide icon name, e.g. rocket, shield, code, users)",
           "type": "text",
           "key": "icon"
         },
@@ -55,22 +55,22 @@
     "style": "horizontal",
     "steps": [
       {
-        "icon": "\ud83d\udccb",
+        "icon": "clipboard-list",
         "title": "Create Account",
         "description": "Sign up with your email and choose a plan that fits your needs. No credit card required for the free trial."
       },
       {
-        "icon": "\u2699\ufe0f",
+        "icon": "settings",
         "title": "Configure Settings",
         "description": "Customize your workspace, invite team members, and set up integrations with your existing tools."
       },
       {
-        "icon": "\ud83d\ude80",
+        "icon": "rocket",
         "title": "Launch Project",
         "description": "Create your first project, import data, and start building with our intuitive drag-and-drop interface."
       },
       {
-        "icon": "\ud83d\udcca",
+        "icon": "bar-chart",
         "title": "Track Results",
         "description": "Monitor performance with real-time analytics and optimize your workflow based on actionable insights."
       }

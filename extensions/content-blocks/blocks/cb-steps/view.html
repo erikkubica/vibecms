@@ -12,7 +12,7 @@
       <div class="vb-cb-steps__item">
         <div class="vb-cb-steps__marker">
           {{if $step.icon}}
-          <span class="vb-cb-steps__icon">{{$step.icon}}</span>
+          <span class="vb-cb-steps__icon"><i data-lucide="{{$step.icon}}" class="vb-icon"></i></span>
           {{else}}
           <span class="vb-cb-steps__number">{{add $i 1}}</span>
           {{end}}

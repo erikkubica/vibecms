@@ -6,7 +6,7 @@
     <div class="vb-stats-counter__grid">
       {{range .stats}}
       <div class="vb-stats-counter__item">
-        {{if .icon}}<span class="vb-stats-counter__icon">{{.icon}}</span>{{end}}
+        {{if .icon}}<span class="vb-stats-counter__icon"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>{{end}}
         <div class="vb-stats-counter__number">
           {{if .prefix}}<span class="vb-stats-counter__prefix">{{.prefix}}</span>{{end}}<span class="vb-stats-counter__value" data-target="{{.number}}">0</span>{{if .suffix}}<span class="vb-stats-counter__suffix">{{.suffix}}</span>{{end}}
         </div>

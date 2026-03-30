@@ -40,7 +40,7 @@
       "type": "cb-newsletter",
       "fields": {
         "heading": "Stay in the Loop",
-        "description": "Get our best articles delivered to your inbox every Thursday. No spam, no fluff \u2014 just actionable insights from our engineering and product teams.",
+        "description": "Get our best articles delivered to your inbox every Thursday. No spam, no fluff — just actionable insights from our engineering and product teams.",
         "form_action": "/api/newsletter/subscribe",
         "privacy_note": "We respect your privacy. Unsubscribe at any time.",
         "style": "dark",

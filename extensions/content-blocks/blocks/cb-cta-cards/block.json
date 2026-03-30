@@ -15,7 +15,7 @@
       "type": "repeater",
       "sub_fields": [
         {
-          "label": "Icon / Emoji",
+          "label": "Icon (Lucide icon name, e.g. rocket, shield, code, users)",
           "type": "text",
           "required": false,
           "key": "icon"
@@ -45,7 +45,7 @@
     "heading": "Choose Your Path",
     "cards": [
       {
-        "icon": "\ud83d\ude80",
+        "icon": "rocket",
         "title": "For Startups",
         "description": "Launch fast with our startup-friendly tools. Get your site live in minutes with zero config.",
         "button": {
@@ -56,7 +56,7 @@
         }
       },
       {
-        "icon": "\ud83c\udfe2",
+        "icon": "building",
         "title": "For Business",
         "description": "Enterprise-grade features with the simplicity your team needs. Scale without limits.",
         "button": {
@@ -67,7 +67,7 @@
         }
       },
       {
-        "icon": "\ud83c\udfa8",
+        "icon": "palette",
         "title": "For Creators",
         "description": "Beautiful themes and powerful content tools designed for writers, artists, and makers.",
         "button": {

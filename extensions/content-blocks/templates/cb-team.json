@@ -117,12 +117,12 @@
         "heading": "Our Values",
         "items": [
           {
-            "icon": "🧭",
+            "icon": "compass",
             "title": "Clarity Over Cleverness",
             "description": "We write clear code, give direct feedback, and build products that explain themselves. Simple beats smart."
           },
           {
-            "icon": "👥",
+            "icon": "users",
             "title": "Users Come First",
             "description": "Every decision starts with the question: how does this make our users' lives better? If it doesn't, we don't build it."
           },
@@ -132,12 +132,12 @@
             "description": "We ship early, learn fast, and improve constantly. Version one is just the beginning of the conversation."
           },
           {
-            "icon": "❤️",
+            "icon": "heart",
             "title": "Take Care of Each Other",
             "description": "Great work comes from people who feel supported. We invest in growth, celebrate wins, and show up for each other."
           },
           {
-            "icon": "🎯",
+            "icon": "target",
             "title": "Own the Outcome",
             "description": "We don't pass the buck. Every team member has the autonomy and accountability to drive results from start to finish."
           },

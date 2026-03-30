@@ -15,7 +15,7 @@
       "type": "repeater",
       "sub_fields": [
         {
-          "label": "Icon / Emoji",
+          "label": "Icon (Lucide icon name, e.g. rocket, shield, code, users)",
           "type": "text",
           "required": true,
           "key": "icon"
@@ -65,42 +65,42 @@
     "style": "filled",
     "items": [
       {
-        "icon": "\u26a1",
+        "icon": "zap",
         "title": "Go",
         "description": "High-performance backend"
       },
       {
-        "icon": "\u269b\ufe0f",
+        "icon": "atom",
         "title": "React",
         "description": "Modern admin interface"
       },
       {
-        "icon": "\ud83d\udc18",
+        "icon": "database",
         "title": "PostgreSQL",
         "description": "Reliable data storage"
       },
       {
-        "icon": "\ud83d\udd27",
+        "icon": "wrench",
         "title": "gRPC",
         "description": "Fast plugin communication"
       },
       {
-        "icon": "\ud83c\udfa8",
+        "icon": "palette",
         "title": "Tailwind",
         "description": "Utility-first CSS"
       },
       {
-        "icon": "\ud83d\udce6",
+        "icon": "package",
         "title": "Docker",
         "description": "Easy deployment"
       },
       {
-        "icon": "\ud83d\udd12",
+        "icon": "lock",
         "title": "Ed25519",
         "description": "Cryptographic security"
       },
       {
-        "icon": "\ud83e\udde9",
+        "icon": "puzzle",
         "title": "Tengo",
         "description": "Embedded scripting"
       }

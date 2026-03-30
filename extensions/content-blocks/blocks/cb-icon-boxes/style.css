@@ -35,6 +35,14 @@
   margin-bottom: 0.625rem;
 }
 
+.vb-icon-boxes__icon .vb-icon svg,
+.vb-icon-boxes__icon [data-lucide] svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+}
+
 .vb-icon-boxes__title {
   font-size: 0.9375rem;
   font-weight: 600;

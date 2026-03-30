@@ -38,6 +38,14 @@
   margin-bottom: 1rem;
 }
 
+.vb-cta-cards__icon .vb-icon svg,
+.vb-cta-cards__icon [data-lucide] svg {
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  vertical-align: -0.125em;
+}
+
 .vb-cta-cards__title {
   font-size: 1.25rem;
   font-weight: 600;

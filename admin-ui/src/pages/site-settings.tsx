@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Save, Loader2, RefreshCw, Globe, Home, FileText, Search } from "lucide-react";
+import { Save, Loader2, RefreshCw, Globe, Home, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,13 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   getSiteSettings,
@@ -44,12 +51,7 @@ export default function SiteSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
-
-  // Homepage picker
   const [pages, setPages] = useState<ContentNode[]>([]);
-  const [pageSearch, setPageSearch] = useState("");
-  const [showPagePicker, setShowPagePicker] = useState(false);
-  const [selectedPage, setSelectedPage] = useState<ContentNode | null>(null);
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -69,14 +71,6 @@ export default function SiteSettingsPage() {
       setSettings(loaded);
       setOriginal(loaded);
       setPages(pagesRes.data);
-
-      // Find selected homepage
-      if (data.homepage_node_id) {
-        const hp = pagesRes.data.find(
-          (p) => String(p.id) === data.homepage_node_id
-        );
-        if (hp) setSelectedPage(hp);
-      }
     } catch {
       toast.error("Failed to load settings");
     } finally {
@@ -127,21 +121,6 @@ export default function SiteSettingsPage() {
   function update(key: keyof SettingsState, value: string) {
     setSettings((prev) => ({ ...prev, [key]: value }));
   }
-
-  function selectHomepage(page: ContentNode) {
-    setSelectedPage(page);
-    update("homepage_node_id", String(page.id));
-    setShowPagePicker(false);
-    setPageSearch("");
-  }
-
-  const filteredPages = pageSearch
-    ? pages.filter(
-        (p) =>
-          p.title.toLowerCase().includes(pageSearch.toLowerCase()) ||
-          p.full_url.toLowerCase().includes(pageSearch.toLowerCase())
-      )
-    : pages;
 
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(original);
 
@@ -259,84 +238,32 @@ export default function SiteSettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
-            {/* Selected page display */}
-            {selectedPage ? (
-              <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-800">
-                    {selectedPage.title}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {selectedPage.full_url} &middot;{" "}
-                    {selectedPage.language_code.toUpperCase()}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs rounded-lg"
-                  onClick={() => setShowPagePicker(!showPagePicker)}
-                >
-                  Change
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                className="w-full rounded-lg border-dashed border-slate-300 text-slate-500 hover:border-indigo-300 hover:text-indigo-600"
-                onClick={() => setShowPagePicker(true)}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-slate-700">
+                Homepage
+              </Label>
+              <Select
+                value={settings.homepage_node_id || "none"}
+                onValueChange={(v) =>
+                  update("homepage_node_id", v === "none" ? "" : v)
+                }
               >
-                <Home className="mr-2 h-4 w-4" />
-                Select a homepage
-              </Button>
-            )}
-
-            {/* Page picker */}
-            {showPagePicker && (
-              <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
-                <div className="relative p-2">
-                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    placeholder="Search pages..."
-                    value={pageSearch}
-                    onChange={(e) => setPageSearch(e.target.value)}
-                    className="pl-8 h-8 rounded-md border-slate-200 text-sm"
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-48 overflow-y-auto border-t border-slate-100">
-                  {filteredPages.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-slate-400">
-                      No pages found
-                    </p>
-                  ) : (
-                    filteredPages.map((page) => (
-                      <button
-                        key={page.id}
-                        onClick={() => selectHomepage(page)}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-left hover:bg-slate-50 transition-colors ${
-                          String(page.id) === settings.homepage_node_id
-                            ? "bg-indigo-50"
-                            : ""
-                        }`}
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-slate-800">
-                            {page.title}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {page.full_url}
-                          </p>
-                        </div>
-                        <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                          {page.language_code.toUpperCase()}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
+                <SelectTrigger className="rounded-lg border-slate-300">
+                  <SelectValue placeholder="Select a page..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No homepage set</SelectItem>
+                  {pages.map((page) => (
+                    <SelectItem key={page.id} value={String(page.id)}>
+                      {page.title} ({page.full_url}) [{page.language_code.toUpperCase()}]
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-slate-400">
+                This page will be displayed when visitors access your site root
+              </p>
+            </div>
           </CardContent>
         </Card>
 

@@ -21,6 +21,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ArrowUpDown,
+  AlertCircle,
 } from "@vibecms/icons";
 import {
   Button,
@@ -199,6 +200,43 @@ function FileIcon({ mime, className }: { mime: string; className?: string }) {
   return <File className={className} />;
 }
 
+function BrokenMediaFallback({ className }: { className?: string }) {
+  return (
+    <div className={`flex flex-col items-center justify-center gap-2 w-full h-full min-h-32 aspect-square bg-slate-50 text-slate-400 ${className || ""}`}>
+      <AlertCircle className="h-8 w-8 text-slate-300" />
+      <span className="text-xs font-medium text-slate-400">Failed to load</span>
+    </div>
+  );
+}
+
+function MediaImage({ src, alt, className, style, onError }: { src: string; alt: string; className?: string; style?: React.CSSProperties; onError?: () => void }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <BrokenMediaFallback />;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      style={style}
+      loading="lazy"
+      onError={() => { setBroken(true); onError?.(); }}
+    />
+  );
+}
+
+function MediaVideo({ src, className, controls }: { src: string; className?: string; controls?: boolean }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <BrokenMediaFallback />;
+  return (
+    <video
+      src={src}
+      className={className}
+      controls={controls}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 function mimeLabel(mime: string): string {
   const sub = mime.split("/")[1];
   if (!sub) return mime;
@@ -238,6 +276,14 @@ export default function MediaLibrary() {
   const [sortBy, setSortBy] = useState("date_desc");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [selected, setSelected] = useState<MediaFile | null>(null);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+
+  function selectFile(file: MediaFile | null) {
+    setSelected(file);
+    if (file && typeof window !== "undefined" && window.innerWidth < 1024) {
+      setMobileDetailOpen(true);
+    }
+  }
 
   // Bulk selection
   const [bulkSelected, setBulkSelected] = useState<Set<number>>(new Set());
@@ -371,11 +417,26 @@ export default function MediaLibrary() {
     }
   }
 
-  // Copy URL
+  // Copy URL — fallback for HTTP (non-secure contexts)
+  function copyToClipboard(text: string) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return Promise.resolve();
+  }
+
   function handleCopyUrl() {
     if (!selected) return;
     const fullUrl = window.location.origin + selected.url;
-    navigator.clipboard.writeText(fullUrl).then(() => {
+    copyToClipboard(fullUrl).then(() => {
       setCopied(true);
       toast.success("URL copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
@@ -650,121 +711,103 @@ export default function MediaLibrary() {
                 </div>
               ) : viewMode === "grid" ? (
                 /* ---- GRID VIEW ---- */
-                <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-4 lg:grid-cols-6">
+                <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                   {files.map((file) => {
                     const isBulk = bulkSelected.has(file.id);
+                    const isSelected = selected?.id === file.id;
                     return (
-                      <button
+                      <div
                         key={file.id}
                         onClick={(e) => {
                           if (e.shiftKey || e.ctrlKey || e.metaKey) {
                             toggleBulkSelect(file.id);
                           } else {
-                            setSelected(selected?.id === file.id ? null : file);
+                            selectFile(isSelected ? null : file);
                           }
                         }}
-                        className={`group relative flex flex-col overflow-hidden rounded-lg border-2 bg-white text-left transition-all hover:shadow-md ${
-                          selected?.id === file.id
-                            ? "border-indigo-500 ring-2 ring-indigo-500/20"
+                        className={`group relative flex flex-col overflow-hidden rounded-lg cursor-pointer transition-all duration-150 bg-white ${
+                          isSelected
+                            ? "ring-2 ring-indigo-500"
                             : isBulk
-                            ? "border-indigo-300 bg-indigo-50"
-                            : "border-slate-200 hover:border-slate-300"
+                            ? "ring-2 ring-indigo-300"
+                            : "ring-1 ring-slate-200 hover:ring-slate-300 hover:shadow-md"
                         }`}
                       >
-                        {/* Bulk checkbox */}
-                        <div
-                          className={`absolute top-1.5 left-1.5 z-10 flex h-5 w-5 items-center justify-center rounded border transition-all cursor-pointer ${
-                            isBulk
-                              ? "bg-indigo-500 border-indigo-500"
-                              : "bg-white/80 border-slate-300 opacity-0 group-hover:opacity-100"
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleBulkSelect(file.id);
-                          }}
-                        >
-                          {isBulk && <Check className="h-3 w-3 text-white" />}
-                        </div>
-
-                        {/* Thumbnail */}
-                        <div className="relative aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+                        {/* Thumbnail — clean, no overlays */}
+                        <div className="relative w-full bg-slate-100 flex items-center justify-center overflow-hidden" style={{ aspectRatio: "1 / 1" }}>
                           {isImage(file.mime_type) ? (
-                            <img
+                            <MediaImage
                               src={file.url}
                               alt={file.alt || file.original_name}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
                           ) : (
-                            <div className="flex flex-col items-center gap-1.5">
-                              <FileIcon
-                                mime={file.mime_type}
-                                className="h-8 w-8 text-slate-400"
-                              />
-                              <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                            <div className="flex flex-col items-center gap-2">
+                              <FileIcon mime={file.mime_type} className="h-8 w-8 text-slate-400" />
+                              <span className="rounded-md bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                 {getFileExtension(file.original_name)}
                               </span>
                             </div>
                           )}
-                          {selected?.id === file.id && (
+                          {/* Selection check — only when selected */}
+                          {isSelected && (
                             <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500">
                               <Check className="h-3 w-3 text-white" />
                             </div>
                           )}
-                          {/* Hover actions */}
-                          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1 bg-gradient-to-t from-black/60 to-transparent p-1.5 pt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Bulk check — only when bulk selected */}
+                          {isBulk && !isSelected && (
+                            <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded bg-indigo-500">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer — file info + actions on hover */}
+                        <div className="relative border-t border-slate-100">
+                          {/* Default: file info */}
+                          <div className="px-2.5 py-2 group-hover:opacity-0 transition-opacity duration-100">
+                            <p className="truncate text-[12px] font-medium text-slate-800 leading-tight">
+                              {file.original_name}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-slate-400 tabular-nums">
+                              {humanFileSize(file.size)}
+                            </p>
+                          </div>
+                          {/* Hover: action buttons */}
+                          <div className="absolute inset-0 flex items-center justify-center gap-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 bg-white">
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded bg-white/90 text-slate-700 hover:bg-white shadow-sm"
+                              className="flex h-7 flex-1 items-center justify-center gap-1 rounded-md text-slate-600 hover:bg-slate-100 text-[11px] font-medium transition-colors"
                               title="Copy URL"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const fullUrl = window.location.origin + file.url;
-                                navigator.clipboard.writeText(fullUrl).then(() => {
-                                  toast.success("URL copied");
-                                });
+                                copyToClipboard(window.location.origin + file.url).then(() => toast.success("URL copied"));
                               }}
                             >
                               <Copy className="h-3 w-3" />
+                              Copy
                             </button>
-                            <a
-                              href={file.url}
-                              download={file.original_name}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex h-6 w-6 items-center justify-center rounded bg-white/90 text-slate-700 hover:bg-white shadow-sm"
-                              title="Download"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Download className="h-3 w-3" />
-                            </a>
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded bg-white/90 text-red-500 hover:bg-red-50 shadow-sm"
-                              title="Delete"
+                              className="flex h-7 flex-1 items-center justify-center gap-1 rounded-md text-slate-600 hover:bg-slate-100 text-[11px] font-medium transition-colors"
+                              title="Download"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setDeleteTarget(file);
+                                window.open(file.url, "_blank");
                               }}
+                            >
+                              <Download className="h-3 w-3" />
+                              Save
+                            </button>
+                            <button
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Delete"
+                              onClick={(e) => { e.stopPropagation(); setDeleteTarget(file); }}
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>
                           </div>
                         </div>
-
-                        {/* Info */}
-                        <div className="p-2">
-                          <p className="truncate text-xs font-medium text-slate-700">
-                            {file.original_name}
-                          </p>
-                          <div className="mt-0.5 flex items-center justify-between">
-                            <span className="text-[10px] text-slate-400">
-                              {humanFileSize(file.size)}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              {new Date(file.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -814,7 +857,7 @@ export default function MediaLibrary() {
                               : "hover:bg-slate-50"
                           }`}
                           onClick={() =>
-                            setSelected(selected?.id === file.id ? null : file)
+                            selectFile(selected?.id === file.id ? null : file)
                           }
                         >
                           <TableCell className="pl-4">
@@ -832,11 +875,10 @@ export default function MediaLibrary() {
                           <TableCell>
                             <div className="h-10 w-10 rounded-md bg-slate-100 overflow-hidden flex items-center justify-center">
                               {isImage(file.mime_type) ? (
-                                <img
+                                <MediaImage
                                   src={file.url}
-                                  alt=""
+                                  alt={file.original_name}
                                   className="h-full w-full object-cover"
-                                  loading="lazy"
                                 />
                               ) : (
                                 <FileIcon
@@ -1020,13 +1062,15 @@ export default function MediaLibrary() {
                 {/* Preview */}
                 <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                   {isImage(selected.mime_type) ? (
-                    <img
-                      src={selected.url}
-                      alt={selected.alt || selected.original_name}
-                      className="w-full object-contain max-h-48"
-                    />
+                    <div className="aspect-square overflow-hidden">
+                      <MediaImage
+                        src={selected.url}
+                        alt={selected.alt || selected.original_name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   ) : isVideo(selected.mime_type) ? (
-                    <video
+                    <MediaVideo
                       src={selected.url}
                       controls
                       className="w-full max-h-48"
@@ -1160,18 +1204,18 @@ export default function MediaLibrary() {
               </CardContent>
             </Card>
           </div>
-          {/* Mobile/tablet dialog */}
-          <Dialog open={true} onOpenChange={(open: boolean) => { if (!open) setSelected(null); }}>
-            <DialogContent className="lg:hidden max-w-md max-h-[85vh] overflow-y-auto">
+          {/* Mobile/tablet dialog — only renders below lg breakpoint */}
+          <Dialog open={mobileDetailOpen} onOpenChange={(open: boolean) => { if (!open) { setMobileDetailOpen(false); setSelected(null); } }}>
+            <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto lg:hidden">
               <DialogHeader>
                 <DialogTitle className="text-sm">File Details</DialogTitle>
               </DialogHeader>
               {/* Preview */}
               <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                 {isImage(selected.mime_type) ? (
-                  <img src={selected.url} alt={selected.alt || selected.original_name} className="w-full object-contain max-h-48" />
+                  <div className="aspect-square overflow-hidden"><MediaImage src={selected.url} alt={selected.alt || selected.original_name} className="w-full h-full object-cover" /></div>
                 ) : isVideo(selected.mime_type) ? (
-                  <video src={selected.url} controls className="w-full max-h-48" />
+                  <MediaVideo src={selected.url} controls className="w-full max-h-48" />
                 ) : isAudio(selected.mime_type) ? (
                   <div className="p-4"><audio src={selected.url} controls className="w-full" /></div>
                 ) : (

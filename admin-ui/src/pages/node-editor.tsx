@@ -183,7 +183,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   // SEO
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
-  const [seoOpen, setSeoOpen] = useState(false);
+  const [seoOpen, setSeoOpen] = useState(true);
 
   // Homepage
   const [homepageId, setHomepageId] = useState<number | null>(null);
@@ -193,8 +193,25 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   const [showCreateTranslation, setShowCreateTranslation] = useState(false);
   const [creatingTranslation, setCreatingTranslation] = useState(false);
 
-  // Block editor state
-  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(new Set());
+  // Block editor state — persisted to localStorage per node
+  const storageKey = id ? `vibecms:collapsed-blocks:${id}` : "";
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(() => {
+    if (!storageKey) return new Set();
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return new Set(JSON.parse(saved) as number[]);
+    } catch { /* ignore */ }
+    return new Set();
+  });
+  useEffect(() => {
+    if (!storageKey) return;
+    if (collapsedBlocks.size === 0) {
+      localStorage.removeItem(storageKey);
+    } else {
+      localStorage.setItem(storageKey, JSON.stringify([...collapsedBlocks]));
+    }
+  }, [collapsedBlocks, storageKey]);
+
   const [showRawJson, setShowRawJson] = useState(false);
   const [rawJson, setRawJson] = useState("");
 

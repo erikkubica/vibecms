@@ -249,10 +249,21 @@ func main() {
 	app.Static("/theme/assets", filepath.Join(themePath, "assets"))
 
 	// --- Admin SPA ---
-	app.Static("/admin/assets", "./admin-ui/dist/assets")
+	// Hashed assets: cache forever
+	app.Static("/admin/assets", "./admin-ui/dist/assets", fiber.Static{
+		MaxAge: 31536000, // 1 year — filenames are hashed by Vite
+	})
+	// Shims, previews, extension UIs: no cache — unhashed filenames
+	noCache := func(c *fiber.Ctx) error {
+		c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		return c.Next()
+	}
+	app.Use("/admin/shims", noCache)
 	app.Static("/admin/shims", "./admin-ui/dist/shims")
+	app.Use("/admin/previews", noCache)
 	app.Static("/admin/previews", "./admin-ui/dist/previews")
 	app.Get("/admin/*", func(c *fiber.Ctx) error {
+		c.Set("Cache-Control", "no-cache")
 		return c.SendFile("./admin-ui/dist/index.html")
 	})
 

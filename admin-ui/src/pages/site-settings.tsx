@@ -11,7 +11,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { getSiteSettings, updateSiteSettings, clearCache } from "@/api/client";
 

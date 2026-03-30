@@ -180,6 +180,7 @@ func (h *ExtensionHandler) ServeAsset(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusBadRequest, "INVALID_PATH", "Path traversal not allowed")
 	}
 
+	c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	return c.SendFile(cleanPath)
 }
 

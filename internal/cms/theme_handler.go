@@ -2,6 +2,8 @@ package cms
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -70,6 +72,7 @@ func NewThemeHandler(db *gorm.DB, mgmtSvc *ThemeMgmtService) *ThemeHandler {
 func (h *ThemeHandler) RegisterRoutes(router fiber.Router) {
 	g := router.Group("/themes", auth.CapabilityRequired("manage_settings"))
 	g.Get("/", h.List)
+	g.Get("/:id/preview", h.ServePreview)
 	g.Get("/:id/files", h.BrowseFiles)
 	g.Get("/:id", h.Get)
 	g.Post("/upload", h.Upload)
@@ -119,6 +122,29 @@ func (h *ThemeHandler) Get(c *fiber.Ctx) error {
 }
 
 // BrowseFiles handles GET /themes/:id/files?path= — browse theme files.
+// ServePreview handles GET /themes/:id/preview — serves preview image from theme directory.
+func (h *ThemeHandler) ServePreview(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Redirect("/admin/previews/default-theme.svg")
+	}
+
+	var theme models.Theme
+	if err := h.db.First(&theme, id).Error; err != nil {
+		return c.Redirect("/admin/previews/default-theme.svg")
+	}
+
+	for _, name := range []string{"preview.svg", "preview.png", "preview.jpg", "preview.webp"} {
+		path := filepath.Join(theme.Path, name)
+		if _, err := os.Stat(path); err == nil {
+			c.Set("Cache-Control", "public, max-age=3600")
+			return c.SendFile(path)
+		}
+	}
+
+	return c.Redirect("/admin/previews/default-theme.svg")
+}
+
 func (h *ThemeHandler) BrowseFiles(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {

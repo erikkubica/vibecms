@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="225" rx="12" fill="url(#bg)"/>
+  <g transform="translate(200,85)" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="0" cy="-4" r="24"/>
+    <path d="M-10 2 Q0 14 10 2"/>
+    <circle cx="-8" cy="-8" r="2" fill="white"/>
+    <circle cx="8" cy="-8" r="2" fill="white"/>
+  </g>
+  <text x="200" y="155" text-anchor="middle" fill="white" font-family="system-ui,sans-serif" font-size="18" font-weight="600">Hello Extension</text>
+  <text x="200" y="175" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="system-ui,sans-serif" font-size="12">Demo extension for developers</text>
+</svg>

@@ -291,19 +291,11 @@ export default function ThemesPage() {
 
               {/* Thumbnail area */}
               <div className="relative h-36 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-3 rounded-lg overflow-hidden">
-                {theme.thumbnail ? (
-                  <img
-                    src={theme.thumbnail}
-                    alt={theme.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src="/admin/previews/default-theme.svg"
-                    alt={theme.name}
-                    className="h-full w-full object-cover"
-                  />
-                )}
+                <img
+                  src={theme.thumbnail || `/admin/api/themes/${theme.id}/preview`}
+                  alt={theme.name}
+                  className="h-full w-full object-cover"
+                />
               </div>
 
               <CardContent className="p-4 space-y-3">

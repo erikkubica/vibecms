@@ -56,6 +56,7 @@ func (h *ExtensionHandler) RegisterRoutes(router fiber.Router) {
 	g.Get("/:slug/files", h.BrowseFiles)
 	g.Get("/:slug/settings", h.GetSettings)
 	g.Put("/:slug/settings", h.UpdateSettings)
+	g.Get("/:slug/preview", h.ServePreview)
 	g.Get("/:slug/assets/*", h.ServeAsset)
 	g.Get("/:slug", h.Get)
 	g.Post("/:slug/activate", h.Activate)
@@ -160,6 +161,26 @@ func (h *ExtensionHandler) UpdateSettings(c *fiber.Ctx) error {
 	}
 
 	return api.Success(c, fiber.Map{"message": "Settings saved"})
+}
+
+// ServePreview handles GET /extensions/:slug/preview — serves preview image from extension directory.
+// Looks for preview.svg, preview.png, preview.jpg in the extension root. Falls back to default.
+func (h *ExtensionHandler) ServePreview(c *fiber.Ctx) error {
+	slug := c.Params("slug")
+	ext, err := h.loader.GetBySlug(slug)
+	if err != nil {
+		return c.Redirect("/admin/previews/default-extension.svg")
+	}
+
+	for _, name := range []string{"preview.svg", "preview.png", "preview.jpg", "preview.webp"} {
+		path := filepath.Join(ext.Path, name)
+		if _, err := os.Stat(path); err == nil {
+			c.Set("Cache-Control", "public, max-age=3600")
+			return c.SendFile(path)
+		}
+	}
+
+	return c.Redirect("/admin/previews/default-extension.svg")
 }
 
 // ServeAsset handles GET /extensions/:slug/assets/* — serves static files from extension admin-ui/dist/.

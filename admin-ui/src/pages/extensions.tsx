@@ -197,7 +197,7 @@ export default function ExtensionsPage() {
 
               <div className="relative h-28 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-3 rounded-lg overflow-hidden">
                 <img
-                  src="/admin/previews/default-extension.svg"
+                  src={`/admin/api/extensions/${ext.slug}/preview`}
                   alt={ext.name}
                   className="h-full w-full object-cover"
                 />

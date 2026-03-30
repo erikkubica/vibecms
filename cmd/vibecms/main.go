@@ -174,7 +174,7 @@ func main() {
 	menuHandler.RegisterRoutes(adminAPI)
 	roleHandler.RegisterRoutes(adminAPI)
 	settingsHandler.RegisterRoutes(adminAPI)
-	cacheHandler := cms.NewCacheHandler(publicHandler)
+	cacheHandler := cms.NewCacheHandler(publicHandler, eventBus)
 	cacheHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)
 

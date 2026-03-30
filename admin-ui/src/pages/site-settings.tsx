@@ -34,6 +34,7 @@ interface SettingsState {
   homepage_node_id: string;
   analytics_code: string;
   custom_head_code: string;
+  custom_footer_code: string;
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -43,6 +44,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   homepage_node_id: "",
   analytics_code: "",
   custom_head_code: "",
+  custom_footer_code: "",
 };
 
 export default function SiteSettingsPage() {
@@ -67,6 +69,7 @@ export default function SiteSettingsPage() {
         homepage_node_id: data.homepage_node_id || "",
         analytics_code: data.analytics_code || "",
         custom_head_code: data.custom_head_code || "",
+        custom_footer_code: data.custom_footer_code || "",
       };
       setSettings(loaded);
       setOriginal(loaded);
@@ -314,6 +317,21 @@ export default function SiteSettingsPage() {
                   Injected into &lt;head&gt; on every public page
                 </p>
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium text-slate-700">
+                Footer Code
+              </Label>
+              <Textarea
+                placeholder={"<!-- Chat widgets, tracking pixels, etc. -->\n<script src=\"...\"></script>"}
+                value={settings.custom_footer_code}
+                onChange={(e) => update("custom_footer_code", e.target.value)}
+                rows={5}
+                className="rounded-lg border-slate-300 font-mono text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+              />
+              <p className="text-[11px] text-slate-400">
+                Injected before &lt;/body&gt; on every public page
+              </p>
             </div>
           </CardContent>
         </Card>

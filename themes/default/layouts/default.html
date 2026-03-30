@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{or .node.language_code "en"}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="{{.}}">
     {{- end -}}
     {{.app.block_styles}}
+    {{- with index .app.settings "analytics_code"}}{{safeHTML .}}{{end -}}
+    {{- with index .app.settings "custom_head_code"}}{{safeHTML .}}{{end -}}
 </head>
 <body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased">
     {{renderLayoutBlock "site-header"}}
@@ -29,5 +31,6 @@
     <script src="{{.}}" defer></script>
     {{- end -}}
     {{.app.block_scripts}}
+    {{- with index .app.settings "custom_footer_code"}}{{safeHTML .}}{{end -}}
 </body>
 </html>

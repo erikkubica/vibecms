@@ -100,12 +100,27 @@ func (d *Dispatcher) HandleEvent(action string, payload events.Payload) {
 		"site_url":  settings["site_url"],
 	}
 
-	// Load base email layout if configured.
-	baseLayout := settings["email_base_layout"]
-
 	for _, rule := range rules {
-		d.processRule(action, payload, rule, siteData, baseLayout, providerSettings)
+		d.processRule(action, payload, rule, siteData, providerSettings)
 	}
+}
+
+// resolveLayoutForLang finds the best email layout for a recipient's language.
+// Fallback: language-specific → universal (NULL language_id).
+func (d *Dispatcher) resolveLayoutForLang(langID *int) string {
+	// 1. Try language-specific layout.
+	if langID != nil {
+		var layout models.EmailLayout
+		if err := d.db.Where("language_id = ?", *langID).First(&layout).Error; err == nil {
+			return layout.BodyTemplate
+		}
+	}
+	// 2. Fall back to universal layout (language_id IS NULL).
+	var layout models.EmailLayout
+	if err := d.db.Where("language_id IS NULL").First(&layout).Error; err == nil {
+		return layout.BodyTemplate
+	}
+	return ""
 }
 
 // processRule handles a single rule: resolve recipients, render, send, and log.
@@ -114,7 +129,6 @@ func (d *Dispatcher) processRule(
 	payload events.Payload,
 	rule models.EmailRule,
 	siteData map[string]string,
-	baseLayout string,
 	providerSettings map[string]string,
 ) {
 	// Resolve recipients with their language info.
@@ -153,6 +167,8 @@ func (d *Dispatcher) processRule(
 			continue
 		}
 
+		// Resolve base layout for this recipient's language.
+		baseLayout := d.resolveLayoutForLang(ri.languageID)
 		if baseLayout != "" {
 			data["email_body"] = htmltemplate.HTML(body)
 			wrapped, wrapErr := renderTemplate("base_layout", baseLayout, data)

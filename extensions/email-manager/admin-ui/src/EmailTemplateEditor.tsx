@@ -58,6 +58,7 @@ export default function EmailTemplateEditor() {
   const [saving, setSaving] = useState(false);
 
   const [languages, setLanguages] = useState<Language[]>([]);
+  const [baseLayout, setBaseLayout] = useState("");
 
   // Form state
   const [formSlug, setFormSlug] = useState("");
@@ -72,6 +73,16 @@ export default function EmailTemplateEditor() {
     getLanguages().then((langs: Language[]) => {
       if (!cancelled) setLanguages(langs);
     }).catch(() => {});
+    fetch("/admin/api/ext/email-manager/layouts", { credentials: "include" })
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled) return;
+        // Find universal layout (language_id is null) as default for preview.
+        const layouts = json.data || [];
+        const universal = layouts.find((l: any) => l.language_id === null);
+        if (universal) setBaseLayout(universal.body_template);
+      })
+      .catch(() => {});
 
     if (!isEdit) return;
     setLoading(true);
@@ -154,7 +165,14 @@ export default function EmailTemplateEditor() {
   function getPreviewHtml(): string {
     try {
       const testData = JSON.parse(formTestData);
-      return renderPreview(formBody, testData);
+      let html = renderPreview(formBody, testData);
+      if (baseLayout) {
+        html = baseLayout
+          .replace(/\{\{\s*\.email_body\s*\}\}/g, html)
+          .replace(/\{\{\s*\.site\.site_name\s*\}\}/g, testData.site_name || "My Site")
+          .replace(/\{\{\s*\.site\.site_url\s*\}\}/g, testData.site_url || "#");
+      }
+      return html;
     } catch {
       return formBody;
     }

@@ -1,0 +1,23 @@
+<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+  <h2 style="margin:0 0 16px 0; color:#1e293b;">New Content Created</h2>
+  <p style="margin:0 0 12px 0; color:#475569; line-height:1.6;">
+    A new {{.node_type}} has been created on <strong>{{.site_name}}</strong>.
+  </p>
+  <table style="width:100%; border-collapse:collapse; margin:16px 0;">
+    <tr>
+      <td style="padding:8px 12px; border:1px solid #e2e8f0; color:#64748b; font-size:13px;">Title</td>
+      <td style="padding:8px 12px; border:1px solid #e2e8f0; color:#1e293b;">{{.node_title}}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px; border:1px solid #e2e8f0; color:#64748b; font-size:13px;">Type</td>
+      <td style="padding:8px 12px; border:1px solid #e2e8f0; color:#1e293b;">{{.node_type}}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px; border:1px solid #e2e8f0; color:#64748b; font-size:13px;">Author</td>
+      <td style="padding:8px 12px; border:1px solid #e2e8f0; color:#1e293b;">{{.author_full_name}}</td>
+    </tr>
+  </table>
+  <p style="margin:0;">
+    <a href="{{.site_url}}{{.node_url}}" style="color:#2563eb; font-size:14px;">View on site</a>
+  </p>
+</div>

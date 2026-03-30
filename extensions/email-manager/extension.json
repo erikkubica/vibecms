@@ -25,6 +25,7 @@
             {"path": "/templates", "component": "EmailTemplates"},
             {"path": "/templates/new", "component": "EmailTemplateEditor"},
             {"path": "/templates/:id", "component": "EmailTemplateEditor"},
+            {"path": "/layouts", "component": "EmailBaseLayout"},
             {"path": "/rules", "component": "EmailRules"},
             {"path": "/rules/new", "component": "EmailRuleEditor"},
             {"path": "/rules/:id", "component": "EmailRuleEditor"},
@@ -37,6 +38,7 @@
             "position": "6",
             "children": [
                 {"label": "Templates", "route": "/admin/ext/email-manager/templates", "icon": "LayoutTemplate"},
+                {"label": "Layouts", "route": "/admin/ext/email-manager/layouts", "icon": "Layout"},
                 {"label": "Rules", "route": "/admin/ext/email-manager/rules", "icon": "Gavel"},
                 {"label": "Logs", "route": "/admin/ext/email-manager/logs", "icon": "ScrollText"},
                 {"label": "Settings", "route": "/admin/ext/email-manager/settings", "icon": "Settings"}

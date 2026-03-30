@@ -163,7 +163,7 @@ func (rc *RenderContext) BuildAppData(settings map[string]string, languages []mo
 }
 
 // BuildNodeData creates the .Node namespace from a content node and its rendered blocks HTML.
-func (rc *RenderContext) BuildNodeData(node *models.ContentNode, blocksHTML string) NodeData {
+func (rc *RenderContext) BuildNodeData(node *models.ContentNode, blocksHTML string, languages []models.Language) NodeData {
 	fields := make(map[string]interface{})
 	if len(node.FieldsData) > 0 {
 		if err := json.Unmarshal([]byte(node.FieldsData), &fields); err != nil {
@@ -179,7 +179,7 @@ func (rc *RenderContext) BuildNodeData(node *models.ContentNode, blocksHTML stri
 	}
 
 	// Load translations for language switcher
-	translations := rc.loadTranslations(node)
+	translations := rc.loadTranslations(node, languages)
 
 	return NodeData{
 		ID:           node.ID,
@@ -198,7 +198,7 @@ func (rc *RenderContext) BuildNodeData(node *models.ContentNode, blocksHTML stri
 
 // loadTranslations returns translation siblings for a node, including the current node.
 // Each entry has: language_code, full_url, title, flag, language_name, is_current.
-func (rc *RenderContext) loadTranslations(node *models.ContentNode) []map[string]interface{} {
+func (rc *RenderContext) loadTranslations(node *models.ContentNode, langs []models.Language) []map[string]interface{} {
 	if node.TranslationGroupID == nil || *node.TranslationGroupID == "" {
 		return nil
 	}
@@ -212,9 +212,6 @@ func (rc *RenderContext) loadTranslations(node *models.ContentNode) []map[string
 		return nil
 	}
 
-	// Load languages for flags/names
-	var langs []models.Language
-	rc.db.Where("is_active = ?", true).Find(&langs)
 	langMap := make(map[string]models.Language)
 	for _, l := range langs {
 		langMap[l.Code] = l
@@ -236,50 +233,75 @@ func (rc *RenderContext) loadTranslations(node *models.ContentNode) []map[string
 }
 
 // LoadMenus resolves all menus for the current language into a map keyed by slug.
-// Menus are converted to snake_case maps for consistent template access.
+// Performance: Uses ListWithItems for batch loading and single query node URL resolution.
 func (rc *RenderContext) LoadMenus(languageID *int) map[string]interface{} {
 	menus := make(map[string]interface{})
-	allMenus, err := rc.menuSvc.List(nil)
+	
+	// Step 1: Batch fetch all menus and their items
+	allMenus, err := rc.menuSvc.ListWithItems(languageID)
 	if err != nil {
 		log.Printf("WARN: failed to load menus: %v", err)
 		return menus
 	}
-	slugs := make(map[string]bool)
+
+	// Step 2: Collect all node IDs across all menus for single batch lookup
+	allNodeIDs := make(map[int]bool)
 	for _, m := range allMenus {
-		slugs[m.Slug] = true
+		rc.collectMenuItemNodeIDs(m.Items, allNodeIDs)
 	}
-	for slug := range slugs {
-		menu, err := rc.menuSvc.Resolve(slug, languageID)
-		if err != nil {
-			continue
+
+	// Step 3: Batch fetch all node URLs
+	nodeMap := make(map[int]string)
+	if len(allNodeIDs) > 0 {
+		var ids []int
+		for id := range allNodeIDs {
+			ids = append(ids, id)
 		}
-		menus[slug] = rc.menuToMap(menu)
+		var nodes []models.ContentNode
+		if err := rc.db.Select("id, full_url").Where("id IN ?", ids).Find(&nodes).Error; err == nil {
+			for _, n := range nodes {
+				nodeMap[n.ID] = n.FullURL
+			}
+		}
 	}
+
+	// Step 4: Convert to maps using the pre-fetched nodeMap
+	for _, m := range allMenus {
+		menus[m.Slug] = map[string]interface{}{
+			"id":          m.ID,
+			"slug":        m.Slug,
+			"name":        m.Name,
+			"language_id": m.LanguageID,
+			"items":       rc.menuItemsToMaps(m.Items, nodeMap),
+		}
+	}
+
 	return menus
 }
 
-// menuToMap converts a Menu struct to a snake_case map for template access.
-func (rc *RenderContext) menuToMap(menu *models.Menu) map[string]interface{} {
-	return map[string]interface{}{
-		"id":          menu.ID,
-		"slug":        menu.Slug,
-		"name":        menu.Name,
-		"language_id": menu.LanguageID,
-		"items":       rc.menuItemsToMaps(menu.Items),
+
+
+func (rc *RenderContext) collectMenuItemNodeIDs(items []models.MenuItem, nodeIDs map[int]bool) {
+	for _, item := range items {
+		if item.ItemType == "node" && item.NodeID != nil {
+			nodeIDs[*item.NodeID] = true
+		}
+		if len(item.Children) > 0 {
+			rc.collectMenuItemNodeIDs(item.Children, nodeIDs)
+		}
 	}
 }
 
 // menuItemsToMaps converts MenuItem structs to snake_case maps recursively.
-// For "node" type items, resolves the URL from the content node's full_url.
-func (rc *RenderContext) menuItemsToMaps(items []models.MenuItem) []map[string]interface{} {
+// For "node" type items, resolves the URL from the pre-fetched node map.
+func (rc *RenderContext) menuItemsToMaps(items []models.MenuItem, nodeMap map[int]string) []map[string]interface{} {
 	result := make([]map[string]interface{}, 0, len(items))
 	for _, item := range items {
 		url := item.URL
-		// Resolve URL for node-type items from the content node
+		// Resolve URL for node-type items from the map
 		if item.ItemType == "node" && item.NodeID != nil {
-			var node models.ContentNode
-			if err := rc.db.Select("full_url").First(&node, *item.NodeID).Error; err == nil {
-				url = node.FullURL
+			if fullURL, ok := nodeMap[*item.NodeID]; ok {
+				url = fullURL
 			}
 		}
 		m := map[string]interface{}{
@@ -289,7 +311,7 @@ func (rc *RenderContext) menuItemsToMaps(items []models.MenuItem) []map[string]i
 			"url":       url,
 			"target":    item.Target,
 			"css_class": item.CSSClass,
-			"children":  rc.menuItemsToMaps(item.Children),
+			"children":  rc.menuItemsToMaps(item.Children, nodeMap),
 		}
 		if item.NodeID != nil {
 			m["node_id"] = *item.NodeID

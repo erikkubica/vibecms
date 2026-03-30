@@ -112,7 +112,7 @@ func main() {
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, eventBus)
 
 	// Theme loading.
-	themeLoader := cms.NewThemeLoader(database, themeAssets)
+	themeLoader := cms.NewThemeLoader(database, themeAssets, eventBus)
 	themePath := os.Getenv("THEME_PATH")
 	if themePath == "" {
 		themePath = "themes/default"
@@ -148,7 +148,7 @@ func main() {
 	renderer.SetFilterRunner(scriptEngine.ApplyFilter)
 
 	renderCtx := cms.NewRenderContext(database, layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
-	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx)
+	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx, eventBus)
 
 	// --- Public HTML pages ---
 	pageAuthHandler.RegisterRoutes(app)

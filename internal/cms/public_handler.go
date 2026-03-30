@@ -9,8 +9,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"vibecms/internal/auth"
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 	"vibecms/internal/rendering"
 
@@ -39,6 +41,13 @@ type PublicHandler struct {
 	layoutBlockSvc *LayoutBlockService
 	menuSvc        *MenuService
 	renderCtx      *RenderContext
+	eventBus       *events.EventBus
+
+	cacheMu         sync.RWMutex
+	siteSettings    map[string]string
+	blockTypes      map[string]models.BlockType
+	themeBlockCache map[string]string
+	activeLanguages []models.Language
 }
 
 // NewPublicHandler creates a new PublicHandler.
@@ -50,8 +59,9 @@ func NewPublicHandler(
 	layoutBlockSvc *LayoutBlockService,
 	menuSvc *MenuService,
 	renderCtx *RenderContext,
+	eventBus *events.EventBus,
 ) *PublicHandler {
-	return &PublicHandler{
+	h := &PublicHandler{
 		db:             db,
 		renderer:       renderer,
 		sessions:       sessions,
@@ -59,7 +69,31 @@ func NewPublicHandler(
 		layoutBlockSvc: layoutBlockSvc,
 		menuSvc:        menuSvc,
 		renderCtx:      renderCtx,
+		eventBus:       eventBus,
 	}
+	h.ClearCache()
+
+	if eventBus != nil {
+		eventBus.SubscribeAll(func(event string, payload events.Payload) {
+			if strings.HasPrefix(event, "theme.") || strings.HasPrefix(event, "setting.") || strings.HasPrefix(event, "block_type.") || strings.HasPrefix(event, "language.") || strings.HasPrefix(event, "layout") {
+				h.ClearCache()
+			}
+		})
+	}
+
+	return h
+}
+
+// ClearCache clears the in-memory caches.
+func (h *PublicHandler) ClearCache() {
+	h.renderer.ClearCache()
+
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+	h.siteSettings = nil
+	h.blockTypes = nil
+	h.activeLanguages = nil
+	h.themeBlockCache = make(map[string]string)
 }
 
 // RegisterRoutes registers public page routes on the Fiber app.
@@ -75,13 +109,13 @@ func (h *PublicHandler) HomePage(c *fiber.Ctx) error {
 	user := h.currentUser(c)
 
 	// Check if a homepage node is configured
-	var setting models.SiteSetting
-	if err := h.db.Where("key = ?", "homepage_node_id").First(&setting).Error; err == nil && setting.Value != nil {
-		if homepageID, err := strconv.Atoi(*setting.Value); err == nil && homepageID > 0 {
+	settings := h.loadSiteSettings()
+	if val, ok := settings["homepage_node_id"]; ok && val != "" {
+		if homepageID, err := strconv.Atoi(val); err == nil && homepageID > 0 {
 			var node models.ContentNode
 			if err := h.db.Where("id = ? AND status = ?", homepageID, "published").First(&node).Error; err == nil {
 				blocks := parseBlocks(node.BlocksData)
-				renderedBlocks := h.renderBlocks(blocks)
+				renderedBlocks := h.renderBlocksBatch(blocks)
 
 				// Try layout-based rendering first
 				if html, ok := h.renderNodeWithLayout(c, &node, blocks, renderedBlocks, user); ok {
@@ -164,7 +198,7 @@ func (h *PublicHandler) PageByFullURL(c *fiber.Ctx) error {
 	}
 
 	blocks := parseBlocks(node.BlocksData)
-	renderedBlocks := h.renderBlocks(blocks)
+	renderedBlocks := h.renderBlocksBatch(blocks)
 
 	// Try layout-based rendering first
 	if html, ok := h.renderNodeWithLayout(c, node, blocks, renderedBlocks, user); ok {
@@ -190,30 +224,22 @@ func (h *PublicHandler) PageByFullURL(c *fiber.Ctx) error {
 // If no layout is found or an error occurs, it returns "" and false so the
 // caller can fall back to the legacy file-based rendering.
 func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentNode, blocks []map[string]interface{}, renderedBlocks []string, user *models.User) (string, bool) {
-	// Resolve the node's language to get its ID
-	var nodeLang models.Language
+	languages := h.loadActiveLanguages()
 	var languageID *int
-	if err := h.db.Where("code = ?", node.LanguageCode).First(&nodeLang).Error; err == nil {
-		languageID = &nodeLang.ID
+	var currentLang *models.Language
+
+	for i := range languages {
+		if languages[i].Code == node.LanguageCode {
+			languageID = &languages[i].ID
+			currentLang = &languages[i]
+			break
+		}
 	}
 
 	// Resolve layout for this node
 	layout, err := h.layoutSvc.ResolveForNode(node, languageID)
 	if err != nil || layout == nil {
 		return "", false
-	}
-
-	// Get all active languages
-	var languages []models.Language
-	h.db.Where("is_active = ?", true).Order("sort_order ASC").Find(&languages)
-
-	// Find the current language
-	var currentLang *models.Language
-	for i := range languages {
-		if languages[i].Code == node.LanguageCode {
-			currentLang = &languages[i]
-			break
-		}
 	}
 
 	// Load site settings
@@ -229,7 +255,7 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 	appData := h.renderCtx.BuildAppData(settings, languages, currentLang)
 	appData.Menus = menus
 
-	nodeData := h.renderCtx.BuildNodeData(node, blocksHTML)
+	nodeData := h.renderCtx.BuildNodeData(node, blocksHTML, languages)
 
 	templateData := TemplateData{
 		App:  appData,
@@ -258,33 +284,23 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 
 // render404WithLayout renders a 404 page using the default layout.
 func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
-	// Get default language
-	var defaultLang models.Language
-	if err := h.db.Where("is_default = ?", true).First(&defaultLang).Error; err != nil {
+	languages := h.loadActiveLanguages()
+	var defaultLang *models.Language
+	for i := range languages {
+		if languages[i].IsDefault {
+			defaultLang = &languages[i]
+			break
+		}
+	}
+	if defaultLang == nil {
 		return "", false
 	}
 	defaultLangID := &defaultLang.ID
 
 	// Find default layout — try language-specific first, then universal (NULL)
-	var layout models.Layout
-	err := h.db.Where("is_default = ? AND language_id = ?", true, *defaultLangID).First(&layout).Error
+	layout, err := h.layoutSvc.ResolveDefault(defaultLangID)
 	if err != nil {
-		// Fall back to universal default layout
-		if err2 := h.db.Where("is_default = ? AND language_id IS NULL", true).First(&layout).Error; err2 != nil {
-			return "", false
-		}
-	}
-
-	// Get languages, settings, menus
-	var languages []models.Language
-	h.db.Where("is_active = ?", true).Order("sort_order ASC").Find(&languages)
-
-	var currentLang *models.Language
-	for i := range languages {
-		if languages[i].Code == defaultLang.Code {
-			currentLang = &languages[i]
-			break
-		}
+		return "", false
 	}
 
 	settings := h.loadSiteSettings()
@@ -298,7 +314,7 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 		<a href="/" class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Back to Home</a>
 	</div>`
 
-	appData := h.renderCtx.BuildAppData(settings, languages, currentLang)
+	appData := h.renderCtx.BuildAppData(settings, languages, defaultLang)
 	appData.Menus = menus
 
 	nodeData := NodeData{
@@ -335,35 +351,30 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 // RenderWithLayout renders arbitrary HTML content inside the default site layout.
 // Used by auth pages, error pages, etc. that need the full site chrome.
 func (h *PublicHandler) RenderWithLayout(c *fiber.Ctx, title string, innerHTML template.HTML) (string, bool) {
-	var defaultLang models.Language
-	if err := h.db.Where("is_default = ?", true).First(&defaultLang).Error; err != nil {
+	languages := h.loadActiveLanguages()
+	var defaultLang *models.Language
+	for i := range languages {
+		if languages[i].IsDefault {
+			defaultLang = &languages[i]
+			break
+		}
+	}
+	if defaultLang == nil {
 		return "", false
 	}
 	defaultLangID := &defaultLang.ID
 
-	var layout models.Layout
-	if err := h.db.Where("is_default = ? AND language_id = ?", true, defaultLangID).First(&layout).Error; err != nil {
-		if err2 := h.db.Where("is_default = ? AND language_id IS NULL", true).First(&layout).Error; err2 != nil {
-			return "", false
-		}
-	}
-
-	var languages []models.Language
-	h.db.Where("is_active = ?", true).Order("sort_order ASC").Find(&languages)
-
-	var currentLang *models.Language
-	for i := range languages {
-		if languages[i].Code == defaultLang.Code {
-			currentLang = &languages[i]
-			break
-		}
+	// Find default layout — try language-specific first, then universal (NULL)
+	layout, err := h.layoutSvc.ResolveDefault(defaultLangID)
+	if err != nil {
+		return "", false
 	}
 
 	settings := h.loadSiteSettings()
 	menus := h.renderCtx.LoadMenus(defaultLangID)
 	user := h.currentUser(c)
 
-	appData := h.renderCtx.BuildAppData(settings, languages, currentLang)
+	appData := h.renderCtx.BuildAppData(settings, languages, defaultLang)
 	appData.Menus = menus
 
 	nodeData := NodeData{
@@ -397,7 +408,21 @@ func (h *PublicHandler) RenderWithLayout(c *fiber.Ctx, title string, innerHTML t
 
 // loadSiteSettings loads all site settings into a map keyed by setting key.
 func (h *PublicHandler) loadSiteSettings() map[string]string {
-	settings := make(map[string]string)
+	h.cacheMu.RLock()
+	settings := h.siteSettings
+	h.cacheMu.RUnlock()
+
+	if settings != nil {
+		return settings
+	}
+
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+	if h.siteSettings != nil {
+		return h.siteSettings
+	}
+
+	settings = make(map[string]string)
 	var allSettings []models.SiteSetting
 	h.db.Find(&allSettings)
 	for _, s := range allSettings {
@@ -405,19 +430,61 @@ func (h *PublicHandler) loadSiteSettings() map[string]string {
 			settings[s.Key] = *s.Value
 		}
 	}
+
+	h.siteSettings = settings
 	return settings
+}
+
+// loadActiveLanguages loads all active languages as a slice.
+func (h *PublicHandler) loadActiveLanguages() []models.Language {
+	h.cacheMu.RLock()
+	languages := h.activeLanguages
+	h.cacheMu.RUnlock()
+
+	if languages != nil {
+		return languages
+	}
+
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+	if h.activeLanguages != nil {
+		return h.activeLanguages
+	}
+
+	var langs []models.Language
+	h.db.Where("is_active = ?", true).Order("sort_order ASC").Find(&langs)
+
+	h.activeLanguages = langs
+	return langs
+}
+
+func (h *PublicHandler) getBlockType(slug string) (models.BlockType, bool) {
+	h.cacheMu.RLock()
+	blocks := h.blockTypes
+	h.cacheMu.RUnlock()
+
+	if blocks == nil {
+		h.cacheMu.Lock()
+		if h.blockTypes == nil {
+			var dt []models.BlockType
+			h.db.Find(&dt)
+			blocks = make(map[string]models.BlockType)
+			for _, b := range dt {
+				blocks[b.Slug] = b
+			}
+			h.blockTypes = blocks
+		} else {
+			blocks = h.blockTypes
+		}
+		h.cacheMu.Unlock()
+	}
+
+	bt, ok := blocks[slug]
+	return bt, ok
 }
 
 // renderBlocks renders each block's HTML template with its field values.
 func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
-	// Fetch all block types
-	var blockTypes []models.BlockType
-	h.db.Find(&blockTypes)
-	btMap := make(map[string]models.BlockType)
-	for _, bt := range blockTypes {
-		btMap[bt.Slug] = bt
-	}
-
 	var rendered []string
 	for _, block := range blocks {
 		blockType, _ := block["type"].(string)
@@ -426,7 +493,7 @@ func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
 			fields = block // fallback for old format
 		}
 
-		bt, ok := btMap[blockType]
+		bt, ok := h.getBlockType(blockType)
 		if !ok || bt.HTMLTemplate == "" {
 			// Fallback: render raw JSON debug block
 			jsonBytes, _ := json.MarshalIndent(fields, "", "  ")
@@ -441,34 +508,44 @@ func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
 			continue
 		}
 
-		// Check for theme file override
+		// Check for theme file override with caching
 		tmplContent := bt.HTMLTemplate
 		themeFile := fmt.Sprintf("themes/default/blocks/%s.html", blockType)
-		if fileContent, err := os.ReadFile(themeFile); err == nil {
-			tmplContent = string(fileContent)
+		
+		h.cacheMu.RLock()
+		cachedContent, hasCache := h.themeBlockCache[themeFile]
+		h.cacheMu.RUnlock()
+
+		if hasCache {
+			if cachedContent != "" {
+				tmplContent = cachedContent
+			}
+		} else {
+			if fileContent, err := os.ReadFile(themeFile); err == nil {
+				tmplContent = string(fileContent)
+				h.cacheMu.Lock()
+				h.themeBlockCache[themeFile] = tmplContent
+				h.cacheMu.Unlock()
+			} else {
+				h.cacheMu.Lock()
+				h.themeBlockCache[themeFile] = "" // Cache the miss
+				h.cacheMu.Unlock()
+			}
 		}
 
 		// Hydrate node references — resolve node selector fields to full node data
-		h.hydrateFields(fields)
-
-		// Auto-mark richtext fields as template.HTML so they render unescaped.
-		// Also walk repeater rows to mark nested richtext fields.
 		markRichTextFields(fields, bt.FieldSchema)
-
-		// Execute template with field values and custom functions
-		tmpl, err := template.New(blockType).Funcs(template.FuncMap{
+		
+		// Use the new RenderParsed method for cached template execution
+		cacheKey := "block:" + blockType + ":" + tmplContent
+		var buf bytes.Buffer
+		err := h.renderer.RenderParsed(&buf, cacheKey, tmplContent, fields, template.FuncMap{
 			"safeHTML": func(s interface{}) template.HTML {
 				return template.HTML(fmt.Sprintf("%v", s))
 			},
-		}).Parse(tmplContent)
+		})
 		if err != nil {
 			rendered = append(rendered, fmt.Sprintf(`<div class="mb-4 text-red-500 text-sm">Template error in %s: %v</div>`, blockType, err))
-			continue
-		}
-
-		var buf strings.Builder
-		if err := tmpl.Execute(&buf, fields); err != nil {
-			rendered = append(rendered, fmt.Sprintf(`<div class="mb-4 text-red-500 text-sm">Render error in %s: %v</div>`, blockType, err))
 			continue
 		}
 
@@ -477,42 +554,213 @@ func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
 	return rendered
 }
 
-// hydrateFields walks through field values and hydrates node references.
-// A node reference is a map with an "id" key (single node selector) or
-// an array of such maps (multi node selector). Each reference is replaced
-// with full node data including flattened fields_data.
-func (h *PublicHandler) hydrateFields(fields map[string]interface{}) {
-	for key, val := range fields {
-		switch v := val.(type) {
-		case map[string]interface{}:
-			// Single node reference: {"id": 5, "title": "..."}
-			if _, hasID := v["id"]; hasID {
-				fields[key] = h.hydrateNodeRef(v)
+// renderBlocksBatch is the optimized version that performs batch node hydration.
+func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}) []string {
+	var rendered []string
+	if len(blocks) == 0 {
+		return rendered
+	}
+
+	// Step 1: Collect all node IDs across all blocks
+	allNodeIDs := make(map[int]bool)
+	for _, block := range blocks {
+		fields, _ := block["fields"].(map[string]interface{})
+		if fields == nil {
+			fields = block
+		}
+		collectNodeIDs(fields, allNodeIDs)
+	}
+
+	// Step 2: Batch fetch nodes if any IDs were found
+	nodeMap := make(map[int]map[string]interface{})
+	if len(allNodeIDs) > 0 {
+		var ids []int
+		for id := range allNodeIDs {
+			ids = append(ids, id)
+		}
+		var nodes []models.ContentNode
+		if err := h.db.Where("id IN ?", ids).Find(&nodes).Error; err == nil {
+			// Get node types for schema info
+			typeSlugs := make(map[string]bool)
+			for _, n := range nodes {
+				if n.NodeType != "" {
+					typeSlugs[n.NodeType] = true
+				}
 			}
-		case []interface{}:
-			// Array: could be multi node selector or repeater rows
-			if len(v) > 0 {
-				if first, ok := v[0].(map[string]interface{}); ok {
-					if _, hasID := first["id"]; hasID {
-						// Multi node selector: hydrate each
-						for i, item := range v {
-							if m, ok := item.(map[string]interface{}); ok {
-								v[i] = h.hydrateNodeRef(m)
-							}
-						}
-						fields[key] = v
-					} else {
-						// Repeater rows: recursively hydrate each row
-						for _, item := range v {
-							if m, ok := item.(map[string]interface{}); ok {
-								h.hydrateFields(m)
-							}
-						}
-					}
+			var slugs []string
+			for s := range typeSlugs {
+				slugs = append(slugs, s)
+			}
+			var nodeTypes []models.NodeType
+			if len(slugs) > 0 {
+				h.db.Where("slug IN ?", slugs).Find(&nodeTypes)
+			}
+			typeSchemaMap := make(map[string]models.JSONB)
+			for _, nt := range nodeTypes {
+				typeSchemaMap[nt.Slug] = nt.FieldSchema
+			}
+
+			for _, n := range nodes {
+				fields := make(map[string]interface{})
+				json.Unmarshal(n.FieldsData, &fields)
+				schema := typeSchemaMap[n.NodeType]
+				markRichTextFields(fields, schema)
+				nodeMap[n.ID] = map[string]interface{}{
+					"id":            n.ID,
+					"title":         n.Title,
+					"slug":          n.Slug,
+					"full_url":      n.FullURL,
+					"fields":        fields,
+					"node_type":     n.NodeType,
+					"language_code": n.LanguageCode,
+					"status":        n.Status,
 				}
 			}
 		}
 	}
+
+	// Step 3: Render each block with pre-hydrated nodeMap
+	for _, block := range blocks {
+		blockType, _ := block["type"].(string)
+		fields, _ := block["fields"].(map[string]interface{})
+		if fields == nil {
+			fields = block
+		}
+
+		bt, ok := h.getBlockType(blockType)
+		if !ok || bt.HTMLTemplate == "" {
+			jsonBytes, _ := json.MarshalIndent(fields, "", "  ")
+			rendered = append(rendered, fmt.Sprintf(`<div class="mb-8 bg-slate-50 rounded-xl p-6 border border-slate-200">
+				<div class="flex items-center gap-2 mb-3">
+					<span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-200 text-slate-700">%s</span>
+				</div>
+				<pre class="text-sm text-slate-600 bg-white rounded-lg p-4 border border-slate-200"><code>%s</code></pre>
+			</div>`, blockType, string(jsonBytes)))
+			continue
+		}
+
+		// Apply batch-hydrated nodes
+		applyHydratedNodes(fields, nodeMap)
+
+		tmplContent := bt.HTMLTemplate
+		themeFile := fmt.Sprintf("themes/default/blocks/%s.html", blockType)
+		h.cacheMu.RLock()
+		cachedContent, hasCache := h.themeBlockCache[themeFile]
+		h.cacheMu.RUnlock()
+		if hasCache && cachedContent != "" {
+			tmplContent = cachedContent
+		} else if !hasCache {
+			if fileContent, err := os.ReadFile(themeFile); err == nil {
+				tmplContent = string(fileContent)
+				h.cacheMu.Lock()
+				h.themeBlockCache[themeFile] = tmplContent
+				h.cacheMu.Unlock()
+			} else {
+				h.cacheMu.Lock()
+				h.themeBlockCache[themeFile] = ""
+				h.cacheMu.Unlock()
+			}
+		}
+
+		markRichTextFields(fields, bt.FieldSchema)
+		
+		cacheKey := "block:" + blockType + ":" + tmplContent
+		var buf bytes.Buffer
+		err := h.renderer.RenderParsed(&buf, cacheKey, tmplContent, fields, template.FuncMap{
+			"safeHTML": func(s interface{}) template.HTML {
+				return template.HTML(fmt.Sprintf("%v", s))
+			},
+		})
+		if err != nil {
+			log.Printf("WARN: block template render error [%s]: %v", blockType, err)
+			continue
+		}
+		rendered = append(rendered, buf.String())
+	}
+	return rendered
+}
+
+// hydrateFields walks through field values and hydrates node references.
+// Note: Preferred way is to use renderBlocksBatch for superior performance.
+func (h *PublicHandler) hydrateFields(fields map[string]interface{}) {
+	nodeIDs := make(map[int]bool)
+	collectNodeIDs(fields, nodeIDs)
+	if len(nodeIDs) == 0 {
+		return
+	}
+
+	var ids []int
+	for id := range nodeIDs {
+		ids = append(ids, id)
+	}
+
+	var nodes []models.ContentNode
+	if err := h.db.Where("id IN ?", ids).Find(&nodes).Error; err != nil {
+		return
+	}
+
+	nodeTypeSlugs := make(map[string]bool)
+	for _, n := range nodes {
+		if n.NodeType != "" {
+			nodeTypeSlugs[n.NodeType] = true
+		}
+	}
+	var types []string
+	for nt := range nodeTypeSlugs {
+		types = append(types, nt)
+	}
+
+	var nodeTypes []models.NodeType
+	if len(types) > 0 {
+		h.db.Where("slug IN ?", types).Find(&nodeTypes)
+	}
+	typeSchemaMap := make(map[string]models.JSONB)
+	for _, nt := range nodeTypes {
+		typeSchemaMap[nt.Slug] = nt.FieldSchema
+	}
+
+	nodeMap := make(map[int]map[string]interface{})
+	for _, node := range nodes {
+		hydrated := map[string]interface{}{
+			"id":            node.ID,
+			"uuid":          node.UUID,
+			"title":         node.Title,
+			"slug":          node.Slug,
+			"full_url":      node.FullURL,
+			"node_type":     node.NodeType,
+			"status":        node.Status,
+			"language_code": node.LanguageCode,
+			"version":       node.Version,
+			"created_at":    node.CreatedAt,
+			"updated_at":    node.UpdatedAt,
+		}
+		if node.PublishedAt != nil {
+			hydrated["published_at"] = *node.PublishedAt
+		}
+
+		if len(node.FieldsData) > 0 {
+			var fieldsData map[string]interface{}
+			if err := json.Unmarshal([]byte(node.FieldsData), &fieldsData); err == nil {
+				if schema, ok := typeSchemaMap[node.NodeType]; ok {
+					markRichTextFields(fieldsData, schema)
+				}
+				for k, v := range fieldsData {
+					hydrated[k] = v
+				}
+			}
+		}
+
+		if len(node.BlocksData) > 0 {
+			var blocksData []map[string]interface{}
+			if err := json.Unmarshal([]byte(node.BlocksData), &blocksData); err == nil {
+				hydrated["blocks"] = blocksData
+			}
+		}
+
+		nodeMap[int(node.ID)] = hydrated
+	}
+
+	applyHydratedNodes(fields, nodeMap)
 }
 
 // fieldSchemaDef represents a field definition from the block type's field_schema.
@@ -564,81 +812,92 @@ func applyRichTextMarking(fields map[string]interface{}, defs []fieldSchemaDef) 
 	}
 }
 
-// hydrateNodeRef takes a lightweight node reference {"id": 5, "title": "..."}
-// and returns a fully hydrated map with all node fields + flattened fields_data.
-// Template can then use {{.title}}, {{.slug}}, {{.position}}, {{.bio}}, etc.
-func (h *PublicHandler) hydrateNodeRef(ref map[string]interface{}) map[string]interface{} {
-	idVal, ok := ref["id"]
-	if !ok {
-		return ref
-	}
-
-	// Parse ID (could be float64 from JSON)
-	var nodeID int
+func parseNodeID(idVal interface{}) int {
 	switch id := idVal.(type) {
 	case float64:
-		nodeID = int(id)
+		return int(id)
 	case int:
-		nodeID = id
+		return id
 	case json.Number:
 		n, _ := id.Int64()
-		nodeID = int(n)
-	default:
-		return ref
+		return int(n)
 	}
+	return 0
+}
 
-	if nodeID == 0 {
-		return ref
-	}
-
-	var node models.ContentNode
-	if err := h.db.First(&node, nodeID).Error; err != nil {
-		return ref
-	}
-
-	// Build hydrated map with core node fields
-	hydrated := map[string]interface{}{
-		"id":            node.ID,
-		"uuid":          node.UUID,
-		"title":         node.Title,
-		"slug":          node.Slug,
-		"full_url":      node.FullURL,
-		"node_type":     node.NodeType,
-		"status":        node.Status,
-		"language_code": node.LanguageCode,
-		"version":       node.Version,
-		"created_at":    node.CreatedAt,
-		"updated_at":    node.UpdatedAt,
-	}
-
-	if node.PublishedAt != nil {
-		hydrated["published_at"] = *node.PublishedAt
-	}
-
-	// Flatten fields_data into the hydrated map so custom fields are directly accessible
-	if len(node.FieldsData) > 0 {
-		var fieldsData map[string]interface{}
-		if err := json.Unmarshal([]byte(node.FieldsData), &fieldsData); err == nil {
-			// Look up node type schema to mark richtext fields
-			var nodeType models.NodeType
-			if err := h.db.Where("slug = ?", node.NodeType).First(&nodeType).Error; err == nil {
-				markRichTextFields(fieldsData, nodeType.FieldSchema)
+func collectNodeIDs(fields map[string]interface{}, nodeIDs map[int]bool) {
+	for _, val := range fields {
+		switch v := val.(type) {
+		case map[string]interface{}:
+			if idVal, hasID := v["id"]; hasID {
+				if id := parseNodeID(idVal); id > 0 {
+					nodeIDs[id] = true
+				}
 			}
-			for k, v := range fieldsData {
-				hydrated[k] = v
+		case []interface{}:
+			if len(v) > 0 {
+				if first, ok := v[0].(map[string]interface{}); ok {
+					if _, hasID := first["id"]; hasID {
+						for _, item := range v {
+							if m, ok := item.(map[string]interface{}); ok {
+								if idVal, hasID := m["id"]; hasID {
+									if id := parseNodeID(idVal); id > 0 {
+										nodeIDs[id] = true
+									}
+								}
+							}
+						}
+					} else {
+						for _, item := range v {
+							if m, ok := item.(map[string]interface{}); ok {
+								collectNodeIDs(m, nodeIDs)
+							}
+						}
+					}
+				}
 			}
 		}
 	}
+}
 
-	// Also parse and flatten blocks_data for advanced use
-	if len(node.BlocksData) > 0 {
-		var blocksData []map[string]interface{}
-		if err := json.Unmarshal([]byte(node.BlocksData), &blocksData); err == nil {
-			hydrated["blocks"] = blocksData
+func applyHydratedNodes(fields map[string]interface{}, nodeMap map[int]map[string]interface{}) {
+	for key, val := range fields {
+		switch v := val.(type) {
+		case map[string]interface{}:
+			if idVal, hasID := v["id"]; hasID {
+				if id := parseNodeID(idVal); id > 0 {
+					if hydrated, ok := nodeMap[id]; ok {
+						fields[key] = hydrated
+					}
+				}
+			}
+		case []interface{}:
+			if len(v) > 0 {
+				if first, ok := v[0].(map[string]interface{}); ok {
+					if _, hasID := first["id"]; hasID {
+						for i, item := range v {
+							if m, ok := item.(map[string]interface{}); ok {
+								if idVal, hasID := m["id"]; hasID {
+									if id := parseNodeID(idVal); id > 0 {
+										if hydrated, ok := nodeMap[id]; ok {
+											v[i] = hydrated
+										}
+									}
+								}
+							}
+						}
+						fields[key] = v
+					} else {
+						for _, item := range v {
+							if m, ok := item.(map[string]interface{}); ok {
+								applyHydratedNodes(m, nodeMap)
+							}
+						}
+					}
+				}
+			}
 		}
 	}
-
-	return hydrated
 }
 
 // findNodeByURL does a direct full_url lookup.
@@ -654,16 +913,25 @@ func (h *PublicHandler) findLanguageHomepage(path string) (*models.ContentNode, 
 
 	// Check if this matches any active language slug
 	var lang models.Language
-	if err := h.db.Where("slug = ? AND is_active = ?", langSlug, true).First(&lang).Error; err != nil {
+	foundLang := false
+	for _, l := range h.loadActiveLanguages() {
+		if l.Slug == langSlug {
+			lang = l
+			foundLang = true
+			break
+		}
+	}
+	if !foundLang {
 		return nil, false
 	}
 
 	// Find the configured homepage
-	var setting models.SiteSetting
-	if err := h.db.Where("key = ?", "homepage_node_id").First(&setting).Error; err != nil || setting.Value == nil {
+	settings := h.loadSiteSettings()
+	val, ok := settings["homepage_node_id"]
+	if !ok || val == "" {
 		return nil, false
 	}
-	homepageID, err := strconv.Atoi(*setting.Value)
+	homepageID, err := strconv.Atoi(val)
 	if err != nil || homepageID <= 0 {
 		return nil, false
 	}
@@ -705,13 +973,16 @@ func (h *PublicHandler) findNodeByURL(path string) (*models.ContentNode, bool) {
 // - /en/test -> tries /test (for when hide_prefix is ON but user typed with prefix)
 // - /test -> tries /en/test (for when hide_prefix is OFF but URL has no prefix)
 func (h *PublicHandler) findNodeWithPrefixFallback(path string) (*models.ContentNode, bool) {
+	// Get all active languages
+	allLangs := h.loadActiveLanguages()
+
 	// Get all languages with hide_prefix enabled
 	var hiddenLangs []models.Language
-	h.db.Where("hide_prefix = ?", true).Find(&hiddenLangs)
-
-	// Get all active languages for the reverse lookup
-	var allLangs []models.Language
-	h.db.Where("is_active = ?", true).Find(&allLangs)
+	for _, l := range allLangs {
+		if l.HidePrefix {
+			hiddenLangs = append(hiddenLangs, l)
+		}
+	}
 
 	// Case 1: path is /en/something — check if "en" is a language slug with hide_prefix,
 	// meaning the stored URL is just /something

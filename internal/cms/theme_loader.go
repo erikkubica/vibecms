@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 
 	"gorm.io/gorm"
@@ -153,13 +154,15 @@ func (r *ThemeAssetRegistry) BuildBlockScriptTags() template.HTML {
 type ThemeLoader struct {
 	db       *gorm.DB
 	registry *ThemeAssetRegistry
+	eventBus *events.EventBus
 }
 
 // NewThemeLoader creates a new ThemeLoader.
-func NewThemeLoader(db *gorm.DB, registry *ThemeAssetRegistry) *ThemeLoader {
+func NewThemeLoader(db *gorm.DB, registry *ThemeAssetRegistry, eventBus *events.EventBus) *ThemeLoader {
 	return &ThemeLoader{
 		db:       db,
 		registry: registry,
+		eventBus: eventBus,
 	}
 }
 
@@ -237,6 +240,14 @@ func (tl *ThemeLoader) LoadTheme(themeDir string) error {
 	log.Printf("theme loaded: %s (%d layouts, %d partials, %d blocks, %d styles, %d scripts)",
 		manifest.Name, len(manifest.Layouts), len(manifest.Partials), len(manifest.Blocks),
 		len(manifest.Styles), len(manifest.Scripts))
+
+	// Trigger cache invalidation across the system
+	if tl.eventBus != nil {
+		tl.eventBus.Publish("theme.activated", events.Payload{
+			"name": manifest.Name,
+			"path": themeDir,
+		})
+	}
 
 	return nil
 }

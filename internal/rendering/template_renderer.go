@@ -14,13 +14,24 @@ import (
 // TemplateRenderer handles parsing and rendering of Go html/template files.
 // It supports caching in production and always re-parses in dev mode.
 type TemplateRenderer struct {
-	templateDir string
-	cache       map[string]*template.Template
-	mu          sync.RWMutex
+	templateDir  string
+	cache        map[string]*template.Template
+	layoutCache  map[string]*template.Template
+	blockCache   map[string]*template.Template
+	mu           sync.RWMutex
 	isDev        bool
 	funcMap      template.FuncMap
 	eventRunner  func(string, interface{}, []interface{}) template.HTML
 	filterRunner func(string, interface{}, interface{}) interface{}
+}
+
+// ClearCache completely resets the template caches.
+func (r *TemplateRenderer) ClearCache() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.cache = make(map[string]*template.Template)
+	r.layoutCache = make(map[string]*template.Template)
+	r.blockCache = make(map[string]*template.Template)
 }
 
 // SetEventRunner sets the function called by {{event "name" .}} in templates.
@@ -43,6 +54,8 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 	r := &TemplateRenderer{
 		templateDir: templateDir,
 		cache:       make(map[string]*template.Template),
+		layoutCache: make(map[string]*template.Template),
+		blockCache:  make(map[string]*template.Template),
 		isDev:       isDev,
 	}
 	// Default no-op runners (replaced when scripting engine is loaded)
@@ -161,10 +174,63 @@ func (r *TemplateRenderer) RenderFragment(w io.Writer, pageName string, data int
 	return tmpl.Execute(w, data)
 }
 
+// RenderParsed renders a template from a string (code), caching the parsed version.
+// The cacheKey should uniquely identify the template content (e.g. slug + code hash).
+func (r *TemplateRenderer) RenderParsed(w io.Writer, cacheKey string, code string, data interface{}, funcMap template.FuncMap) error {
+	var tmpl *template.Template
+
+	if !r.isDev {
+		r.mu.RLock()
+		cachedTmpl, ok := r.blockCache[cacheKey]
+		r.mu.RUnlock()
+		if ok {
+			tmpl, _ = cachedTmpl.Clone()
+		}
+	}
+
+	if tmpl == nil {
+		// Define a dummy renderLayoutBlock if it's missing from the funcMap
+		// to allow parsing templates that reference it.
+		fullFuncMap := template.FuncMap{}
+		for k, v := range r.funcMap {
+			fullFuncMap[k] = v
+		}
+		for k, v := range funcMap {
+			fullFuncMap[k] = v
+		}
+		if _, ok := fullFuncMap["renderLayoutBlock"]; !ok {
+			fullFuncMap["renderLayoutBlock"] = func(s string) template.HTML { return "" }
+		}
+
+		var err error
+		tmpl, err = template.New(cacheKey).Funcs(fullFuncMap).Parse(code)
+		if err != nil {
+			return fmt.Errorf("template parse error: %w", err)
+		}
+
+		if !r.isDev {
+			r.mu.Lock()
+			clone, _ := tmpl.Clone()
+			r.blockCache[cacheKey] = clone
+			r.mu.Unlock()
+		}
+	}
+
+	// Apply the actual funcMap with the correct closures for this request
+	fullFuncMap := template.FuncMap{}
+	for k, v := range r.funcMap {
+		fullFuncMap[k] = v
+	}
+	for k, v := range funcMap {
+		fullFuncMap[k] = v
+	}
+	tmpl.Funcs(fullFuncMap)
+
+	return tmpl.Execute(w, data)
+}
+
 // RenderLayout renders a layout template_code string (from the DB) with a
 // blockResolver that supports the renderLayoutBlock template function.
-// The blockResolver returns the template_code for a given layout block slug.
-// Recursion is guarded to a maximum depth of 5.
 func (r *TemplateRenderer) RenderLayout(w io.Writer, templateCode string, data interface{}, blockResolver func(slug string) (string, error)) error {
 	depth := 0
 	maxDepth := 5
@@ -185,34 +251,20 @@ func (r *TemplateRenderer) RenderLayout(w io.Writer, templateCode string, data i
 			return ""
 		}
 
-		funcMap := template.FuncMap{}
-		for k, v := range r.funcMap {
-			funcMap[k] = v
-		}
-		funcMap["renderLayoutBlock"] = renderBlock
-
-		tmpl, err := template.New("partial-" + slug).Funcs(funcMap).Parse(code)
-		if err != nil {
-			log.Printf("WARN: template parse error in '%s': %v", slug, err)
-			return ""
-		}
 		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, data); err != nil {
-			log.Printf("WARN: template execute error in '%s': %v", slug, err)
+		cacheKey := "block:" + slug + ":" + code
+		err = r.RenderParsed(&buf, cacheKey, code, data, template.FuncMap{
+			"renderLayoutBlock": renderBlock,
+		})
+		if err != nil {
+			log.Printf("WARN: template render error in block '%s': %v", slug, err)
 			return ""
 		}
 		return template.HTML(buf.String())
 	}
 
-	funcMap := template.FuncMap{}
-	for k, v := range r.funcMap {
-		funcMap[k] = v
-	}
-	funcMap["renderLayoutBlock"] = renderBlock
-
-	tmpl, err := template.New("layout").Funcs(funcMap).Parse(templateCode)
-	if err != nil {
-		return fmt.Errorf("layout template parse error: %w", err)
-	}
-	return tmpl.Execute(w, data)
+	cacheKey := "layout:" + templateCode
+	return r.RenderParsed(w, cacheKey, templateCode, data, template.FuncMap{
+		"renderLayoutBlock": renderBlock,
+	})
 }

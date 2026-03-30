@@ -25,6 +25,17 @@ func NewMenuService(db *gorm.DB, eventBus *events.EventBus) *MenuService {
 
 // List retrieves menus with an optional language_id filter.
 func (s *MenuService) List(languageID *int) ([]models.Menu, error) {
+	cacheKey := "list:all"
+	if languageID != nil {
+		cacheKey = fmt.Sprintf("list:%d", *languageID)
+	}
+	
+	if cached, ok := s.cache.Load(cacheKey); ok {
+		if cached != nil {
+			return cached.([]models.Menu), nil
+		}
+	}
+
 	var menus []models.Menu
 	q := s.db.Order("name ASC")
 	if languageID != nil {
@@ -33,6 +44,60 @@ func (s *MenuService) List(languageID *int) ([]models.Menu, error) {
 	if err := q.Find(&menus).Error; err != nil {
 		return nil, fmt.Errorf("failed to list menus: %w", err)
 	}
+	
+	s.cache.Store(cacheKey, menus)
+	return menus, nil
+}
+
+// ListWithItems retrieves all matches for a language (or all) and populates their nested items tree.
+// Employs only 2 database queries regardless of the number of menus.
+func (s *MenuService) ListWithItems(languageID *int) ([]models.Menu, error) {
+	cacheKey := "list-items:all"
+	if languageID != nil {
+		cacheKey = fmt.Sprintf("list-items:%d", *languageID)
+	}
+
+	if cached, ok := s.cache.Load(cacheKey); ok {
+		if cached != nil {
+			return cached.([]models.Menu), nil
+		}
+	}
+
+	var menus []models.Menu
+	q := s.db.Order("name ASC")
+	if languageID != nil {
+		q = q.Where("language_id = ?", *languageID).Or("language_id IS NULL")
+	}
+	if err := q.Find(&menus).Error; err != nil {
+		return nil, err
+	}
+
+	if len(menus) == 0 {
+		return nil, nil
+	}
+
+	menuIDs := make([]int, len(menus))
+	for i, m := range menus {
+		menuIDs[i] = m.ID
+	}
+
+	var allItems []models.MenuItem
+	if err := s.db.Where("menu_id IN ?", menuIDs).Order("sort_order ASC").Find(&allItems).Error; err != nil {
+		return nil, err
+	}
+
+	// Group items by menu_id
+	itemsByMenu := make(map[int][]models.MenuItem)
+	for _, item := range allItems {
+		itemsByMenu[item.MenuID] = append(itemsByMenu[item.MenuID], item)
+	}
+
+	// Build trees for each menu
+	for i := range menus {
+		menus[i].Items = buildTree(itemsByMenu[menus[i].ID])
+	}
+
+	s.cache.Store(cacheKey, menus)
 	return menus, nil
 }
 
@@ -203,6 +268,8 @@ func (s *MenuService) ReplaceItems(menuID, clientVersion int, tree []models.Menu
 		}).Error; err != nil {
 			return fmt.Errorf("failed to bump version: %w", err)
 		}
+		
+		s.InvalidateCache()
 
 		return nil
 	})

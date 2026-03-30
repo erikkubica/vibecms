@@ -372,6 +372,14 @@ func (s *LayoutService) findDefault(languageID *int) *models.Layout {
 	return nil
 }
 
+// ResolveDefault resolves the default layout for the given language.
+func (s *LayoutService) ResolveDefault(languageID *int) (*models.Layout, error) {
+	if layout := s.findDefault(languageID); layout != nil {
+		return layout, nil
+	}
+	return nil, fmt.Errorf("no default layout found")
+}
+
 // InvalidateCache resets the entire layout cache.
 func (s *LayoutService) InvalidateCache() {
 	s.cache.Range(func(key, value interface{}) bool {

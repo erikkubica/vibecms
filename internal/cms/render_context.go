@@ -142,7 +142,8 @@ func NewRenderContext(db *gorm.DB, layoutSvc *LayoutService, lbSvc *LayoutBlockS
 }
 
 // BuildAppData populates the AppData struct with theme assets and other app-level data.
-func (rc *RenderContext) BuildAppData(settings map[string]string, languages []models.Language, currentLang *models.Language) AppData {
+// If usedBlockSlugs is provided, only CSS/JS for those blocks are included.
+func (rc *RenderContext) BuildAppData(settings map[string]string, languages []models.Language, currentLang *models.Language, usedBlockSlugs ...[]string) AppData {
 	app := AppData{
 		Settings:    settings,
 		Languages:   languages,
@@ -153,8 +154,8 @@ func (rc *RenderContext) BuildAppData(settings map[string]string, languages []mo
 		app.HeadStyles = rc.themeAssets.GetHeadStyles()
 		app.HeadScripts = rc.themeAssets.GetHeadScripts()
 		app.FootScripts = rc.themeAssets.GetFootScripts()
-		app.BlockStyles = rc.themeAssets.BuildBlockStyleTags()
-		app.BlockScripts = rc.themeAssets.BuildBlockScriptTags()
+		app.BlockStyles = rc.themeAssets.BuildBlockStyleTags(usedBlockSlugs...)
+		app.BlockScripts = rc.themeAssets.BuildBlockScriptTags(usedBlockSlugs...)
 	}
 
 	app.ThemeURL = "/theme/assets"

@@ -273,8 +273,9 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 	// Combine rendered blocks into a single HTML string
 	blocksHTML := strings.Join(renderedBlocks, "\n")
 
-	// Build template data
-	appData := h.renderCtx.BuildAppData(settings, languages, currentLang)
+	// Build template data — only include CSS/JS for blocks used on this page
+	usedSlugs := extractBlockSlugs(blocks)
+	appData := h.renderCtx.BuildAppData(settings, languages, currentLang, usedSlugs)
 	appData.Menus = menus
 
 	nodeData := h.renderCtx.BuildNodeData(node, blocksHTML, languages)
@@ -336,7 +337,7 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 		<a href="/" class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Back to Home</a>
 	</div>`
 
-	appData := h.renderCtx.BuildAppData(settings, languages, defaultLang)
+	appData := h.renderCtx.BuildAppData(settings, languages, defaultLang, []string{})
 	appData.Menus = menus
 
 	nodeData := NodeData{
@@ -396,7 +397,7 @@ func (h *PublicHandler) RenderWithLayout(c *fiber.Ctx, title string, innerHTML t
 	menus := h.renderCtx.LoadMenus(defaultLangID)
 	user := h.currentUser(c)
 
-	appData := h.renderCtx.BuildAppData(settings, languages, defaultLang)
+	appData := h.renderCtx.BuildAppData(settings, languages, defaultLang, []string{})
 	appData.Menus = menus
 
 	nodeData := NodeData{
@@ -1118,4 +1119,17 @@ func parseBlocks(data models.JSONB) []map[string]interface{} {
 		return nil
 	}
 	return blocks
+}
+
+// extractBlockSlugs returns the unique block type slugs used in a parsed blocks list.
+func extractBlockSlugs(blocks []map[string]interface{}) []string {
+	seen := make(map[string]bool, len(blocks))
+	slugs := make([]string, 0, len(blocks))
+	for _, b := range blocks {
+		if t, ok := b["type"].(string); ok && t != "" && !seen[t] {
+			seen[t] = true
+			slugs = append(slugs, t)
+		}
+	}
+	return slugs
 }

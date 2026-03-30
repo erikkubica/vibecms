@@ -124,27 +124,58 @@ func (r *ThemeAssetRegistry) GetBlockAssets(slug string) (*BlockAsset, bool) {
 	return ba, ok
 }
 
-// BuildBlockStyleTags returns inline <style> tags for all block assets.
-func (r *ThemeAssetRegistry) BuildBlockStyleTags() template.HTML {
+// BuildBlockStyleTags returns inline <style> tags for block assets.
+// If usedSlugs is provided, only those blocks are included; otherwise all blocks.
+func (r *ThemeAssetRegistry) BuildBlockStyleTags(usedSlugs ...[]string) template.HTML {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var sb strings.Builder
-	for slug, ba := range r.blockAssets {
-		if ba.CSS != "" {
-			sb.WriteString(fmt.Sprintf("<style data-block=\"%s\">\n%s\n</style>\n", slug, ba.CSS))
+
+	if len(usedSlugs) > 0 && len(usedSlugs[0]) > 0 {
+		// Only include CSS for blocks used on this page.
+		seen := make(map[string]bool, len(usedSlugs[0]))
+		for _, slug := range usedSlugs[0] {
+			if seen[slug] {
+				continue
+			}
+			seen[slug] = true
+			if ba, ok := r.blockAssets[slug]; ok && ba.CSS != "" {
+				sb.WriteString(fmt.Sprintf("<style data-block=\"%s\">\n%s\n</style>\n", slug, ba.CSS))
+			}
+		}
+	} else {
+		for slug, ba := range r.blockAssets {
+			if ba.CSS != "" {
+				sb.WriteString(fmt.Sprintf("<style data-block=\"%s\">\n%s\n</style>\n", slug, ba.CSS))
+			}
 		}
 	}
 	return template.HTML(sb.String())
 }
 
-// BuildBlockScriptTags returns inline <script> tags for all block assets.
-func (r *ThemeAssetRegistry) BuildBlockScriptTags() template.HTML {
+// BuildBlockScriptTags returns inline <script> tags for block assets.
+// If usedSlugs is provided, only those blocks are included; otherwise all blocks.
+func (r *ThemeAssetRegistry) BuildBlockScriptTags(usedSlugs ...[]string) template.HTML {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var sb strings.Builder
-	for slug, ba := range r.blockAssets {
-		if ba.JS != "" {
-			sb.WriteString(fmt.Sprintf("<script data-block=\"%s\">\n%s\n</script>\n", slug, ba.JS))
+
+	if len(usedSlugs) > 0 && len(usedSlugs[0]) > 0 {
+		seen := make(map[string]bool, len(usedSlugs[0]))
+		for _, slug := range usedSlugs[0] {
+			if seen[slug] {
+				continue
+			}
+			seen[slug] = true
+			if ba, ok := r.blockAssets[slug]; ok && ba.JS != "" {
+				sb.WriteString(fmt.Sprintf("<script data-block=\"%s\">\n%s\n</script>\n", slug, ba.JS))
+			}
+		}
+	} else {
+		for slug, ba := range r.blockAssets {
+			if ba.JS != "" {
+				sb.WriteString(fmt.Sprintf("<script data-block=\"%s\">\n%s\n</script>\n", slug, ba.JS))
+			}
 		}
 	}
 	return template.HTML(sb.String())

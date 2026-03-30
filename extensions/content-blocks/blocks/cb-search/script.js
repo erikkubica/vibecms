@@ -68,7 +68,7 @@
 
       debounceTimer = setTimeout(function () {
         fetch(
-          "/admin/api/nodes?type=" +
+          "/admin/api/nodes?node_type=" +
             encodeURIComponent(nodeType) +
             "&search=" +
             encodeURIComponent(query) +

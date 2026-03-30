@@ -77,7 +77,7 @@
     }
 
     fetch(
-      "/admin/api/nodes?type=" +
+      "/admin/api/nodes?node_type=" +
         encodeURIComponent(nodeType) +
         "&limit=" +
         count +

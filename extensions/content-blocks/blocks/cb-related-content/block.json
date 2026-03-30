@@ -12,7 +12,7 @@
     },
     {
       "label": "Content Type",
-      "type": "text",
+      "type": "node_type_select",
       "default": "post",
       "key": "node_type"
     },

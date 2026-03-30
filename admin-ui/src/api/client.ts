@@ -218,7 +218,7 @@ export async function setHomepage(nodeId: number | string): Promise<void> {
 export interface NodeTypeField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "number" | "date" | "select" | "image" | "toggle" | "link" | "group" | "repeater" | "node" | "color" | "email" | "url" | "richtext" | "range" | "file" | "gallery" | "radio" | "checkbox";
+  type: "text" | "textarea" | "number" | "date" | "select" | "image" | "toggle" | "link" | "group" | "repeater" | "node" | "color" | "email" | "url" | "richtext" | "range" | "file" | "gallery" | "radio" | "checkbox" | "node_type_select";
   required?: boolean;
   options?: string[];            // for select, radio, checkbox types
   placeholder?: string;          // for text, textarea, number, email, url

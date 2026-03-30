@@ -20,8 +20,10 @@ import {
 } from "lucide-react";
 import {
   searchNodes,
+  getNodeTypes,
   type NodeTypeField,
   type NodeSearchResult,
+  type NodeType,
 } from "@/api/client";
 
 // Link field: text, url, alt, open in new tab
@@ -422,6 +424,50 @@ function NodeSelectorInput({
   );
 }
 
+// Node type selector: fetches registered node types and renders a select dropdown
+function NodeTypeSelectInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [nodeTypes, setNodeTypes] = useState<NodeType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getNodeTypes()
+      .then(setNodeTypes)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Select disabled>
+        <SelectTrigger className="rounded-lg border-slate-300">
+          <SelectValue placeholder="Loading node types..." />
+        </SelectTrigger>
+      </Select>
+    );
+  }
+
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="rounded-lg border-slate-300">
+        <SelectValue placeholder="Select content type" />
+      </SelectTrigger>
+      <SelectContent>
+        {nodeTypes.map((nt) => (
+          <SelectItem key={nt.slug} value={nt.slug}>
+            {nt.label || nt.slug}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function CustomFieldInput({
   field,
   value,
@@ -505,6 +551,8 @@ function CustomFieldInput({
           </SelectContent>
         </Select>
       );
+    case "node_type_select":
+      return <NodeTypeSelectInput value={strVal} onChange={(v) => onChange(v)} />;
     case "toggle":
       return (
         <div className="flex items-center gap-3">

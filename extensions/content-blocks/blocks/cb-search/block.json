@@ -17,7 +17,7 @@
     },
     {
       "label": "Content Type",
-      "type": "text",
+      "type": "node_type_select",
       "default": "page",
       "key": "node_type"
     },

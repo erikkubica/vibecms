@@ -584,16 +584,6 @@ function CustomFieldInput({
           <span className="text-sm text-slate-600">{value ? "Yes" : "No"}</span>
         </div>
       );
-    case "image":
-      return (
-        <Input
-          placeholder={field.placeholder || "Image URL"}
-          value={strVal}
-          onChange={(e) => onChange(e.target.value)}
-          required={field.required}
-          className={inputClass}
-        />
-      );
     case "link":
       return <LinkFieldInput value={value as Record<string, unknown> | null} onChange={onChange} />;
     case "group":
@@ -687,24 +677,13 @@ function CustomFieldInput({
         </div>
       );
     case "file":
-      return (
-        <Input
-          placeholder={field.placeholder || "File URL"}
-          value={strVal}
-          onChange={(e) => onChange(e.target.value)}
-          required={field.required}
-          className={inputClass}
-        />
-      );
+    case "image":
+    case "media":
     case "gallery":
       return (
-        <Textarea
-          placeholder="Enter image URLs, one per line"
-          value={Array.isArray(value) ? (value as string[]).join("\n") : strVal}
-          onChange={(e) => onChange(e.target.value.split("\n").filter(Boolean))}
-          rows={4}
-          className={inputClass}
-        />
+        <p className="text-sm text-slate-400 italic py-2">
+          Media extension required for this field type.
+        </p>
       );
     case "radio":
       return (

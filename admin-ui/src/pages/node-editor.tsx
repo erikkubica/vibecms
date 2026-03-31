@@ -82,6 +82,7 @@ import {
   getLayouts,
   getNodeTranslations,
   createNodeTranslation,
+  searchNodes,
   type ContentNode,
   type NodeType,
   type NodeTypeField,
@@ -179,6 +180,13 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
+
+  // Parent node search
+  const [parentNode, setParentNode] = useState<{ id: number; title: string; slug: string } | null>(null);
+  const [parentSearch, setParentSearch] = useState("");
+  const [parentResults, setParentResults] = useState<{ id: number; title: string; slug: string }[]>([]);
+  const [parentSearching, setParentSearching] = useState(false);
+  const [showParentResults, setShowParentResults] = useState(false);
 
   // SEO
   const [seoTitle, setSeoTitle] = useState("");
@@ -303,6 +311,40 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
       setShowCreateTranslation(false);
     }
   }
+
+  // Load parent node details when editing (to show slug prefix)
+  useEffect(() => {
+    if (parentId && !parentNode) {
+      getNode(parentId)
+        .then((n) => setParentNode({ id: n.id, title: n.title, slug: n.slug }))
+        .catch(() => setParentNode(null));
+    }
+  }, [parentId]);
+
+  // Parent node search with debounce
+  useEffect(() => {
+    if (!parentSearch.trim()) {
+      setParentResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setParentSearching(true);
+      try {
+        const res = await searchNodes({
+          q: parentSearch,
+          node_type: nodeType,
+          limit: 10,
+        });
+        // Filter out self
+        setParentResults(res.filter((r) => String(r.id) !== id));
+      } catch {
+        setParentResults([]);
+      } finally {
+        setParentSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [parentSearch, nodeType, id]);
 
   // Auto-generate slug from title
   useEffect(() => {
@@ -605,7 +647,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
             <div className="flex items-center gap-2">
               <div className="flex items-center flex-1 rounded-lg border border-slate-200 bg-white overflow-hidden h-8">
                 <span className="shrink-0 bg-slate-50 px-2.5 text-xs text-slate-400 border-r border-slate-200 h-full flex items-center">
-                  /{langSlug ? `${langSlug}/` : ""}{urlPrefix ? `${urlPrefix}/` : ""}
+                  /{langSlug ? `${langSlug}/` : ""}{urlPrefix ? `${urlPrefix}/` : ""}{parentNode ? `${parentNode.slug}/` : ""}
                 </span>
                 <input
                   id="slug"
@@ -847,7 +889,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
             <CardContent className="space-y-4 p-5">
               {/* Status + Language row */}
@@ -882,9 +924,8 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
                 </div>
               </div>
 
-              {/* Layout + Parent row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
+              {/* Layout */}
+              <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-slate-500">Layout</Label>
                   <Select value={layoutId || "auto"} onValueChange={(v) => setLayoutId(v === "auto" ? "" : v)}>
                     <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
@@ -900,18 +941,69 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-500">Parent ID</Label>
-                  <Input
-                    type="number"
-                    placeholder="None"
-                    value={parentId}
-                    onChange={(e) => setParentId(e.target.value)}
-                    className="h-9 rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
               </div>
+
+              {/* Parent */}
+              <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">Parent</Label>
+                  {parentNode ? (
+                    <div className="flex items-center gap-2 h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3">
+                      <span className="flex-1 text-sm font-medium text-slate-800 truncate">{parentNode.title}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">/{parentNode.slug}</span>
+                      <button
+                        type="button"
+                        className="text-slate-400 hover:text-red-500 shrink-0"
+                        onClick={() => { setParentId(""); setParentNode(null); }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Input
+                        placeholder={`Search ${label.toLowerCase()}s...`}
+                        value={parentSearch}
+                        onChange={(e) => {
+                          setParentSearch(e.target.value);
+                          setShowParentResults(true);
+                        }}
+                        onFocus={() => setShowParentResults(true)}
+                        onBlur={() => setTimeout(() => setShowParentResults(false), 200)}
+                        className="h-9 rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                      {showParentResults && (parentSearch.trim() || parentSearching) && (
+                        <div className="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+                          {parentSearching ? (
+                            <div className="px-3 py-2 text-sm text-slate-400">Searching...</div>
+                          ) : parentResults.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-slate-400">
+                              {parentSearch.trim() ? "No results found" : "Type to search..."}
+                            </div>
+                          ) : (
+                            parentResults.map((node) => (
+                              <button
+                                key={node.id}
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50 transition-colors"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setParentId(String(node.id));
+                                  setParentNode(node);
+                                  setParentSearch("");
+                                  setParentResults([]);
+                                  setShowParentResults(false);
+                                }}
+                              >
+                                <span className="font-medium text-slate-800 truncate">{node.title}</span>
+                                <span className="text-[10px] text-slate-400 font-mono ml-auto shrink-0">/{node.slug}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
               {/* Save buttons */}
               <div className="flex gap-2 pt-1">

@@ -453,7 +453,7 @@ function NodeTypeSelectInput({
   }
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select key={nodeTypes.length} value={value || undefined} onValueChange={onChange}>
       <SelectTrigger className="rounded-lg border-slate-300">
         <SelectValue placeholder="Select content type" />
       </SelectTrigger>

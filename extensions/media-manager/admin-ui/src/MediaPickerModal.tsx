@@ -120,6 +120,11 @@ function isImage(mime: string): boolean {
   return mime.startsWith("image/");
 }
 
+function cachedUrl(url: string, size: string): string {
+  if (!url.startsWith("/media/")) return url;
+  return "/media/cache/" + size + "/" + url.slice(7);
+}
+
 function FileIcon({ mime, className }: { mime: string; className?: string }) {
   if (isImage(mime)) return <ImageIcon className={className} />;
   if (mime.startsWith("video/")) return <Film className={className} />;
@@ -288,7 +293,7 @@ export default function MediaPickerModal({
                   >
                     {isImage(file.mime_type) ? (
                       <img
-                        src={file.url}
+                        src={cachedUrl(file.url, "medium")}
                         alt={file.alt || file.original_name}
                         className="h-full w-full object-cover"
                         loading="lazy"

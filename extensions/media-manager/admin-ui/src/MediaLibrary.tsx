@@ -200,6 +200,12 @@ function FileIcon({ mime, className }: { mime: string; className?: string }) {
   return <File className={className} />;
 }
 
+// Rewrite /media/... URL to /media/cache/{size}/... for optimized thumbnails.
+function cachedUrl(url: string, size: string): string {
+  if (!url.startsWith("/media/")) return url;
+  return "/media/cache/" + size + "/" + url.slice(7);
+}
+
 function BrokenMediaFallback({ className }: { className?: string }) {
   return (
     <div className={`flex flex-col items-center justify-center gap-2 w-full h-full min-h-32 aspect-square bg-slate-50 text-slate-400 ${className || ""}`}>
@@ -733,11 +739,11 @@ export default function MediaLibrary() {
                             : "ring-1 ring-slate-200 hover:ring-slate-300 hover:shadow-md"
                         }`}
                       >
-                        {/* Thumbnail — clean, no overlays */}
+                        {/* Thumbnail — uses medium cache size for grid */}
                         <div className="relative w-full bg-slate-100 flex items-center justify-center overflow-hidden" style={{ aspectRatio: "1 / 1" }}>
                           {isImage(file.mime_type) ? (
                             <MediaImage
-                              src={file.url}
+                              src={cachedUrl(file.url, "medium")}
                               alt={file.alt || file.original_name}
                               style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
@@ -876,7 +882,7 @@ export default function MediaLibrary() {
                             <div className="h-10 w-10 rounded-md bg-slate-100 overflow-hidden flex items-center justify-center">
                               {isImage(file.mime_type) ? (
                                 <MediaImage
-                                  src={file.url}
+                                  src={cachedUrl(file.url, "thumbnail")}
                                   alt={file.original_name}
                                   className="h-full w-full object-cover"
                                 />

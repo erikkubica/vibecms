@@ -836,7 +836,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 scrollbar-thin">
+        <div className="space-y-6 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
             <CardContent className="space-y-4 p-5">
               {/* Status + Language row */}

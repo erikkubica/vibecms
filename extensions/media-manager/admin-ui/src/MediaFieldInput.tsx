@@ -282,7 +282,7 @@ function GalleryItem({
           <div className="fixed inset-0 z-40" onClick={() => setEditing(false)} />
           <div
             ref={popupRef}
-            className="absolute z-50 top-full left-0 mt-1 w-56 bg-white rounded-lg border border-slate-200 shadow-xl p-3 space-y-2"
+            className="absolute z-50 bottom-full left-0 mb-1 w-56 bg-white rounded-lg border border-slate-200 shadow-xl p-3 space-y-2"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-xs font-semibold text-slate-700">Image Settings</p>

@@ -1,34 +1,34 @@
-<section class="vb-reviews" data-block="cb-reviews">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="vb-reviews__header">
+<section class="py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-reviews">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-12">
       {{if .heading}}
-      <h2 class="vb-reviews__heading">{{.heading}}</h2>
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
       {{end}}
       {{if .average_rating}}
-      <div class="vb-reviews__average">
-        <span class="vb-reviews__average-number">{{.average_rating}}</span>
-        <span class="vb-reviews__average-label">out of 5</span>
+      <div class="flex items-baseline justify-center gap-1.5">
+        <span class="text-2xl font-bold" style="color: var(--color-text);">{{.average_rating}}</span>
+        <span class="text-sm leading-relaxed" style="color: var(--color-text-muted);">out of 5</span>
       </div>
       {{end}}
     </div>
-    <div class="vb-reviews__grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {{range .reviews}}
-      <div class="vb-reviews__card">
-        <div class="vb-reviews__stars" data-rating="{{.rating}}">
-          <span class="vb-reviews__star">&#9733;</span>
-          <span class="vb-reviews__star">&#9733;</span>
-          <span class="vb-reviews__star">&#9733;</span>
-          <span class="vb-reviews__star">&#9733;</span>
-          <span class="vb-reviews__star">&#9733;</span>
+      <div class="vb-cb-reviews__card rounded-lg p-6 transition-all duration-200" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+        <div class="vb-cb-reviews__stars flex gap-0.5 mb-3" data-rating="{{.rating}}">
+          <span class="vb-cb-reviews__star">&#9733;</span>
+          <span class="vb-cb-reviews__star">&#9733;</span>
+          <span class="vb-cb-reviews__star">&#9733;</span>
+          <span class="vb-cb-reviews__star">&#9733;</span>
+          <span class="vb-cb-reviews__star">&#9733;</span>
         </div>
         {{if .title}}
-        <h3 class="vb-reviews__title">{{.title}}</h3>
+        <h3 class="text-lg font-semibold mb-2" style="color: var(--color-text);">{{.title}}</h3>
         {{end}}
-        <p class="vb-reviews__body">{{.body}}</p>
-        <div class="vb-reviews__author-row">
-          <span class="vb-reviews__author">{{.author}}</span>
+        <p class="leading-relaxed mb-4 flex-1" style="color: var(--color-text-muted);">{{.body}}</p>
+        <div class="flex items-center gap-2 mt-auto">
+          <span class="text-sm font-semibold" style="color: var(--color-text);">{{.author}}</span>
           {{if eq .verified "true"}}
-          <span class="vb-reviews__verified">&#10003; Verified</span>
+          <span class="vb-cb-reviews__verified">&#10003; Verified</span>
           {{end}}
         </div>
       </div>

@@ -1,13 +1,7 @@
 /* Image + Text Block — scoped styles */
 
-.vb-image-text__img-wrap {
-  overflow: hidden;
-  border-radius: 0.75rem;
-}
-
 .vb-image-text__img {
   aspect-ratio: 4 / 3;
-  object-fit: cover;
   transition: transform 0.3s ease;
 }
 
@@ -15,7 +9,6 @@
   transform: scale(1.02);
 }
 
-/* Ensure stacking looks good on mobile */
 @media (max-width: 767px) {
   .vb-image-text__img {
     aspect-ratio: 16 / 9;

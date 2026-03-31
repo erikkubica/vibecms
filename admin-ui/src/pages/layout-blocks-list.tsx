@@ -7,6 +7,7 @@ import {
   Loader2,
   Component,
   Filter,
+  Unplug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,11 +37,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  getLayoutBlocks,
+  getLayoutBlocksPaginated,
   deleteLayoutBlock,
+  detachLayoutBlock,
   getLanguages,
   type LayoutBlock,
   type Language,
+  type PaginationMeta,
 } from "@/api/client";
 
 export default function LayoutBlocksListPage() {
@@ -50,22 +53,26 @@ export default function LayoutBlocksListPage() {
   const [languageFilter, setLanguageFilter] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<LayoutBlock | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [detachingId, setDetachingId] = useState<number | null>(null);
 
   const fetchLayoutBlocks = useCallback(async () => {
     setLoading(true);
     try {
-      const params: { language_id?: number } = {};
+      const params: { language_id?: number; page: number; per_page: number } = { page, per_page: 25 };
       if (languageFilter && languageFilter !== "all") {
         params.language_id = Number(languageFilter);
       }
-      const data = await getLayoutBlocks(params);
-      setLayoutBlocks(data);
+      const res = await getLayoutBlocksPaginated(params);
+      setLayoutBlocks(res.data);
+      setMeta(res.meta);
     } catch {
       toast.error("Failed to load layout blocks");
     } finally {
       setLoading(false);
     }
-  }, [languageFilter]);
+  }, [languageFilter, page]);
 
   const fetchLanguages = useCallback(async () => {
     try {
@@ -79,6 +86,10 @@ export default function LayoutBlocksListPage() {
   useEffect(() => {
     fetchLanguages();
   }, [fetchLanguages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [languageFilter]);
 
   useEffect(() => {
     fetchLayoutBlocks();
@@ -96,6 +107,19 @@ export default function LayoutBlocksListPage() {
       toast.error("Failed to delete layout block");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleDetach(lb: LayoutBlock) {
+    setDetachingId(lb.id);
+    try {
+      await detachLayoutBlock(lb.id);
+      toast.success(`"${lb.name}" detached from ${lb.source}`);
+      fetchLayoutBlocks();
+    } catch {
+      toast.error("Failed to detach layout block");
+    } finally {
+      setDetachingId(null);
     }
   }
 
@@ -180,12 +204,26 @@ export default function LayoutBlocksListPage() {
                     <TableCell className="hidden px-6 py-4 text-sm text-slate-500 sm:table-cell">
                       {lb.source === "theme" ? (
                         <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">Theme</Badge>
+                      ) : lb.source === "extension" ? (
+                        <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-0 text-xs">Extension</Badge>
                       ) : (
                         <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-0 text-xs">Custom</Badge>
                       )}
                     </TableCell>
                     <TableCell className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-1">
+                        {lb.source !== "custom" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                            onClick={() => handleDetach(lb)}
+                            disabled={detachingId === lb.id}
+                            title="Detach from source"
+                          >
+                            <Unplug className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -200,7 +238,7 @@ export default function LayoutBlocksListPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-red-500 hover:text-red-600"
-                          disabled={lb.source === "theme"}
+                          disabled={lb.source !== "custom"}
                           onClick={() => setDeleteTarget(lb)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -214,6 +252,35 @@ export default function LayoutBlocksListPage() {
           )}
         </CardContent>
       </Card>
+
+      {meta && meta.total_pages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-500">
+            Showing {(meta.page - 1) * meta.per_page + 1} to{" "}
+            {Math.min(meta.page * meta.per_page, meta.total)} of {meta.total}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg border-slate-300"
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= meta.total_pages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg border-slate-300"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Delete dialog */}
       <Dialog

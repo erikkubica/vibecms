@@ -41,12 +41,24 @@ type AdminUIMenu struct {
 	Children []AdminUIMenuItem `json:"children"`
 }
 
+// AdminUIFieldType describes a custom field type registered by an extension.
+type AdminUIFieldType struct {
+	Type        string   `json:"type"`
+	Label       string   `json:"label"`
+	Description string   `json:"description"`
+	Icon        string   `json:"icon"`
+	Group       string   `json:"group"`
+	Component   string   `json:"component"`
+	Supports    []string `json:"supports,omitempty"`
+}
+
 // AdminUIManifest describes the admin UI components an extension provides.
 type AdminUIManifest struct {
-	Entry  string                 `json:"entry"`
-	Slots  map[string]AdminUISlot `json:"slots"`
-	Routes []AdminUIRoute         `json:"routes"`
-	Menu   *AdminUIMenu           `json:"menu"`
+	Entry      string                 `json:"entry"`
+	Slots      map[string]AdminUISlot `json:"slots"`
+	Routes     []AdminUIRoute         `json:"routes"`
+	Menu       *AdminUIMenu           `json:"menu"`
+	FieldTypes []AdminUIFieldType     `json:"field_types,omitempty"`
 }
 
 // SettingsField describes a single setting field in the schema.

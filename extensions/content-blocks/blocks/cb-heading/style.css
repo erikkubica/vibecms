@@ -1,12 +1,6 @@
-.vb-cb-heading {
-  padding: 3rem 0;
-}
-
 .vb-cb-heading__title {
-  color: var(--color-text);
-  font-weight: 700;
-  line-height: 1.2;
   margin: 0;
+  line-height: 1.2;
 }
 
 .vb-cb-heading__title--h1 { font-size: 3rem; }
@@ -15,11 +9,6 @@
 .vb-cb-heading__title--h4 { font-size: 1.5rem; }
 .vb-cb-heading__title--h5 { font-size: 1.25rem; }
 .vb-cb-heading__title--h6 { font-size: 1.125rem; }
-
-.vb-cb-heading__divider {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
 
 .vb-cb-heading__divider--line {
   width: 4rem;
@@ -34,11 +23,4 @@
   background-image: radial-gradient(circle, var(--color-accent) 3px, transparent 3px);
   background-size: 14px 6px;
   background-repeat: repeat-x;
-}
-
-.vb-cb-heading__subtitle {
-  color: var(--color-text-muted);
-  font-size: 1.125rem;
-  line-height: 1.6;
-  margin: 0;
 }

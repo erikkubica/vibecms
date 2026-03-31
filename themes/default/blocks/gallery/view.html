@@ -1,9 +1,9 @@
-<section class="vibe-gallery py-16 px-4">
+<section class="vb-gallery py-16 md:py-24 px-4 sm:px-6 lg:px-8">
   <div class="max-w-7xl mx-auto">
-    <div class="vibe-gallery__grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       {{range .images}}
-      <div class="vibe-gallery__item group">
-        <div class="rounded-lg overflow-hidden vibe-gallery__image-wrapper">
+      <div class="vb-gallery__item group">
+        <div class="vb-gallery__img-wrap rounded-lg overflow-hidden">
           <img
             src="{{.image}}"
             alt="{{.caption}}"
@@ -12,7 +12,7 @@
           />
         </div>
         {{if .caption}}
-        <p class="vibe-gallery__caption mt-2 text-sm" style="color: var(--color-text-muted);">{{.caption}}</p>
+        <p class="mt-2 text-sm leading-relaxed" style="color: var(--color-text-muted);">{{.caption}}</p>
         {{end}}
       </div>
       {{end}}

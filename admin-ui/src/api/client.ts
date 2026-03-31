@@ -218,7 +218,7 @@ export async function setHomepage(nodeId: number | string): Promise<void> {
 export interface NodeTypeField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "number" | "date" | "select" | "image" | "toggle" | "link" | "group" | "repeater" | "node" | "color" | "email" | "url" | "richtext" | "range" | "file" | "gallery" | "radio" | "checkbox" | "node_type_select";
+  type: "text" | "textarea" | "number" | "date" | "select" | "image" | "toggle" | "link" | "group" | "repeater" | "node" | "color" | "email" | "url" | "richtext" | "range" | "file" | "gallery" | "radio" | "checkbox" | "node_type_select" | (string & {});
   required?: boolean;
   options?: string[];            // for select, radio, checkbox types
   placeholder?: string;          // for text, textarea, number, email, url
@@ -375,6 +375,8 @@ export interface Template {
   slug: string;
   label: string;
   description: string;
+  source: string;
+  theme_name: string | null;
   block_config: TemplateBlockConfig[];
   created_at: string;
   updated_at: string;
@@ -383,6 +385,15 @@ export interface Template {
 export async function getBlockTypes(): Promise<BlockType[]> {
   const res = await api<ApiResponse<BlockType[]>>("/admin/api/block-types");
   return res.data;
+}
+
+export async function getBlockTypesPaginated(params?: { page?: number; per_page?: number }): Promise<{ data: BlockType[]; meta: PaginationMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.per_page) searchParams.set("per_page", String(params.per_page));
+  const qs = searchParams.toString();
+  const res = await api<{ data: BlockType[]; meta: PaginationMeta }>(`/admin/api/block-types${qs ? `?${qs}` : ""}`);
+  return res;
 }
 
 export async function getBlockType(id: number | string): Promise<BlockType> {
@@ -461,6 +472,15 @@ export async function getTemplates(): Promise<Template[]> {
   return res.data;
 }
 
+export async function getTemplatesPaginated(params?: { page?: number; per_page?: number }): Promise<{ data: Template[]; meta: PaginationMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.per_page) searchParams.set("per_page", String(params.per_page));
+  const qs = searchParams.toString();
+  const res = await api<{ data: Template[]; meta: PaginationMeta }>(`/admin/api/templates${qs ? `?${qs}` : ""}`);
+  return res;
+}
+
 export async function getTemplate(id: number | string): Promise<Template> {
   const res = await api<ApiResponse<Template>>(`/admin/api/templates/${id}`);
   return res.data;
@@ -486,6 +506,20 @@ export async function deleteTemplate(id: number | string): Promise<void> {
   await api<void>(`/admin/api/templates/${id}`, { method: "DELETE" });
 }
 
+export async function detachTemplate(id: number | string): Promise<Template> {
+  const res = await api<ApiResponse<Template>>(`/admin/api/templates/${id}/detach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
+export async function reattachTemplate(id: number | string): Promise<Template> {
+  const res = await api<ApiResponse<Template>>(`/admin/api/templates/${id}/reattach`, {
+    method: "POST",
+  });
+  return res.data;
+}
+
 // --- Layouts ---
 
 export interface Layout {
@@ -509,6 +543,17 @@ export async function getLayouts(params?: { language_id?: number; source?: strin
   const qs = searchParams.toString();
   const res = await api<ApiResponse<Layout[]>>(`/admin/api/layouts${qs ? `?${qs}` : ""}`);
   return res.data;
+}
+
+export async function getLayoutsPaginated(params?: { language_id?: number; source?: string; page?: number; per_page?: number }): Promise<{ data: Layout[]; meta: PaginationMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.language_id != null) searchParams.set("language_id", String(params.language_id));
+  if (params?.source) searchParams.set("source", params.source);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.per_page) searchParams.set("per_page", String(params.per_page));
+  const qs = searchParams.toString();
+  const res = await api<{ data: Layout[]; meta: PaginationMeta }>(`/admin/api/layouts${qs ? `?${qs}` : ""}`);
+  return res;
 }
 
 export async function getLayout(id: number | string): Promise<Layout> {
@@ -572,6 +617,17 @@ export async function getLayoutBlocks(params?: { language_id?: number; source?: 
   const qs = searchParams.toString();
   const res = await api<ApiResponse<LayoutBlock[]>>(`/admin/api/layout-blocks${qs ? `?${qs}` : ""}`);
   return res.data;
+}
+
+export async function getLayoutBlocksPaginated(params?: { language_id?: number; source?: string; page?: number; per_page?: number }): Promise<{ data: LayoutBlock[]; meta: PaginationMeta }> {
+  const searchParams = new URLSearchParams();
+  if (params?.language_id != null) searchParams.set("language_id", String(params.language_id));
+  if (params?.source) searchParams.set("source", params.source);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.per_page) searchParams.set("per_page", String(params.per_page));
+  const qs = searchParams.toString();
+  const res = await api<{ data: LayoutBlock[]; meta: PaginationMeta }>(`/admin/api/layout-blocks${qs ? `?${qs}` : ""}`);
+  return res;
 }
 
 export async function getLayoutBlock(id: number | string): Promise<LayoutBlock> {

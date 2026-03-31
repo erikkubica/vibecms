@@ -1,13 +1,15 @@
-<section class="vb-testimonials" data-block="cb-testimonials">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-testimonials py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-testimonials">
+  <div class="max-w-6xl mx-auto">
     {{if .heading}}
-    <h2 class="vb-testimonials__heading">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
     <div class="vb-testimonials__carousel">
       <div class="vb-testimonials__track">
         {{range .testimonials}}
         <div class="vb-testimonials__slide">
-          <div class="vb-testimonials__card">
+          <div class="vb-testimonials__card rounded-lg p-6" style="background: var(--color-surface); border: 1px solid var(--color-border);">
             <div class="vb-testimonials__stars" data-rating="{{.rating}}">
               <span class="vb-testimonials__star">&#9733;</span>
               <span class="vb-testimonials__star">&#9733;</span>
@@ -15,15 +17,15 @@
               <span class="vb-testimonials__star">&#9733;</span>
               <span class="vb-testimonials__star">&#9733;</span>
             </div>
-            <blockquote class="vb-testimonials__quote">{{.quote}}</blockquote>
+            <blockquote class="vb-testimonials__quote leading-relaxed" style="color: var(--color-text);">{{.quote}}</blockquote>
             <div class="vb-testimonials__author">
               {{if .avatar}}
               <img src="{{.avatar}}" alt="{{.author_name}}" class="vb-testimonials__avatar" loading="lazy" />
               {{end}}
               <div class="vb-testimonials__author-info">
-                <span class="vb-testimonials__author-name">{{.author_name}}</span>
+                <span class="text-lg font-semibold" style="color: var(--color-text);">{{.author_name}}</span>
                 {{if .author_role}}
-                <span class="vb-testimonials__author-role">{{.author_role}}</span>
+                <span class="vb-testimonials__author-role" style="color: var(--color-text-muted);">{{.author_role}}</span>
                 {{end}}
               </div>
             </div>

@@ -1,24 +1,24 @@
-<section class="vb-cb-tabs" data-block="cb-tabs">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+<section class="vb-cb-tabs py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-tabs">
+  <div class="max-w-3xl mx-auto">
     {{if .heading}}
-    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color: var(--color-text);">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
 
-    <div class="max-w-4xl mx-auto">
-      <div class="vb-cb-tabs__nav vb-cb-tabs__nav--{{.style}}" role="tablist">
-        {{range $i, $tab := .tabs}}
-        <button class="vb-cb-tabs__tab{{if eq $i 0}} vb-cb-tabs__tab--active{{end}}" role="tab" data-tab-index="{{$i}}" aria-selected="{{if eq $i 0}}true{{else}}false{{end}}">
-          {{if $tab.icon}}<span class="vb-cb-tabs__tab-icon"><i data-lucide="{{$tab.icon}}" class="vb-icon"></i></span>{{end}}
-          <span>{{$tab.label}}</span>
-        </button>
-        {{end}}
-      </div>
-
+    <div class="vb-cb-tabs__nav vb-cb-tabs__nav--{{.style}}" role="tablist">
       {{range $i, $tab := .tabs}}
-      <div class="vb-cb-tabs__panel{{if eq $i 0}} vb-cb-tabs__panel--active{{end}}" role="tabpanel" data-panel-index="{{$i}}">
-        {{$tab.content}}
-      </div>
+      <button class="vb-cb-tabs__tab{{if eq $i 0}} vb-cb-tabs__tab--active{{end}}" role="tab" data-tab-index="{{$i}}" aria-selected="{{if eq $i 0}}true{{else}}false{{end}}">
+        {{if $tab.icon}}<span class="vb-cb-tabs__tab-icon"><i data-lucide="{{$tab.icon}}" class="vb-icon"></i></span>{{end}}
+        <span>{{$tab.label}}</span>
+      </button>
       {{end}}
     </div>
+
+    {{range $i, $tab := .tabs}}
+    <div class="vb-cb-tabs__panel{{if eq $i 0}} vb-cb-tabs__panel--active{{end}}" role="tabpanel" data-panel-index="{{$i}}">
+      {{$tab.content}}
+    </div>
+    {{end}}
   </div>
 </section>

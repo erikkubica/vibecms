@@ -6,6 +6,7 @@ import {
   Trash2,
   Loader2,
   Unplug,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,7 +93,7 @@ export default function LayoutEditorPage() {
   // Languages
   const [languages, setLanguages] = useState<Language[]>([]);
 
-  const isTheme = source === "theme";
+  const isManaged = source !== "custom";
 
   useEffect(() => {
     getLanguages(true)
@@ -223,14 +224,14 @@ export default function LayoutEditorPage() {
           <h1 className="text-2xl font-bold text-slate-900">
             {isEdit ? "Edit Layout" : "New Layout"}
           </h1>
-          {isTheme && (
-            <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-0 text-xs">
-              Theme (Read-Only)
+          {isManaged && (
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">
+              {source === "theme" ? "Theme" : "Extension"}
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {isEdit && isTheme && (
+          {isEdit && isManaged && (
             <Button
               variant="outline"
               onClick={handleDetach}
@@ -238,10 +239,10 @@ export default function LayoutEditorPage() {
               className="text-amber-600 border-amber-300 hover:bg-amber-50"
             >
               <Unplug className="mr-2 h-4 w-4" />
-              {detaching ? "Detaching..." : "Detach from Theme"}
+              {detaching ? "Detaching..." : "Detach"}
             </Button>
           )}
-          {isEdit && !isTheme && (
+          {isEdit && !isManaged && (
             <Button
               variant="outline"
               className="text-red-600 border-red-300 hover:bg-red-50"
@@ -253,7 +254,7 @@ export default function LayoutEditorPage() {
           )}
           <Button
             onClick={handleSave}
-            disabled={saving || isTheme}
+            disabled={saving || isManaged}
             className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium"
           >
             <Save className="mr-2 h-4 w-4" />
@@ -261,6 +262,16 @@ export default function LayoutEditorPage() {
           </Button>
         </div>
       </div>
+
+      {isManaged && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-start gap-2">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            This layout is managed by the active {source} and is read-only. To customize it, click
+            &quot;Detach&quot; to create an editable copy.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
@@ -274,7 +285,7 @@ export default function LayoutEditorPage() {
               <CodeEditor
                 value={templateCode}
                 onChange={setTemplateCode}
-                disabled={isTheme}
+                disabled={isManaged}
                 height="500px"
                 placeholder="Enter your Go html/template code here..."
                 variables={TEMPLATE_VARIABLES}
@@ -366,7 +377,7 @@ export default function LayoutEditorPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Main Layout"
-                  disabled={isTheme}
+                  disabled={isManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -379,7 +390,7 @@ export default function LayoutEditorPage() {
                     setSlug(e.target.value);
                   }}
                   placeholder="main-layout"
-                  disabled={isTheme}
+                  disabled={isManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -390,7 +401,7 @@ export default function LayoutEditorPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="A brief description of this layout..."
                   rows={2}
-                  disabled={isTheme}
+                  disabled={isManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -400,7 +411,7 @@ export default function LayoutEditorPage() {
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
                   value={languageId === null ? "" : String(languageId)}
                   onChange={(e) => setLanguageId(e.target.value === "" ? null : Number(e.target.value))}
-                  disabled={isTheme}
+                  disabled={isManaged}
                 >
                   <option value="">All Languages</option>
                   {languages.map((lang) => (
@@ -416,7 +427,7 @@ export default function LayoutEditorPage() {
                     type="checkbox"
                     checked={isDefault}
                     onChange={(e) => setIsDefault(e.target.checked)}
-                    disabled={isTheme}
+                    disabled={isManaged}
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   Set as default layout

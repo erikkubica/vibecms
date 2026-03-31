@@ -1,0 +1,6 @@
+/* Rich Text Block — scoped styles */
+/* Tailwind prose handles all typography; minimal overrides here */
+
+.vb-rich-text__content a:hover {
+  color: var(--color-accent-hover);
+}

@@ -1,17 +1,19 @@
-<section class="vb-logo-cloud vb-logo-cloud--{{.style}}" data-block="cb-logo-cloud">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-logo-cloud vb-cb-logo-cloud--{{.style}} py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-logo-cloud">
+  <div class="max-w-6xl mx-auto">
     {{if .heading}}
-    <h2 class="vb-logo-cloud__heading">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-lg leading-relaxed font-medium uppercase tracking-wide" style="color: var(--color-text-muted);">{{.heading}}</h2>
+    </div>
     {{end}}
-    <div class="vb-logo-cloud__grid">
+    <div class="vb-cb-logo-cloud__grid">
       {{range .logos}}
-      <div class="vb-logo-cloud__item">
+      <div class="vb-cb-logo-cloud__item">
         {{if .url}}
-        <a href="{{.url}}" class="vb-logo-cloud__link" target="_blank" rel="noopener noreferrer" title="{{.name}}">
-          <img src="{{.image}}" alt="{{.name}}" class="vb-logo-cloud__image" loading="lazy" />
+        <a href="{{.url}}" class="vb-cb-logo-cloud__link" target="_blank" rel="noopener noreferrer" title="{{.name}}">
+          <img src="{{.image}}" alt="{{.name}}" class="vb-cb-logo-cloud__image" loading="lazy" />
         </a>
         {{else}}
-        <img src="{{.image}}" alt="{{.name}}" class="vb-logo-cloud__image" loading="lazy" />
+        <img src="{{.image}}" alt="{{.name}}" class="vb-cb-logo-cloud__image" loading="lazy" />
         {{end}}
       </div>
       {{end}}

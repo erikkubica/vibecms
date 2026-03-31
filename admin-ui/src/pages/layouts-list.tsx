@@ -7,6 +7,7 @@ import {
   Loader2,
   LayoutTemplate,
   Check,
+  Unplug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,11 +30,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  getLayouts,
+  getLayoutsPaginated,
   deleteLayout,
+  detachLayout,
   getLanguages,
   type Layout,
   type Language,
+  type PaginationMeta,
 } from "@/api/client";
 
 export default function LayoutsListPage() {
@@ -43,24 +46,32 @@ export default function LayoutsListPage() {
   const [deleteTarget, setDeleteTarget] = useState<Layout | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [langFilter, setLangFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [detachingId, setDetachingId] = useState<number | null>(null);
 
   const fetchLayouts = useCallback(async () => {
     setLoading(true);
     try {
-      const params: { language_id?: number } = {};
+      const params: { language_id?: number; page: number; per_page: number } = { page, per_page: 25 };
       if (langFilter) params.language_id = Number(langFilter);
-      const data = await getLayouts(params);
-      setLayouts(data);
+      const res = await getLayoutsPaginated(params);
+      setLayouts(res.data);
+      setMeta(res.meta);
     } catch {
       toast.error("Failed to load layouts");
     } finally {
       setLoading(false);
     }
-  }, [langFilter]);
+  }, [langFilter, page]);
 
   useEffect(() => {
     fetchLayouts();
   }, [fetchLayouts]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [langFilter]);
 
   useEffect(() => {
     getLanguages(true)
@@ -80,6 +91,19 @@ export default function LayoutsListPage() {
       toast.error("Failed to delete layout");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleDetach(layout: Layout) {
+    setDetachingId(layout.id);
+    try {
+      await detachLayout(layout.id);
+      toast.success(`"${layout.name}" detached from ${layout.source}`);
+      fetchLayouts();
+    } catch {
+      toast.error("Failed to detach layout");
+    } finally {
+      setDetachingId(null);
     }
   }
 
@@ -160,7 +184,9 @@ export default function LayoutsListPage() {
                     </TableCell>
                     <TableCell className="hidden px-6 py-4 text-sm text-slate-500 sm:table-cell">
                       {layout.source === "theme" ? (
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-0 text-xs">Theme</Badge>
+                        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">Theme</Badge>
+                      ) : layout.source === "extension" ? (
+                        <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-0 text-xs">Extension</Badge>
                       ) : (
                         <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-xs">Custom</Badge>
                       )}
@@ -175,6 +201,18 @@ export default function LayoutsListPage() {
                     </TableCell>
                     <TableCell className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-1">
+                        {layout.source !== "custom" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                            onClick={() => handleDetach(layout)}
+                            disabled={detachingId === layout.id}
+                            title="Detach from source"
+                          >
+                            <Unplug className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -189,7 +227,7 @@ export default function LayoutsListPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-red-500 hover:text-red-600"
-                          disabled={layout.source === "theme"}
+                          disabled={layout.source !== "custom"}
                           onClick={() => setDeleteTarget(layout)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -203,6 +241,35 @@ export default function LayoutsListPage() {
           )}
         </CardContent>
       </Card>
+
+      {meta && meta.total_pages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-500">
+            Showing {(meta.page - 1) * meta.per_page + 1} to{" "}
+            {Math.min(meta.page * meta.per_page, meta.total)} of {meta.total}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg border-slate-300"
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= meta.total_pages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg border-slate-300"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Delete dialog */}
       <Dialog

@@ -1,19 +1,23 @@
-<section class="vb-contact-form py-16 px-4">
-  <div class="max-w-2xl mx-auto">
-    {{if .heading}}
-    <h2 class="text-3xl font-bold text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+<section class="vb-contact-form py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-3xl mx-auto">
+    {{if or .heading .subheading}}
+    <div class="text-center mb-12">
+      {{if .heading}}
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+      {{end}}
+      {{if .subheading}}
+      <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.subheading}}</p>
+      {{end}}
+    </div>
     {{end}}
-    {{if .subheading}}
-    <p class="text-center mb-10 text-lg" style="color: var(--color-text-muted);">{{.subheading}}</p>
-    {{end}}
-    <div class="rounded-lg p-8 border" style="background: var(--color-surface); border-color: var(--color-border); border-radius: var(--radius);">
+    <div class="rounded-lg p-8" style="background: var(--color-surface); border: 1px solid var(--color-border);">
       <div class="space-y-6">
         <div>
           <label class="block text-sm font-medium mb-2" style="color: var(--color-text);">Name</label>
           <input
             type="text"
-            class="vb-contact-input w-full px-4 py-3 rounded-md border outline-none"
-            style="background: var(--color-surface-alt); border-color: var(--color-border); color: var(--color-text); border-radius: var(--radius);"
+            class="vb-contact-form__input w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
+            style="background: var(--color-surface-alt); border: 1px solid var(--color-border); color: var(--color-text);"
             placeholder="Your name"
             disabled
           />
@@ -22,8 +26,8 @@
           <label class="block text-sm font-medium mb-2" style="color: var(--color-text);">{{.email_label}}</label>
           <input
             type="email"
-            class="vb-contact-input w-full px-4 py-3 rounded-md border outline-none"
-            style="background: var(--color-surface-alt); border-color: var(--color-border); color: var(--color-text); border-radius: var(--radius);"
+            class="vb-contact-form__input w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
+            style="background: var(--color-surface-alt); border: 1px solid var(--color-border); color: var(--color-text);"
             placeholder="you@example.com"
             disabled
           />
@@ -31,8 +35,8 @@
         <div>
           <label class="block text-sm font-medium mb-2" style="color: var(--color-text);">{{.message_label}}</label>
           <textarea
-            class="vb-contact-input w-full px-4 py-3 rounded-md border outline-none resize-y"
-            style="background: var(--color-surface-alt); border-color: var(--color-border); color: var(--color-text); border-radius: var(--radius);"
+            class="vb-contact-form__input w-full px-4 py-3 rounded-lg outline-none resize-y transition-all duration-200"
+            style="background: var(--color-surface-alt); border: 1px solid var(--color-border); color: var(--color-text);"
             rows="5"
             placeholder="Your message..."
             disabled
@@ -41,8 +45,8 @@
         <div>
           <button
             type="button"
-            class="vb-contact-button w-full py-3 px-6 rounded-md font-semibold transition-colors duration-200"
-            style="background: var(--color-accent); color: var(--color-accent-text); border-radius: var(--radius);"
+            class="vb-contact-form__button inline-flex items-center justify-center w-full px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200"
+            style="background-color: var(--color-accent); color: var(--color-accent-text);"
             disabled
           >
             {{.button_text}}

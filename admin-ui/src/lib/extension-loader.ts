@@ -21,11 +21,22 @@ export interface AdminUIMenu {
   children: AdminUIMenuItem[];
 }
 
+export interface AdminUIFieldType {
+  type: string;
+  label: string;
+  description: string;
+  icon: string;
+  group: string;
+  component: string;
+  supports?: string[];
+}
+
 export interface AdminUIManifest {
   entry: string;
   slots: Record<string, AdminUISlot>;
   routes: AdminUIRoute[];
   menu: AdminUIMenu | null;
+  field_types?: AdminUIFieldType[];
 }
 
 export interface ExtensionManifestEntry {

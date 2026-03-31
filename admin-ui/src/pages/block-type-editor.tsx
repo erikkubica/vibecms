@@ -32,6 +32,8 @@ import {
   Tag,
   Star,
   Heart,
+  Unlink,
+  Info,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,6 +65,7 @@ import {
   createBlockType,
   updateBlockType,
   deleteBlockType,
+  detachBlockType,
   type BlockType,
   type NodeTypeField,
   previewBlockTemplate,
@@ -167,6 +170,8 @@ export default function BlockTypeEditorPage() {
   const [saving, setSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDetach, setShowDetach] = useState(false);
+  const [detaching, setDetaching] = useState(false);
   const [autoSlug, setAutoSlug] = useState(!isEdit);
 
   // Form state
@@ -177,6 +182,7 @@ export default function BlockTypeEditorPage() {
   const [fields, setFields] = useState<NodeTypeField[]>([]);
   const [htmlTemplate, setHtmlTemplate] = useState("");
   const [source, setSource] = useState("custom");
+  const isManaged = source !== "custom";
   const [originalBlockType, setOriginalBlockType] = useState<BlockType | null>(null);
 
   // Template tabs state
@@ -421,6 +427,22 @@ export default function BlockTypeEditorPage() {
     }
   }
 
+  async function handleDetach() {
+    if (!id) return;
+    setDetaching(true);
+    try {
+      const detached = await detachBlockType(id);
+      setOriginalBlockType(detached);
+      setSource(detached.source);
+      toast.success("Block type detached — now editable");
+      setShowDetach(false);
+    } catch {
+      toast.error("Failed to detach block type");
+    } finally {
+      setDetaching(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -432,16 +454,43 @@ export default function BlockTypeEditorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild className="rounded-lg hover:bg-slate-200">
-          <Link to="/admin/block-types">
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
-          </Link>
-        </Button>
-        <h1 className="text-2xl font-bold text-slate-900">
-          {isEdit ? "Edit Block Type" : "New Block Type"}
-        </h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild className="rounded-lg hover:bg-slate-200">
+            <Link to="/admin/block-types">
+              <ArrowLeft className="h-5 w-5 text-slate-600" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isEdit ? "Edit Block Type" : "New Block Type"}
+          </h1>
+          {isEdit && isManaged && (
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">
+              {source === "theme" ? "Theme" : "Extension"}
+            </Badge>
+          )}
+        </div>
+        {isEdit && isManaged && (
+          <Button
+            variant="outline"
+            onClick={() => setShowDetach(true)}
+            className="text-amber-600 border-amber-300 hover:bg-amber-50"
+          >
+            <Unlink className="mr-2 h-4 w-4" />
+            Detach
+          </Button>
+        )}
       </div>
+
+      {isEdit && isManaged && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-start gap-2">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            This block type is managed by the active {source} and is read-only. To customize it, click
+            &quot;Detach&quot; to create an editable copy.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
@@ -1229,7 +1278,7 @@ export default function BlockTypeEditorPage() {
               <Button
                 type="submit"
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
-                disabled={saving}
+                disabled={saving || isManaged}
               >
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? "Saving..." : isEdit ? "Update Block Type" : "Create Block Type"}
@@ -1275,7 +1324,7 @@ export default function BlockTypeEditorPage() {
           </Card>
 
           {/* Actions (edit mode only) */}
-          {isEdit && (
+          {isEdit && !isManaged && (
             <Card className="rounded-xl border border-slate-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-slate-900">Actions</CardTitle>
@@ -1340,6 +1389,31 @@ export default function BlockTypeEditorPage() {
               disabled={deleting}
             >
               {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detach dialog */}
+      <Dialog open={showDetach} onOpenChange={setShowDetach}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detach from {source === "theme" ? "Theme" : "Extension"}</DialogTitle>
+            <DialogDescription>
+              This will create an editable copy of this block type. The {source} version will no longer
+              be used. You can always re-sync from the {source} later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetach(false)} disabled={detaching}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDetach}
+              disabled={detaching}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {detaching ? "Detaching..." : "Detach"}
             </Button>
           </DialogFooter>
         </DialogContent>

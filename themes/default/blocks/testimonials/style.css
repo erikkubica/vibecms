@@ -1,29 +1,11 @@
-.vb-testimonials {
-  background: var(--color-surface-alt);
-}
+/* Testimonials Block — scoped styles */
 
-.vb-testimonial-card {
-  display: flex;
-  flex-direction: column;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.vb-testimonial-card:hover {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+.vb-testimonials__card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-.vb-testimonial-quote-mark {
+.vb-testimonials__quote-mark {
   font-family: Georgia, "Times New Roman", serif;
   user-select: none;
-  line-height: 1;
-}
-
-.vb-testimonial-avatar {
-  flex-shrink: 0;
-}
-
-.vb-testimonial-initials {
-  flex-shrink: 0;
-  line-height: 1;
 }

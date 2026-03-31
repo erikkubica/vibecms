@@ -3,15 +3,15 @@
     {{range $index, $slide := .slides}}
       <div class="vb-cb-slider__slide {{if eq $index 0}}vb-cb-slider__slide--active{{end}}" style="background-image: url('{{$slide.image}}');">
         <div class="vb-cb-slider__overlay"></div>
-        <div class="vb-cb-slider__content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="vb-cb-slider__content max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {{if $slide.heading}}
-            <h2 class="vb-cb-slider__heading">{{$slide.heading}}</h2>
+            <h2 class="vb-cb-slider__heading text-3xl md:text-4xl font-bold tracking-tight">{{$slide.heading}}</h2>
           {{end}}
           {{if $slide.description}}
-            <p class="vb-cb-slider__description">{{$slide.description}}</p>
+            <p class="vb-cb-slider__description text-lg leading-relaxed">{{$slide.description}}</p>
           {{end}}
           {{if and $slide.button.text $slide.button.url}}
-            <a href="{{$slide.button.url}}" class="vb-cb-slider__button">{{$slide.button.text}}</a>
+            <a href="{{$slide.button.url}}" class="vb-cb-slider__button inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background-color: var(--color-accent); color: var(--color-accent-text);">{{$slide.button.text}}</a>
           {{end}}
         </div>
       </div>

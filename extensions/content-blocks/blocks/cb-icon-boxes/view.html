@@ -1,15 +1,17 @@
-<section class="vb-icon-boxes vb-icon-boxes--{{.style}}" data-block="cb-icon-boxes">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-icon-boxes vb-cb-icon-boxes--{{.style}} py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-icon-boxes">
+  <div class="max-w-7xl mx-auto">
     {{if .heading}}
-    <h2 class="vb-icon-boxes__heading">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
-    <div class="vb-icon-boxes__grid vb-icon-boxes__grid--cols-{{.columns}}">
+    <div class="vb-cb-icon-boxes__grid vb-cb-icon-boxes__grid--cols-{{.columns}}">
       {{range .items}}
-      <div class="vb-icon-boxes__box">
-        <span class="vb-icon-boxes__icon"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>
-        <h3 class="vb-icon-boxes__title">{{.title}}</h3>
+      <div class="vb-cb-icon-boxes__box flex flex-col items-center text-center rounded-lg p-6 transition-all duration-200">
+        <span class="vb-cb-icon-boxes__icon text-3xl mb-3"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>
+        <h3 class="text-lg font-semibold mb-1" style="color: var(--color-text);">{{.title}}</h3>
         {{if .description}}
-        <p class="vb-icon-boxes__description">{{.description}}</p>
+        <p class="text-sm leading-relaxed" style="color: var(--color-text-muted);">{{.description}}</p>
         {{end}}
       </div>
       {{end}}

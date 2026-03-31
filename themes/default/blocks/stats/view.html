@@ -1,14 +1,16 @@
-<section class="vb-stats py-16 px-4">
-  <div class="max-w-7xl mx-auto">
+<section class="vb-stats py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-6xl mx-auto">
     {{if .heading}}
-    <h2 class="text-3xl font-bold text-center mb-12" style="color: var(--color-text);">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
-    <div class="vb-stats-container rounded-lg p-8 md:p-12" style="background: var(--color-surface-alt); border-radius: var(--radius);">
+    <div class="rounded-lg p-8 md:p-12" style="background: var(--color-surface-alt); border: 1px solid var(--color-border);">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
         {{range .stats}}
-        <div class="vb-stat-item text-center">
-          <div class="vb-stat-number text-4xl md:text-5xl font-bold mb-2" style="color: var(--color-accent);">
-            {{if .prefix}}<span class="vb-stat-prefix">{{.prefix}}</span>{{end}}{{.number}}{{if .suffix}}<span class="vb-stat-suffix">{{.suffix}}</span>{{end}}
+        <div class="vb-stats__item text-center">
+          <div class="vb-stats__number text-4xl md:text-5xl font-bold mb-2" style="color: var(--color-accent);">
+            {{if .prefix}}<span class="vb-stats__affix">{{.prefix}}</span>{{end}}{{.number}}{{if .suffix}}<span class="vb-stats__affix">{{.suffix}}</span>{{end}}
           </div>
           <div class="text-sm md:text-base font-medium" style="color: var(--color-text-muted);">{{.label}}</div>
         </div>

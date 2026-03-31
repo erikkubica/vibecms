@@ -1,10 +1,5 @@
-.vb-cb-code-block {
-  padding: 3rem 0;
-}
-
 .vb-cb-code-block__container {
   background-color: #1e1e2e;
-  border: 1px solid #313244;
 }
 
 .vb-cb-code-block__header {
@@ -16,10 +11,6 @@
 }
 
 .vb-cb-code-block__lang {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: #a6adc8;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }

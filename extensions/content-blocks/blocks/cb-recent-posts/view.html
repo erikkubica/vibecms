@@ -1,7 +1,9 @@
-<section class="vb-cb-recent-posts" data-block="cb-recent-posts" data-node-type="{{.node_type}}" data-count="{{.count}}" data-layout="{{.layout}}" data-columns="{{.columns}}" data-show-image="{{.show_image}}" data-show-excerpt="{{.show_excerpt}}" data-show-date="{{.show_date}}" data-link-text="{{.link_text}}">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+<section class="py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-recent-posts" data-node-type="{{.node_type}}" data-count="{{.count}}" data-layout="{{.layout}}" data-columns="{{.columns}}" data-show-image="{{.show_image}}" data-show-excerpt="{{.show_excerpt}}" data-show-date="{{.show_date}}" data-link-text="{{.link_text}}">
+  <div class="max-w-7xl mx-auto">
     {{if .heading}}
-    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color: var(--color-text);">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
 
     <div class="vb-cb-recent-posts__container" data-layout="{{.layout}}" data-columns="{{.columns}}">

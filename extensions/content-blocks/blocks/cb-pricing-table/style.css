@@ -1,62 +1,31 @@
-.vb-pricing-table {
-  padding: 4rem 0;
-  color: var(--color-text);
-}
-
-.vb-pricing-table__header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.vb-pricing-table__heading {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0 0 0.75rem;
-  line-height: 1.2;
-}
-
-.vb-pricing-table__subheading {
-  font-size: 1.125rem;
-  color: var(--color-text-muted);
-  margin: 0;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
-}
-
-.vb-pricing-table__grid {
+.vb-cb-pricing-table__grid {
   display: flex;
-  gap: 1.5rem;
+  gap: 2rem;
   justify-content: center;
   align-items: stretch;
   flex-wrap: wrap;
 }
 
-.vb-pricing-table__card {
+.vb-cb-pricing-table__card {
   position: relative;
   flex: 1 1 280px;
   max-width: 360px;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  padding: 2rem;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease;
 }
 
-.vb-pricing-table__card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+.vb-cb-pricing-table__card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-.vb-pricing-table__card--featured {
-  border: 2px solid var(--color-accent);
+.vb-cb-pricing-table__card--featured {
+  border: 2px solid var(--color-accent) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transform: scale(1.03);
 }
 
-.vb-pricing-table__badge {
+.vb-cb-pricing-table__badge {
   position: absolute;
   top: -0.75rem;
   left: 50%;
@@ -72,110 +41,51 @@
   white-space: nowrap;
 }
 
-.vb-pricing-table__card-header {
-  margin-bottom: 1.5rem;
-}
-
-.vb-pricing-table__plan-name {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem;
-}
-
-.vb-pricing-table__plan-desc {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.vb-pricing-table__price-wrap {
+.vb-cb-pricing-table__price-wrap {
   margin-bottom: 1.5rem;
   display: flex;
   align-items: baseline;
   gap: 0.125rem;
 }
 
-.vb-pricing-table__price {
+.vb-cb-pricing-table__price {
   font-size: 2.5rem;
   font-weight: 700;
   line-height: 1;
 }
 
-.vb-pricing-table__period {
+.vb-cb-pricing-table__period {
   font-size: 1rem;
-  color: var(--color-text-muted);
 }
 
-.vb-pricing-table__features {
+.vb-cb-pricing-table__features {
   flex: 1;
   font-size: 0.9375rem;
   line-height: 2;
   white-space: pre-line;
-  color: var(--color-text-muted);
   margin-bottom: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
 }
 
-.vb-pricing-table__card-footer {
-  margin-top: auto;
-}
-
-.vb-pricing-table__button {
+.vb-cb-pricing-table__button {
   display: block;
   width: 100%;
   text-align: center;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  border-radius: 0.5rem;
   text-decoration: none;
-  border: 2px solid var(--color-border);
-  color: var(--color-text);
-  background: transparent;
-  transition: all 0.15s ease;
-}
-
-.vb-pricing-table__button:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.vb-pricing-table__card--featured .vb-pricing-table__button {
-  background-color: var(--color-accent);
-  color: var(--color-accent-text);
-  border-color: var(--color-accent);
-}
-
-.vb-pricing-table__card--featured .vb-pricing-table__button:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 767px) {
-  .vb-pricing-table__card--featured {
+  .vb-cb-pricing-table__card--featured {
     transform: none;
   }
 
-  .vb-pricing-table__grid {
+  .vb-cb-pricing-table__grid {
     flex-direction: column;
     align-items: center;
   }
 
-  .vb-pricing-table__card {
+  .vb-cb-pricing-table__card {
     max-width: 100%;
     width: 100%;
-  }
-}
-
-@media (min-width: 768px) {
-  .vb-pricing-table {
-    padding: 5rem 0;
-  }
-
-  .vb-pricing-table__heading {
-    font-size: 2.5rem;
   }
 }

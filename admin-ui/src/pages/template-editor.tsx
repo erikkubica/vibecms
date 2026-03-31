@@ -31,6 +31,8 @@ import {
   Tag,
   Star,
   Heart,
+  Unlink,
+  Info,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
@@ -58,6 +61,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  detachTemplate,
   getBlockTypes,
   type Template,
   type TemplateBlockConfig,
@@ -106,6 +110,8 @@ export default function TemplateEditorPage() {
   const [saving, setSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDetach, setShowDetach] = useState(false);
+  const [detaching, setDetaching] = useState(false);
   const [autoSlug, setAutoSlug] = useState(!isEdit);
   const [showAddBlock, setShowAddBlock] = useState(false);
 
@@ -115,6 +121,9 @@ export default function TemplateEditorPage() {
   const [description, setDescription] = useState("");
   const [blockConfig, setBlockConfig] = useState<TemplateBlockConfig[]>([]);
   const [originalTemplate, setOriginalTemplate] = useState<Template | null>(null);
+  const [source, setSource] = useState("custom");
+
+  const isManaged = source !== "custom";
 
   // Block types
   const [blockTypes, setBlockTypes] = useState<BlockType[]>([]);
@@ -135,6 +144,7 @@ export default function TemplateEditorPage() {
         setSlug(tpl.slug);
         setDescription(tpl.description || "");
         setBlockConfig(tpl.block_config || []);
+        setSource(tpl.source || "custom");
         setAutoSlug(false);
       })
       .catch(() => {
@@ -237,6 +247,22 @@ export default function TemplateEditorPage() {
     }
   }
 
+  async function handleDetach() {
+    if (!id) return;
+    setDetaching(true);
+    try {
+      const detached = await detachTemplate(id);
+      setOriginalTemplate(detached);
+      setSource(detached.source);
+      toast.success("Template detached — now editable");
+      setShowDetach(false);
+    } catch {
+      toast.error("Failed to detach template");
+    } finally {
+      setDetaching(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -248,16 +274,43 @@ export default function TemplateEditorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild className="rounded-lg hover:bg-slate-200">
-          <Link to="/admin/templates">
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
-          </Link>
-        </Button>
-        <h1 className="text-2xl font-bold text-slate-900">
-          {isEdit ? "Edit Template" : "New Template"}
-        </h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild className="rounded-lg hover:bg-slate-200">
+            <Link to="/admin/templates">
+              <ArrowLeft className="h-5 w-5 text-slate-600" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isEdit ? "Edit Template" : "New Template"}
+          </h1>
+          {isEdit && isManaged && (
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">
+              {source === "theme" ? "Theme" : "Extension"}
+            </Badge>
+          )}
+        </div>
+        {isEdit && isManaged && (
+          <Button
+            variant="outline"
+            onClick={() => setShowDetach(true)}
+            className="text-amber-600 border-amber-300 hover:bg-amber-50"
+          >
+            <Unlink className="mr-2 h-4 w-4" />
+            Detach
+          </Button>
+        )}
       </div>
+
+      {isEdit && isManaged && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-start gap-2">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            This template is managed by the active {source} and is read-only. To customize it, click
+            &quot;Detach&quot; to create an editable copy.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
@@ -428,14 +481,14 @@ export default function TemplateEditorPage() {
               <Button
                 type="submit"
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
-                disabled={saving}
+                disabled={saving || isManaged}
               >
                 <Save className="mr-1.5 h-3.5 w-3.5" />
                 {saving ? "Saving..." : "Save"}
               </Button>
 
               {/* Actions (edit mode) */}
-              {isEdit && (
+              {isEdit && !isManaged && (
                 <>
                   <Separator />
                   <Button
@@ -516,6 +569,31 @@ export default function TemplateEditorPage() {
               disabled={deleting}
             >
               {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detach dialog */}
+      <Dialog open={showDetach} onOpenChange={setShowDetach}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detach from {source === "theme" ? "Theme" : "Extension"}</DialogTitle>
+            <DialogDescription>
+              This will create an editable copy of this template. The {source} version will no longer
+              be used. You can always re-sync from the {source} later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetach(false)} disabled={detaching}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDetach}
+              disabled={detaching}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {detaching ? "Detaching..." : "Detach"}
             </Button>
           </DialogFooter>
         </DialogContent>

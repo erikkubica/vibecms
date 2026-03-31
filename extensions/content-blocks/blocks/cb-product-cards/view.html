@@ -1,26 +1,28 @@
-<section class="vb-product-cards" data-block="cb-product-cards">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-product-cards">
+  <div class="max-w-7xl mx-auto">
     {{if .heading}}
-    <h2 class="vb-product-cards__heading">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
-    <div class="vb-product-cards__grid vb-product-cards__grid--cols-{{.columns}}">
+    <div class="vb-cb-product-cards__grid vb-cb-product-cards__grid--cols-{{.columns}}">
       {{range .products}}
-      <div class="vb-product-cards__card">
-        <div class="vb-product-cards__image-wrap">
-          <img src="{{.image}}" alt="{{.name}}" class="vb-product-cards__image" loading="lazy" />
+      <div class="vb-cb-product-cards__card rounded-lg transition-all duration-200" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+        <div class="vb-cb-product-cards__image-wrap">
+          <img src="{{.image}}" alt="{{.name}}" class="vb-cb-product-cards__image" loading="lazy" />
         </div>
-        <div class="vb-product-cards__body">
+        <div class="p-6 flex flex-col flex-1">
           {{if .category}}
-          <span class="vb-product-cards__category">{{.category}}</span>
+          <span class="text-xs font-semibold uppercase tracking-wide mb-1" style="color: var(--color-accent);">{{.category}}</span>
           {{end}}
-          <h3 class="vb-product-cards__name">{{.name}}</h3>
-          <div class="vb-product-cards__price-row">
-            <span class="vb-product-cards__price">{{.price}}</span>
+          <h3 class="text-lg font-semibold mb-2" style="color: var(--color-text);">{{.name}}</h3>
+          <div class="flex items-baseline gap-2 mb-4">
+            <span class="text-xl font-bold" style="color: var(--color-text);">{{.price}}</span>
             {{if .original_price}}
-            <span class="vb-product-cards__original-price">{{.original_price}}</span>
+            <span class="text-sm line-through" style="color: var(--color-text-muted);">{{.original_price}}</span>
             {{end}}
           </div>
-          <a href="{{.button.url}}" class="vb-product-cards__button">{{.button.text}}</a>
+          <a href="{{.button.url}}" class="inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 mt-auto text-center" style="background-color: var(--color-accent); color: var(--color-accent-text);">{{.button.text}}</a>
         </div>
       </div>
       {{end}}

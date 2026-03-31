@@ -1,11 +1,6 @@
-.vb-cb-text-columns {
-  padding: 3rem 0;
-}
-
+/* Column content */
 .vb-cb-text-columns__content {
-  color: var(--color-text);
   font-size: 1rem;
-  line-height: 1.7;
 }
 
 .vb-cb-text-columns__content p {

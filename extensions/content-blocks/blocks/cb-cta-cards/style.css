@@ -1,92 +1,16 @@
-.vb-cta-cards {
-  padding: 4rem 0;
+.vb-cb-cta-cards__card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-.vb-cta-cards__heading {
-  font-size: 1.875rem;
-  font-weight: 700;
-  text-align: center;
-  color: var(--color-text);
-  margin: 0 0 2.5rem 0;
-}
-
-.vb-cta-cards__grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-}
-
-.vb-cta-cards__card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 2rem 1.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  background: #fff;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.vb-cta-cards__card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-.vb-cta-cards__icon {
+.vb-cb-cta-cards__icon {
   font-size: 2.5rem;
-  margin-bottom: 1rem;
 }
 
-.vb-cta-cards__icon .vb-icon svg,
-.vb-cta-cards__icon [data-lucide] svg {
+.vb-cb-cta-cards__icon .vb-icon svg,
+.vb-cb-cta-cards__icon [data-lucide] svg {
   width: 1em;
   height: 1em;
   stroke: currentColor;
   vertical-align: -0.125em;
-}
-
-.vb-cta-cards__title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 0.75rem 0;
-}
-
-.vb-cta-cards__description {
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: var(--color-text-muted);
-  margin: 0 0 1.5rem 0;
-  flex: 1;
-}
-
-.vb-cta-cards__button {
-  display: inline-block;
-  padding: 0.625rem 1.5rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  background-color: var(--color-accent);
-  color: var(--color-accent-text);
-  border-radius: 0.375rem;
-  text-decoration: none;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  margin-top: auto;
-}
-
-.vb-cta-cards__button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-@media (min-width: 640px) {
-  .vb-cta-cards__grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .vb-cta-cards__grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
 }

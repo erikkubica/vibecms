@@ -1,28 +1,26 @@
-<section class="vb-cb-quote">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="max-w-3xl mx-auto">
-      <blockquote class="vb-cb-quote__block vb-cb-quote__block--{{.style}}">
-        {{if eq .style "marks"}}
-          <span class="vb-cb-quote__mark" aria-hidden="true">&ldquo;</span>
-        {{end}}
-        <p class="vb-cb-quote__text">{{.quote}}</p>
-      </blockquote>
-
-      {{if or .author_name .author_role}}
-        <div class="vb-cb-quote__attribution">
-          {{if .avatar}}
-            <img src="{{.avatar}}" alt="{{.author_name}}" class="vb-cb-quote__avatar rounded-full w-12 h-12 object-cover" />
-          {{end}}
-          <div>
-            {{if .author_name}}
-              <cite class="vb-cb-quote__author not-italic font-semibold" style="color: var(--color-text);">{{.author_name}}</cite>
-            {{end}}
-            {{if .author_role}}
-              <p class="vb-cb-quote__role text-sm" style="color: var(--color-text-muted);">{{.author_role}}</p>
-            {{end}}
-          </div>
-        </div>
+<section class="py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-quote">
+  <div class="max-w-3xl mx-auto">
+    <blockquote class="vb-cb-quote__block vb-cb-quote__block--{{.style}}">
+      {{if eq .style "marks"}}
+        <span class="vb-cb-quote__mark" aria-hidden="true">&ldquo;</span>
       {{end}}
-    </div>
+      <p class="vb-cb-quote__text text-xl leading-relaxed italic" style="color: var(--color-text);">{{.quote}}</p>
+    </blockquote>
+
+    {{if or .author_name .author_role}}
+      <div class="flex items-center gap-3 mt-5">
+        {{if .avatar}}
+          <img src="{{.avatar}}" alt="{{.author_name}}" class="rounded-full w-12 h-12 object-cover" />
+        {{end}}
+        <div>
+          {{if .author_name}}
+            <cite class="not-italic font-semibold text-base block" style="color: var(--color-text);">{{.author_name}}</cite>
+          {{end}}
+          {{if .author_role}}
+            <p class="text-sm mt-0.5 leading-relaxed" style="color: var(--color-text-muted);">{{.author_role}}</p>
+          {{end}}
+        </div>
+      </div>
+    {{end}}
   </div>
 </section>

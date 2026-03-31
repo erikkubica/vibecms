@@ -1,19 +1,21 @@
-<section class="vb-newsletter vb-newsletter--{{.style}}" data-block="cb-newsletter">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="vb-newsletter__inner">
-      <h2 class="vb-newsletter__heading">{{.heading}}</h2>
+<section class="vb-cb-newsletter vb-cb-newsletter--{{.style}} py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-newsletter">
+  <div class="max-w-3xl mx-auto">
+    <div class="text-center">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
       {{if .description}}
-      <p class="vb-newsletter__description">{{.description}}</p>
-      {{end}}
-      <form class="vb-newsletter__form" action="{{.form_action}}" method="POST">
-        <div class="vb-newsletter__input-group">
-          <input type="email" name="email" placeholder="Enter your email" required class="vb-newsletter__input" />
-          <button type="submit" class="vb-newsletter__button">{{if .button.text}}{{.button.text}}{{else}}Subscribe{{end}}</button>
-        </div>
-      </form>
-      {{if .privacy_note}}
-      <p class="vb-newsletter__privacy">{{.privacy_note}}</p>
+      <p class="text-lg leading-relaxed max-w-2xl mx-auto mb-12" style="color: var(--color-text-muted);">{{.description}}</p>
+      {{else}}
+      <div class="mb-12"></div>
       {{end}}
     </div>
+    <form class="vb-cb-newsletter__form" action="{{.form_action}}" method="POST">
+      <div class="vb-cb-newsletter__input-group">
+        <input type="email" name="email" placeholder="Enter your email" required class="vb-cb-newsletter__input" style="border: 1px solid var(--color-border);" />
+        <button type="submit" class="inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background-color: var(--color-accent); color: var(--color-accent-text);">{{if .button.text}}{{.button.text}}{{else}}Subscribe{{end}}</button>
+      </div>
+    </form>
+    {{if .privacy_note}}
+    <p class="vb-cb-newsletter__privacy leading-relaxed" style="color: var(--color-text-muted);">{{.privacy_note}}</p>
+    {{end}}
   </div>
 </section>

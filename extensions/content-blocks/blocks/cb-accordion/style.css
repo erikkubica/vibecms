@@ -1,8 +1,9 @@
 .vb-cb-accordion__item {
   border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   margin-bottom: 0.75rem;
   overflow: hidden;
+  background: var(--color-surface);
   transition: box-shadow 0.2s ease;
 }
 
@@ -21,7 +22,7 @@
   cursor: pointer;
   text-align: left;
   color: var(--color-text);
-  font-size: 1.1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.4;
   gap: 1rem;
@@ -54,7 +55,6 @@
 
 .vb-cb-accordion__panel-inner {
   padding: 0 1.5rem 1.25rem;
-  color: var(--color-text-muted);
   font-size: 1rem;
   line-height: 1.7;
 }

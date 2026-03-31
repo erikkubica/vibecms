@@ -31,6 +31,17 @@
             "label": "Media",
             "icon": "Image",
             "position": "3"
-        }
+        },
+        "field_types": [
+            {
+                "type": "media",
+                "label": "Media Selector",
+                "description": "Select files from media library",
+                "icon": "Image",
+                "group": "Media",
+                "component": "MediaFieldInput",
+                "supports": ["image", "gallery", "file"]
+            }
+        ]
     }
 }

@@ -3,6 +3,8 @@ package cms
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"gorm.io/gorm"
@@ -12,21 +14,27 @@ import (
 
 // TemplateService provides business logic for managing templates.
 type TemplateService struct {
-	db *gorm.DB
+	db          *gorm.DB
+	themeAssets *ThemeAssetRegistry
 }
 
 // NewTemplateService creates a new TemplateService with the given database connection.
-func NewTemplateService(db *gorm.DB) *TemplateService {
-	return &TemplateService{db: db}
+func NewTemplateService(db *gorm.DB, themeAssets *ThemeAssetRegistry) *TemplateService {
+	return &TemplateService{db: db, themeAssets: themeAssets}
 }
 
-// List retrieves all templates ordered by label.
-func (s *TemplateService) List() ([]models.Template, error) {
-	var templates []models.Template
-	if err := s.db.Order("label ASC").Find(&templates).Error; err != nil {
-		return nil, fmt.Errorf("listing templates: %w", err)
+// List retrieves templates ordered by label with pagination.
+func (s *TemplateService) List(page, perPage int) ([]models.Template, int64, error) {
+	var total int64
+	if err := s.db.Model(&models.Template{}).Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("counting templates: %w", err)
 	}
-	return templates, nil
+	var templates []models.Template
+	offset := (page - 1) * perPage
+	if err := s.db.Order("label ASC").Offset(offset).Limit(perPage).Find(&templates).Error; err != nil {
+		return nil, 0, fmt.Errorf("listing templates: %w", err)
+	}
+	return templates, total, nil
 }
 
 // GetByID retrieves a single template by its ID.
@@ -130,4 +138,67 @@ func (s *TemplateService) Delete(id int) error {
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+// Detach converts a theme/extension-sourced template to custom.
+func (s *TemplateService) Detach(id int) (*models.Template, error) {
+	var existing models.Template
+	if err := s.db.First(&existing, id).Error; err != nil {
+		return nil, err
+	}
+	if err := s.db.Model(&existing).Updates(map[string]interface{}{
+		"source":     "custom",
+		"theme_name": nil,
+	}).Error; err != nil {
+		return nil, fmt.Errorf("failed to detach template: %w", err)
+	}
+	s.db.First(&existing, id)
+	return &existing, nil
+}
+
+// Reattach restores a detached template to its theme version.
+func (s *TemplateService) Reattach(id int) (*models.Template, error) {
+	var existing models.Template
+	if err := s.db.First(&existing, id).Error; err != nil {
+		return nil, err
+	}
+	if existing.Source == "theme" || existing.Source == "extension" {
+		return &existing, nil // already attached
+	}
+
+	if s.themeAssets == nil {
+		return nil, fmt.Errorf("no theme loaded")
+	}
+
+	s.themeAssets.mu.RLock()
+	themeDir := s.themeAssets.themeDir
+	s.themeAssets.mu.RUnlock()
+
+	if themeDir == "" {
+		return nil, fmt.Errorf("no theme directory configured")
+	}
+
+	// Read theme.json to find the matching template definition.
+	manifestData, err := os.ReadFile(filepath.Join(themeDir, "theme.json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read theme.json: %w", err)
+	}
+	var manifest ThemeManifest
+	if err := json.Unmarshal(manifestData, &manifest); err != nil {
+		return nil, fmt.Errorf("failed to parse theme.json: %w", err)
+	}
+
+	themeName := manifest.Name
+	for _, def := range manifest.Templates {
+		if def.Slug == existing.Slug {
+			filePath := filepath.Join(themeDir, "templates", def.File)
+			if err := RegisterTemplateFromFile(s.db, filePath, def.Slug, "theme", themeName); err != nil {
+				return nil, fmt.Errorf("failed to reattach template: %w", err)
+			}
+			s.db.First(&existing, id)
+			return &existing, nil
+		}
+	}
+
+	return nil, fmt.Errorf("template %q not found in current theme", existing.Slug)
 }

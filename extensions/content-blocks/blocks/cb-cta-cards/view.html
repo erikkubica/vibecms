@@ -1,21 +1,23 @@
-<section class="vb-cta-cards" data-block="cb-cta-cards">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    {{if .heading}}
-    <h2 class="vb-cta-cards__heading">{{.heading}}</h2>
-    {{end}}
-    <div class="vb-cta-cards__grid">
-      {{range .cards}}
-      <div class="vb-cta-cards__card">
-        {{if .icon}}
-        <span class="vb-cta-cards__icon"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>
-        {{end}}
-        <h3 class="vb-cta-cards__title">{{.title}}</h3>
-        {{if .description}}
-        <p class="vb-cta-cards__description">{{.description}}</p>
-        {{end}}
-        <a href="{{.button.url}}" class="vb-cta-cards__button">{{.button.text}}</a>
+<section class="vb-cb-cta-cards py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-cta-cards">
+  <div class="max-w-7xl mx-auto">
+      {{if .heading}}
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
       </div>
       {{end}}
-    </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {{range .cards}}
+        <div class="vb-cb-cta-cards__card rounded-lg p-6 transition-all duration-200 flex flex-col items-center text-center" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+          {{if .icon}}
+          <span class="vb-cb-cta-cards__icon mb-4"><i data-lucide="{{.icon}}" class="vb-icon"></i></span>
+          {{end}}
+          <h3 class="text-lg font-semibold mb-3" style="color: var(--color-text);">{{.title}}</h3>
+          {{if .description}}
+          <p class="leading-relaxed mb-6 flex-1" style="color: var(--color-text-muted);">{{.description}}</p>
+          {{end}}
+          <a href="{{.button.url}}" class="inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 mt-auto" style="background-color: var(--color-accent); color: var(--color-accent-text);">{{.button.text}}</a>
+        </div>
+        {{end}}
+      </div>
   </div>
 </section>

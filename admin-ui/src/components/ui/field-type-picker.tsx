@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Check, ChevronsUpDown, Type, AlignLeft, Hash, Calendar, ListOrdered, Image, ToggleLeft, Link2, Layers, Repeat, FileSearch, Palette, Mail, Globe, FileText as RichTextIcon, SlidersHorizontal, File, Images, CircleDot, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { NodeTypeField } from "@/api/client";
+import { useExtensions } from "@/hooks/use-extensions";
 
 interface FieldTypeOption {
-  value: NodeTypeField["type"];
+  value: string;
   label: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -72,8 +72,30 @@ export { FIELD_TYPE_OPTIONS };
 
 export default function FieldTypePicker({ value, onValueChange, className, compact }: FieldTypePickerProps) {
   const [open, setOpen] = useState(false);
-  const selected = FIELD_TYPE_OPTIONS.find((o) => o.value === value);
-  const groups = getFieldTypeGroups();
+  const { getFieldTypes } = useExtensions();
+  const extFieldTypes = getFieldTypes();
+
+  // Build merged options: core types (minus those "supported" by extensions) + extension types
+  const mergedOptions = useMemo(() => {
+    const supportedSet = new Set<string>();
+    for (const eft of extFieldTypes) {
+      if (eft.supports) eft.supports.forEach((s) => supportedSet.add(s));
+    }
+
+    const coreFiltered = FIELD_TYPE_OPTIONS.filter((o) => !supportedSet.has(o.value));
+    const extOptions: FieldTypeOption[] = extFieldTypes.map((eft) => ({
+      value: eft.type,
+      label: eft.label,
+      description: eft.description,
+      icon: eft.icon,
+      group: eft.group,
+    }));
+
+    return [...coreFiltered, ...extOptions];
+  }, [extFieldTypes]);
+
+  const selected = mergedOptions.find((o) => o.value === value);
+  const groups = [...new Set(mergedOptions.map((o) => o.group))];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -107,7 +129,7 @@ export default function FieldTypePicker({ value, onValueChange, className, compa
             <CommandEmpty>No field type found.</CommandEmpty>
             {groups.map((group) => (
               <CommandGroup key={group} heading={group}>
-                {FIELD_TYPE_OPTIONS.filter((o) => o.group === group).map((option) => {
+                {mergedOptions.filter((o) => o.group === group).map((option) => {
                   const Icon = option.icon;
                   return (
                     <CommandItem

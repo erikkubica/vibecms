@@ -1,10 +1,10 @@
-<section class="vb-cb-steps" data-block="cb-steps">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+<section class="vb-cb-steps py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-steps">
+  <div class="max-w-6xl mx-auto">
     {{if .heading}}
-    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
     {{end}}
     {{if .subheading}}
-    <p class="text-center text-lg mb-14" style="color: var(--color-text-muted); max-width: 600px; margin-left: auto; margin-right: auto;">{{.subheading}}</p>
+    <p class="text-lg leading-relaxed text-center mb-12" style="color: var(--color-text-muted); max-width: 600px; margin-left: auto; margin-right: auto;">{{.subheading}}</p>
     {{end}}
 
     <div class="vb-cb-steps__container vb-cb-steps__container--{{.style}}">
@@ -19,8 +19,8 @@
         </div>
         <div class="vb-cb-steps__connector"></div>
         <div class="vb-cb-steps__content">
-          <h3 class="vb-cb-steps__title">{{$step.title}}</h3>
-          <p class="vb-cb-steps__description">{{$step.description}}</p>
+          <h3 class="vb-cb-steps__title text-lg font-semibold" style="color: var(--color-text);">{{$step.title}}</h3>
+          <p class="vb-cb-steps__description leading-relaxed" style="color: var(--color-text-muted);">{{$step.description}}</p>
         </div>
       </div>
       {{end}}

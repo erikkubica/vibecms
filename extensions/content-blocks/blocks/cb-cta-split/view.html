@@ -1,15 +1,19 @@
-<section class="vb-cta-split vb-cta-split--img-{{.image_position}}" data-block="cb-cta-split">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="vb-cta-split__grid">
-      <div class="vb-cta-split__image-col">
-        <img src="{{.image}}" alt="{{.heading}}" class="vb-cta-split__image" loading="lazy" />
-      </div>
-      <div class="vb-cta-split__content-col">
-        <h2 class="vb-cta-split__heading">{{.heading}}</h2>
-        {{if .description}}
-        <p class="vb-cta-split__description">{{.description}}</p>
-        {{end}}
-        <a href="{{.button.url}}" class="vb-cta-split__button">{{.button.text}}</a>
+<section class="vb-cb-cta-split vb-cb-cta-split--img-{{.image_position}}" data-block="cb-cta-split">
+  <div class="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="vb-cb-cta-split__image-col">
+          <img src="{{.image}}" alt="{{.heading}}" class="w-full h-auto rounded-lg object-cover" loading="lazy" />
+        </div>
+        <div class="flex flex-col gap-4">
+          <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+          {{if .description}}
+          <p class="text-lg leading-relaxed" style="color: var(--color-text-muted);">{{.description}}</p>
+          {{end}}
+          <div class="mt-4">
+            <a href="{{.button.url}}" class="inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background-color: var(--color-accent); color: var(--color-accent-text);">{{.button.text}}</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -1,19 +1,21 @@
-<section class="vb-features-list" data-block="cb-features-list">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-features-list py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-features-list">
+  <div class="max-w-6xl mx-auto">
     {{if .heading}}
-    <h2 class="vb-features-list__heading">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
-    <div class="vb-features-list__rows">
+    <div class="flex flex-col gap-16">
       {{range .features}}
-      <div class="vb-features-list__row">
-        <div class="vb-features-list__image-col">
-          <img src="{{.image}}" alt="{{.title}}" class="vb-features-list__image" loading="lazy" />
+      <div class="vb-cb-features-list__row grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="vb-cb-features-list__image-col">
+          <img src="{{.image}}" alt="{{.title}}" class="w-full h-auto rounded-lg object-cover" loading="lazy" />
         </div>
-        <div class="vb-features-list__content-col">
-          <h3 class="vb-features-list__title">{{.title}}</h3>
-          <div class="vb-features-list__description">{{.description}}</div>
+        <div class="flex flex-col gap-4">
+          <h3 class="text-2xl font-bold" style="color: var(--color-text);">{{.title}}</h3>
+          <div class="leading-relaxed" style="color: var(--color-text-muted);">{{.description}}</div>
           {{if and .button.text .button.url}}
-          <a href="{{.button.url}}" class="vb-features-list__button">{{.button.text}} &rarr;</a>
+          <a href="{{.button.url}}" class="inline-block self-start font-semibold transition-opacity duration-150 hover:opacity-80" style="color: var(--color-accent);">{{.button.text}} &rarr;</a>
           {{end}}
         </div>
       </div>

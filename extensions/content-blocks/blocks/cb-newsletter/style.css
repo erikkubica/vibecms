@@ -1,150 +1,85 @@
-.vb-newsletter {
-  padding: 4rem 0;
+.vb-cb-newsletter__form {
+  margin-top: 0;
 }
 
-.vb-newsletter__inner {
-  max-width: 36rem;
-  margin: 0 auto;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.vb-newsletter__heading {
-  font-size: 1.875rem;
-  font-weight: 700;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.vb-newsletter__description {
-  font-size: 1.0625rem;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.vb-newsletter__form {
-  margin-top: 0.5rem;
-}
-
-.vb-newsletter__input-group {
+.vb-cb-newsletter__input-group {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
-.vb-newsletter__input {
+.vb-cb-newsletter__input {
   flex: 1;
   padding: 0.75rem 1rem;
   font-size: 1rem;
-  border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   outline: none;
-  transition: border-color 0.15s ease;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color 0.2s ease;
 }
 
-.vb-newsletter__input:focus {
+.vb-cb-newsletter__input:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
-.vb-newsletter__button {
-  padding: 0.75rem 1.75rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  white-space: nowrap;
-}
-
-.vb-newsletter__button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.vb-newsletter__privacy {
+.vb-cb-newsletter__privacy {
   font-size: 0.8125rem;
-  margin: 0;
+  margin: 1rem 0 0;
+  text-align: center;
 }
 
-/* Light variant */
-.vb-newsletter--light {
-  background-color: #f9fafb;
-  color: var(--color-text);
-}
-
-.vb-newsletter--light .vb-newsletter__description {
-  color: var(--color-text-muted);
-}
-
-.vb-newsletter--light .vb-newsletter__button {
+/* Accent variant — override inline colors */
+.vb-cb-newsletter--accent {
   background-color: var(--color-accent);
-  color: var(--color-accent-text);
 }
 
-.vb-newsletter--light .vb-newsletter__privacy {
-  color: var(--color-text-muted);
+.vb-cb-newsletter--accent h2 {
+  color: var(--color-accent-text) !important;
 }
 
-/* Dark variant */
-.vb-newsletter--dark {
-  background-color: #111827;
-  color: #f9fafb;
-}
-
-.vb-newsletter--dark .vb-newsletter__description {
-  color: #d1d5db;
-}
-
-.vb-newsletter--dark .vb-newsletter__input {
-  background-color: #1f2937;
-  border-color: #374151;
-  color: #f9fafb;
-}
-
-.vb-newsletter--dark .vb-newsletter__input::placeholder {
-  color: #9ca3af;
-}
-
-.vb-newsletter--dark .vb-newsletter__button {
-  background-color: var(--color-accent);
-  color: var(--color-accent-text);
-}
-
-.vb-newsletter--dark .vb-newsletter__privacy {
-  color: #9ca3af;
-}
-
-/* Accent variant */
-.vb-newsletter--accent {
-  background-color: var(--color-accent);
-  color: var(--color-accent-text);
-}
-
-.vb-newsletter--accent .vb-newsletter__description {
+.vb-cb-newsletter--accent p {
+  color: var(--color-accent-text) !important;
   opacity: 0.9;
 }
 
-.vb-newsletter--accent .vb-newsletter__input {
+.vb-cb-newsletter--accent .vb-cb-newsletter__input {
   background-color: rgba(255, 255, 255, 0.95);
   border-color: transparent;
-  color: #111827;
+  color: var(--color-text);
 }
 
-.vb-newsletter--accent .vb-newsletter__button {
-  background-color: #111827;
-  color: #f9fafb;
+.vb-cb-newsletter--accent button {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
 }
 
-.vb-newsletter--accent .vb-newsletter__privacy {
-  opacity: 0.8;
+/* Dark variant */
+.vb-cb-newsletter--dark {
+  background-color: var(--color-text);
+}
+
+.vb-cb-newsletter--dark h2 {
+  color: var(--color-surface) !important;
+}
+
+.vb-cb-newsletter--dark p {
+  color: var(--color-border) !important;
+}
+
+.vb-cb-newsletter--dark .vb-cb-newsletter__input {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-surface);
+}
+
+.vb-cb-newsletter--dark .vb-cb-newsletter__input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 @media (min-width: 640px) {
-  .vb-newsletter__input-group {
+  .vb-cb-newsletter__input-group {
     flex-direction: row;
   }
 }

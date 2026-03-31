@@ -25,6 +25,7 @@ import {
   type NodeSearchResult,
   type NodeType,
 } from "@/api/client";
+import { useExtensions } from "@/hooks/use-extensions";
 
 // Link field: text, url, alt, open in new tab
 function LinkFieldInput({
@@ -477,6 +478,21 @@ function CustomFieldInput({
   value: unknown;
   onChange: (val: unknown) => void;
 }) {
+  const { getFieldComponent } = useExtensions();
+  const extField = getFieldComponent(field.type);
+
+  if (extField) {
+    const ExtComponent = extField.Component as React.ComponentType<{ field: NodeTypeField; value: unknown; onChange: (val: unknown) => void }>;
+    return (
+      <div>
+        <ExtComponent field={field} value={value} onChange={onChange} />
+        {field.help_text && (
+          <p className="mt-1 text-xs text-slate-400">{field.help_text}</p>
+        )}
+      </div>
+    );
+  }
+
   const inputClass =
     "rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
   const strVal = value == null ? (field.default_value ?? "") : String(value);

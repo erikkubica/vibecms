@@ -1,28 +1,19 @@
-.vb-stats-container {
-  border: 1px solid var(--color-border);
-}
+/* Stats Block — scoped styles */
 
-.vb-stat-number {
+.vb-stats__number {
   line-height: 1.2;
   letter-spacing: -0.02em;
 }
 
-.vb-stat-prefix,
-.vb-stat-suffix {
+.vb-stats__affix {
   font-size: 0.7em;
   opacity: 0.85;
 }
 
-.vb-stat-item {
+.vb-stats__item {
   transition: transform 0.2s ease;
 }
 
-.vb-stat-item:hover {
+.vb-stats__item:hover {
   transform: scale(1.05);
-}
-
-@media (max-width: 640px) {
-  .vb-stat-number {
-    font-size: 2rem;
-  }
 }

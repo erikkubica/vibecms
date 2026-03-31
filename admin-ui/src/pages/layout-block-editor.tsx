@@ -92,7 +92,7 @@ export default function LayoutBlockEditorPage() {
   const [templateCode, setTemplateCode] = useState("");
   const [source, setSource] = useState("custom");
 
-  const isTheme = source === "theme";
+  const isManaged = source !== "custom";
 
   const fetchLayoutBlock = useCallback(async () => {
     if (!id) return;
@@ -223,12 +223,12 @@ export default function LayoutBlockEditorPage() {
           <h1 className="text-2xl font-bold text-slate-900">
             {isNew ? "New Layout Block" : name || "Edit Layout Block"}
           </h1>
-          {isTheme && (
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">Theme</Badge>
+          {isManaged && (
+            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">{source === "theme" ? "Theme" : "Extension"}</Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {!isNew && isTheme && (
+          {!isNew && isManaged && (
             <Button
               variant="outline"
               onClick={() => setShowDetach(true)}
@@ -238,7 +238,7 @@ export default function LayoutBlockEditorPage() {
               Detach
             </Button>
           )}
-          {!isNew && !isTheme && (
+          {!isNew && !isManaged && (
             <Button
               variant="outline"
               className="text-red-500 border-red-300 hover:bg-red-50"
@@ -250,7 +250,7 @@ export default function LayoutBlockEditorPage() {
           )}
           <Button
             onClick={handleSave}
-            disabled={saving || isTheme}
+            disabled={saving || isManaged}
             className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium"
           >
             {saving ? (
@@ -263,11 +263,11 @@ export default function LayoutBlockEditorPage() {
         </div>
       </div>
 
-      {isTheme && (
+      {isManaged && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-start gap-2">
           <Info className="h-4 w-4 mt-0.5 shrink-0" />
           <p>
-            This layout block is managed by the active theme and is read-only. To customize it, click
+            This layout block is managed by the active {source} and is read-only. To customize it, click
             &quot;Detach&quot; to create an editable copy.
           </p>
         </div>
@@ -284,7 +284,7 @@ export default function LayoutBlockEditorPage() {
               <CodeEditor
                 value={templateCode}
                 onChange={setTemplateCode}
-                disabled={isTheme}
+                disabled={isManaged}
                 height="400px"
                 placeholder="Enter your Go html/template code here..."
                 variables={TEMPLATE_VARIABLES}
@@ -352,7 +352,7 @@ export default function LayoutBlockEditorPage() {
                   value={name}
                   onChange={(e) => handleNameChange(e.target.value)}
                   placeholder="e.g. Site Header"
-                  disabled={isTheme}
+                  disabled={isManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -365,7 +365,7 @@ export default function LayoutBlockEditorPage() {
                     setSlugManual(true);
                   }}
                   placeholder="e.g. site-header"
-                  disabled={isTheme}
+                  disabled={isManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -376,7 +376,7 @@ export default function LayoutBlockEditorPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Optional description of this layout block"
                   rows={2}
-                  disabled={isTheme}
+                  disabled={isManaged}
                 />
               </div>
               <div className="space-y-2">
@@ -384,7 +384,7 @@ export default function LayoutBlockEditorPage() {
                 <Select
                   value={languageId === null ? "all" : String(languageId)}
                   onValueChange={(v) => setLanguageId(v === "all" ? null : Number(v))}
-                  disabled={isTheme}
+                  disabled={isManaged}
                 >
                   <SelectTrigger id="language">
                     <SelectValue placeholder="All Languages" />
@@ -428,10 +428,10 @@ export default function LayoutBlockEditorPage() {
       <Dialog open={showDetach} onOpenChange={setShowDetach}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Detach from Theme</DialogTitle>
+            <DialogTitle>Detach from {source === "theme" ? "Theme" : "Extension"}</DialogTitle>
             <DialogDescription>
-              This will create an editable copy of this layout block. The theme version will no longer
-              be used. You can always re-sync from the theme later.
+              This will create an editable copy of this layout block. The {source} version will no longer
+              be used. You can always re-sync from the {source} later.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -1,25 +1,25 @@
-<section class="vb-cb-heading">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 {{if eq .alignment "center"}}text-center{{else if eq .alignment "right"}}text-right{{else}}text-left{{end}}">
+<section class="vb-cb-heading py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-6xl mx-auto {{if eq .alignment "center"}}text-center{{else if eq .alignment "right"}}text-right{{else}}text-left{{end}}">
     {{if eq .level "h1"}}
-      <h1 class="vb-cb-heading__title vb-cb-heading__title--h1">{{.text}}</h1>
+      <h1 class="vb-cb-heading__title vb-cb-heading__title--h1 font-bold tracking-tight" style="color: var(--color-text);">{{.text}}</h1>
     {{else if eq .level "h3"}}
-      <h3 class="vb-cb-heading__title vb-cb-heading__title--h3">{{.text}}</h3>
+      <h3 class="vb-cb-heading__title vb-cb-heading__title--h3 font-bold tracking-tight" style="color: var(--color-text);">{{.text}}</h3>
     {{else if eq .level "h4"}}
-      <h4 class="vb-cb-heading__title vb-cb-heading__title--h4">{{.text}}</h4>
+      <h4 class="vb-cb-heading__title vb-cb-heading__title--h4 font-bold tracking-tight" style="color: var(--color-text);">{{.text}}</h4>
     {{else if eq .level "h5"}}
-      <h5 class="vb-cb-heading__title vb-cb-heading__title--h5">{{.text}}</h5>
+      <h5 class="vb-cb-heading__title vb-cb-heading__title--h5 font-bold tracking-tight" style="color: var(--color-text);">{{.text}}</h5>
     {{else if eq .level "h6"}}
-      <h6 class="vb-cb-heading__title vb-cb-heading__title--h6">{{.text}}</h6>
+      <h6 class="vb-cb-heading__title vb-cb-heading__title--h6 font-bold tracking-tight" style="color: var(--color-text);">{{.text}}</h6>
     {{else}}
-      <h2 class="vb-cb-heading__title vb-cb-heading__title--h2">{{.text}}</h2>
+      <h2 class="vb-cb-heading__title vb-cb-heading__title--h2 font-bold tracking-tight" style="color: var(--color-text);">{{.text}}</h2>
     {{end}}
 
     {{if ne .divider "none"}}
-      <div class="vb-cb-heading__divider vb-cb-heading__divider--{{.divider}} {{if eq .alignment "center"}}mx-auto{{else if eq .alignment "right"}}ml-auto{{end}}"></div>
+      <div class="vb-cb-heading__divider vb-cb-heading__divider--{{.divider}} mt-4 mb-4 {{if eq .alignment "center"}}mx-auto{{else if eq .alignment "right"}}ml-auto{{end}}"></div>
     {{end}}
 
     {{if .subtitle}}
-      <p class="vb-cb-heading__subtitle">{{.subtitle}}</p>
+      <p class="text-lg leading-relaxed" style="color: var(--color-text-muted);">{{.subtitle}}</p>
     {{end}}
   </div>
 </section>

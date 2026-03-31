@@ -1,24 +1,10 @@
-/* Features Grid Block */
-.vibe-features-grid__card {
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
+/* Features Grid Block — scoped styles */
 
-.vibe-features-grid__card:hover {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+.vb-features-grid__card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-.vibe-features-grid__icon {
-  font-size: 1.875rem;
+.vb-features-grid__icon {
   line-height: 1;
-  display: inline-block;
-}
-
-.vibe-features-grid__card h3 {
-  color: var(--color-text);
-}
-
-.vibe-features-grid__card p {
-  color: var(--color-text-muted);
-  line-height: 1.6;
 }

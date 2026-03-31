@@ -1,27 +1,27 @@
-<section class="vb-cb-video-embed" data-block="cb-video-embed">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl mx-auto">
-      {{if .heading}}
-        <h2 class="vb-cb-video-embed__heading">{{.heading}}</h2>
-      {{end}}
-      <div class="vb-cb-video-embed__container" data-video-url="{{.video_url}}">
-        {{if .poster_image}}
-          <div class="vb-cb-video-embed__poster">
-            <img src="{{.poster_image}}" alt="{{if .heading}}{{.heading}}{{else}}Video thumbnail{{end}}" class="vb-cb-video-embed__poster-img" loading="lazy" />
-            <button class="vb-cb-video-embed__play-btn" aria-label="Play video">
-              <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="34" cy="34" r="33" fill="rgba(0,0,0,0.6)" stroke="white" stroke-width="2"/>
-                <polygon points="27,20 27,48 50,34" fill="white"/>
-              </svg>
-            </button>
-          </div>
-        {{else}}
-          <iframe class="vb-cb-video-embed__iframe" src="" data-src="{{.video_url}}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        {{end}}
+<section class="vb-cb-video-embed py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-video-embed">
+  <div class="max-w-3xl mx-auto">
+    {{if .heading}}
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
+    {{end}}
+    <div class="vb-cb-video-embed__container" data-video-url="{{.video_url}}">
+      {{if .poster_image}}
+      <div class="vb-cb-video-embed__poster">
+        <img src="{{.poster_image}}" alt="{{if .heading}}{{.heading}}{{else}}Video thumbnail{{end}}" class="vb-cb-video-embed__poster-img" loading="lazy" />
+        <button class="vb-cb-video-embed__play-btn" aria-label="Play video">
+          <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="34" cy="34" r="33" fill="rgba(0,0,0,0.6)" stroke="white" stroke-width="2"/>
+            <polygon points="27,20 27,48 50,34" fill="white"/>
+          </svg>
+        </button>
       </div>
-      {{if .caption}}
-        <p class="vb-cb-video-embed__caption">{{.caption}}</p>
+      {{else}}
+      <iframe class="vb-cb-video-embed__iframe" src="" data-src="{{.video_url}}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       {{end}}
     </div>
+    {{if .caption}}
+    <p class="vb-cb-video-embed__caption leading-relaxed" style="color: var(--color-text-muted);">{{.caption}}</p>
+    {{end}}
   </div>
 </section>

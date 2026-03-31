@@ -9,6 +9,7 @@
   left: 1rem;
   color: var(--color-text-muted);
   pointer-events: none;
+  z-index: 1;
 }
 
 .vb-cb-search__input {
@@ -16,7 +17,7 @@
   padding: 1rem 3rem 1rem 3rem;
   font-size: 1.1rem;
   color: var(--color-text);
-  background: transparent;
+  background: var(--color-surface);
   border: none;
   outline: none;
   font-family: inherit;
@@ -24,12 +25,12 @@
 
 .vb-cb-search--bordered .vb-cb-search__input {
   border: 2px solid var(--color-border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
 }
 
 .vb-cb-search--bordered .vb-cb-search__input:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(var(--color-accent), 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
 .vb-cb-search--floating .vb-cb-search__input {
@@ -57,6 +58,7 @@
   right: 1rem;
   animation: vb-cb-search-spin 1s linear infinite;
   color: var(--color-text-muted);
+  z-index: 1;
 }
 
 @keyframes vb-cb-search-spin {
@@ -65,12 +67,14 @@
 }
 
 .vb-cb-search__results {
+  position: relative;
   margin-top: 0.5rem;
   border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   overflow: hidden;
-  background: white;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  z-index: 50;
 }
 
 .vb-cb-search__result-item {
@@ -94,12 +98,13 @@
   font-weight: 600;
   font-size: 1rem;
   margin-bottom: 0.25rem;
+  color: var(--color-text);
 }
 
 .vb-cb-search__result-excerpt {
   font-size: 0.875rem;
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: 1.625;
 }
 
 .vb-cb-search__no-results {

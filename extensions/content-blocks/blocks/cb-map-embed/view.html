@@ -1,11 +1,13 @@
-<section class="vb-cb-map-embed" data-block="cb-map-embed">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+<section class="vb-cb-map-embed py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-map-embed">
+  <div class="max-w-6xl mx-auto">
     {{if .heading}}
-    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color: var(--color-text);">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
 
     <div class="vb-cb-map-embed__grid">
-      <div class="vb-cb-map-embed__map-wrapper">
+      <div class="vb-cb-map-embed__map-wrapper rounded-lg" style="border: 1px solid var(--color-border);">
         <iframe
           src="{{.map_embed_url}}"
           class="vb-cb-map-embed__iframe"
@@ -17,7 +19,7 @@
         </iframe>
       </div>
 
-      <div class="vb-cb-map-embed__contact">
+      <div class="vb-cb-map-embed__contact rounded-lg p-6" style="background: var(--color-surface); border: 1px solid var(--color-border);">
         {{if .address}}
         <div class="vb-cb-map-embed__info-group">
           <div class="vb-cb-map-embed__info-icon">
@@ -28,7 +30,7 @@
           </div>
           <div class="vb-cb-map-embed__info-content">
             <h4 class="vb-cb-map-embed__info-label">Address</h4>
-            <p class="vb-cb-map-embed__info-value">{{.address}}</p>
+            <p class="vb-cb-map-embed__info-value leading-relaxed" style="color: var(--color-text);">{{.address}}</p>
           </div>
         </div>
         {{end}}
@@ -42,7 +44,7 @@
           </div>
           <div class="vb-cb-map-embed__info-content">
             <h4 class="vb-cb-map-embed__info-label">Phone</h4>
-            <a href="tel:{{.phone}}" class="vb-cb-map-embed__info-value vb-cb-map-embed__info-link">{{.phone}}</a>
+            <a href="tel:{{.phone}}" class="vb-cb-map-embed__info-link">{{.phone}}</a>
           </div>
         </div>
         {{end}}
@@ -57,7 +59,7 @@
           </div>
           <div class="vb-cb-map-embed__info-content">
             <h4 class="vb-cb-map-embed__info-label">Email</h4>
-            <a href="mailto:{{.email}}" class="vb-cb-map-embed__info-value vb-cb-map-embed__info-link">{{.email}}</a>
+            <a href="mailto:{{.email}}" class="vb-cb-map-embed__info-link">{{.email}}</a>
           </div>
         </div>
         {{end}}
@@ -72,7 +74,7 @@
           </div>
           <div class="vb-cb-map-embed__info-content">
             <h4 class="vb-cb-map-embed__info-label">Hours</h4>
-            <p class="vb-cb-map-embed__info-value">{{.hours}}</p>
+            <p class="vb-cb-map-embed__info-value leading-relaxed" style="color: var(--color-text);">{{.hours}}</p>
           </div>
         </div>
         {{end}}

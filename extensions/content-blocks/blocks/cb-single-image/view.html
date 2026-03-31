@@ -1,5 +1,5 @@
-<section class="vb-cb-single-image" data-block="cb-single-image">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-single-image py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-single-image">
+  <div class="max-w-6xl mx-auto">
     <figure class="vb-cb-single-image__figure {{if eq .size "small"}}max-w-md{{else if eq .size "full"}}max-w-full{{else}}max-w-2xl{{end}} mx-auto">
       {{if .link}}
         <a href="{{.link}}" class="vb-cb-single-image__link">
@@ -19,7 +19,7 @@
         />
       {{end}}
       {{if .caption}}
-        <figcaption class="vb-cb-single-image__caption">{{.caption}}</figcaption>
+        <figcaption class="vb-cb-single-image__caption leading-relaxed" style="color: var(--color-text-muted);">{{.caption}}</figcaption>
       {{end}}
     </figure>
   </div>

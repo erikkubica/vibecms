@@ -1,35 +1,35 @@
 {{if eq .style "accent"}}
-<section class="vibe-cta vibe-cta--accent py-20 px-4" style="background-color: var(--color-accent);">
-  <div class="max-w-2xl mx-auto text-center">
-    <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">{{.heading}}</h2>
+<section class="vb-cta vb-cta--accent py-20 md:py-32 px-4 sm:px-6 lg:px-8" style="background-color: var(--color-accent);">
+  <div class="max-w-3xl mx-auto text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">{{.heading}}</h2>
     {{if .body}}
-    <p class="text-lg text-white/80 mb-8">{{.body}}</p>
+    <p class="text-lg leading-relaxed text-white/80 mb-12 max-w-2xl mx-auto">{{.body}}</p>
     {{end}}
-    <a href="{{.button_url}}" class="vibe-cta__button inline-block px-8 py-3 rounded-lg font-semibold text-base transition-all duration-200 bg-white hover:bg-white/90 shadow-lg hover:shadow-xl" style="color: var(--color-accent);">
+    <a href="{{.button_url}}" class="vb-cta__button inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 bg-white hover:shadow-lg hover:-translate-y-0.5" style="color: var(--color-accent);">
       {{.button_text}}
     </a>
   </div>
 </section>
 {{else if eq .style "dark"}}
-<section class="vibe-cta vibe-cta--dark py-20 px-4 bg-slate-900">
-  <div class="max-w-2xl mx-auto text-center">
-    <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">{{.heading}}</h2>
+<section class="vb-cta vb-cta--dark py-20 md:py-32 px-4 sm:px-6 lg:px-8" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+  <div class="max-w-3xl mx-auto text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">{{.heading}}</h2>
     {{if .body}}
-    <p class="text-lg text-slate-300 mb-8">{{.body}}</p>
+    <p class="text-lg leading-relaxed text-white/80 mb-12 max-w-2xl mx-auto">{{.body}}</p>
     {{end}}
-    <a href="{{.button_url}}" class="vibe-cta__button inline-block px-8 py-3 rounded-lg font-semibold text-base text-white transition-all duration-200 shadow-lg hover:shadow-xl" style="background-color: var(--color-accent);">
+    <a href="{{.button_url}}" class="vb-cta__button inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg text-white transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background-color: var(--color-accent);">
       {{.button_text}}
     </a>
   </div>
 </section>
 {{else}}
-<section class="vibe-cta vibe-cta--light py-20 px-4" style="background-color: var(--color-surface-alt);">
-  <div class="max-w-2xl mx-auto text-center">
-    <h2 class="text-3xl sm:text-4xl font-bold mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+<section class="vb-cta vb-cta--light py-20 md:py-32 px-4 sm:px-6 lg:px-8" style="background-color: var(--color-surface-alt);">
+  <div class="max-w-3xl mx-auto text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
     {{if .body}}
-    <p class="text-lg mb-8" style="color: var(--color-text-muted);">{{.body}}</p>
+    <p class="text-lg leading-relaxed mb-12 max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.body}}</p>
     {{end}}
-    <a href="{{.button_url}}" class="vibe-cta__button inline-block px-8 py-3 rounded-lg font-semibold text-base text-white transition-all duration-200 shadow-lg hover:shadow-xl" style="background-color: var(--color-accent);">
+    <a href="{{.button_url}}" class="vb-cta__button inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg text-white transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background-color: var(--color-accent);">
       {{.button_text}}
     </a>
   </div>

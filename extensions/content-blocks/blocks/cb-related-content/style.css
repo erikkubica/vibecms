@@ -1,6 +1,6 @@
 .vb-cb-related-content__track {
   display: flex;
-  gap: 1.25rem;
+  gap: 1.5rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
@@ -25,18 +25,19 @@
 .vb-cb-related-content__card {
   flex: 0 0 280px;
   scroll-snap-align: start;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   overflow: hidden;
   text-decoration: none;
   color: var(--color-text);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
 }
 
 .vb-cb-related-content__card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
@@ -48,14 +49,14 @@
 }
 
 .vb-cb-related-content__card-body {
-  padding: 1rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
 .vb-cb-related-content__card-title {
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-text);
@@ -69,15 +70,15 @@
 /* Skeleton */
 .vb-cb-related-content__skeleton {
   display: flex;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .vb-cb-related-content__skeleton-card {
   flex: 0 0 280px;
   height: 220px;
   border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-border) 50%, var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: vb-cb-related-shimmer 1.5s ease infinite;
 }

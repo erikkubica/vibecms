@@ -1,34 +1,34 @@
-<section class="vb-pricing-table" data-block="cb-pricing-table">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-pricing-table py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-pricing-table">
+  <div class="max-w-7xl mx-auto">
     {{if .heading}}
-    <div class="vb-pricing-table__header">
-      <h2 class="vb-pricing-table__heading">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
       {{if .subheading}}
-      <p class="vb-pricing-table__subheading">{{.subheading}}</p>
+      <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.subheading}}</p>
       {{end}}
     </div>
     {{end}}
-    <div class="vb-pricing-table__grid">
+    <div class="vb-cb-pricing-table__grid">
       {{range .plans}}
-      <div class="vb-pricing-table__card{{if eq .is_featured "true"}} vb-pricing-table__card--featured{{end}}">
+      <div class="vb-cb-pricing-table__card rounded-lg p-6 transition-all duration-200{{if eq .is_featured "true"}} vb-cb-pricing-table__card--featured{{end}}" style="background: var(--color-surface); border: 1px solid var(--color-border);">
         {{if eq .is_featured "true"}}
-        <div class="vb-pricing-table__badge">Recommended</div>
+        <div class="vb-cb-pricing-table__badge">Recommended</div>
         {{end}}
-        <div class="vb-pricing-table__card-header">
-          <h3 class="vb-pricing-table__plan-name">{{.name}}</h3>
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold" style="color: var(--color-text);">{{.name}}</h3>
           {{if .description}}
-          <p class="vb-pricing-table__plan-desc">{{.description}}</p>
+          <p class="mt-2 leading-relaxed" style="color: var(--color-text-muted);">{{.description}}</p>
           {{end}}
         </div>
-        <div class="vb-pricing-table__price-wrap">
-          <span class="vb-pricing-table__price">{{.price}}</span>
-          {{if .period}}<span class="vb-pricing-table__period">{{.period}}</span>{{end}}
+        <div class="vb-cb-pricing-table__price-wrap">
+          <span class="vb-cb-pricing-table__price" style="color: var(--color-text);">{{.price}}</span>
+          {{if .period}}<span class="vb-cb-pricing-table__period" style="color: var(--color-text-muted);">{{.period}}</span>{{end}}
         </div>
         {{if .features}}
-        <div class="vb-pricing-table__features">{{.features}}</div>
+        <div class="vb-cb-pricing-table__features leading-relaxed" style="color: var(--color-text-muted); border-top: 1px solid var(--color-border);">{{.features}}</div>
         {{end}}
-        <div class="vb-pricing-table__card-footer">
-          <a href="{{.button.url}}" class="vb-pricing-table__button">{{.button.text}}</a>
+        <div class="mt-auto">
+          <a href="{{.button.url}}" class="vb-cb-pricing-table__button inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background-color: var(--color-accent); color: var(--color-accent-text);">{{.button.text}}</a>
         </div>
       </div>
       {{end}}

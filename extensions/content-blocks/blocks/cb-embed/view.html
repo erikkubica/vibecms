@@ -1,15 +1,17 @@
-<section class="vb-cb-embed" data-block="cb-embed">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+<section class="vb-cb-embed py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-embed">
+  <div class="max-w-6xl mx-auto">
     {{if .heading}}
-    <h2 class="text-3xl sm:text-4xl font-bold text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
 
-    <div class="vb-cb-embed__container vb-cb-embed__container--{{.max_width}}" style="min-height: {{.min_height}}px;">
+    <div class="vb-cb-embed__container vb-cb-embed__container--{{.max_width}} rounded-lg overflow-hidden relative mx-auto" style="min-height: {{.min_height}}px; border: 1px solid var(--color-border);">
       {{.embed_code}}
     </div>
 
     {{if .caption}}
-    <p class="vb-cb-embed__caption">{{.caption}}</p>
+    <p class="text-center mt-3 text-sm italic" style="color: var(--color-text-muted);">{{.caption}}</p>
     {{end}}
   </div>
 </section>

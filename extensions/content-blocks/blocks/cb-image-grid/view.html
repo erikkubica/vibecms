@@ -1,27 +1,31 @@
 <section class="vb-cb-image-grid" data-block="cb-image-grid">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    {{if .heading}}
-      <h2 class="vb-cb-image-grid__heading">{{.heading}}</h2>
-    {{end}}
-    <div class="vb-cb-image-grid__grid vb-cb-image-grid__grid--{{.columns}}">
-      {{range .images}}
-        <div class="vb-cb-image-grid__item">
-          {{if .link}}
-            <a href="{{.link}}" class="vb-cb-image-grid__link">
-          {{end}}
-            <div class="vb-cb-image-grid__image-wrap">
-              <img src="{{.image}}" alt="{{if .caption}}{{.caption}}{{else}}Gallery image{{end}}" class="vb-cb-image-grid__img" loading="lazy" />
-              {{if .caption}}
-                <div class="vb-cb-image-grid__overlay">
-                  <span class="vb-cb-image-grid__caption">{{.caption}}</span>
-                </div>
-              {{end}}
-            </div>
-          {{if .link}}
-            </a>
-          {{end}}
-        </div>
+  <div class="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      {{if .heading}}
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+      </div>
       {{end}}
+      <div class="vb-cb-image-grid__grid vb-cb-image-grid__grid--{{.columns}}">
+        {{range .images}}
+          <div class="vb-cb-image-grid__item">
+            {{if .link}}
+              <a href="{{.link}}" class="vb-cb-image-grid__link">
+            {{end}}
+              <div class="vb-cb-image-grid__image-wrap rounded-lg">
+                <img src="{{.image}}" alt="{{if .caption}}{{.caption}}{{else}}Gallery image{{end}}" class="vb-cb-image-grid__img" loading="lazy" />
+                {{if .caption}}
+                  <div class="vb-cb-image-grid__overlay">
+                    <span class="text-sm font-semibold text-white">{{.caption}}</span>
+                  </div>
+                {{end}}
+              </div>
+            {{if .link}}
+              </a>
+            {{end}}
+          </div>
+        {{end}}
+      </div>
     </div>
   </div>
 </section>

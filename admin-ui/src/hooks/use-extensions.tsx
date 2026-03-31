@@ -14,6 +14,17 @@ import {
   type AdminUIMenu,
 } from "@/lib/extension-loader";
 
+export interface ResolvedFieldType {
+  type: string;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  group: string;
+  Component: React.ComponentType<unknown>;
+  supports?: string[];
+  extensionSlug: string;
+}
+
 interface ExtensionsContextValue {
   manifests: ExtensionManifestEntry[];
   loaded: Map<string, LoadedExtension>;
@@ -21,6 +32,8 @@ interface ExtensionsContextValue {
   getSlotExtensions: (
     slotName: string,
   ) => Array<{ slug: string; label: string; Component: React.ComponentType<unknown> }>;
+  getFieldTypes: () => ResolvedFieldType[];
+  getFieldComponent: (fieldType: string) => { Component: React.ComponentType<unknown>; extensionSlug: string } | null;
   routes: Array<AdminUIRoute & { slug: string }>;
   menus: Array<AdminUIMenu & { slug: string }>;
 }
@@ -30,6 +43,8 @@ const ExtensionsContext = createContext<ExtensionsContextValue>({
   loaded: new Map(),
   loading: true,
   getSlotExtensions: () => [],
+  getFieldTypes: () => [],
+  getFieldComponent: () => null,
   routes: [],
   menus: [],
 });
@@ -86,6 +101,52 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
     return results;
   }
 
+  function getFieldTypes(): ResolvedFieldType[] {
+    const results: ResolvedFieldType[] = [];
+    const icons = (window as any).__VIBECMS_SHARED__?.icons || {};
+
+    for (const [slug, ext] of loaded) {
+      const fieldTypes = ext.entry.manifest.admin_ui?.field_types;
+      if (!fieldTypes) continue;
+
+      for (const ft of fieldTypes) {
+        const Component = ext.module[ft.component];
+        if (!Component) continue;
+
+        const IconComponent = icons[ft.icon] || icons["Puzzle"];
+        results.push({
+          type: ft.type,
+          label: ft.label,
+          description: ft.description,
+          icon: IconComponent,
+          group: ft.group,
+          Component,
+          supports: ft.supports,
+          extensionSlug: slug,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  function getFieldComponent(fieldType: string): { Component: React.ComponentType<unknown>; extensionSlug: string } | null {
+    for (const [slug, ext] of loaded) {
+      const fieldTypes = ext.entry.manifest.admin_ui?.field_types;
+      if (!fieldTypes) continue;
+
+      for (const ft of fieldTypes) {
+        const Component = ext.module[ft.component];
+        if (!Component) continue;
+
+        if (ft.type === fieldType || ft.supports?.includes(fieldType)) {
+          return { Component, extensionSlug: slug };
+        }
+      }
+    }
+    return null;
+  }
+
   const routes: Array<AdminUIRoute & { slug: string }> = [];
   const menus: Array<AdminUIMenu & { slug: string }> = [];
 
@@ -106,7 +167,7 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
 
   return (
     <ExtensionsContext.Provider
-      value={{ manifests, loaded, loading, getSlotExtensions, routes, menus }}
+      value={{ manifests, loaded, loading, getSlotExtensions, getFieldTypes, getFieldComponent, routes, menus }}
     >
       {children}
     </ExtensionsContext.Provider>

@@ -28,16 +28,27 @@ func (h *TemplateHandler) RegisterRoutes(router fiber.Router) {
 	router.Post("/templates", h.Create)
 	router.Patch("/templates/:id", h.Update)
 	router.Delete("/templates/:id", h.Delete)
+	router.Post("/templates/:id/detach", h.Detach)
+	router.Post("/templates/:id/reattach", h.Reattach)
 }
 
-// List handles GET /templates to retrieve all templates.
+// List handles GET /templates to retrieve all templates with pagination.
 func (h *TemplateHandler) List(c *fiber.Ctx) error {
-	templates, err := h.svc.List()
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	perPage, _ := strconv.Atoi(c.Query("per_page", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 || perPage > 100 {
+		perPage = 50
+	}
+
+	templates, total, err := h.svc.List(page, perPage)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list templates")
 	}
 
-	return api.Success(c, templates)
+	return api.Paginated(c, templates, total, page, perPage)
 }
 
 // Get handles GET /templates/:id to retrieve a single template.
@@ -127,6 +138,18 @@ func (h *TemplateHandler) Update(c *fiber.Ctx) error {
 	delete(body, "created_at")
 	delete(body, "updated_at")
 
+	// Check for theme-readonly
+	existing, err := h.svc.GetByID(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Template not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch template")
+	}
+	if existing.Source != "custom" {
+		return api.Error(c, fiber.StatusForbidden, "THEME_READONLY", "Theme/extension templates cannot be edited directly; detach first")
+	}
+
 	if len(body) == 0 {
 		return api.Error(c, fiber.StatusBadRequest, "NO_UPDATES", "No valid fields to update")
 	}
@@ -152,6 +175,17 @@ func (h *TemplateHandler) Delete(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Template ID must be a valid integer")
 	}
 
+	existing, err := h.svc.GetByID(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Template not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch template")
+	}
+	if existing.Source != "custom" {
+		return api.Error(c, fiber.StatusForbidden, "THEME_READONLY", "Theme/extension templates cannot be deleted; detach first")
+	}
+
 	if err := h.svc.Delete(id); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Template not found")
@@ -160,4 +194,40 @@ func (h *TemplateHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// Detach handles POST /templates/:id/detach to convert a theme template to custom.
+func (h *TemplateHandler) Detach(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Template ID must be a valid integer")
+	}
+
+	t, err := h.svc.Detach(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Template not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "DETACH_FAILED", "Failed to detach template")
+	}
+
+	return api.Success(c, t)
+}
+
+// Reattach handles POST /templates/:id/reattach to restore a template to its theme version.
+func (h *TemplateHandler) Reattach(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return api.Error(c, fiber.StatusBadRequest, "INVALID_ID", "Template ID must be a valid integer")
+	}
+
+	t, err := h.svc.Reattach(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Template not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "REATTACH_FAILED", "Failed to reattach template")
+	}
+
+	return api.Success(c, t)
 }

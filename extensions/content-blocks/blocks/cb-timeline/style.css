@@ -1,8 +1,10 @@
+/* Container */
 .vb-cb-timeline__container {
   position: relative;
   padding: 2rem 0;
 }
 
+/* Line */
 .vb-cb-timeline__line {
   position: absolute;
   top: 0;
@@ -13,6 +15,7 @@
   transform: translateX(-50%);
 }
 
+/* Item */
 .vb-cb-timeline__item {
   position: relative;
   display: flex;
@@ -21,6 +24,7 @@
   width: 50%;
 }
 
+/* Alternating layout */
 .vb-cb-timeline__container--alternating .vb-cb-timeline__item:nth-child(odd) {
   left: 0;
   padding-right: 3rem;
@@ -33,6 +37,7 @@
   padding-left: 3rem;
 }
 
+/* Left layout */
 .vb-cb-timeline__container--left .vb-cb-timeline__line {
   left: 1.25rem;
 }
@@ -42,6 +47,7 @@
   padding-left: 4rem;
 }
 
+/* Right layout */
 .vb-cb-timeline__container--right .vb-cb-timeline__line {
   left: calc(100% - 1.25rem);
 }
@@ -53,13 +59,14 @@
   text-align: right;
 }
 
+/* Dot */
 .vb-cb-timeline__dot {
   position: absolute;
   width: 1rem;
   height: 1rem;
   background: var(--color-accent);
   border-radius: 50%;
-  border: 3px solid var(--color-accent-text, #fff);
+  border: 3px solid var(--color-accent-text);
   box-shadow: 0 0 0 3px var(--color-accent);
   z-index: 1;
   flex-shrink: 0;
@@ -81,14 +88,18 @@
   right: 0.75rem;
 }
 
+/* Content card */
 .vb-cb-timeline__content {
-  background: var(--color-bg, #fff);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
   max-width: 100%;
+  transition: all 0.2s ease;
 }
 
+.vb-cb-timeline__content:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Date */
 .vb-cb-timeline__date {
   display: inline-block;
   font-size: 0.875rem;
@@ -97,20 +108,13 @@
   margin-bottom: 0.5rem;
 }
 
-.vb-cb-timeline__title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.5rem;
-}
-
+/* Description */
 .vb-cb-timeline__description {
   font-size: 1rem;
-  color: var(--color-text-muted);
-  line-height: 1.6;
   margin-bottom: 0;
 }
 
+/* Image */
 .vb-cb-timeline__image {
   width: 100%;
   border-radius: 0.5rem;
@@ -119,6 +123,7 @@
   max-height: 200px;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .vb-cb-timeline__line {
     left: 1.25rem !important;

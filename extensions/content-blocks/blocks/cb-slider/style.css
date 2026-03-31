@@ -37,38 +37,17 @@
   position: relative;
   z-index: 1;
   max-width: 40rem;
-  padding: 4rem 2rem;
+  padding: 4rem 0;
 }
 
 .vb-cb-slider__heading {
-  font-size: 2.5rem;
-  font-weight: 800;
   color: #fff;
   margin-bottom: 1rem;
-  line-height: 1.2;
 }
 
 .vb-cb-slider__description {
-  font-size: 1.125rem;
   color: rgba(255, 255, 255, 0.9);
   margin-bottom: 1.5rem;
-  line-height: 1.6;
-}
-
-.vb-cb-slider__button {
-  display: inline-block;
-  padding: 0.75rem 1.75rem;
-  background: var(--color-accent, #3b82f6);
-  color: var(--color-accent-text, #fff);
-  font-weight: 600;
-  font-size: 0.9375rem;
-  border-radius: 0.5rem;
-  text-decoration: none;
-  transition: opacity 0.2s ease;
-}
-
-.vb-cb-slider__button:hover {
-  opacity: 0.9;
 }
 
 /* Arrows */
@@ -133,11 +112,7 @@
     min-height: 300px;
   }
 
-  .vb-cb-slider__heading {
-    font-size: 1.75rem;
-  }
-
   .vb-cb-slider__content {
-    padding: 2rem 1rem;
+    padding: 2rem 0;
   }
 }

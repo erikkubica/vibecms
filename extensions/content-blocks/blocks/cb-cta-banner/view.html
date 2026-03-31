@@ -1,12 +1,12 @@
-<section class="vb-cta-banner vb-cta-banner--{{.style}}" data-block="cb-cta-banner"{{if .background_image}} style="background-image: url('{{.background_image}}')"{{end}}>
-  {{if .background_image}}<div class="vb-cta-banner__overlay"></div>{{end}}
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="vb-cta-banner__content">
-      <h2 class="vb-cta-banner__heading">{{.heading}}</h2>
+<section class="vb-cb-cta-banner vb-cb-cta-banner--{{.style}}" data-block="cb-cta-banner"{{if .background_image}} style="background-image: url('{{.background_image}}')"{{end}}>
+  {{if .background_image}}<div class="vb-cb-cta-banner__overlay"></div>{{end}}
+  <div class="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto text-center relative z-10">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
       {{if .description}}
-      <p class="vb-cta-banner__description">{{.description}}</p>
+      <p class="text-lg leading-relaxed mb-12 max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.description}}</p>
       {{end}}
-      <a href="{{.button.url}}" class="vb-cta-banner__button">{{.button.text}}</a>
+      <a href="{{.button.url}}" class="inline-flex items-center justify-center px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background-color: var(--color-accent); color: var(--color-accent-text);">{{.button.text}}</a>
     </div>
   </div>
 </section>

@@ -1,26 +1,20 @@
-.vb-contact-input {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
+/* Contact Form Block — scoped styles */
 
-.vb-contact-input:focus {
+.vb-contact-form__input:focus {
   border-color: var(--color-accent) !important;
-  box-shadow: 0 0 0 3px rgba(var(--color-accent), 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
-.vb-contact-input::placeholder {
+.vb-contact-form__input::placeholder {
   color: var(--color-text-muted);
   opacity: 0.6;
 }
 
-.vb-contact-button {
-  cursor: default;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.vb-contact-button:hover {
+.vb-contact-form__button:hover {
   background-color: var(--color-accent-hover) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
-.vb-contact-button:active {
+.vb-contact-form__button:active {
   transform: scale(0.98);
 }

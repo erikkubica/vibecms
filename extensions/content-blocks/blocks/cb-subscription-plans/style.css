@@ -72,22 +72,22 @@
 /* Card */
 .vb-cb-subscription-plans__card {
   position: relative;
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  padding: 2rem;
-  background: var(--color-bg, #fff);
-  transition: box-shadow 0.2s ease;
 }
 
 .vb-cb-subscription-plans__card:hover {
+  transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .vb-cb-subscription-plans__card--featured {
-  border-color: var(--color-accent);
-  border-width: 2px;
+  border-color: var(--color-accent) !important;
+  border-width: 2px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   transform: scale(1.02);
+}
+
+.vb-cb-subscription-plans__card--featured:hover {
+  transform: scale(1.02) translateY(-2px);
 }
 
 .vb-cb-subscription-plans__badge {
@@ -106,18 +106,9 @@
   white-space: nowrap;
 }
 
-.vb-cb-subscription-plans__name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: 0.5rem;
-}
-
 .vb-cb-subscription-plans__description {
   font-size: 0.9rem;
-  color: var(--color-text-muted);
   margin-bottom: 1.5rem;
-  line-height: 1.5;
 }
 
 .vb-cb-subscription-plans__price {
@@ -130,13 +121,11 @@
 .vb-cb-subscription-plans__amount {
   font-size: 2.5rem;
   font-weight: 800;
-  color: var(--color-text);
   line-height: 1;
 }
 
 .vb-cb-subscription-plans__period {
   font-size: 0.9rem;
-  color: var(--color-text-muted);
 }
 
 .vb-cb-subscription-plans__features {
@@ -150,7 +139,6 @@
   padding-left: 1.5rem;
   position: relative;
   font-size: 0.9rem;
-  color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -159,7 +147,7 @@
 }
 
 .vb-cb-subscription-plans__features li::before {
-  content: "✓";
+  content: "\2713";
   position: absolute;
   left: 0;
   color: var(--color-accent);
@@ -170,7 +158,7 @@
   display: block;
   width: 100%;
   text-align: center;
-  padding: 0.875rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   border: 2px solid var(--color-accent);
   border-radius: 0.5rem;
   font-size: 1rem;
@@ -178,12 +166,14 @@
   color: var(--color-accent);
   background: transparent;
   text-decoration: none;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .vb-cb-subscription-plans__button:hover {
   background: var(--color-accent);
   color: var(--color-accent-text, #fff);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-0.5px);
 }
 
 .vb-cb-subscription-plans__button--featured {
@@ -198,5 +188,9 @@
 @media (max-width: 768px) {
   .vb-cb-subscription-plans__card--featured {
     transform: none;
+  }
+
+  .vb-cb-subscription-plans__card--featured:hover {
+    transform: translateY(-2px);
   }
 }

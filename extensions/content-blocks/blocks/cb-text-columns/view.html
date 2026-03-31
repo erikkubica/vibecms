@@ -1,19 +1,21 @@
-<section class="vb-cb-text-columns">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-text-columns py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-text-columns">
+  <div class="max-w-7xl mx-auto">
     {{if .heading}}
-      <h2 class="text-3xl font-bold mb-8 text-center" style="color: var(--color-text);">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
 
     <div class="grid grid-cols-1 gap-8 {{if eq .column_count "2"}}md:grid-cols-2{{else if eq .column_count "4"}}md:grid-cols-2 lg:grid-cols-4{{else}}md:grid-cols-3{{end}}">
       {{range .columns}}
-        <div class="vb-cb-text-columns__col">
-          {{if .title}}
-            <h3 class="text-xl font-semibold mb-3" style="color: var(--color-text);">{{.title}}</h3>
-          {{end}}
-          <div class="vb-cb-text-columns__content">
-            {{.content}}
-          </div>
+      <div class="vb-cb-text-columns__col">
+        {{if .title}}
+        <h3 class="text-lg font-semibold mb-3" style="color: var(--color-text);">{{.title}}</h3>
+        {{end}}
+        <div class="vb-cb-text-columns__content leading-relaxed" style="color: var(--color-text-muted);">
+          {{.content}}
         </div>
+      </div>
       {{end}}
     </div>
   </div>

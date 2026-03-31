@@ -1,27 +1,31 @@
-<section class="vb-faq py-16 px-4">
-  <div class="max-w-4xl mx-auto">
-    {{if .heading}}
-    <h2 class="text-3xl font-bold text-center mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+<section class="vb-faq py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-3xl mx-auto">
+    {{if or .heading .subheading}}
+    <div class="text-center mb-12">
+      {{if .heading}}
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
+      {{end}}
+      {{if .subheading}}
+      <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.subheading}}</p>
+      {{end}}
+    </div>
     {{end}}
-    {{if .subheading}}
-    <p class="text-center mb-12 text-lg" style="color: var(--color-text-muted);">{{.subheading}}</p>
-    {{end}}
-    <div class="vb-faq-list rounded-lg border" style="border-color: var(--color-border); border-radius: var(--radius); background: var(--color-surface);">
+    <div class="rounded-lg overflow-hidden" style="background: var(--color-surface); border: 1px solid var(--color-border);">
       {{range $i, $item := .items}}
-      <div class="vb-faq-item {{if $i}}border-t{{end}}" style="border-color: var(--color-border);" x-data="{ open: false }">
+      <div class="vb-faq__item {{if $i}}border-t{{end}}" style="border-color: var(--color-border);" x-data="{ open: false }">
         <button
-          class="vb-faq-question w-full flex items-center justify-between px-6 py-5 text-left font-semibold focus:outline-none"
+          class="vb-faq__question w-full flex items-center justify-between px-6 py-5 text-left font-semibold transition-colors duration-150"
           style="color: var(--color-text);"
           @click="open = !open"
           :aria-expanded="open"
         >
           <span>{{$item.question}}</span>
-          <svg class="vb-faq-chevron w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--color-text-muted);">
+          <svg class="vb-faq__chevron w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--color-text-muted);">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
-        <div class="vb-faq-answer px-6 overflow-hidden" x-show="open" x-collapse>
-          <div class="pb-5 prose max-w-none" style="color: var(--color-text-muted);">
+        <div class="vb-faq__answer px-6 overflow-hidden" x-show="open" x-collapse>
+          <div class="pb-5 prose max-w-none leading-relaxed" style="color: var(--color-text-muted);">
             {{$item.answer | safeHTML}}
           </div>
         </div>

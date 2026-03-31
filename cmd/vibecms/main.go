@@ -83,7 +83,7 @@ func main() {
 	langSvc := cms.NewLanguageService(database)
 	themeAssets := cms.NewThemeAssetRegistry()
 	blockTypeSvc := cms.NewBlockTypeService(database, eventBus, themeAssets)
-	templateSvc := cms.NewTemplateService(database)
+	templateSvc := cms.NewTemplateService(database, themeAssets)
 	layoutSvc := cms.NewLayoutService(database, eventBus, themeAssets)
 	layoutBlockSvc := cms.NewLayoutBlockService(database, eventBus, themeAssets)
 	menuSvc := cms.NewMenuService(database, eventBus)

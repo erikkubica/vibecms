@@ -13,3 +13,4 @@ tmp/
 node_modules/
 extensions/*/admin-ui/node_modules/
 extensions/*/bin/
+vibecms

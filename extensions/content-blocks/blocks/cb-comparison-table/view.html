@@ -1,26 +1,28 @@
-<section class="vb-comparison-table" data-block="cb-comparison-table">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<section class="vb-cb-comparison-table py-16 md:py-24 px-4 sm:px-6 lg:px-8" data-block="cb-comparison-table">
+  <div class="max-w-7xl mx-auto">
     {{if .heading}}
-    <h2 class="vb-comparison-table__heading">{{.heading}}</h2>
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
+    </div>
     {{end}}
-    <div class="vb-comparison-table__scroll">
-      <table class="vb-comparison-table__table">
+    <div class="vb-cb-comparison-table__scroll rounded-lg overflow-x-auto" style="border: 1px solid var(--color-border); -webkit-overflow-scrolling: touch;">
+      <table class="vb-cb-comparison-table__table w-full">
         <thead>
           <tr>
-            <th class="vb-comparison-table__feature-header">Feature</th>
+            <th class="vb-cb-comparison-table__feature-header text-sm font-semibold text-left" style="color: var(--color-text); background: var(--color-surface-alt); border-bottom: 2px solid var(--color-border);">Feature</th>
             {{range .columns}}
-            <th class="vb-comparison-table__col-header">{{.name}}</th>
+            <th class="vb-cb-comparison-table__col-header text-sm font-semibold text-center" style="color: var(--color-text); background: var(--color-surface-alt); border-bottom: 2px solid var(--color-border);">{{.name}}</th>
             {{end}}
           </tr>
         </thead>
         <tbody>
           {{range .rows}}
-          <tr class="vb-comparison-table__row">
-            <td class="vb-comparison-table__feature-cell">{{.feature}}</td>
-            {{if .col1}}<td class="vb-comparison-table__value-cell" data-value="{{.col1}}">{{.col1}}</td>{{end}}
-            {{if .col2}}<td class="vb-comparison-table__value-cell" data-value="{{.col2}}">{{.col2}}</td>{{end}}
-            {{if .col3}}<td class="vb-comparison-table__value-cell" data-value="{{.col3}}">{{.col3}}</td>{{end}}
-            {{if .col4}}<td class="vb-comparison-table__value-cell" data-value="{{.col4}}">{{.col4}}</td>{{end}}
+          <tr class="vb-cb-comparison-table__row" style="border-bottom: 1px solid var(--color-border);">
+            <td class="vb-cb-comparison-table__feature-cell text-sm font-medium" style="color: var(--color-text);">{{.feature}}</td>
+            {{if .col1}}<td class="vb-cb-comparison-table__value-cell text-sm text-center" style="color: var(--color-text-muted);" data-value="{{.col1}}">{{.col1}}</td>{{end}}
+            {{if .col2}}<td class="vb-cb-comparison-table__value-cell text-sm text-center" style="color: var(--color-text-muted);" data-value="{{.col2}}">{{.col2}}</td>{{end}}
+            {{if .col3}}<td class="vb-cb-comparison-table__value-cell text-sm text-center" style="color: var(--color-text-muted);" data-value="{{.col3}}">{{.col3}}</td>{{end}}
+            {{if .col4}}<td class="vb-cb-comparison-table__value-cell text-sm text-center" style="color: var(--color-text-muted);" data-value="{{.col4}}">{{.col4}}</td>{{end}}
           </tr>
           {{end}}
         </tbody>

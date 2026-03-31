@@ -6,6 +6,7 @@ import {
   Trash2,
   Loader2,
   LayoutTemplate,
+  Unplug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,11 +26,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  getTemplates,
+  getTemplatesPaginated,
   deleteTemplate,
+  detachTemplate,
   type Template,
+  type PaginationMeta,
 } from "@/api/client";
 
 export default function TemplatesListPage() {
@@ -37,18 +41,22 @@ export default function TemplatesListPage() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Template | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [detachingId, setDetachingId] = useState<number | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getTemplates();
-      setTemplates(data);
+      const res = await getTemplatesPaginated({ page, per_page: 25 });
+      setTemplates(res.data);
+      setMeta(res.meta);
     } catch {
       toast.error("Failed to load templates");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     fetchTemplates();
@@ -66,6 +74,19 @@ export default function TemplatesListPage() {
       toast.error("Failed to delete template");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleDetach(tpl: Template) {
+    setDetachingId(tpl.id);
+    try {
+      await detachTemplate(tpl.id);
+      toast.success(`"${tpl.label}" detached from ${tpl.source}`);
+      fetchTemplates();
+    } catch {
+      toast.error("Failed to detach template");
+    } finally {
+      setDetachingId(null);
     }
   }
 
@@ -108,6 +129,7 @@ export default function TemplatesListPage() {
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Label</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Slug</TableHead>
                   <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider md:table-cell">Blocks</TableHead>
+                  <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider sm:table-cell">Source</TableHead>
                   <TableHead className="hidden text-xs font-semibold text-slate-500 uppercase tracking-wider sm:table-cell">Description</TableHead>
                   <TableHead className="w-24 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</TableHead>
                 </TableRow>
@@ -130,10 +152,31 @@ export default function TemplatesListPage() {
                       {tpl.block_config?.length ?? 0}
                     </TableCell>
                     <TableCell className="hidden px-6 py-4 text-sm text-slate-500 sm:table-cell">
-                      <span className="line-clamp-1">{tpl.description || "\u2014"}</span>
+                      {tpl.source === "theme" ? (
+                        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">Theme</Badge>
+                      ) : tpl.source === "extension" ? (
+                        <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-0 text-xs">Extension</Badge>
+                      ) : (
+                        <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-0 text-xs">Custom</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden px-6 py-4 text-sm text-slate-500 sm:table-cell">
+                      <span className="block max-w-xs truncate" title={tpl.description || ""}>{tpl.description || "\u2014"}</span>
                     </TableCell>
                     <TableCell className="px-6 py-4 text-sm">
                       <div className="flex items-center gap-1">
+                        {tpl.source !== "custom" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                            onClick={() => handleDetach(tpl)}
+                            disabled={detachingId === tpl.id}
+                            title="Detach from source"
+                          >
+                            <Unplug className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -148,6 +191,7 @@ export default function TemplatesListPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-red-500 hover:text-red-600"
+                          disabled={tpl.source !== "custom"}
                           onClick={() => setDeleteTarget(tpl)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -161,6 +205,35 @@ export default function TemplatesListPage() {
           )}
         </CardContent>
       </Card>
+
+      {meta && meta.total_pages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-500">
+            Showing {(meta.page - 1) * meta.per_page + 1} to{" "}
+            {Math.min(meta.page * meta.per_page, meta.total)} of {meta.total}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg border-slate-300"
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= meta.total_pages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg border-slate-300"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Delete dialog */}
       <Dialog

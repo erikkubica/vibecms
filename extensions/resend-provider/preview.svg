@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="225" fill="url(#bg)"/>
+  <g transform="translate(200,85)" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="-24" y="-16" width="48" height="32" rx="4"/>
+    <path d="M-24-16 L0 4 L24-16"/>
+    <path d="M-24 16 L-6 2" stroke-width="1.5"/>
+    <path d="M24 16 L6 2" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="155" text-anchor="middle" fill="white" font-family="system-ui,sans-serif" font-size="18" font-weight="600">Resend Provider</text>
+  <text x="200" y="175" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-family="system-ui,sans-serif" font-size="12">Send emails via Resend.com API</text>
+</svg>

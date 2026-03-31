@@ -5,7 +5,6 @@
 .vb-cb-social-share__heading {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 0.75rem;
@@ -26,11 +25,12 @@
   cursor: pointer;
   font-family: inherit;
   font-weight: 500;
-  transition: opacity 0.15s ease, transform 0.1s ease;
+  transition: all 0.2s ease;
 }
 
 .vb-cb-social-share__btn:hover {
   opacity: 0.85;
+  transform: translateY(-1px);
 }
 
 .vb-cb-social-share__btn:active {
@@ -58,11 +58,11 @@
 }
 
 .vb-cb-social-share--buttons .vb-cb-social-share__btn--email {
-  background: #6b7280;
+  background: var(--color-text-muted);
 }
 
 .vb-cb-social-share--buttons .vb-cb-social-share__btn--copy {
-  background: #374151;
+  background: var(--color-text);
 }
 
 /* Icons-only style */
@@ -92,17 +92,17 @@
 }
 
 .vb-cb-social-share--icons .vb-cb-social-share__btn--email {
-  background: #6b7280;
+  background: var(--color-text-muted);
 }
 
 .vb-cb-social-share--icons .vb-cb-social-share__btn--copy {
-  background: #374151;
+  background: var(--color-text);
 }
 
 /* Minimal style */
 .vb-cb-social-share--minimal .vb-cb-social-share__btn {
   padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   font-size: 0.85rem;
   background: transparent;
   border: 1px solid var(--color-border);
@@ -110,13 +110,13 @@
 }
 
 .vb-cb-social-share--minimal .vb-cb-social-share__btn:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--color-surface);
   opacity: 1;
 }
 
 /* Copy success state */
 .vb-cb-social-share__btn--copied {
-  background: #059669 !important;
-  color: #fff !important;
-  border-color: #059669 !important;
+  background: var(--color-accent) !important;
+  color: var(--color-accent-text) !important;
+  border-color: var(--color-accent) !important;
 }

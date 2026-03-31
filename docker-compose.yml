@@ -17,6 +17,8 @@ services:
       MONITOR_BEARER_TOKEN: change-me-to-a-random-token
       STORAGE_DRIVER: local
       STORAGE_PATH: /app/storage
+    volumes:
+      - ./storage:/app/storage
     depends_on:
       db:
         condition: service_healthy

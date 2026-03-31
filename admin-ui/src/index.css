@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @source "../src/**/*.{ts,tsx}";
-@source "../../extensions/*/admin-ui/src/**/*.{ts,tsx}";
 @source "../node_modules/@radix-ui/**/*.{js,jsx}";
 
 @theme {

@@ -214,7 +214,9 @@ function GalleryItem({
 
   return (
     <div
-      className={`group relative aspect-square rounded-lg border-2 overflow-hidden bg-white cursor-grab active:cursor-grabbing transition-all ${
+      className={`group relative aspect-square rounded-lg border-2 bg-white cursor-grab active:cursor-grabbing transition-all ${
+        editing ? "overflow-visible z-50" : "overflow-hidden"
+      } ${
         isDragTarget
           ? "border-indigo-400 scale-[1.02] shadow-md"
           : "border-slate-200 hover:border-slate-300"

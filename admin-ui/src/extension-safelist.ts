@@ -59,7 +59,8 @@ export const EXTENSION_SAFELIST = [
 
   // Sizing
   "h-full", "w-full", "h-screen", "w-screen",
-  "min-h-0", "min-w-0", "max-h-64", "max-h-96",
+  "min-h-0", "min-w-0", "max-h-64", "max-h-96", "max-h-[85vh]", "max-h-[90vh]",
+  "max-w-4xl", "max-w-5xl", "max-w-6xl", "max-w-7xl",
   "size-3", "size-4", "size-5", "size-6", "size-8", "size-10",
 
   // Spacing

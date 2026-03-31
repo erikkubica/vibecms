@@ -148,14 +148,14 @@ export default function MediaPickerModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  const load = useCallback(async (page: number) => {
+  const load = useCallback(async (page: number, searchOverride?: string) => {
     setLoading(true);
     try {
       const result = await fetchMedia({
         page,
         per_page: 24,
         mime_type: mimeType || undefined,
-        search: search || undefined,
+        search: (searchOverride ?? search) || undefined,
       });
       setFiles(result.data);
       setMeta(result.meta);
@@ -164,19 +164,19 @@ export default function MediaPickerModal({
     } finally {
       setLoading(false);
     }
-  }, [search, mimeType]);
+  }, [mimeType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (open) {
       setSelected(new Map());
-      load(1);
+      load(1, "");
     }
   }, [open, load]);
 
   function handleSearchChange(val: string) {
     setSearch(val);
     clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => load(1), 300);
+    searchTimer.current = setTimeout(() => load(1, val), 300);
   }
 
   function toggleSelect(file: MediaFile) {
@@ -218,7 +218,7 @@ export default function MediaPickerModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="flex flex-col" style={{ maxWidth: "72rem", maxHeight: "90vh" }}>
         <DialogHeader>
           <DialogTitle>Select Media</DialogTitle>
           <DialogDescription>Browse or upload files to select</DialogDescription>
@@ -272,7 +272,7 @@ export default function MediaPickerModal({
               <p className="text-sm">No media files found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {files.map((file) => {
                 const isSelected = selected.has(file.id);
                 return (
@@ -308,9 +308,9 @@ export default function MediaPickerModal({
                       </div>
                     )}
                     {/* File info overlay on hover */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <p className="text-[10px] text-white truncate">{file.original_name}</p>
-                      <p className="text-[9px] text-white/70">{humanFileSize(file.size)}</p>
+                    <div className="absolute inset-x-0 bottom-0 bg-black/80 px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-[11px] text-white font-medium truncate">{file.original_name}</p>
+                      <p className="text-[10px] text-white/80">{humanFileSize(file.size)}{file.width && file.height ? ` · ${file.width}×${file.height}` : ""}</p>
                     </div>
                   </button>
                 );

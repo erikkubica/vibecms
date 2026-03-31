@@ -405,7 +405,7 @@ export default function MediaFieldInput({ field, value, onChange }: MediaFieldIn
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
             {items.map((item, i) => (
               <GalleryItem
-                key={item.id || item.url}
+                key={`${i}-${item.id || item.url}`}
                 media={item}
                 index={i}
                 onRemove={() => handleRemove(i)}

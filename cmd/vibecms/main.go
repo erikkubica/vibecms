@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"vibecms/internal/db"
 	"vibecms/internal/email"
 	"vibecms/internal/events"
+	"vibecms/internal/media"
 	"vibecms/internal/rbac"
 	"vibecms/internal/rendering"
 	"vibecms/internal/scripting"
@@ -247,6 +249,43 @@ func main() {
 
 	// Theme deploy webhook (public, authenticated by secret).
 	themeHandler.RegisterWebhook(app)
+
+	// --- Image optimizer / cache ---
+	storagePath := "./storage"
+	sizeRegistry := media.NewSizeRegistry(database)
+	sizeRegistry.Load()
+	cacheManager := media.NewCacheManager(storagePath)
+	settingsGet := func(key string) string {
+		val, _ := coreAPI.GetSetting(context.Background(), key)
+		return val
+	}
+	app.Get("/media/cache/:size/*", media.NewCacheHandler(sizeRegistry, cacheManager, storagePath, settingsGet))
+
+	// Wire image cache events.
+	eventBus.Subscribe("media:cache:clear_all", func(action string, payload events.Payload) {
+		cacheManager.ClearAll()
+	})
+	eventBus.Subscribe("media:cache:clear_size", func(action string, payload events.Payload) {
+		if name, ok := payload["name"].(string); ok {
+			cacheManager.ClearSize(name)
+		}
+	})
+	eventBus.Subscribe("media:cache:clear_file", func(action string, payload events.Payload) {
+		if path, ok := payload["path"].(string); ok {
+			sizes := sizeRegistry.GetAll()
+			sizeNames := make([]string, len(sizes))
+			for i, s := range sizes {
+				sizeNames[i] = s.Name
+			}
+			cacheManager.DeleteForOriginal(path, sizeNames)
+		}
+	})
+	eventBus.Subscribe("media:sizes_changed", func(action string, payload events.Payload) {
+		sizeRegistry.Load()
+	})
+
+	// Inject size registry into template renderer for image_srcset width descriptors.
+	renderer.SetSizeRegistry(media.AsImageSizeProvider(sizeRegistry))
 
 	// --- Media files ---
 	app.Static("/media", "./storage/media")

@@ -14,6 +14,8 @@
         "files:write",
         "files:delete",
         "settings:read",
+        "settings:write",
+        "events:emit",
         "log:write"
     ],
     "plugins": [
@@ -25,7 +27,8 @@
     "admin_ui": {
         "entry": "admin-ui/dist/index.js",
         "routes": [
-            {"path": "/", "component": "MediaLibrary"}
+            {"path": "/", "component": "MediaLibrary"},
+            {"path": "/optimizer", "component": "ImageOptimizerSettings"}
         ],
         "menu": {
             "label": "Media",

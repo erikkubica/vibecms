@@ -3,7 +3,7 @@ WORKDIR /app/admin-ui
 COPY admin-ui/package*.json ./
 RUN npm ci
 COPY admin-ui/ .
-RUN npm run build
+RUN node scripts/generate-icon-shim.cjs && npm run build
 
 # Build extension admin UIs
 WORKDIR /app/extensions/media-manager/admin-ui

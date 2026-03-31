@@ -22,7 +22,7 @@ RUN for dir in extensions/*/cmd/plugin; do \
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates \
-    jpegoptim optipng imagemagick ffmpeg
+    jpegoptim optipng pngquant imagemagick ffmpeg
 WORKDIR /app
 COPY --from=builder /app/vibecms .
 COPY --from=builder /app/ui/templates ./ui/templates

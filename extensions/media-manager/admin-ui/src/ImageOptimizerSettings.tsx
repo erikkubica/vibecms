@@ -37,7 +37,7 @@ import { toast } from "sonner";
 interface OptimizerSettings {
   normalize_enabled: boolean;
   normalize_max_dimension: number;
-  normalize_jpeg_quality: number;
+  upload_quality: number;
   jpeg_quality: number;
   webp_enabled: boolean;
   webp_quality: number;
@@ -146,7 +146,7 @@ export default function ImageOptimizerSettings() {
   const [settings, setSettings] = useState<OptimizerSettings>({
     normalize_enabled: true,
     normalize_max_dimension: 5000,
-    normalize_jpeg_quality: 92,
+    upload_quality: 100,
     jpeg_quality: 80,
     webp_enabled: true,
     webp_quality: 75,
@@ -368,20 +368,20 @@ export default function ImageOptimizerSettings() {
             {/* Upload JPEG Quality */}
             <div className="space-y-1.5">
               <Label htmlFor="upload-quality" className="text-sm">
-                Upload JPEG Quality: <span className="font-mono text-indigo-600">{settings.normalize_jpeg_quality}</span>
+                Upload Quality: <span className="font-mono text-indigo-600">{settings.upload_quality}</span>
               </Label>
               <input
                 id="upload-quality"
                 type="range"
                 min={50}
                 max={100}
-                value={settings.normalize_jpeg_quality}
+                value={settings.upload_quality}
                 onChange={(e) =>
-                  setSettings((s) => ({ ...s, normalize_jpeg_quality: parseInt(e.target.value) }))
+                  setSettings((s) => ({ ...s, upload_quality: parseInt(e.target.value) }))
                 }
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
               />
-              <p className="text-xs text-slate-400">Quality for upload normalization (92 = visually lossless)</p>
+              <p className="text-xs text-slate-400">100 = lossless (metadata strip only). Lower = lossy compression (JPEG + PNG)</p>
             </div>
           </div>
 

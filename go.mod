@@ -1,9 +1,10 @@
 module vibecms
 
-go 1.24.0
+go 1.24.4
 
 require (
 	github.com/d5/tengo/v2 v2.17.0
+	github.com/gen2brain/webp v0.5.5
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-plugin v1.6.2
@@ -20,7 +21,6 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/ebitengine/purego v0.8.3 // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/gen2brain/webp v0.5.5 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect

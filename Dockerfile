@@ -23,8 +23,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+# Core builds without CGO (no C deps)
 RUN CGO_ENABLED=0 go build -o vibecms ./cmd/vibecms
-# Build extension plugin binaries
+# Extension plugins: media-manager uses CGO for gen2brain/webp wazero runtime
 RUN CGO_ENABLED=0 go build -o extensions/smtp-provider/bin/smtp-provider ./extensions/smtp-provider/cmd/plugin/
 RUN CGO_ENABLED=0 go build -o extensions/sitemap-generator/bin/sitemap-generator ./extensions/sitemap-generator/cmd/plugin/
 RUN CGO_ENABLED=0 go build -o extensions/media-manager/bin/media-manager ./extensions/media-manager/cmd/plugin/

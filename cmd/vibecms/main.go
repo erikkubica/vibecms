@@ -162,6 +162,10 @@ func main() {
 	app.Get("/api/v1/health", healthHandler.HealthCheck)
 	app.Get("/api/v1/stats", api.BearerTokenRequired(cfg.MonitorBearerToken), healthHandler.Stats)
 
+	// --- Public API routes (no auth required) ---
+	publicAPI := app.Group("/api/v1")
+	nodeHandler.RegisterPublicRoutes(publicAPI)
+
 	// --- Admin API routes (session auth required) ---
 	adminAPI := app.Group("/admin/api", auth.AuthRequired(sessionSvc))
 	userHandler.RegisterRoutes(adminAPI)

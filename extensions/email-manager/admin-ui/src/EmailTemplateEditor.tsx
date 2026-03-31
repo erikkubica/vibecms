@@ -89,11 +89,11 @@ export default function EmailTemplateEditor() {
     getEmailTemplate(Number(id))
       .then((tpl: EmailTemplate) => {
         if (cancelled) return;
-        setFormSlug(tpl.slug);
-        setFormName(tpl.name);
+        setFormSlug(tpl.slug || "");
+        setFormName(tpl.name || "");
         setFormLanguageId(tpl.language_id ? String(tpl.language_id) : "__universal__");
-        setFormSubject(tpl.subject_template);
-        setFormBody(tpl.body_template);
+        setFormSubject(tpl.subject_template || "");
+        setFormBody(tpl.body_template || "");
         // test_data may come back as a JSON string or an object
         let td = tpl.test_data;
         if (typeof td === "string") {

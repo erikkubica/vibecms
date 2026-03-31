@@ -22,7 +22,7 @@ import {
   type MenuItem,
   type Language,
 } from "@/api/client";
-import MenuTree from "@/components/menu-tree";
+import MenuTree, { generateTempId } from "@/components/menu-tree";
 import { Link } from "react-router-dom";
 
 function slugify(text: string): string {
@@ -33,6 +33,7 @@ function slugify(text: string): string {
 }
 
 function newMenuItem(type: MenuItem["item_type"]): MenuItem {
+  const uid = generateTempId();
   const base: MenuItem = {
     title: "",
     item_type: type,
@@ -40,6 +41,7 @@ function newMenuItem(type: MenuItem["item_type"]): MenuItem {
     css_class: "",
     children: [],
   };
+  (base as Record<string, unknown>)._uid = uid;
   if (type === "custom") base.url = "";
   if (type === "node") base.node_id = null;
   return base;
@@ -61,6 +63,7 @@ export default function MenuEditorPage() {
   const [languageId, setLanguageId] = useState<number | null>(null);
   const [version, setVersion] = useState(1);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
 
   const fetchMenu = useCallback(async () => {
     if (!id) return;
@@ -104,7 +107,21 @@ export default function MenuEditorPage() {
   }
 
   function addItem(type: MenuItem["item_type"]) {
-    setMenuItems((prev) => [...prev, newMenuItem(type)]);
+    const item = newMenuItem(type);
+    const uid = (item as Record<string, unknown>)._uid as string;
+    setMenuItems((prev) => [...prev, item]);
+    setLastAddedId(uid);
+  }
+
+  function stripUids(items: MenuItem[]): MenuItem[] {
+    return items.map((item) => {
+      const clean = { ...item };
+      delete (clean as Record<string, unknown>)._uid;
+      if (clean.children && clean.children.length > 0) {
+        clean.children = stripUids(clean.children);
+      }
+      return clean;
+    });
   }
 
   async function handleSave() {
@@ -117,6 +134,8 @@ export default function MenuEditorPage() {
       return;
     }
 
+    const cleanItems = stripUids(menuItems);
+
     setSaving(true);
     try {
       if (isNew) {
@@ -124,7 +143,7 @@ export default function MenuEditorPage() {
           name,
           slug,
           language_id: languageId,
-          items: menuItems,
+          items: cleanItems,
         });
         toast.success("Menu created successfully");
         navigate(`/admin/menus/${menu.id}`, { replace: true });
@@ -137,7 +156,7 @@ export default function MenuEditorPage() {
         });
         // Replace menu items with version check
         try {
-          const updated = await replaceMenuItems(id!, version, menuItems);
+          const updated = await replaceMenuItems(id!, version, cleanItems);
           setVersion(updated.version);
           toast.success("Menu saved successfully");
         } catch (err: unknown) {
@@ -240,7 +259,7 @@ export default function MenuEditorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <MenuTree items={menuItems} onChange={setMenuItems} />
+              <MenuTree items={menuItems} onChange={setMenuItems} autoEditId={lastAddedId} />
             </CardContent>
           </Card>
 

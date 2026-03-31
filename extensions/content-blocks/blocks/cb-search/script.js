@@ -23,7 +23,7 @@
 
       nodes.forEach(function (node) {
         var a = document.createElement("a");
-        a.href = "/" + (node.slug || "");
+        a.href = node.full_url || "/" + (node.slug || "");
         a.className = "vb-cb-search__result-item";
 
         var title = document.createElement("div");
@@ -68,7 +68,7 @@
 
       debounceTimer = setTimeout(function () {
         fetch(
-          "/admin/api/nodes?node_type=" +
+          "/api/v1/nodes?node_type=" +
             encodeURIComponent(nodeType) +
             "&search=" +
             encodeURIComponent(query) +
@@ -76,11 +76,6 @@
             limit
         )
           .then(function (res) {
-            if (res.status === 401 || res.status === 403) {
-              spinner.style.display = "none";
-              showMessage("Sign in to preview dynamic content.");
-              return null;
-            }
             if (!res.ok) {
               spinner.style.display = "none";
               showMessage("Search unavailable. Please try again.");

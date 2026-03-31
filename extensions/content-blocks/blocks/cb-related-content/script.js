@@ -47,7 +47,7 @@
 
     function buildCard(node) {
       var a = document.createElement("a");
-      a.href = "/" + (node.slug || "");
+      a.href = node.full_url || "/" + (node.slug || "");
       a.className = "vb-cb-related-content__card";
 
       if (showImage && node.featured_image) {
@@ -87,17 +87,13 @@
     }
 
     fetch(
-      "/admin/api/nodes?node_type=" +
+      "/api/v1/nodes?node_type=" +
         encodeURIComponent(nodeType) +
         "&limit=" +
         count +
-        "&status=published&sort=-published_at"
+        "&sort=-published_at"
     )
       .then(function (res) {
-        if (res.status === 401 || res.status === 403) {
-          showMessage("Sign in to preview dynamic content.");
-          return null;
-        }
         if (!res.ok) {
           showMessage("Unable to load related content.");
           return null;

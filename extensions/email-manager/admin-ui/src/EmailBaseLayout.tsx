@@ -158,9 +158,9 @@ export default function EmailBaseLayout() {
   function openEditor(layout?: EmailLayout) {
     if (layout) {
       setEditId(layout.id);
-      setFormName(layout.name);
+      setFormName(layout.name || "");
       setFormLanguageId(layout.language_id ? String(layout.language_id) : "__universal__");
-      setFormBody(layout.body_template);
+      setFormBody(layout.body_template || "");
     } else {
       setEditId(null);
       setFormName("");

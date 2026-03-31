@@ -142,6 +142,7 @@ const MAX_DEPTH = 3;
 interface MenuTreeProps {
   items: MenuItem[];
   onChange: (items: MenuItem[]) => void;
+  autoEditId?: string | null;
 }
 
 function generateTempId(): string {
@@ -208,26 +209,60 @@ function getItemAtPath(items: MenuItem[], path: number[]): MenuItem {
 }
 
 
-export default function MenuTree({ items, onChange }: MenuTreeProps) {
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [editingPath, setEditingPath] = useState<string | null>(null);
+// Ensure every item has a stable _uid for tracking UI state
+function ensureUids(items: MenuItem[]): MenuItem[] {
+  for (const item of items) {
+    if (!(item as Record<string, unknown>)._uid) {
+      (item as Record<string, unknown>)._uid = generateTempId();
+    }
+    if (item.children && item.children.length > 0) {
+      ensureUids(item.children);
+    }
+  }
+  return items;
+}
+
+function getItemUid(item: MenuItem): string {
+  return ((item as Record<string, unknown>)._uid as string) || "";
+}
+
+export default function MenuTree({ items, onChange, autoEditId }: MenuTreeProps) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Ensure all items have stable UIDs
+  useEffect(() => {
+    const hasAllUids = flattenItems(items).every((fi) => !!(fi.item as Record<string, unknown>)._uid);
+    if (!hasAllUids) {
+      const next = cloneItems(items);
+      ensureUids(next);
+      onChange(next);
+    }
+  }, [items]);
+
+  // Auto-open newly added items for editing
+  useEffect(() => {
+    if (autoEditId) {
+      setEditingId(autoEditId);
+    }
+  }, [autoEditId]);
 
   const flat = flattenItems(items);
 
-  function toggleExpanded(pathKey: string) {
-    setExpandedPaths((prev) => {
+  function toggleExpanded(uid: string) {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(pathKey)) {
-        next.delete(pathKey);
+      if (next.has(uid)) {
+        next.delete(uid);
       } else {
-        next.add(pathKey);
+        next.add(uid);
       }
       return next;
     });
   }
 
-  function toggleEditing(pathKey: string) {
-    setEditingPath((prev) => (prev === pathKey ? null : pathKey));
+  function toggleEditing(uid: string) {
+    setEditingId((prev) => (prev === uid ? null : uid));
   }
 
   function updateItemField(path: number[], field: string, value: unknown) {
@@ -244,7 +279,7 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
     const siblings = parentPath.length === 0 ? next : getItemAtPath(next, parentPath).children!;
     siblings.splice(idx, 1);
     onChange(next);
-    setEditingPath(null);
+    setEditingId(null);
   }
 
   function moveUp(path: number[]) {
@@ -279,7 +314,6 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
     if (!prevSibling.children) prevSibling.children = [];
     prevSibling.children.push(item);
     onChange(next);
-    setEditingPath(null);
   }
 
   function outdent(path: number[]) {
@@ -295,7 +329,6 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
     const grandSiblings = grandParentPath.length === 0 ? next : getItemAtPath(next, grandParentPath).children!;
     grandSiblings.splice(parentIdx + 1, 0, item);
     onChange(next);
-    setEditingPath(null);
   }
 
   function hasChildren(item: MenuItem): boolean {
@@ -311,12 +344,12 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
       ) : (
         <div className="rounded-lg border border-slate-200 overflow-hidden divide-y divide-slate-100">
           {flat.map((fi) => {
-            const pathKey = fi.path.join("-");
-            const isEditing = editingPath === pathKey;
-            const isChildExpanded = hasChildren(fi.item) && expandedPaths.has(pathKey);
+            const uid = getItemUid(fi.item);
+            const isEditing = editingId === uid;
+            const isChildExpanded = hasChildren(fi.item) && expandedIds.has(uid);
 
             return (
-              <div key={pathKey} className="bg-white">
+              <div key={uid || fi.path.join("-")} className="bg-white">
                 {/* Collapsed row */}
                 <div
                   className={`flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 transition-colors ${
@@ -327,7 +360,7 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
                   {/* Expand toggle for children */}
                   <button
                     className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex-shrink-0"
-                    onClick={() => toggleExpanded(pathKey)}
+                    onClick={() => toggleExpanded(uid)}
                     title={hasChildren(fi.item) ? (isChildExpanded ? "Collapse" : "Expand") : "No children"}
                   >
                     {hasChildren(fi.item) ? (
@@ -354,7 +387,7 @@ export default function MenuTree({ items, onChange }: MenuTreeProps) {
                     variant="ghost"
                     size="sm"
                     className="h-7 px-2 text-xs"
-                    onClick={() => toggleEditing(pathKey)}
+                    onClick={() => toggleEditing(uid)}
                   >
                     {isEditing ? "Close" : "Edit"}
                   </Button>

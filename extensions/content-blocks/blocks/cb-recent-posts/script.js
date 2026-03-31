@@ -59,7 +59,7 @@
 
       var link = document.createElement("a");
       link.className = "vb-cb-recent-posts__link";
-      link.href = "/" + (node.slug || "");
+      link.href = node.full_url || "/" + (node.slug || "");
       link.textContent = linkText;
       body.appendChild(link);
 
@@ -77,17 +77,13 @@
     }
 
     fetch(
-      "/admin/api/nodes?node_type=" +
+      "/api/v1/nodes?node_type=" +
         encodeURIComponent(nodeType) +
         "&limit=" +
         count +
-        "&status=published&sort=-published_at"
+        "&sort=-published_at"
     )
       .then(function (res) {
-        if (res.status === 401 || res.status === 403) {
-          showMessage("Sign in to preview dynamic content.");
-          return null;
-        }
         if (!res.ok) {
           showMessage("Unable to load posts. Please refresh the page.");
           return null;

@@ -120,7 +120,7 @@ function isImage(mime: string): boolean {
   return mime.startsWith("image/");
 }
 
-function cachedUrl(url: string, size: string): string {
+function imageSize(url: string, size: string): string {
   if (!url.startsWith("/media/")) return url;
   return "/media/cache/" + size + "/" + url.slice(7);
 }
@@ -293,7 +293,7 @@ export default function MediaPickerModal({
                   >
                     {isImage(file.mime_type) ? (
                       <img
-                        src={cachedUrl(file.url, "medium")}
+                        src={imageSize(file.url, "medium")}
                         alt={file.alt || file.original_name}
                         className="h-full w-full object-cover"
                         loading="lazy"

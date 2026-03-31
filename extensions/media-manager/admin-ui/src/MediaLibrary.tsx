@@ -200,8 +200,8 @@ function FileIcon({ mime, className }: { mime: string; className?: string }) {
   return <File className={className} />;
 }
 
-// Rewrite /media/... URL to /media/cache/{size}/... for optimized thumbnails.
-function cachedUrl(url: string, size: string): string {
+// Get a resized image URL for a given size name (thumbnail, medium, large).
+function imageSize(url: string, size: string): string {
   if (!url.startsWith("/media/")) return url;
   return "/media/cache/" + size + "/" + url.slice(7);
 }
@@ -743,7 +743,7 @@ export default function MediaLibrary() {
                         <div className="relative w-full bg-slate-100 flex items-center justify-center overflow-hidden" style={{ aspectRatio: "1 / 1" }}>
                           {isImage(file.mime_type) ? (
                             <MediaImage
-                              src={cachedUrl(file.url, "medium")}
+                              src={imageSize(file.url, "medium")}
                               alt={file.alt || file.original_name}
                               style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
@@ -882,7 +882,7 @@ export default function MediaLibrary() {
                             <div className="h-10 w-10 rounded-md bg-slate-100 overflow-hidden flex items-center justify-center">
                               {isImage(file.mime_type) ? (
                                 <MediaImage
-                                  src={cachedUrl(file.url, "thumbnail")}
+                                  src={imageSize(file.url, "thumbnail")}
                                   alt={file.original_name}
                                   className="h-full w-full object-cover"
                                 />

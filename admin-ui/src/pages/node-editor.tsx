@@ -14,28 +14,9 @@ import {
   X,
   LayoutTemplate,
   Square,
-  Type,
-  Image,
-  MousePointerClick,
-  Images,
-  Play,
-  List,
-  Quote,
-  MapPin,
-  Code as CodeIcon,
-  SeparatorHorizontal as SeparatorIcon,
-  FileText,
-  Newspaper,
-  ShoppingBag,
-  Calendar,
-  Users,
-  Folder,
-  Bookmark,
-  Tag,
-  Star,
-  Heart,
   ExternalLink,
   Search,
+  Code as CodeIcon,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import CustomFieldInput from "@/components/ui/custom-field-input";
+import BlockPicker, { BLOCK_ICON_MAP } from "@/components/ui/block-picker";
 import { toast } from "sonner";
 import {
   getNode,
@@ -91,31 +73,6 @@ import {
   type Template,
   type Layout,
 } from "@/api/client";
-
-const BLOCK_ICON_MAP: Record<string, LucideIcon> = {
-  "square": Square,
-  "layout-template": LayoutTemplate,
-  "type": Type,
-  "image": Image,
-  "mouse-pointer-click": MousePointerClick,
-  "images": Images,
-  "play": Play,
-  "list": List,
-  "quote": Quote,
-  "map-pin": MapPin,
-  "code": CodeIcon,
-  "separator": SeparatorIcon,
-  "file-text": FileText,
-  "newspaper": Newspaper,
-  "shopping-bag": ShoppingBag,
-  "calendar": Calendar,
-  "users": Users,
-  "folder": Folder,
-  "bookmark": Bookmark,
-  "tag": Tag,
-  "star": Star,
-  "heart": Heart,
-};
 
 interface NodeEditorProps {
   nodeType: string;
@@ -176,9 +133,7 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
   // Page templates
   const [showLoadTemplate, setShowLoadTemplate] = useState(false);
   const [showConfirmTemplate, setShowConfirmTemplate] = useState(false);
-  const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   // Parent node search
@@ -503,17 +458,8 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
     }
   }
 
-  async function openLoadTemplate() {
+  function openLoadTemplate() {
     setShowLoadTemplate(true);
-    setLoadingTemplates(true);
-    try {
-      const templates = await getTemplates();
-      setAvailableTemplates(templates);
-    } catch {
-      toast.error("Failed to load templates");
-    } finally {
-      setLoadingTemplates(false);
-    }
   }
 
   function selectTemplate(id: number) {
@@ -522,26 +468,28 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
     setShowConfirmTemplate(true);
   }
 
-  async function applyTemplate() {
+  function applyTemplate() {
     if (!selectedTemplateId) return;
     setApplyingTemplate(true);
-    try {
-      const detail = await getTemplate(selectedTemplateId);
-      const config = detail.block_config as Array<{ block_type_slug: string; default_values: Record<string, unknown> }>;
-      const newBlocks: BlockData[] = config.map((b) => ({
-        type: b.block_type_slug,
-        fields: { ...(b.default_values || {}) },
-      }));
-      setBlocks(newBlocks);
-      setCollapsedBlocks(new Set());
-      toast.success(`Loaded template "${detail.label}" with ${newBlocks.length} block(s)`);
-    } catch {
-      toast.error("Failed to load template");
-    } finally {
+    const tpl = templates.find((t) => t.id === selectedTemplateId);
+    if (!tpl) {
+      toast.error("Template not found");
       setApplyingTemplate(false);
       setShowConfirmTemplate(false);
       setSelectedTemplateId(null);
+      return;
     }
+    const config = tpl.block_config as Array<{ block_type_slug: string; default_values: Record<string, unknown> }>;
+    const newBlocks: BlockData[] = config.map((b) => ({
+      type: b.block_type_slug,
+      fields: { ...(b.default_values || {}) },
+    }));
+    setBlocks(newBlocks);
+    setCollapsedBlocks(new Set());
+    toast.success(`Loaded template "${tpl.label}" with ${newBlocks.length} block(s)`);
+    setApplyingTemplate(false);
+    setShowConfirmTemplate(false);
+    setSelectedTemplateId(null);
   }
 
   async function handleSave(e: FormEvent, publishStatus?: string) {
@@ -1213,81 +1161,43 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
         </div>
       </form>
 
-      {/* Add Block dialog */}
-      <Dialog open={showAddBlock} onOpenChange={setShowAddBlock}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Block</DialogTitle>
-            <DialogDescription>
-              Select a block type to add to this page.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto py-2">
-            {blockTypes.map((bt) => {
-              const IconComp = BLOCK_ICON_MAP[bt.icon] || Square;
-              return (
-                <button
-                  key={bt.id}
-                  type="button"
-                  onClick={() => addBlock(bt.slug)}
-                  className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50"
-                >
-                  <IconComp className="h-5 w-5 text-slate-500 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{bt.label}</p>
-                    {bt.description && (
-                      <p className="text-xs text-slate-400 truncate">{bt.description}</p>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-            {blockTypes.length === 0 && (
-              <p className="col-span-2 text-center text-sm text-slate-400 py-8">
-                No block types available. Create block types first.
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Add Block picker */}
+      <BlockPicker
+        open={showAddBlock}
+        onClose={() => setShowAddBlock(false)}
+        onSelect={(item) => addBlock(item.slug)}
+        items={blockTypes.map((bt) => ({
+          id: bt.id,
+          slug: bt.slug,
+          label: bt.label,
+          description: bt.description,
+          icon: bt.icon,
+        }))}
+        title="Add Block"
+        description="Select a block type to add to this page."
+        emptyMessage="No block types available. Create block types first."
+      />
 
-      {/* Insert Template dialog */}
-      <Dialog open={showInsertTemplate} onOpenChange={setShowInsertTemplate}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Insert Template</DialogTitle>
-            <DialogDescription>
-              Select a template to insert its blocks with default values.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 max-h-80 overflow-y-auto py-2">
-            {templates.map((tpl) => (
-              <button
-                key={tpl.id}
-                type="button"
-                onClick={() => insertTemplate(tpl)}
-                className="flex w-full items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50"
-              >
-                <LayoutTemplate className="h-5 w-5 text-slate-500 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-800">{tpl.label}</p>
-                  {tpl.description && (
-                    <p className="text-xs text-slate-400 truncate">{tpl.description}</p>
-                  )}
-                </div>
-                <span className="text-xs text-slate-400 shrink-0">
-                  {tpl.block_config?.length ?? 0} block(s)
-                </span>
-              </button>
-            ))}
-            {templates.length === 0 && (
-              <p className="text-center text-sm text-slate-400 py-8">
-                No templates available. Create templates first.
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Insert Template picker */}
+      <BlockPicker
+        open={showInsertTemplate}
+        onClose={() => setShowInsertTemplate(false)}
+        onSelect={(item) => {
+          const tpl = templates.find((t) => t.id === item.id);
+          if (tpl) insertTemplate(tpl);
+        }}
+        items={templates.map((tpl) => ({
+          id: tpl.id,
+          slug: tpl.slug,
+          label: tpl.label,
+          description: tpl.description,
+          icon: "layout-template",
+          badge: `${tpl.block_config?.length ?? 0} block(s)`,
+        }))}
+        title="Insert Template"
+        description="Select a template to insert its blocks with default values."
+        emptyMessage="No templates available. Create templates first."
+      />
 
       {/* Delete dialog */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
@@ -1319,46 +1229,23 @@ export default function NodeEditorPage({ nodeType }: NodeEditorProps) {
       </Dialog>
 
       {/* Load Page Template dialog */}
-      <Dialog open={showLoadTemplate} onOpenChange={setShowLoadTemplate}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Load from Template</DialogTitle>
-            <DialogDescription>
-              Select a page template to apply. This will replace all existing blocks.
-            </DialogDescription>
-          </DialogHeader>
-          {loadingTemplates ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-            </div>
-          ) : availableTemplates.length === 0 ? (
-            <p className="text-center text-sm text-slate-400 py-12">
-              No templates available.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto py-2">
-              {availableTemplates.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => selectTemplate(tpl.id)}
-                  className="flex flex-col items-start gap-2 rounded-lg border border-slate-200 bg-white p-4 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm"
-                >
-                  <div className="w-full h-24 flex items-center justify-center rounded-md bg-slate-100">
-                    <LayoutTemplate className="h-8 w-8 text-slate-300" />
-                  </div>
-                  <div className="min-w-0 w-full">
-                    <p className="text-sm font-medium text-slate-800 truncate">{tpl.label}</p>
-                    {tpl.description && (
-                      <p className="text-xs text-slate-400 line-clamp-2 mt-0.5">{tpl.description}</p>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Load from Template picker */}
+      <BlockPicker
+        open={showLoadTemplate}
+        onClose={() => setShowLoadTemplate(false)}
+        onSelect={(item) => selectTemplate(item.id as number)}
+        items={templates.map((tpl) => ({
+          id: tpl.id,
+          slug: tpl.slug,
+          label: tpl.label,
+          description: tpl.description,
+          icon: "layout-template",
+          badge: `${tpl.block_config?.length ?? 0} block(s)`,
+        }))}
+        title="Load from Template"
+        description="Select a page template to apply. This will replace all existing blocks."
+        emptyMessage="No templates available. Create templates first."
+      />
 
       {/* Confirm template replacement dialog */}
       <Dialog open={showConfirmTemplate} onOpenChange={(open) => {

@@ -10,27 +10,6 @@ import {
   ChevronDown,
   X,
   Square,
-  LayoutTemplate,
-  Type,
-  Image,
-  MousePointerClick,
-  Images,
-  Play,
-  List,
-  Quote,
-  MapPin,
-  Code,
-  SeparatorHorizontal as SeparatorIcon,
-  FileText,
-  Newspaper,
-  ShoppingBag,
-  Calendar,
-  Users,
-  Folder,
-  Bookmark,
-  Tag,
-  Star,
-  Heart,
   Unlink,
   Info,
   type LucideIcon,
@@ -56,6 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import BlockPicker, { BLOCK_ICON_MAP } from "@/components/ui/block-picker";
 import {
   getTemplate,
   createTemplate,
@@ -67,31 +47,6 @@ import {
   type TemplateBlockConfig,
   type BlockType,
 } from "@/api/client";
-
-const BLOCK_ICON_MAP: Record<string, LucideIcon> = {
-  "square": Square,
-  "layout-template": LayoutTemplate,
-  "type": Type,
-  "image": Image,
-  "mouse-pointer-click": MousePointerClick,
-  "images": Images,
-  "play": Play,
-  "list": List,
-  "quote": Quote,
-  "map-pin": MapPin,
-  "code": Code,
-  "separator": SeparatorIcon,
-  "file-text": FileText,
-  "newspaper": Newspaper,
-  "shopping-bag": ShoppingBag,
-  "calendar": Calendar,
-  "users": Users,
-  "folder": Folder,
-  "bookmark": Bookmark,
-  "tag": Tag,
-  "star": Star,
-  "heart": Heart,
-};
 
 function slugify(text: string): string {
   return text
@@ -507,43 +462,22 @@ export default function TemplateEditorPage() {
         </div>
       </form>
 
-      {/* Add Block dialog */}
-      <Dialog open={showAddBlock} onOpenChange={setShowAddBlock}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Block</DialogTitle>
-            <DialogDescription>
-              Select a block type to add to this template.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto py-2">
-            {blockTypes.map((bt) => {
-              const IconComp = BLOCK_ICON_MAP[bt.icon] || Square;
-              return (
-                <button
-                  key={bt.id}
-                  type="button"
-                  onClick={() => handleAddBlock(bt.slug)}
-                  className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50"
-                >
-                  <IconComp className="h-5 w-5 text-slate-500 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{bt.label}</p>
-                    {bt.description && (
-                      <p className="text-xs text-slate-400 truncate">{bt.description}</p>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-            {blockTypes.length === 0 && (
-              <p className="col-span-2 text-center text-sm text-slate-400 py-8">
-                No block types available. Create block types first.
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Add Block picker */}
+      <BlockPicker
+        open={showAddBlock}
+        onClose={() => setShowAddBlock(false)}
+        onSelect={(item) => handleAddBlock(item.slug)}
+        items={blockTypes.map((bt) => ({
+          id: bt.id,
+          slug: bt.slug,
+          label: bt.label,
+          description: bt.description,
+          icon: bt.icon,
+        }))}
+        title="Add Block"
+        description="Select a block type to add to this template."
+        emptyMessage="No block types available. Create block types first."
+      />
 
       {/* Delete dialog */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>

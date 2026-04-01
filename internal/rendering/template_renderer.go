@@ -107,6 +107,16 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 				return template.HTML(fmt.Sprintf("%v", v))
 			}
 		},
+		"safeURL": func(s interface{}) template.URL {
+			switch v := s.(type) {
+			case string:
+				return template.URL(v)
+			case template.URL:
+				return v
+			default:
+				return template.URL(fmt.Sprintf("%v", v))
+			}
+		},
 		"json": func(v interface{}) string {
 			b, err := json.MarshalIndent(v, "", "  ")
 			if err != nil {

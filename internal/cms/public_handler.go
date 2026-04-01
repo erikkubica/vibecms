@@ -566,6 +566,9 @@ func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
 			"safeHTML": func(s interface{}) template.HTML {
 				return template.HTML(fmt.Sprintf("%v", s))
 			},
+			"safeURL": func(s interface{}) template.URL {
+				return template.URL(fmt.Sprintf("%v", s))
+			},
 		})
 		if err != nil {
 			rendered = append(rendered, fmt.Sprintf(`<div class="mb-4 text-red-500 text-sm">Template error in %s: %v</div>`, blockType, err))
@@ -705,6 +708,9 @@ func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}) []str
 			"safeHTML": func(s interface{}) template.HTML {
 				return template.HTML(fmt.Sprintf("%v", s))
 			},
+			"safeURL": func(s interface{}) template.URL {
+				return template.URL(fmt.Sprintf("%v", s))
+			},
 		})
 		if err != nil {
 			log.Printf("WARN: block template render error [%s]: %v", blockType, err)
@@ -839,6 +845,30 @@ func applyRichTextMarking(fields map[string]interface{}, defs []fieldSchemaDef) 
 			// Convert string HTML to template.HTML to prevent escaping
 			if s, ok := val.(string); ok {
 				fields[def.Key] = template.HTML(s)
+			}
+		case "image":
+			// Normalize image fields to always be a map with at least "url".
+			// Media picker stores full objects (url, alt, width, height, etc.).
+			// Plain strings (from test_data) get wrapped as {"url": "..."}.
+			// Templates access via .field.url, .field.alt, .field.width, etc.
+			switch v := val.(type) {
+			case string:
+				if v != "" {
+					fields[def.Key] = map[string]interface{}{"url": v}
+				}
+			case map[string]interface{}:
+				// Already a proper object — leave as-is.
+			}
+		case "link":
+			// Normalize link fields to always be a map with text, url, alt, target.
+			// Templates access via .field.url, .field.text, .field.target, etc.
+			switch v := val.(type) {
+			case string:
+				if v != "" {
+					fields[def.Key] = map[string]interface{}{"url": v, "text": v}
+				}
+			case map[string]interface{}:
+				// Already a proper object — leave as-is.
 			}
 		case "group":
 			// Recurse into group sub-fields

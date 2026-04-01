@@ -116,7 +116,13 @@ func main() {
 	themeLoader := cms.NewThemeLoader(database, themeAssets, eventBus)
 	themePath := os.Getenv("THEME_PATH")
 	if themePath == "" {
-		themePath = "themes/default"
+		// Try to load from active theme in DB.
+		var activeTheme struct{ Path string }
+		if err := database.Raw("SELECT path FROM themes WHERE is_active = true LIMIT 1").Scan(&activeTheme).Error; err == nil && activeTheme.Path != "" {
+			themePath = activeTheme.Path
+		} else {
+			themePath = "themes/default"
+		}
 	}
 	themeLoader.LoadTheme(themePath)
 
@@ -138,6 +144,11 @@ func main() {
 	extLoader.LoadBlocksForActiveExtensions(themeAssets)
 	activeExts, _ := extLoader.GetActive()
 	for _, ext := range activeExts {
+		// Run pending SQL migrations for this extension.
+		if err := cms.RunExtensionMigrations(database, ext.Path, ext.Slug); err != nil {
+			log.Printf("WARN: extension %s migrations failed: %v", ext.Slug, err)
+		}
+
 		var manifest cms.ExtensionManifest
 		_ = json.Unmarshal(ext.Manifest, &manifest)
 		caps := manifest.CapabilityMap()

@@ -200,6 +200,9 @@ func (h *BlockTypeHandler) PreviewBlockTemplate(c *fiber.Ctx) error {
 		"safeHTML": func(s interface{}) template.HTML {
 			return template.HTML(fmt.Sprintf("%v", s))
 		},
+		"safeURL": func(s interface{}) template.URL {
+			return template.URL(fmt.Sprintf("%v", s))
+		},
 	}).Parse(req.HTMLTemplate)
 	if err != nil {
 		return c.JSON(fiber.Map{"html": fmt.Sprintf("<div class=\"text-red-500 text-sm p-3 bg-red-50 rounded-lg border border-red-200\"><strong>Template Error:</strong> %s</div>", template.HTMLEscapeString(err.Error()))})

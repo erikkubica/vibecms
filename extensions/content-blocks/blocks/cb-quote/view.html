@@ -10,7 +10,7 @@
     {{if or .author_name .author_role}}
       <div class="flex items-center gap-3 mt-5">
         {{if .avatar}}
-          <img src="{{.avatar}}" alt="{{.author_name}}" class="rounded-full w-12 h-12 object-cover" />
+          <img src="{{with .avatar}}{{.url}}{{end}}" alt="{{.author_name}}" class="rounded-full w-12 h-12 object-cover" />
         {{end}}
         <div>
           {{if .author_name}}

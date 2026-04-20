@@ -10,10 +10,10 @@
       <div class="vb-cb-logo-cloud__item">
         {{if .url}}
         <a href="{{.url}}" class="vb-cb-logo-cloud__link" target="_blank" rel="noopener noreferrer" title="{{.name}}">
-          <img src="{{.image}}" alt="{{.name}}" class="vb-cb-logo-cloud__image" loading="lazy" />
+          <img src="{{with .image}}{{.url}}{{end}}" alt="{{.name}}" class="vb-cb-logo-cloud__image" loading="lazy" />
         </a>
         {{else}}
-        <img src="{{.image}}" alt="{{.name}}" class="vb-cb-logo-cloud__image" loading="lazy" />
+        <img src="{{with .image}}{{.url}}{{end}}" alt="{{.name}}" class="vb-cb-logo-cloud__image" loading="lazy" />
         {{end}}
       </div>
       {{end}}

@@ -1,4 +1,4 @@
-<section class="vb-cb-cta-banner vb-cb-cta-banner--{{.style}}" data-block="cb-cta-banner"{{if .background_image}} style="background-image: url('{{.background_image}}')"{{end}}>
+<section class="vb-cb-cta-banner vb-cb-cta-banner--{{.style}}" data-block="cb-cta-banner"{{if .background_image}} style="background-image: url('{{with .background_image}}{{.url}}{{end}}')"{{end}}>
   {{if .background_image}}<div class="vb-cb-cta-banner__overlay"></div>{{end}}
   <div class="py-16 md:py-24 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto text-center relative z-10">

@@ -12,7 +12,7 @@
       {{range .members}}
       <div class="vb-cb-team__card">
         {{if .photo}}
-        <img src="{{.photo}}" alt="{{.name}}" class="vb-cb-team__photo vb-cb-team__photo--{{$.photo_style}}" loading="lazy" />
+        <img src="{{with .photo}}{{.url}}{{end}}" alt="{{.name}}" class="vb-cb-team__photo vb-cb-team__photo--{{$.photo_style}}" loading="lazy" />
         {{end}}
         <h3 class="text-lg font-semibold" style="color: var(--color-text);">{{.name}}</h3>
         <p class="vb-cb-team__role">{{.role}}</p>

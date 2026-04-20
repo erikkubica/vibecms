@@ -8,7 +8,7 @@
     <div class="vb-cb-video-embed__container" data-video-url="{{.video_url}}">
       {{if .poster_image}}
       <div class="vb-cb-video-embed__poster">
-        <img src="{{.poster_image}}" alt="{{if .heading}}{{.heading}}{{else}}Video thumbnail{{end}}" class="vb-cb-video-embed__poster-img" loading="lazy" />
+        <img src="{{with .poster_image}}{{.url}}{{end}}" alt="{{if .heading}}{{.heading}}{{else}}Video thumbnail{{end}}" class="vb-cb-video-embed__poster-img" loading="lazy" />
         <button class="vb-cb-video-embed__play-btn" aria-label="Play video">
           <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="34" cy="34" r="33" fill="rgba(0,0,0,0.6)" stroke="white" stroke-width="2"/>

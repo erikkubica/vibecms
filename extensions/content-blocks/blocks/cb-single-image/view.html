@@ -4,7 +4,7 @@
       {{if .link}}
         <a href="{{.link}}" class="vb-cb-single-image__link">
           <img
-            src="{{.image}}"
+            src="{{with .image}}{{.url}}{{end}}"
             alt="{{if .alt}}{{.alt}}{{else}}Image{{end}}"
             class="vb-cb-single-image__img {{if eq .rounded "md"}}rounded-md{{else if eq .rounded "lg"}}rounded-lg{{else if eq .rounded "full"}}rounded-full{{else}}rounded-none{{end}}"
             loading="lazy"
@@ -12,7 +12,7 @@
         </a>
       {{else}}
         <img
-          src="{{.image}}"
+          src="{{with .image}}{{.url}}{{end}}"
           alt="{{if .alt}}{{.alt}}{{else}}Image{{end}}"
           class="vb-cb-single-image__img {{if eq .rounded "md"}}rounded-md{{else if eq .rounded "lg"}}rounded-lg{{else if eq .rounded "full"}}rounded-full{{else}}rounded-none{{end}}"
           loading="lazy"

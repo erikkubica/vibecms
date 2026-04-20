@@ -20,7 +20,7 @@
             <blockquote class="vb-testimonials__quote leading-relaxed" style="color: var(--color-text);">{{.quote}}</blockquote>
             <div class="vb-testimonials__author">
               {{if .avatar}}
-              <img src="{{.avatar}}" alt="{{.author_name}}" class="vb-testimonials__avatar" loading="lazy" />
+              <img src="{{with .avatar}}{{.url}}{{end}}" alt="{{.author_name}}" class="vb-testimonials__avatar" loading="lazy" />
               {{end}}
               <div class="vb-testimonials__author-info">
                 <span class="text-lg font-semibold" style="color: var(--color-text);">{{.author_name}}</span>

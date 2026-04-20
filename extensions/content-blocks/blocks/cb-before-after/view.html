@@ -7,9 +7,9 @@
     {{end}}
     <div class="max-w-3xl mx-auto">
       <div class="vb-cb-before-after__wrapper rounded-lg overflow-hidden relative select-none cursor-ew-resize">
-        <img src="{{.after_image}}" alt="{{if .after_label}}{{.after_label}}{{else}}After{{end}}" class="vb-cb-before-after__img block w-full h-auto pointer-events-none" draggable="false" />
+        <img src="{{with .after_image}}{{.url}}{{end}}" alt="{{if .after_label}}{{.after_label}}{{else}}After{{end}}" class="vb-cb-before-after__img block w-full h-auto pointer-events-none" draggable="false" />
         <div class="vb-cb-before-after__before absolute inset-0 overflow-hidden" style="clip-path: inset(0 50% 0 0);">
-          <img src="{{.before_image}}" alt="{{if .before_label}}{{.before_label}}{{else}}Before{{end}}" class="vb-cb-before-after__img w-full h-full object-cover pointer-events-none" draggable="false" />
+          <img src="{{with .before_image}}{{.url}}{{end}}" alt="{{if .before_label}}{{.before_label}}{{else}}Before{{end}}" class="vb-cb-before-after__img w-full h-full object-cover pointer-events-none" draggable="false" />
         </div>
         <div class="vb-cb-before-after__handle absolute top-0 bottom-0 w-0 z-10" style="left: 50%;">
           <div class="vb-cb-before-after__handle-line"></div>

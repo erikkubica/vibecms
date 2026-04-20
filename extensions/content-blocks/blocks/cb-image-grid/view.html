@@ -13,7 +13,7 @@
               <a href="{{.link}}" class="vb-cb-image-grid__link">
             {{end}}
               <div class="vb-cb-image-grid__image-wrap rounded-lg">
-                <img src="{{.image}}" alt="{{if .caption}}{{.caption}}{{else}}Gallery image{{end}}" class="vb-cb-image-grid__img" loading="lazy" />
+                <img src="{{with .image}}{{.url}}{{end}}" alt="{{if .caption}}{{.caption}}{{else}}Gallery image{{end}}" class="vb-cb-image-grid__img" loading="lazy" />
                 {{if .caption}}
                   <div class="vb-cb-image-grid__overlay">
                     <span class="text-sm font-semibold text-white">{{.caption}}</span>

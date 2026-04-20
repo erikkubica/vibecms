@@ -82,6 +82,9 @@ func main() {
 	nodeTypeSvc := cms.NewNodeTypeService(database)
 	langSvc := cms.NewLanguageService(database)
 	themeAssets := cms.NewThemeAssetRegistry()
+	if err := themeAssets.LoadBlockAssetsFromDB(database); err != nil {
+		log.Printf("WARN: failed to seed block asset registry from DB: %v", err)
+	}
 	blockTypeSvc := cms.NewBlockTypeService(database, eventBus, themeAssets)
 	templateSvc := cms.NewTemplateService(database, themeAssets)
 	layoutSvc := cms.NewLayoutService(database, eventBus, themeAssets)

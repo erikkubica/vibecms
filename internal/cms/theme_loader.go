@@ -92,6 +92,30 @@ func NewThemeAssetRegistry() *ThemeAssetRegistry {
 	}
 }
 
+// LoadBlockAssetsFromDB seeds the in-memory block asset registry from the
+// block_types table. Disk-based sync (ThemeLoader, ExtensionLoader) skips the
+// registry write when the content hash is unchanged, which leaves the registry
+// empty on every restart after first install. Calling this at boot guarantees
+// the registry reflects whatever block_css/block_js is currently persisted.
+func (r *ThemeAssetRegistry) LoadBlockAssetsFromDB(db *gorm.DB) error {
+	var bts []models.BlockType
+	if err := db.Select("slug, block_css, block_js").Find(&bts).Error; err != nil {
+		return fmt.Errorf("load block assets from db: %w", err)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, bt := range bts {
+		if bt.BlockCSS == "" && bt.BlockJS == "" {
+			continue
+		}
+		r.blockAssets[bt.Slug] = &BlockAsset{
+			CSS: bt.BlockCSS,
+			JS:  bt.BlockJS,
+		}
+	}
+	return nil
+}
+
 // GetHeadStyles returns the resolved head style URLs.
 func (r *ThemeAssetRegistry) GetHeadStyles() []string {
 	r.mu.RLock()

@@ -138,6 +138,7 @@ func (h *PublicHandler) HomePage(c *fiber.Ctx) error {
 			var node models.ContentNode
 			if err := h.db.Where("id = ? AND status = ?", homepageID, "published").First(&node).Error; err == nil {
 				blocks := parseBlocks(node.BlocksData)
+				h.resolveAssetRefsInBlocks(blocks)
 				renderedBlocks := h.renderBlocksBatch(blocks)
 
 				// Try layout-based rendering first
@@ -221,6 +222,7 @@ func (h *PublicHandler) PageByFullURL(c *fiber.Ctx) error {
 	}
 
 	blocks := parseBlocks(node.BlocksData)
+	h.resolveAssetRefsInBlocks(blocks)
 	renderedBlocks := h.renderBlocksBatch(blocks)
 
 	// Try layout-based rendering first
@@ -1319,6 +1321,29 @@ func parseBlocks(data models.JSONB) []map[string]interface{} {
 		return nil
 	}
 	return blocks
+}
+
+// resolveAssetRefsInBlocks walks each block's "fields" map and substitutes
+// any `theme-asset:<key>` / `extension-asset:<slug>:<key>` string references
+// with the matching media object, using the active theme's asset map.
+// Without this, live renders leak "theme-asset:..." strings into templates
+// and Go's safeURL sanitiser replaces them with "#ZgotmplZ".
+func (h *PublicHandler) resolveAssetRefsInBlocks(blocks []map[string]interface{}) {
+	if len(blocks) == 0 {
+		return
+	}
+	var active models.Theme
+	if err := h.db.Where("is_active = ?", true).First(&active).Error; err != nil {
+		return
+	}
+	lookup := LoadAssetLookup(h.db, active.Name)
+	for i := range blocks {
+		fields, ok := blocks[i]["fields"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		blocks[i]["fields"] = ResolveThemeAssetRefs(fields, lookup)
+	}
 }
 
 // extractBlockSlugs returns the unique block type slugs used in a parsed blocks list.

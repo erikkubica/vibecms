@@ -675,7 +675,7 @@ func nodeTypeToProto(nt *NodeType) *pb.NodeTypeMessage {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  f.OptionsToStrings(),
 		}
 	}
 	msg := &pb.NodeTypeMessage{
@@ -708,7 +708,7 @@ func nodeTypeInputFromProto(inp *pb.NodeTypeInputMessage) NodeTypeInput {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  OptionsFromStrings(f.Options),
 		})
 	}
 	ni := NodeTypeInput{
@@ -792,7 +792,7 @@ func taxonomyToProto(t *Taxonomy) *pb.TaxonomyMessage {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  f.OptionsToStrings(),
 		}
 	}
 	return &pb.TaxonomyMessage{
@@ -818,7 +818,7 @@ func taxonomyInputFromProto(inp *pb.TaxonomyInputMessage) TaxonomyInput {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  OptionsFromStrings(f.Options),
 		})
 	}
 	return TaxonomyInput{

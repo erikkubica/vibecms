@@ -269,12 +269,73 @@ type NodeType struct {
 	UpdatedAt   time.Time         `json:"updated_at"`
 }
 
+// NodeTypeField — note: both `name` and `key` JSON tags resolve to the same
+// Go field. The admin UI uses `key` (the block-type convention); Tengo theme
+// scripts and legacy code use `name`. NormalizeFieldSchema mirrors one into
+// the other so either naming works and consumers always see both.
 type NodeTypeField struct {
-	Name     string   `json:"name"`
-	Label    string   `json:"label"`
-	Type     string   `json:"type"`
-	Required bool     `json:"required"`
-	Options  []string `json:"options,omitempty"`
+	Name      string           `json:"name"`
+	Key       string           `json:"key,omitempty"`
+	Label     string           `json:"label"`
+	Type      string           `json:"type"`
+	Required  bool             `json:"required"`
+	Options   []interface{}    `json:"options,omitempty"`
+	SubFields []NodeTypeField  `json:"sub_fields,omitempty"`
+	Default   interface{}      `json:"default,omitempty"`
+	Help      string           `json:"help,omitempty"`
+}
+
+// NormalizeFieldSchema mirrors Name↔Key on every field (including recursively
+// inside sub_fields) so the admin UI and template code can both rely on
+// either accessor being populated.
+func NormalizeFieldSchema(fields []NodeTypeField) []NodeTypeField {
+	for i := range fields {
+		if fields[i].Key == "" && fields[i].Name != "" {
+			fields[i].Key = fields[i].Name
+		} else if fields[i].Name == "" && fields[i].Key != "" {
+			fields[i].Name = fields[i].Key
+		}
+		if len(fields[i].SubFields) > 0 {
+			fields[i].SubFields = NormalizeFieldSchema(fields[i].SubFields)
+		}
+	}
+	return fields
+}
+
+// OptionsToStrings coerces the polymorphic Options slice to strings for
+// gRPC proto wire compatibility. Map-shaped {label,value} options are
+// reduced to their string value.
+func (f NodeTypeField) OptionsToStrings() []string {
+	if len(f.Options) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(f.Options))
+	for _, o := range f.Options {
+		switch v := o.(type) {
+		case string:
+			out = append(out, v)
+		case map[string]any:
+			if s, ok := v["value"].(string); ok {
+				out = append(out, s)
+			} else if s, ok := v["label"].(string); ok {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
+}
+
+// OptionsFromStrings re-hydrates a []string into the polymorphic slice
+// (used when decoding from gRPC proto wire).
+func OptionsFromStrings(in []string) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]interface{}, len(in))
+	for i, s := range in {
+		out[i] = s
+	}
+	return out
 }
 
 type NodeTypeInput struct {

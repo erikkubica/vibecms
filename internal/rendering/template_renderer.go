@@ -155,6 +155,31 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 		"split": func(sep, s string) []string {
 			return strings.Split(s, sep)
 		},
+		"mod": func(a, b int) int {
+			if b == 0 {
+				return 0
+			}
+			return a % b
+		},
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"sub": func(a, b int) int {
+			return a - b
+		},
+		"list": func(items ...interface{}) []interface{} {
+			return items
+		},
+		"seq": func(n int) []int {
+			if n <= 0 {
+				return nil
+			}
+			out := make([]int, n)
+			for i := range out {
+				out[i] = i
+			}
+			return out
+		},
 		"image_url": func(originalURL string, sizeName string) string {
 			// Transform /media/2026/03/photo.jpg -> /media/cache/{size}/2026/03/photo.jpg
 			if !strings.HasPrefix(originalURL, "/media/") {

@@ -16,6 +16,7 @@ func (c *coreImpl) RegisterNodeType(_ context.Context, input NodeTypeInput) (*No
 		return nil, NewValidation("label is required")
 	}
 
+	input.FieldSchema = NormalizeFieldSchema(input.FieldSchema)
 	fieldSchemaJSON, err := json.Marshal(input.FieldSchema)
 	if err != nil {
 		return nil, NewInternal("failed to marshal field_schema: " + err.Error())
@@ -187,7 +188,7 @@ func nodeTypeFromModel(nt *models.NodeType) *NodeType {
 	if len(nt.FieldSchema) > 0 {
 		var fields []NodeTypeField
 		if err := json.Unmarshal([]byte(nt.FieldSchema), &fields); err == nil {
-			result.FieldSchema = fields
+			result.FieldSchema = NormalizeFieldSchema(fields)
 		}
 	}
 	if result.FieldSchema == nil {

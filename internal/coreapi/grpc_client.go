@@ -810,7 +810,7 @@ func nodeTypeFromProto(msg *pb.NodeTypeMessage) *NodeType {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  OptionsFromStrings(f.Options),
 		}
 	}
 	if nt.URLPrefixes == nil {
@@ -838,7 +838,7 @@ func nodeTypeInputToProto(input NodeTypeInput) *pb.NodeTypeInputMessage {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  f.OptionsToStrings(),
 		})
 	}
 	return msg
@@ -924,7 +924,7 @@ func taxonomyFromProto(msg *pb.TaxonomyMessage) Taxonomy {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  OptionsFromStrings(f.Options),
 		}
 	}
 	return t
@@ -943,7 +943,7 @@ func taxonomyInputToProto(input TaxonomyInput) *pb.TaxonomyInputMessage {
 			Label:    f.Label,
 			Type:     f.Type,
 			Required: f.Required,
-			Options:  f.Options,
+			Options:  f.OptionsToStrings(),
 		})
 	}
 	return msg

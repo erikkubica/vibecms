@@ -224,7 +224,7 @@ func nodeTypeToTengoObj(nt *NodeType) tengo.Object {
 	for i, f := range nt.FieldSchema {
 		opts := make([]tengo.Object, len(f.Options))
 		for j, o := range f.Options {
-			opts[j] = &tengo.String{Value: o}
+			opts[j] = goToTengoObj(o)
 		}
 		fields[i] = &tengo.ImmutableMap{Value: map[string]tengo.Object{
 			"name":     &tengo.String{Value: f.Name},
@@ -854,9 +854,28 @@ func tengoToField(fm map[string]tengo.Object) NodeTypeField {
 	if ov, ok := fm["options"]; ok {
 		if oarr, ok := ov.(*tengo.Array); ok {
 			for _, o := range oarr.Value {
-				f.Options = append(f.Options, tengoToString(o))
+				if m, ok := o.(*tengo.Map); ok {
+					f.Options = append(f.Options, tengoMapToGoMap(m.Value))
+				} else {
+					f.Options = append(f.Options, tengoToString(o))
+				}
 			}
 		}
+	}
+	if sfv, ok := fm["sub_fields"]; ok {
+		if sfarr, ok := sfv.(*tengo.Array); ok {
+			for _, sf := range sfarr.Value {
+				if sm, ok := sf.(*tengo.Map); ok {
+					f.SubFields = append(f.SubFields, tengoToField(sm.Value))
+				}
+			}
+		}
+	}
+	if dv, ok := fm["default"]; ok {
+		f.Default = tengoObjToGo(dv)
+	}
+	if hv, ok := fm["help"]; ok {
+		f.Help = tengoToString(hv)
 	}
 	return f
 }

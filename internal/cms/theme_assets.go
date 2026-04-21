@@ -5,6 +5,8 @@ import (
 	"regexp"
 
 	"gorm.io/gorm"
+
+	"vibecms/internal/models"
 )
 
 // themeAssetRefRegexp matches "theme-asset:<key>" — references the active
@@ -106,6 +108,23 @@ func LoadAssetLookup(db *gorm.DB, themeName string) AssetLookup {
 // Prefer LoadAssetLookup.
 func LoadThemeAssetMap(db *gorm.DB, themeName string) map[string]mediaAssetRow {
 	return LoadAssetLookup(db, themeName).Theme
+}
+
+// hasAny reports whether the lookup has any resolvable entries. Used to
+// short-circuit work when no theme/extension is active.
+func (l AssetLookup) hasAny() bool {
+	return len(l.Theme) > 0 || len(l.Extension) > 0
+}
+
+// loadActiveAssetLookup returns the AssetLookup for the currently active
+// theme — convenience wrapper used by live render paths that don't already
+// carry a theme name.
+func loadActiveAssetLookup(db *gorm.DB) AssetLookup {
+	var t models.Theme
+	if err := db.Where("is_active = ?", true).First(&t).Error; err != nil {
+		return AssetLookup{}
+	}
+	return LoadAssetLookup(db, t.Name)
 }
 
 // ResolveThemeAssetRefs walks a JSON-decoded value and replaces any

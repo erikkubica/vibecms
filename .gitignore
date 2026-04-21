@@ -15,3 +15,8 @@ node_modules/
 extensions/*/admin-ui/node_modules/
 extensions/*/bin/
 /vibecms
+*.jpeg
+*.jpg
+*.png
+.playwright-mcp/
+.claude/scheduled_tasks.lock

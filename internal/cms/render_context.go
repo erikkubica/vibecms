@@ -178,6 +178,15 @@ func (rc *RenderContext) BuildNodeData(node *models.ContentNode, blocksHTML stri
 		}
 	}
 
+	// Resolve theme-asset:/extension-asset: refs in node fields so templates
+	// receive real media URLs instead of opaque scheme strings (which Go's
+	// safeURL pipeline rewrites to "#ZgotmplZ").
+	if lookup := loadActiveAssetLookup(rc.db); lookup.hasAny() {
+		if resolved, ok := ResolveThemeAssetRefs(fields, lookup).(map[string]interface{}); ok {
+			fields = resolved
+		}
+	}
+
 	seo := make(map[string]interface{})
 	if len(node.SeoSettings) > 0 {
 		if err := json.Unmarshal([]byte(node.SeoSettings), &seo); err != nil {

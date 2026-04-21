@@ -143,12 +143,116 @@ func (c *coreImpl) QueryNodes(_ context.Context, q NodeQuery) (*NodeList, error)
 		return nil, fmt.Errorf("coreapi QueryNodes: %w", err)
 	}
 
+	// Pre-compute theme-asset lookup once so every node in this batch
+	// gets its fields_data references resolved without N extra queries.
+	lookup := c.loadThemeAssetLookup()
+
 	nodes := make([]*Node, len(rows))
 	for i := range rows {
 		nodes[i] = nodeFromModel(&rows[i])
+		if len(lookup) > 0 && nodes[i].FieldsData != nil {
+			nodes[i].FieldsData = resolveAssetRefsIn(nodes[i].FieldsData, lookup)
+		}
 	}
 
 	return &NodeList{Nodes: nodes, Total: total}, nil
+}
+
+// assetRef maps an asset_key like "cave-obsidian" → media row's URL/alt/dims.
+type assetRef struct {
+	URL    string
+	Alt    string
+	Width  int
+	Height int
+}
+
+// loadThemeAssetLookup reads media_files rows owned by the currently active
+// theme and returns a map keyed by asset_key. Returns nil if no active theme
+// or no theme-owned assets.
+func (c *coreImpl) loadThemeAssetLookup() map[string]assetRef {
+	type row struct {
+		AssetKey string
+		URL      string
+		Alt      string
+		Width    int
+		Height   int
+	}
+	var rows []row
+	err := c.db.Table("media_files").
+		Select("asset_key, url, alt, width, height").
+		Where("source = ?", "theme").
+		Where("theme_name = (SELECT name FROM themes WHERE is_active = true LIMIT 1)").
+		Scan(&rows).Error
+	if err != nil || len(rows) == 0 {
+		return nil
+	}
+	out := make(map[string]assetRef, len(rows))
+	for _, r := range rows {
+		if r.AssetKey == "" {
+			continue
+		}
+		out[r.AssetKey] = assetRef{URL: r.URL, Alt: r.Alt, Width: r.Width, Height: r.Height}
+	}
+	return out
+}
+
+// resolveAssetRefsIn walks a map (usually fields_data) and replaces any
+// `theme-asset:<key>` string with a resolved `{url, alt, width, height}`
+// media object. When the ref sits at an object's "url" key (e.g.
+// `{"url": "theme-asset:foo", "alt": "..."}` — the common block-image shape),
+// the url is replaced in place so sibling keys (like a custom alt) survive.
+func resolveAssetRefsIn(v map[string]interface{}, lookup map[string]assetRef) map[string]interface{} {
+	for k, val := range v {
+		v[k] = resolveAssetRefAny(val, lookup)
+	}
+	return v
+}
+
+func resolveAssetRefAny(val interface{}, lookup map[string]assetRef) interface{} {
+	switch vv := val.(type) {
+	case string:
+		if ref, ok := matchThemeAssetRef(vv, lookup); ok {
+			return map[string]interface{}{"url": ref.URL, "alt": ref.Alt, "width": ref.Width, "height": ref.Height}
+		}
+		return vv
+	case map[string]interface{}:
+		if rawURL, ok := vv["url"].(string); ok {
+			if ref, hit := matchThemeAssetRef(rawURL, lookup); hit {
+				vv["url"] = ref.URL
+				if _, has := vv["alt"]; !has {
+					vv["alt"] = ref.Alt
+				}
+				if _, has := vv["width"]; !has && ref.Width > 0 {
+					vv["width"] = ref.Width
+				}
+				if _, has := vv["height"]; !has && ref.Height > 0 {
+					vv["height"] = ref.Height
+				}
+				return vv
+			}
+		}
+		for k, iv := range vv {
+			vv[k] = resolveAssetRefAny(iv, lookup)
+		}
+		return vv
+	case []interface{}:
+		for i, iv := range vv {
+			vv[i] = resolveAssetRefAny(iv, lookup)
+		}
+		return vv
+	}
+	return val
+}
+
+// matchThemeAssetRef returns the resolved row when the string matches the
+// `theme-asset:<key>` pattern AND the key is present in the lookup.
+func matchThemeAssetRef(s string, lookup map[string]assetRef) (assetRef, bool) {
+	const prefix = "theme-asset:"
+	if len(s) <= len(prefix) || s[:len(prefix)] != prefix {
+		return assetRef{}, false
+	}
+	ref, ok := lookup[s[len(prefix):]]
+	return ref, ok
 }
 
 func (c *coreImpl) ListTaxonomyTerms(_ context.Context, nodeType string, taxonomy string) ([]string, error) {

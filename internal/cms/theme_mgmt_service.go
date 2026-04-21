@@ -296,15 +296,23 @@ func (s *ThemeMgmtService) Activate(id int) error {
 	return s.Reload(theme.Path)
 }
 
-// Deactivate sets the given theme as inactive.
+// Deactivate sets the given theme as inactive and removes all its registered
+// blocks, layouts, partials, and templates from the DB and in-memory registry.
+// Idempotent: safe to call on an already-inactive theme to re-run cleanup.
 func (s *ThemeMgmtService) Deactivate(id int) error {
-	result := s.db.Model(&models.Theme{}).Where("id = ?", id).Update("is_active", false)
-	if result.Error != nil {
-		return fmt.Errorf("failed to deactivate theme %d: %w", id, result.Error)
+	theme, err := s.GetByID(id)
+	if err != nil {
+		return err
 	}
-	if result.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
+
+	if err := s.db.Model(&models.Theme{}).Where("id = ?", id).Update("is_active", false).Error; err != nil {
+		return fmt.Errorf("failed to deactivate theme %d: %w", id, err)
 	}
+
+	if err := s.themeLoader.DeregisterTheme(theme.Name); err != nil {
+		log.Printf("WARN: deactivate theme %d: %v", id, err)
+	}
+
 	return nil
 }
 

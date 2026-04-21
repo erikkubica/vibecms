@@ -1,10 +1,33 @@
-/* Features Grid Block — scoped styles */
+/* Features Grid Block — bento edition */
 
-.vb-features-grid__card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+.vb-features-grid__icon { line-height: 1; }
+
+.vb-features-grid__card {
+  overflow: hidden;
+  isolation: isolate;
 }
 
-.vb-features-grid__icon {
-  line-height: 1;
+.vb-features-grid__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  background: radial-gradient(60% 80% at 100% 0%, rgba(124, 58, 237, 0.12) 0%, transparent 60%);
+  z-index: 0;
+}
+.vb-features-grid__card:hover .vb-features-grid__glow { opacity: 1; }
+
+/* Bento highlight — first card gets a warm gradient tint (only when >=3 cards on md+) */
+@media (min-width: 1024px) {
+  .vb-features-grid__grid > .vb-features-grid__card:first-child {
+    background:
+      radial-gradient(80% 100% at 100% 0%, rgba(237, 233, 254, 0.55) 0%, transparent 60%),
+      #ffffff;
+  }
+  .vb-features-grid__grid > .vb-features-grid__card:first-child .vb-features-grid__icon {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: #fff;
+    box-shadow: var(--shadow-accent);
+  }
 }

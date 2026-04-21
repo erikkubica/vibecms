@@ -49,6 +49,71 @@ function isImage(mime?: string): boolean {
   return !!mime && mime.startsWith("image/");
 }
 
+/**
+ * Infer a mime type from a URL's file extension. Used when an image value
+ * comes from a theme's test_data or a raw external URL that doesn't carry
+ * a mime_type field — without this, the preview falls back to a generic file
+ * icon even though the URL points at an image.
+ */
+function inferMimeFromUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  const lower = url.split("?")[0].toLowerCase();
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".svg")) return "image/svg+xml";
+  if (lower.endsWith(".avif")) return "image/avif";
+  if (lower.endsWith(".mp4") || lower.endsWith(".webm") || lower.endsWith(".mov")) return "video/mp4";
+  if (lower.endsWith(".mp3") || lower.endsWith(".wav") || lower.endsWith(".ogg")) return "audio/mpeg";
+  return undefined;
+}
+
+/**
+ * <img> with a graceful error fallback. External URLs blocked by CORS,
+ * missing files, and 404s all trigger a placeholder SVG instead of the
+ * browser's default broken-image glyph.
+ */
+function ImgWithFallback({
+  src,
+  alt,
+  className,
+  ...rest
+}: React.ImgHTMLAttributes<HTMLImageElement>) {
+  const [failed, setFailed] = useState(false);
+  if (failed || !src) {
+    return (
+      <div
+        className={`flex items-center justify-center bg-slate-100 text-slate-400 ${className ?? ""}`}
+        aria-label={typeof alt === "string" ? alt : "Image unavailable"}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="h-6 w-6"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+          <path d="M21 15l-5-5L5 21" />
+          <path d="M3 3l18 18" />
+        </svg>
+      </div>
+    );
+  }
+  return (
+    <img
+      {...rest}
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function FileIcon({ mime, className }: { mime?: string; className?: string }) {
   if (!mime) return <File className={className} />;
   if (isImage(mime)) return <ImageIcon className={className} />;
@@ -75,10 +140,15 @@ function normalizeToMediaValue(val: unknown): MediaValue | null {
   if (!val) return null;
   if (typeof val === "string") {
     if (!val) return null;
-    return { url: val };
+    return { url: val, mime_type: inferMimeFromUrl(val) };
   }
   if (typeof val === "object" && val !== null && "url" in val) {
-    return val as MediaValue;
+    const mv = val as MediaValue;
+    if (!mv.url) return null;
+    if (!mv.mime_type) {
+      return { ...mv, mime_type: inferMimeFromUrl(mv.url) };
+    }
+    return mv;
   }
   return null;
 }
@@ -129,7 +199,7 @@ function SingleMediaPreview({
         {/* Thumbnail */}
         {isImage(media.mime_type) ? (
           <div className="shrink-0 h-20 w-20 rounded-md overflow-hidden border border-slate-200 bg-white">
-            <img
+            <ImgWithFallback
               src={media.url}
               alt={media.alt || ""}
               className="h-full w-full object-cover"
@@ -228,7 +298,7 @@ function GalleryItem({
       onDragEnd={onDragEnd}
     >
       {isImage(media.mime_type) ? (
-        <img
+        <ImgWithFallback
           src={media.url}
           alt={media.alt || ""}
           className="h-full w-full object-cover"

@@ -1,29 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Epilogue:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+/* Stitch utility classes — allow pasting Stitch markup verbatim */
+.sora { font-family: 'Sora', 'Inter', system-ui, sans-serif; }
+.epilogue { font-family: 'Epilogue', 'Inter', system-ui, sans-serif; }
+.font-headline { font-family: 'Sora', 'Epilogue', 'Inter', system-ui, sans-serif; }
+.font-body { font-family: 'Inter', system-ui, sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.material-symbols-outlined.filled { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.glass-nav { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.bento-grid-bg { background-image: radial-gradient(#630ed410 1px, transparent 1px); background-size: 24px 24px; }
+.ambient-shadow { box-shadow: 0 40px 40px -10px rgba(27, 28, 26, 0.06); }
+.primary-gradient { background: linear-gradient(135deg, #630ed4 0%, #7c3aed 100%); }
 
 /* ──────────────────────────────────────────────
-   Custom Properties — edit these to rebrand
+   VibeCMS Default Theme — 2026 Bento edition
+   Light-first, violet accent, warm neutrals.
+   Rebrand by editing the custom properties below.
    ────────────────────────────────────────────── */
 :root {
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
-  --color-accent-text: #ffffff;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-  --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --radius: 0.5rem;
-  --max-width: 1200px;
+  /* Accent — deep violet (Stitch reference) */
+  --color-accent:         #630ed4;
+  --color-accent-hover:   #4f0bad;
+  --color-accent-soft:    #f1e9ff;
+  --color-accent-text:    #ffffff;
+  --color-accent-ring:    rgba(99, 14, 212, 0.22);
+
+  /* Surfaces — warm ivory canvas + white cards */
+  --color-bg:             #fbf9f6;   /* page canvas */
+  --color-surface:        #ffffff;   /* card */
+  --color-surface-low:    #f7f4ee;   /* lowered surface */
+  --color-surface-alt:    #f1e9ff;   /* tinted accent surface */
+  --color-surface-warm:   #f4efe6;   /* warm alt tint */
+  --color-surface-dark:   #12101c;   /* dark bento */
+
+  /* Text */
+  --color-text:           #1b1c1a;
+  --color-text-muted:     #5b5f66;
+  --color-text-subtle:    #9a9ea4;
+
+  /* Lines */
+  --color-border:         #ece6d9;
+  --color-border-strong:  #d9d1bf;
+
+  /* Typography */
+  --font-heading: 'Sora', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Radii — bento scale */
+  --radius-sm:  0.625rem;   /* 10px */
+  --radius:     1rem;       /* 16px */
+  --radius-lg:  1.5rem;     /* 24px */
+  --radius-xl:  2rem;       /* 32px */
+  --radius-2xl: 2.5rem;     /* 40px */
+  --radius-pill: 999px;
+
+  /* Shadows — soft layered */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow:    0 10px 30px -12px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 24px 60px -18px rgba(15, 23, 42, 0.18), 0 6px 16px -6px rgba(15, 23, 42, 0.06);
+  --shadow-accent: 0 18px 40px -14px rgba(99, 14, 212, 0.45);
+  --shadow-ambient: 0 40px 40px -10px rgba(27, 28, 26, 0.06);
+
+  --max-width: 1280px;
 }
 
 /* ──────────────────────────────────────────────
    Reset & Base
    ────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -34,6 +80,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  background: var(--color-bg);
 }
 
 body {
@@ -41,15 +88,19 @@ body {
   font-weight: 400;
   line-height: 1.6;
   color: var(--color-text);
-  background-color: var(--color-surface);
+  background-color: var(--color-bg);
+  text-rendering: optimizeLegibility;
 }
 
-img,
-video,
-svg {
+img, video, svg {
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 /* ──────────────────────────────────────────────
@@ -58,25 +109,37 @@ svg {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.05;
   color: var(--color-text);
   margin-bottom: 0.5em;
+  letter-spacing: -0.03em;
 }
 
-h1 { font-size: 2.5rem; letter-spacing: -0.025em; }
-h2 { font-size: 2rem;   letter-spacing: -0.02em;  }
-h3 { font-size: 1.5rem; }
-h4 { font-size: 1.25rem; }
-h5 { font-size: 1.125rem; }
+h1 { font-size: clamp(2.75rem, 6.5vw, 5.5rem); font-weight: 800; letter-spacing: -0.045em; line-height: 0.98; }
+h2 { font-size: clamp(2rem, 4vw, 3rem);  font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+h3 { font-size: 1.5rem; font-weight: 700; }
+h4 { font-size: 1.25rem; font-weight: 700; }
+h5 { font-size: 1.125rem; font-weight: 600; }
 h6 { font-size: 1rem; font-weight: 600; }
 
-p {
-  margin-bottom: 1rem;
-}
+p { margin-bottom: 1rem; }
 
-small {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
+small { font-size: 0.875rem; color: var(--color-text-muted); }
+
+/* Eyebrow label (used by some blocks) */
+.vb-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
 }
 
 /* ──────────────────────────────────────────────
@@ -91,57 +154,65 @@ a {
 a:hover,
 a:focus-visible {
   color: var(--color-accent-hover);
-  text-decoration: underline;
 }
 
 /* ──────────────────────────────────────────────
    Buttons
    ────────────────────────────────────────────── */
+.btn,
 .btn-accent,
-.btn-outline {
+.btn-outline,
+.btn-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
+  padding: 0.75rem 1.35rem;
   font-family: var(--font-body);
   font-size: 0.9375rem;
   font-weight: 600;
-  line-height: 1.4;
-  border-radius: var(--radius);
-  border: 2px solid transparent;
+  line-height: 1.2;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.18s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .btn-accent {
   background-color: var(--color-accent);
   color: var(--color-accent-text);
-  border-color: var(--color-accent);
+  box-shadow: var(--shadow-accent);
 }
-
 .btn-accent:hover,
 .btn-accent:focus-visible {
   background-color: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
   color: var(--color-accent-text);
-  text-decoration: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 22px 48px -14px rgba(124, 58, 237, 0.55);
 }
 
 .btn-outline {
-  background-color: transparent;
-  color: var(--color-accent);
-  border-color: var(--color-accent);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-xs);
 }
-
 .btn-outline:hover,
 .btn-outline:focus-visible {
-  background-color: var(--color-accent);
-  color: var(--color-accent-text);
-  text-decoration: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text);
+}
+.btn-ghost:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 /* ──────────────────────────────────────────────
@@ -158,7 +229,7 @@ textarea,
 select {
   display: block;
   width: 100%;
-  padding: 0.625rem 0.875rem;
+  padding: 0.85rem 1rem;
   font-family: var(--font-body);
   font-size: 0.9375rem;
   line-height: 1.5;
@@ -170,44 +241,46 @@ select {
   outline: none;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
+input:focus, textarea:focus, select:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 4px var(--color-accent-ring);
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: var(--color-text-muted);
+input::placeholder, textarea::placeholder {
+  color: var(--color-text-subtle);
 }
 
 label {
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.5rem;
   color: var(--color-text);
 }
 
 /* ──────────────────────────────────────────────
-   Section Spacing Utilities
+   Bento card — shared primitive
    ────────────────────────────────────────────── */
-.section {
-  padding: 4rem 1.5rem;
+.vb-bento {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s ease, box-shadow 0.3s ease, border-color 0.25s ease;
+}
+.vb-bento--interactive:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-accent-soft);
 }
 
-.section-sm {
-  padding: 2rem 1.5rem;
-}
-
-.section-lg {
-  padding: 6rem 1.5rem;
-}
-
-.section-alt {
-  background-color: var(--color-surface-alt);
-}
+/* ──────────────────────────────────────────────
+   Section Spacing
+   ────────────────────────────────────────────── */
+.section     { padding: 5rem 1.5rem; }
+.section-sm  { padding: 2.5rem 1.5rem; }
+.section-lg  { padding: 7rem 1.5rem; }
+.section-alt { background-color: var(--color-surface-alt); }
 
 .container {
   width: 100%;
@@ -228,67 +301,60 @@ label {
   color: var(--color-text);
 }
 
-.prose h1,
-.prose h2,
-.prose h3,
-.prose h4 {
+.prose h1, .prose h2, .prose h3, .prose h4 {
   margin-top: 1.75em;
   margin-bottom: 0.5em;
 }
-
 .prose h1:first-child,
 .prose h2:first-child,
-.prose h3:first-child {
-  margin-top: 0;
-}
+.prose h3:first-child { margin-top: 0; }
 
-.prose p + p {
-  margin-top: 0;
-}
+.prose p + p { margin-top: 0; }
 
-.prose ul,
-.prose ol {
+.prose ul, .prose ol {
   padding-left: 1.5em;
   margin-bottom: 1rem;
 }
 
-.prose li {
-  margin-bottom: 0.375rem;
-}
+.prose ul { list-style-type: disc; }
+.prose ol { list-style-type: decimal; }
+
+.prose li { margin-bottom: 0.375rem; }
 
 .prose blockquote {
   border-left: 4px solid var(--color-accent);
-  padding: 0.75rem 1.25rem;
-  margin: 1.5rem 0;
-  background-color: var(--color-surface-alt);
-  color: var(--color-text-muted);
-  font-style: italic;
-  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  margin: 2rem 0;
+  background: none;
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 1.2em;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  border-radius: 0;
 }
+
+.prose blockquote p { margin-bottom: 0; }
 
 .prose code {
   font-size: 0.875em;
-  background-color: var(--color-surface-alt);
-  padding: 0.15em 0.4em;
-  border-radius: 0.25rem;
+  background: var(--color-surface-warm);
+  padding: 0.15em 0.45em;
+  border-radius: 0.35rem;
   font-weight: 500;
 }
 
 .prose pre {
-  background-color: var(--color-text);
-  color: var(--color-surface-alt);
-  padding: 1.25rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1.25rem 1.5rem;
   border-radius: var(--radius);
   overflow-x: auto;
   margin: 1.5rem 0;
 }
-
-.prose pre code {
-  background: none;
-  padding: 0;
-  color: inherit;
-  font-weight: 400;
-}
+.prose pre code { background: none; padding: 0; color: inherit; font-weight: 400; }
 
 .prose hr {
   border: none;
@@ -297,18 +363,21 @@ label {
 }
 
 .prose img {
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   margin: 1.5rem 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .prose a {
   color: var(--color-accent);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--color-accent-soft);
 }
-
 .prose a:hover {
   color: var(--color-accent-hover);
+  text-decoration-color: var(--color-accent);
 }
 
 .prose table {
@@ -316,16 +385,13 @@ label {
   border-collapse: collapse;
   margin: 1.5rem 0;
 }
-
-.prose th,
-.prose td {
-  padding: 0.625rem 0.75rem;
+.prose th, .prose td {
+  padding: 0.75rem 0.9rem;
   border: 1px solid var(--color-border);
   text-align: left;
 }
-
 .prose th {
-  background-color: var(--color-surface-alt);
+  background: var(--color-surface-warm);
   font-weight: 600;
 }
 
@@ -337,14 +403,31 @@ label {
 .mt-0 { margin-top: 0; }
 .mb-0 { margin-bottom: 0; }
 
+/* Decorative gradient blob helper (used by hero/cta) */
+.vb-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Grid-dots pattern (Stitch-style, subtle violet) */
+.vb-dots {
+  background-image: radial-gradient(rgba(99, 14, 212, 0.09) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 /* ──────────────────────────────────────────────
    Responsive
    ────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  h1 { font-size: 1.875rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
+  .section    { padding: 3.5rem 1rem; }
+  .section-lg { padding: 4.5rem 1rem; }
+}
 
-  .section    { padding: 2.5rem 1rem; }
-  .section-lg { padding: 3.5rem 1rem; }
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }

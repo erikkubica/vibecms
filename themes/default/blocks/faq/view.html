@@ -1,36 +1,20 @@
-<section class="vb-faq py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-3xl mx-auto">
-    {{if or .heading .subheading}}
-    <div class="text-center mb-12">
-      {{if .heading}}
-      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
-      {{end}}
-      {{if .subheading}}
-      <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.subheading}}</p>
-      {{end}}
-    </div>
-    {{end}}
-    <div class="rounded-lg overflow-hidden" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-      {{range $i, $item := .items}}
-      <div class="vb-faq__item {{if $i}}border-t{{end}}" style="border-color: var(--color-border);" x-data="{ open: false }">
-        <button
-          class="vb-faq__question w-full flex items-center justify-between px-6 py-5 text-left font-semibold transition-colors duration-150"
-          style="color: var(--color-text);"
-          @click="open = !open"
-          :aria-expanded="open"
-        >
-          <span>{{$item.question}}</span>
-          <svg class="vb-faq__chevron w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--color-text-muted);">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-          </svg>
-        </button>
-        <div class="vb-faq__answer px-6 overflow-hidden" x-show="open" x-collapse>
-          <div class="pb-5 prose max-w-none leading-relaxed" style="color: var(--color-text-muted);">
-            {{$item.answer | safeHTML}}
-          </div>
-        </div>
-      </div>
-      {{end}}
-    </div>
-  </div>
+{{- /* FAQ — 1:1 Stitch markup */ -}}
+<section class="max-w-3xl mx-auto space-y-12">
+{{if or .heading .subheading}}
+<div class="text-center space-y-4">
+{{if .heading}}<h2 class="text-4xl font-bold sora tracking-tight text-on-surface">{{.heading}}</h2>{{end}}
+{{if .subheading}}<p class="text-on-surface-variant">{{.subheading}}</p>{{end}}
+</div>
+{{end}}
+<div class="space-y-4">
+{{range $item := .items}}
+<details class="group bg-surface-container-low rounded-lg p-6 border border-outline-variant/10">
+<summary class="flex justify-between items-center font-bold sora cursor-pointer list-none text-on-surface">
+{{$item.question}}
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform" data-icon="expand_more">expand_more</span>
+</summary>
+<div class="mt-4 text-on-surface-variant leading-relaxed">{{$item.answer | safeHTML}}</div>
+</details>
+{{end}}
+</div>
 </section>

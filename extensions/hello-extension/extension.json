@@ -4,5 +4,12 @@
     "version": "1.0.0",
     "author": "VibeCMS",
     "description": "Example extension demonstrating the extension API",
-    "priority": 50
+    "priority": 50,
+    "assets": [
+        {
+            "key": "demo-banner",
+            "src": "images/demo-banner.jpg",
+            "alt": "Hello extension demo banner"
+        }
+    ]
 }

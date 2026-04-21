@@ -138,6 +138,23 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 			}
 			return dict, nil
 		},
+		"lastWord": func(s string) string {
+			s = strings.TrimSpace(s)
+			if i := strings.LastIndexAny(s, " \t\n"); i >= 0 {
+				return s[i+1:]
+			}
+			return s
+		},
+		"beforeLastWord": func(s string) string {
+			s = strings.TrimSpace(s)
+			if i := strings.LastIndexAny(s, " \t\n"); i >= 0 {
+				return s[:i]
+			}
+			return ""
+		},
+		"split": func(sep, s string) []string {
+			return strings.Split(s, sep)
+		},
 		"image_url": func(originalURL string, sizeName string) string {
 			// Transform /media/2026/03/photo.jpg -> /media/cache/{size}/2026/03/photo.jpg
 			if !strings.HasPrefix(originalURL, "/media/") {

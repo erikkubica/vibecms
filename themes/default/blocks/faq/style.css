@@ -1,24 +1,19 @@
-/* FAQ Block — scoped styles */
+/* FAQ Block — bento edition */
 
 .vb-faq__question {
   background: none;
   border: none;
   cursor: pointer;
+  font-family: var(--font-heading);
 }
 
-.vb-faq__question:hover {
-  background-color: var(--color-surface-alt);
-}
-
-.vb-faq__chevron.rotate-180 {
-  transform: rotate(180deg);
+.vb-faq__icon {
+  transition: transform 0.35s cubic-bezier(.2,.8,.2,1), background-color 0.2s ease, color 0.2s ease;
 }
 
 .vb-faq__answer a {
   color: var(--color-accent);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
-
-.vb-faq__answer a:hover {
-  color: var(--color-accent-hover);
-}
+.vb-faq__answer a:hover { color: var(--color-accent-hover); }

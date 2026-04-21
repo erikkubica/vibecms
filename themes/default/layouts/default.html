@@ -8,6 +8,68 @@
     <meta name="description" content="{{.}}">
     {{- end -}}
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              /* Stitch "Luminous Curator" palette — 1:1 from Stitch design system */
+              primary:                        '#630ed4',
+              'primary-container':            '#7c3aed',
+              'on-primary':                   '#ffffff',
+              'on-primary-container':         '#ede0ff',
+              'primary-fixed':                '#eaddff',
+              'primary-fixed-dim':            '#d2bbff',
+              'secondary':                    '#6a4fa0',
+              'secondary-container':          '#c4a7ff',
+              'on-secondary':                 '#ffffff',
+              'on-secondary-container':       '#523787',
+              'tertiary':                     '#7d3d00',
+              'tertiary-container':           '#a15100',
+              'on-tertiary':                  '#ffffff',
+              background:                     '#fbf9f6',
+              'on-background':                '#1b1c1a',
+              surface:                        '#fbf9f6',
+              'surface-bright':               '#fbf9f6',
+              'surface-dim':                  '#dbdad7',
+              'surface-variant':              '#e4e2df',
+              'surface-tint':                 '#732ee4',
+              'surface-container':            '#efeeeb',
+              'surface-container-lowest':     '#ffffff',
+              'surface-container-low':        '#f5f3f0',
+              'surface-container-high':       '#eae8e5',
+              'surface-container-highest':    '#e4e2df',
+              'on-surface':                   '#1b1c1a',
+              'on-surface-variant':           '#4a4455',
+              'outline':                      '#7b7487',
+              'outline-variant':              '#ccc3d8',
+              'inverse-surface':              '#30312f',
+              'inverse-on-surface':           '#f2f0ed',
+              'inverse-primary':              '#d2bbff',
+              error:                          '#ba1a1a',
+              /* Extended palette — kept for legacy classes */
+              ink:   { DEFAULT: '#1b1c1a', muted: '#4a4455', subtle: '#9a9ea4' },
+              cream: { DEFAULT: '#fbf9f6', low: '#f5f3f0', warm: '#efeeeb' },
+              line:  { DEFAULT: '#ccc3d8', strong: '#7b7487' },
+              coal:  { DEFAULT: '#12101c', soft: '#1e1a2e' },
+              violet: { 50:'#f5f0ff', 100:'#eaddff', 200:'#d2bbff', 300:'#c4a7ff', 400:'#a979ff', 500:'#8a41ec', 600:'#630ed4', 700:'#4f0bad', 800:'#3d0886', 900:'#2b0560' }
+            },
+            fontFamily: {
+              display: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
+              sans:    ['Inter', 'system-ui', 'sans-serif']
+            },
+            borderRadius: { DEFAULT: '1rem', lg: '2rem', xl: '3rem', full: '9999px', '4xl': '2rem', '5xl': '2.5rem' },
+            boxShadow: {
+              soft:    '0 2px 6px rgba(27,28,26,.05), 0 1px 2px rgba(27,28,26,.04)',
+              bento:   '0 10px 30px -12px rgba(27,28,26,.12), 0 2px 6px rgba(27,28,26,.04)',
+              lift:    '0 24px 60px -18px rgba(27,28,26,.18), 0 6px 16px -6px rgba(27,28,26,.06)',
+              ambient: '0 40px 40px -10px rgba(27,28,26,.06)',
+              accent:  '0 18px 40px -14px rgba(99,14,212,.45)'
+            }
+          }
+        }
+      }
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {{- range .app.head_styles -}}
     <link rel="stylesheet" href="{{.}}">
@@ -16,10 +78,10 @@
     {{- with index .app.settings "analytics_code"}}{{safeHTML .}}{{end -}}
     {{- with index .app.settings "custom_head_code"}}{{safeHTML .}}{{end -}}
 </head>
-<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased">
+<body class="min-h-screen flex flex-col bg-cream text-ink font-sans antialiased selection:bg-violet-600 selection:text-white">
     {{renderLayoutBlock "site-header"}}
 
-    <main class="flex-1">
+    <main class="flex-1 pt-32 px-6 max-w-7xl mx-auto space-y-24 pb-24 w-full">
         {{event "before_main_content" .}}
         {{.node.blocks_html}}
         {{event "after_main_content" .}}

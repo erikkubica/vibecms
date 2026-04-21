@@ -2,8 +2,10 @@
   "slug": "gallery",
   "label": "Gallery",
   "icon": "grid",
-  "description": "Responsive image gallery with captions",
+  "description": "Bento-masonry gallery — first image renders large (2x2), rest as smaller tiles with auto-numbered captions",
   "field_schema": [
+    { "key": "heading", "label": "Section Heading", "type": "text" },
+    { "key": "subheading", "label": "Section Subheading", "type": "text" },
     {
       "key": "images",
       "label": "Images",
@@ -15,13 +17,15 @@
     }
   ],
   "test_data": {
+    "heading": "Our Vision in Frames",
+    "subheading": "A visual journey through the philosophy that drives our interface design and architectural decisions.",
     "images": [
-      { "image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80", "caption": "Modern workspace design" },
-      { "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80", "caption": "Data-driven insights" },
-      { "image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&q=80", "caption": "Collaborative environment" },
-      { "image": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&q=80", "caption": "Technology at scale" },
-      { "image": "https://images.unsplash.com/photo-1553877522-43269d4ea984?w=600&q=80", "caption": "Creative solutions" },
-      { "image": "https://images.unsplash.com/photo-1531973576160-7125cd663d86?w=600&q=80", "caption": "Team collaboration" }
+      { "image": { "url": "theme-asset:gallery-studio" },    "caption": "The Studio Environment" },
+      { "image": { "url": "theme-asset:gallery-analytics" }, "caption": "Data Clarity" },
+      { "image": { "url": "theme-asset:gallery-code" },      "caption": "Structural Integrity" },
+      { "image": { "url": "theme-asset:gallery-team" },      "caption": "Human Connection" },
+      { "image": { "url": "theme-asset:gallery-gradient" },  "caption": "Luminous Palette" },
+      { "image": { "url": "theme-asset:gallery-minimal" },   "caption": "Minimalist Zen" }
     ]
   }
 }

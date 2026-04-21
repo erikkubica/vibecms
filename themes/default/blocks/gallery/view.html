@@ -1,21 +1,39 @@
-<section class="vb-gallery py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-7xl mx-auto">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-      {{range .images}}
-      <div class="vb-gallery__item group">
-        <div class="vb-gallery__img-wrap rounded-lg overflow-hidden">
-          <img
-            src="{{.image}}"
-            alt="{{.caption}}"
-            class="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-        </div>
-        {{if .caption}}
-        <p class="mt-2 text-sm leading-relaxed" style="color: var(--color-text-muted);">{{.caption}}</p>
-        {{end}}
-      </div>
-      {{end}}
-    </div>
-  </div>
+{{- /* Gallery — 1:1 Stitch "Bento Masonry" markup */ -}}
+<section>
+{{- if or .heading .subheading }}
+<div class="text-center mb-16">
+{{- if .heading }}
+<h2 class="text-4xl md:text-5xl font-extrabold sora tracking-tight text-on-surface">{{ .heading }}</h2>
+{{- end }}
+{{- if .subheading }}
+<p class="mt-4 text-on-surface-variant max-w-xl mx-auto">{{ .subheading }}</p>
+{{- end }}
+</div>
+{{- end }}
+<div class="vb-gallery__grid grid grid-cols-1 md:grid-cols-3 gap-8 auto-rows-auto">
+{{- range $i, $item := .images }}
+{{- $url := "" -}}{{- $alt := $item.caption -}}
+{{- with $item.image -}}{{- $url = .url -}}{{- if .alt -}}{{- $alt = .alt -}}{{- end -}}{{- end -}}
+{{- $size := "h-80" -}}
+{{- $span := "" -}}
+{{- if eq $i 0 -}}{{- $size = "h-[500px]" -}}{{- $span = "md:col-span-2 md:row-span-2" -}}{{- end -}}
+{{- if or (eq $i 1) (eq $i 2) -}}{{- $size = "h-64" -}}{{- end -}}
+<div class="vb-gallery__item group {{$span}}">
+<div class="bg-surface-container-lowest p-3 rounded-lg ambient-shadow transition-transform hover:scale-[1.01]">
+<div class="overflow-hidden rounded-lg">
+{{- if $url }}
+<img class="w-full {{$size}} object-cover rounded-lg" src="{{ $url | safeURL }}" alt="{{$alt}}" loading="lazy"/>
+{{- else }}
+<div class="w-full {{$size}} flex items-center justify-center bg-surface-container-high text-primary rounded-lg">
+<span class="material-symbols-outlined" style="font-size: 3rem;">image</span>
+</div>
+{{- end }}
+</div>
+{{- if $item.caption }}
+<p class="vb-gallery__caption mt-4 px-2 text-on-surface-variant font-medium sora"><span class="vb-gallery__num"></span>{{ $item.caption }}</p>
+{{- end }}
+</div>
+</div>
+{{- end }}
+</div>
 </section>

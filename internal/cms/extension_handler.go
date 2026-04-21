@@ -13,6 +13,7 @@ import (
 
 	"vibecms/internal/api"
 	"vibecms/internal/auth"
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 
 	"github.com/gofiber/fiber/v2"
@@ -32,6 +33,7 @@ type ExtensionHandler struct {
 	scriptLoader  ExtensionScriptLoader
 	pluginManager *PluginManager
 	assetRegistry *ThemeAssetRegistry
+	eventBus      *events.EventBus
 }
 
 // NewExtensionHandler creates a new ExtensionHandler.
@@ -52,6 +54,11 @@ func (h *ExtensionHandler) SetPluginManager(pm *PluginManager) {
 // SetAssetRegistry sets the theme asset registry for extension block loading.
 func (h *ExtensionHandler) SetAssetRegistry(r *ThemeAssetRegistry) {
 	h.assetRegistry = r
+}
+
+// SetEventBus sets the event bus used to publish extension lifecycle events.
+func (h *ExtensionHandler) SetEventBus(b *events.EventBus) {
+	h.eventBus = b
 }
 
 // RegisterRoutes registers all admin API extension routes on the provided router group.
@@ -276,6 +283,9 @@ func (h *ExtensionHandler) Activate(c *fiber.Ctx) error {
 		if h.assetRegistry != nil {
 			h.loader.LoadBlocksForExtension(slug, h.assetRegistry)
 		}
+		// Publish extension.activated — other extensions (e.g. media-manager)
+		// can then import any theme-style assets shipped with this extension.
+		PublishExtensionActivated(h.eventBus, slug, ext.Path, json.RawMessage(ext.Manifest))
 	}
 
 	return api.Success(c, fiber.Map{"message": "Extension activated"})
@@ -296,6 +306,10 @@ func (h *ExtensionHandler) Deactivate(c *fiber.Ctx) error {
 	}
 
 	if ext != nil {
+		// Publish extension.deactivated FIRST — subscribing extensions clean
+		// up their extension-owned data (e.g. media-manager deleting imported
+		// extension assets) before we stop the plugin and lose its subscribers.
+		PublishExtensionDeactivated(h.eventBus, slug)
 		// Hot-unload extension scripts
 		if h.scriptLoader != nil {
 			h.scriptLoader.UnloadExtensionScripts(ext.Path, slug)

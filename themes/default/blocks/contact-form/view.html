@@ -1,58 +1,95 @@
-<section class="vb-contact-form py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-3xl mx-auto">
-    {{if or .heading .subheading}}
-    <div class="text-center mb-12">
-      {{if .heading}}
-      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
-      {{end}}
-      {{if .subheading}}
-      <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.subheading}}</p>
-      {{end}}
-    </div>
-    {{end}}
-    <div class="rounded-lg p-8" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-      <div class="space-y-6">
-        <div>
-          <label class="block text-sm font-medium mb-2" style="color: var(--color-text);">Name</label>
-          <input
-            type="text"
-            class="vb-contact-form__input w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
-            style="background: var(--color-surface-alt); border: 1px solid var(--color-border); color: var(--color-text);"
-            placeholder="Your name"
-            disabled
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-2" style="color: var(--color-text);">{{.email_label}}</label>
-          <input
-            type="email"
-            class="vb-contact-form__input w-full px-4 py-3 rounded-lg outline-none transition-all duration-200"
-            style="background: var(--color-surface-alt); border: 1px solid var(--color-border); color: var(--color-text);"
-            placeholder="you@example.com"
-            disabled
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-2" style="color: var(--color-text);">{{.message_label}}</label>
-          <textarea
-            class="vb-contact-form__input w-full px-4 py-3 rounded-lg outline-none resize-y transition-all duration-200"
-            style="background: var(--color-surface-alt); border: 1px solid var(--color-border); color: var(--color-text);"
-            rows="5"
-            placeholder="Your message..."
-            disabled
-          ></textarea>
-        </div>
-        <div>
-          <button
-            type="button"
-            class="vb-contact-form__button inline-flex items-center justify-center w-full px-6 py-3 text-base font-semibold rounded-lg transition-all duration-200"
-            style="background-color: var(--color-accent); color: var(--color-accent-text);"
-            disabled
-          >
-            {{.button_text}}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+{{- /* Contact Form — 1:1 Stitch "Let's Talk" 2-col markup */ -}}
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+<!-- Left: heading + contact chips -->
+<div class="space-y-12">
+<div>
+{{- if .heading }}
+<h2 class="text-6xl md:text-7xl font-extrabold sora tracking-tighter leading-none mb-6 text-on-surface">{{ .heading }}</h2>
+{{- end }}
+{{- if .subheading }}
+<p class="text-xl text-on-surface-variant leading-relaxed max-w-md">{{ .subheading }}</p>
+{{- end }}
+</div>
+
+{{- if or .contact_email .contact_phone .contact_office }}
+<div class="space-y-6">
+{{- if .contact_email }}
+<div class="flex items-center gap-6 group">
+<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+<span class="material-symbols-outlined filled">mail</span>
+</div>
+<div>
+<p class="text-sm font-bold uppercase tracking-widest text-primary/60 sora">Email</p>
+<p class="text-xl sora font-semibold text-on-surface">{{ .contact_email }}</p>
+</div>
+</div>
+{{- end }}
+{{- if .contact_phone }}
+<div class="flex items-center gap-6 group">
+<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+<span class="material-symbols-outlined filled">call</span>
+</div>
+<div>
+<p class="text-sm font-bold uppercase tracking-widest text-primary/60 sora">Phone</p>
+<p class="text-xl sora font-semibold text-on-surface">{{ .contact_phone }}</p>
+</div>
+</div>
+{{- end }}
+{{- if .contact_office }}
+<div class="flex items-center gap-6 group">
+<div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+<span class="material-symbols-outlined filled">location_on</span>
+</div>
+<div>
+<p class="text-sm font-bold uppercase tracking-widest text-primary/60 sora">Office</p>
+<p class="text-xl sora font-semibold text-on-surface">{{ .contact_office }}</p>
+</div>
+</div>
+{{- end }}
+</div>
+{{- end }}
+</div>
+
+<!-- Right: Form card -->
+<div class="bg-surface-container-lowest p-8 md:p-12 rounded-xl ambient-shadow">
+<form class="space-y-8" method="post" action="{{or .action "#"}}">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="block text-sm sora font-semibold ml-2 text-on-surface">{{ or .name_label "Your Name" }}</label>
+<input name="name" type="text" placeholder="John Doe"
+class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 transition-all text-on-surface outline-none"/>
+</div>
+<div class="space-y-2">
+<label class="block text-sm sora font-semibold ml-2 text-on-surface">{{ or .email_label "Email Address" }}</label>
+<input name="email" type="email" placeholder="you@example.com"
+class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 transition-all text-on-surface outline-none"/>
+</div>
+</div>
+
+{{- if .subject_options }}
+<div class="space-y-2">
+<label class="block text-sm sora font-semibold ml-2 text-on-surface">{{ or .subject_label "Subject" }}</label>
+<select name="subject"
+class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 transition-all text-on-surface appearance-none outline-none">
+{{- range .subject_options }}
+<option value="{{ .value }}">{{ .value }}</option>
+{{- end }}
+</select>
+</div>
+{{- end }}
+
+<div class="space-y-2">
+<label class="block text-sm sora font-semibold ml-2 text-on-surface">{{ or .message_label "Message" }}</label>
+<textarea name="message" rows="4" placeholder="How can we help you?"
+class="w-full bg-surface-container-low border-none rounded-lg p-4 focus:ring-2 focus:ring-primary/30 transition-all text-on-surface outline-none resize-y"></textarea>
+</div>
+
+<button type="submit" class="w-full bg-gradient-to-br from-primary to-primary-container text-white sora font-bold py-5 rounded-lg flex items-center justify-center gap-3 scale-[0.98] active:scale-95 transition-transform ambient-shadow">
+{{ or .button_text "Send Message" }}
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</form>
+</div>
+
 </section>

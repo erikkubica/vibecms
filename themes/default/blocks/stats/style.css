@@ -1,19 +1,10 @@
-/* Stats Block — scoped styles */
-
+/* Stats Block — Stitch-aligned */
 .vb-stats__number {
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
 }
-
 .vb-stats__affix {
-  font-size: 0.7em;
-  opacity: 0.85;
-}
-
-.vb-stats__item {
-  transition: transform 0.2s ease;
-}
-
-.vb-stats__item:hover {
-  transform: scale(1.05);
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0;
 }

@@ -2,18 +2,43 @@
   "slug": "contact-form",
   "label": "Contact Form",
   "icon": "mail",
-  "description": "Visual contact form (display only, no submission logic)",
+  "description": "Two-column contact block — heading + contact chips on the left, form card on the right",
   "field_schema": [
     { "key": "heading", "label": "Heading", "type": "text" },
-    { "key": "subheading", "label": "Subheading", "type": "text" },
-    { "key": "email_label", "label": "Email Field Label", "type": "text", "default": "Email" },
+    { "key": "subheading", "label": "Subheading", "type": "textarea" },
+    { "key": "contact_email", "label": "Email Address", "type": "text" },
+    { "key": "contact_phone", "label": "Phone Number", "type": "text" },
+    { "key": "contact_office", "label": "Office Location", "type": "text" },
+    { "key": "name_label", "label": "Name Field Label", "type": "text", "default": "Your Name" },
+    { "key": "email_label", "label": "Email Field Label", "type": "text", "default": "Email Address" },
+    { "key": "subject_label", "label": "Subject Field Label", "type": "text", "default": "Subject" },
+    {
+      "key": "subject_options",
+      "label": "Subject Options (leave empty to hide dropdown)",
+      "type": "repeater",
+      "sub_fields": [
+        { "key": "value", "label": "Option", "type": "text", "required": true }
+      ]
+    },
     { "key": "message_label", "label": "Message Field Label", "type": "text", "default": "Message" },
-    { "key": "button_text", "label": "Submit Button Text", "type": "text", "default": "Send Message" }
+    { "key": "button_text", "label": "Submit Button Text", "type": "text", "default": "Send Message" },
+    { "key": "action", "label": "Form Action URL (optional)", "type": "text" }
   ],
   "test_data": {
-    "heading": "Get in Touch",
-    "subheading": "Have a question or want to work together? Drop us a message.",
-    "email_label": "Email",
+    "heading": "Let's talk.",
+    "subheading": "Ready to elevate your content experience? Our team of curators is here to guide your transition to VibeCMS.",
+    "contact_email": "hello@vibecms.com",
+    "contact_phone": "+1 (555) 890-VIBE",
+    "contact_office": "San Francisco, CA",
+    "name_label": "Your Name",
+    "email_label": "Email Address",
+    "subject_label": "Subject",
+    "subject_options": [
+      { "value": "Product Inquiry" },
+      { "value": "Technical Support" },
+      { "value": "Partnership Idea" },
+      { "value": "Other" }
+    ],
     "message_label": "Message",
     "button_text": "Send Message"
   }

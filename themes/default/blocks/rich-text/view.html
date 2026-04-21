@@ -1,5 +1,20 @@
-<section class="vb-rich-text py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-  <div class="vb-rich-text__content mx-auto max-w-3xl prose prose-lg prose-headings:font-bold prose-a:no-underline hover:prose-a:underline" style="--tw-prose-body: var(--color-text-muted); --tw-prose-headings: var(--color-text); --tw-prose-links: var(--color-accent); --tw-prose-bold: var(--color-text);">
-    {{ .body | safeHTML }}
-  </div>
+{{- /* Rich Text — 1:1 Stitch "Editorial" markup */ -}}
+<section class="max-w-3xl mx-auto">
+{{- if .eyebrow }}
+<div class="mb-6">
+<span class="inline-flex items-center px-4 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold uppercase tracking-widest sora">
+{{ .eyebrow }}
+</span>
+</div>
+{{- end }}
+{{- if .heading }}
+<h2 class="text-5xl md:text-6xl font-extrabold sora tracking-tighter mb-10 leading-[1.1] text-on-surface">
+{{ .heading }}
+</h2>
+{{- end }}
+{{- if .body }}
+<div class="vb-rich-text__body space-y-8 text-lg leading-relaxed text-on-surface-variant">
+{{ .body | safeHTML }}
+</div>
+{{- end }}
 </section>

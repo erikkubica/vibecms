@@ -1,65 +1,54 @@
 {
   "name": "Contact",
-  "description": "A contact page with hero, office details, contact form, and frequently asked questions",
+  "description": "Contact page matching the Stitch Luminous Curator design — editorial intro + contact form",
   "thumbnail": "",
   "blocks": [
     {
-      "type": "hero",
+      "type": "rich-text",
       "fields": {
-        "heading": "Get in Touch",
-        "subheading": "Have a question or want to start a project? We would love to hear from you.",
-        "background_image": "",
-        "button_text": "",
-        "button_url": "",
-        "alignment": "center"
-      }
-    },
-    {
-      "type": "image-text",
-      "fields": {
-        "image": "https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800&q=80",
-        "heading": "Our Office",
-        "body": "<p><strong>Address:</strong> 742 Innovation Drive, Suite 400, San Francisco, CA 94107</p>\n<p><strong>Email:</strong> hello@example.com</p>\n<p><strong>Phone:</strong> +1 (555) 123-4567</p>\n<p><strong>Hours:</strong> Monday through Friday, 9:00 AM — 6:00 PM PST</p>\n<p>We typically respond to inquiries within one business day. For urgent matters, give us a call during business hours.</p>",
-        "image_position": "left",
-        "button_text": "",
-        "button_url": ""
+        "eyebrow": "Contact",
+        "heading": "Let's start a conversation.",
+        "body": "<p>Have a question, a partnership idea, or just want to see if VibeCMS is right for your team? We read every message. Whether you're a solo creator, an agency scaling to dozens of sites, or an enterprise evaluating a migration, our curators will respond within one business day.</p><blockquote>Every great project begins with a well-framed question. We're listening.</blockquote><p>For urgent or commercial inquiries, reach our team directly using any of the channels below.</p>"
       }
     },
     {
       "type": "contact-form",
       "fields": {
-        "heading": "Send Us a Message",
-        "subheading": "Fill out the form below and we will get back to you as soon as possible.",
-        "email_label": "Your Email Address",
-        "message_label": "Your Message",
+        "heading": "Let's talk.",
+        "subheading": "Ready to elevate your content experience? Our team of curators is here to guide your transition to VibeCMS.",
+        "contact_email": "hello@vibecms.com",
+        "contact_phone": "+1 (555) 890-VIBE",
+        "contact_office": "San Francisco, CA",
+        "name_label": "Your Name",
+        "email_label": "Email Address",
+        "subject_label": "Subject",
+        "subject_options": [
+          { "value": "Product Inquiry" },
+          { "value": "Technical Support" },
+          { "value": "Partnership Idea" },
+          { "value": "Other" }
+        ],
+        "message_label": "Message",
         "button_text": "Send Message"
       }
     },
     {
       "type": "faq",
       "fields": {
-        "heading": "Frequently Asked Questions",
-        "subheading": "Answers to the most common questions we receive.",
+        "heading": "Frequently Asked",
+        "subheading": "",
         "items": [
           {
             "question": "What is the typical timeline for a new project?",
-            "answer": "Most projects launch within 4 to 8 weeks depending on scope. Simple brochure sites can go live in as little as two weeks, while complex multi-language platforms may take longer. We will provide a detailed timeline during our initial consultation."
+            "answer": "<p>Most projects launch within 4 to 8 weeks depending on scope. Simple brochure sites can go live in as little as two weeks, while complex multi-language platforms may take longer.</p>"
           },
           {
             "question": "How does pricing work?",
-            "answer": "We offer flexible plans based on site traffic and feature requirements. Every plan includes the full block editor, theme engine, and core CMS features. Contact us for a custom quote tailored to your specific needs."
-          },
-          {
-            "question": "Do you offer ongoing support and maintenance?",
-            "answer": "Yes. All plans include standard support with email and documentation access. We also offer premium support tiers with dedicated account managers, priority response times, and proactive performance monitoring."
+            "answer": "<p>We offer flexible plans based on site traffic and feature requirements. Every plan includes the full block editor, theme engine, and core CMS features.</p>"
           },
           {
             "question": "Can I migrate from my existing CMS?",
-            "answer": "Absolutely. We provide migration tools and services for WordPress, Drupal, and other popular platforms. Our team will help you map your existing content structure to VibeCMS nodes and blocks with minimal disruption."
-          },
-          {
-            "question": "Is VibeCMS suitable for large, high-traffic sites?",
-            "answer": "VibeCMS is built for performance from the ground up. With sub-50ms TTFB and a single-binary deployment model, it handles high traffic gracefully. Our architecture scales vertically with ease and supports CDN integration for global distribution."
+            "answer": "<p>Absolutely. We provide migration tools and services for WordPress, Drupal, and other popular platforms.</p>"
           }
         ]
       }

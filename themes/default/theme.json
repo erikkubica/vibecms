@@ -36,5 +36,17 @@
     { "slug": "about", "file": "about.json" },
     { "slug": "contact", "file": "contact.json" },
     { "slug": "landing", "file": "landing.json" }
+  ],
+  "assets": [
+    { "key": "hero-default",       "src": "images/hero-default.jpg",       "alt": "Analytics dashboard on a laptop" },
+    { "key": "content-web-stack",  "src": "images/content-web-stack.jpg",  "alt": "Data charts on a dark screen" },
+    { "key": "content-editor",     "src": "images/content-editor.jpg",     "alt": "Minimalist writing environment" },
+    { "key": "mission",            "src": "images/mission.jpg",            "alt": "Team collaborating around a laptop" },
+    { "key": "gallery-studio",     "src": "images/gallery-01-studio.jpg",  "alt": "The studio environment" },
+    { "key": "gallery-analytics",  "src": "images/gallery-02-analytics.jpg","alt": "Data clarity" },
+    { "key": "gallery-code",       "src": "images/gallery-03-code.jpg",    "alt": "Structural integrity" },
+    { "key": "gallery-team",       "src": "images/gallery-04-team.jpg",    "alt": "Human connection" },
+    { "key": "gallery-gradient",   "src": "images/gallery-05-gradient.jpg","alt": "Luminous palette" },
+    { "key": "gallery-minimal",    "src": "images/gallery-06-minimal.jpg", "alt": "Minimalist zen" }
   ]
 }

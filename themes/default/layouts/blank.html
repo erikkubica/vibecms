@@ -8,13 +8,29 @@
     <meta name="description" content="{{.}}">
     {{- end -}}
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink:   { DEFAULT: '#1b1c1a', muted: '#5b5f66', subtle: '#9a9ea4' },
+              cream: { DEFAULT: '#fbf9f6', low: '#f7f4ee', warm: '#f4efe6' },
+              line:  { DEFAULT: '#ece6d9', strong: '#d9d1bf' },
+              violet: { 50:'#f5f0ff', 100:'#f1e9ff', 200:'#e4d3ff', 300:'#cbafff', 400:'#a979ff', 500:'#8a41ec', 600:'#630ed4', 700:'#4f0bad', 800:'#3d0886' }
+            },
+            fontFamily: { display: ['Sora','Inter','system-ui','sans-serif'], sans: ['Inter','system-ui','sans-serif'] },
+            borderRadius: { '4xl': '2rem', '5xl': '2.5rem' }
+          }
+        }
+      }
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {{- range .app.head_styles -}}
     <link rel="stylesheet" href="{{.}}">
     {{- end -}}
     {{.app.block_styles}}
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 antialiased">
+<body class="min-h-screen flex flex-col items-center justify-center bg-cream text-ink font-sans antialiased">
 
     <main class="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {{event "before_main_content" .}}

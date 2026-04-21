@@ -1,11 +1,17 @@
-/* Testimonials Block — scoped styles */
+/* Testimonials Block — bento edition */
 
-.vb-testimonials__card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+.vb-testimonials__quote-mark { user-select: none; transition: transform 0.4s ease, color 0.3s ease; }
+.vb-testimonials__card:hover .vb-testimonials__quote-mark {
+  transform: scale(1.1) rotate(-6deg);
+  color: #ddd6fe;
 }
 
-.vb-testimonials__quote-mark {
-  font-family: Georgia, "Times New Roman", serif;
-  user-select: none;
+/* Middle card emphasized — bento variation on 3-up grids */
+@media (min-width: 1024px) {
+  .vb-testimonials .grid > .vb-testimonials__card:nth-child(3n+2) {
+    background:
+      radial-gradient(90% 100% at 100% 0%, rgba(237, 233, 254, 0.7) 0%, transparent 55%),
+      #ffffff;
+    border-color: #e9e4f7;
+  }
 }

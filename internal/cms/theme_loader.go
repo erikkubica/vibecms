@@ -20,16 +20,30 @@ import (
 
 // ThemeManifest represents the parsed theme.json file.
 type ThemeManifest struct {
-	Name        string            `json:"name"`
-	Version     string            `json:"version"`
-	Description string            `json:"description"`
-	Author      string            `json:"author"`
-	Styles      []ThemeAssetDef   `json:"styles"`
-	Scripts     []ThemeAssetDef   `json:"scripts"`
-	Layouts     []ThemeLayoutDef  `json:"layouts"`
-	Partials    []ThemePartialDef `json:"partials"`
-	Blocks      []ThemeBlockDef    `json:"blocks"`
-	Templates   []ThemeTemplateDef `json:"templates"`
+	Name        string               `json:"name"`
+	Version     string               `json:"version"`
+	Description string               `json:"description"`
+	Author      string               `json:"author"`
+	Styles      []ThemeAssetDef      `json:"styles"`
+	Scripts     []ThemeAssetDef      `json:"scripts"`
+	Layouts     []ThemeLayoutDef     `json:"layouts"`
+	Partials    []ThemePartialDef    `json:"partials"`
+	Blocks      []ThemeBlockDef      `json:"blocks"`
+	Templates   []ThemeTemplateDef   `json:"templates"`
+	Assets      []ThemeMediaAssetDef `json:"assets"`
+}
+
+// ThemeMediaAssetDef defines an image or media asset shipped with the theme.
+// When the theme is activated, the theme loader emits theme.activated with
+// these assets in the payload (resolved abs_paths included). Extensions such
+// as media-manager subscribe to that event and import the files into their
+// own storage (media_files table) tagged source='theme'.
+type ThemeMediaAssetDef struct {
+	Key    string `json:"key"`
+	Src    string `json:"src"`
+	Alt    string `json:"alt,omitempty"`
+	Width  int    `json:"width,omitempty"`
+	Height int    `json:"height,omitempty"`
 }
 
 // ThemeAssetDef defines a CSS or JS asset declared in theme.json.
@@ -304,9 +318,15 @@ func (tl *ThemeLoader) LoadTheme(themeDir string) error {
 		tl.eventBus.Publish("taxonomies:register", events.Payload{
 			"theme": manifest.Name,
 		})
-		tl.eventBus.Publish("theme.activated", events.Payload{
-			"name": manifest.Name,
-			"path": themeDir,
+		// theme.activated is published SYNCHRONOUSLY so that subscribing
+		// extensions (e.g. media-manager importing theme assets into
+		// media_files) complete before this function returns. First-request
+		// renders can then rely on imported assets being in place.
+		tl.eventBus.PublishSync("theme.activated", events.Payload{
+			"name":    manifest.Name,
+			"path":    themeDir,
+			"version": manifest.Version,
+			"assets":  themeAssetsPayload(themeDir, manifest.Assets),
 		})
 	}
 
@@ -444,9 +464,15 @@ func (tl *ThemeLoader) registerTemplate(themeName string, def ThemeTemplateDef, 
 }
 
 // registerAssets resolves dependency order and populates the registry.
+// Resets any previously-registered theme assets so switching themes doesn't
+// leak the old theme's stylesheets/scripts into the new active theme.
 func (tl *ThemeLoader) registerAssets(manifest ThemeManifest) {
 	tl.registry.mu.Lock()
 	defer tl.registry.mu.Unlock()
+
+	tl.registry.headStyles = tl.registry.headStyles[:0]
+	tl.registry.headScripts = tl.registry.headScripts[:0]
+	tl.registry.footScripts = tl.registry.footScripts[:0]
 
 	// Resolve styles (styles typically don't have deps but support it).
 	for _, s := range manifest.Styles {
@@ -732,6 +758,99 @@ func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeD
 	if err := RegisterBlockFromDir(tl.db, tl.registry, blockDir, def.Slug, "theme", themeName); err != nil {
 		log.Printf("WARN: %v", err)
 	}
+}
+
+// DeregisterTheme removes all DB records and registry entries that were
+// registered by the named theme (source='theme', theme_name=themeName).
+// Call this when a theme is deactivated so its blocks/layouts/partials/templates
+// are no longer visible to the rest of the system.
+//
+// Emits theme.deactivated (sync) FIRST so subscribing extensions can clean up
+// their own theme-owned data (e.g. media-manager deleting imported theme
+// assets from media_files). Core-owned records are deleted afterwards.
+func (tl *ThemeLoader) DeregisterTheme(themeName string) error {
+	// Give extensions a chance to clean up their theme-owned data before we
+	// delete core-owned records. Sync so handlers complete before we proceed.
+	if tl.eventBus != nil {
+		tl.eventBus.PublishSync("theme.deactivated", events.Payload{
+			"name": themeName,
+		})
+	}
+
+	// Collect block slugs before deleting so we can purge the asset registry.
+	var blockSlugs []string
+	if err := tl.db.Model(&models.BlockType{}).
+		Where("source = 'theme' AND theme_name = ?", themeName).
+		Pluck("slug", &blockSlugs).Error; err != nil {
+		return fmt.Errorf("deregister theme %q: collect block slugs: %w", themeName, err)
+	}
+
+	// Delete theme-owned records from all relevant tables.
+	cond := "source = 'theme' AND theme_name = ?"
+	for _, q := range []interface{}{
+		&models.BlockType{},
+		&models.Layout{},
+		&models.LayoutBlock{},
+		&models.Template{},
+	} {
+		if err := tl.db.Where(cond, themeName).Delete(q).Error; err != nil {
+			return fmt.Errorf("deregister theme %q: delete %T: %w", themeName, q, err)
+		}
+	}
+
+	// Purge block assets from the in-memory registry.
+	if len(blockSlugs) > 0 {
+		tl.registry.mu.Lock()
+		for _, slug := range blockSlugs {
+			delete(tl.registry.blockAssets, slug)
+		}
+		tl.registry.mu.Unlock()
+	}
+
+	log.Printf("theme deregistered: %s (%d blocks removed)", themeName, len(blockSlugs))
+	return nil
+}
+
+// themeAssetsPayload converts a manifest's asset definitions into the shape
+// carried by the theme.activated event — adding an absolute path so
+// extensions running in-process (or out-of-process with the same CWD) can
+// read the file reliably regardless of working directory.
+func themeAssetsPayload(themeDir string, defs []ThemeMediaAssetDef) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(defs))
+	for _, d := range defs {
+		rel := filepath.Join(themeDir, "assets", d.Src)
+		abs, err := filepath.Abs(rel)
+		if err != nil {
+			abs = rel
+		}
+		out = append(out, map[string]interface{}{
+			"key":      d.Key,
+			"src":      d.Src,
+			"alt":      d.Alt,
+			"width":    d.Width,
+			"height":   d.Height,
+			"abs_path": abs,
+		})
+	}
+	return out
+}
+
+// PurgeInactiveThemes deregisters theme-owned assets (blocks, layouts,
+// layout_blocks, templates) for every theme currently marked is_active=false.
+// Runs at boot to heal DB state for themes that were deactivated before the
+// deregistration hook existed, or where cleanup failed.
+// Detached records (source='custom') are untouched — the user owns them.
+func (tl *ThemeLoader) PurgeInactiveThemes() error {
+	var inactive []models.Theme
+	if err := tl.db.Where("is_active = ?", false).Find(&inactive).Error; err != nil {
+		return fmt.Errorf("purge inactive themes: list: %w", err)
+	}
+	for _, t := range inactive {
+		if err := tl.DeregisterTheme(t.Name); err != nil {
+			log.Printf("WARN: purge inactive theme %q: %v", t.Name, err)
+		}
+	}
+	return nil
 }
 
 // resolveDeps performs a topological sort of scripts by their deps field.

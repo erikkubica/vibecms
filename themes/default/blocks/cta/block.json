@@ -2,19 +2,19 @@
   "slug": "cta",
   "label": "Call to Action",
   "icon": "megaphone",
-  "description": "Call-to-action section with heading, body text, and button",
+  "description": "Call-to-action section with heading, body text, and up to two buttons",
   "field_schema": [
     { "key": "heading", "label": "Heading", "type": "text", "required": true },
     { "key": "body", "label": "Body Text", "type": "textarea" },
-    { "key": "button_text", "label": "Button Text", "type": "text", "required": true },
-    { "key": "button_url", "label": "Button URL", "type": "text", "required": true },
+    { "key": "button", "label": "Primary Button", "type": "link", "required": true },
+    { "key": "button_secondary", "label": "Secondary Button", "type": "link" },
     { "key": "style", "label": "Style", "type": "select", "options": ["light", "dark", "accent"], "default": "accent" }
   ],
   "test_data": {
-    "heading": "Ready to Get Started?",
-    "body": "Join thousands of teams already using VibeCMS to build beautiful, fast websites.",
-    "button_text": "Start Free Trial",
-    "button_url": "/register",
+    "heading": "Ready to evolve your content?",
+    "body": "Join 10,000+ developers building the future of the luminous web.",
+    "button": { "text": "Create Free Account", "url": "/register" },
+    "button_secondary": { "text": "Talk to Sales", "url": "/contact" },
     "style": "accent"
   }
 }

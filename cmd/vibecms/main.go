@@ -105,8 +105,8 @@ func main() {
 	nodeHandler := cms.NewNodeHandler(contentSvc, database, eventBus)
 	nodeTypeHandler := cms.NewNodeTypeHandler(nodeTypeSvc)
 	langHandler := cms.NewLanguageHandler(langSvc)
-	blockTypeHandler := cms.NewBlockTypeHandler(blockTypeSvc)
-	templateHandler := cms.NewTemplateHandler(templateSvc)
+	blockTypeHandler := cms.NewBlockTypeHandler(blockTypeSvc, database)
+	templateHandler := cms.NewTemplateHandler(templateSvc, database)
 	layoutHandler := cms.NewLayoutHandler(layoutSvc, layoutBlockSvc)
 	layoutHandler.SetDB(database)
 	layoutBlockHandler := cms.NewLayoutBlockHandler(layoutBlockSvc)
@@ -118,7 +118,11 @@ func main() {
 	settingsHandler := cms.NewSettingsHandler(database, eventBus)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, eventBus)
 
-	// Theme loading.
+	// Theme loader construction (NOT loading yet — must wait for extensions).
+	// Boot order is core → extensions → themes: we only construct the loader
+	// here so routes and services below can reference it. LoadTheme is called
+	// after the gRPC plugin manager has started and all extensions have
+	// subscribed to lifecycle events.
 	themeLoader := cms.NewThemeLoader(database, themeAssets, eventBus)
 	themePath := os.Getenv("THEME_PATH")
 	if themePath == "" {
@@ -130,7 +134,6 @@ func main() {
 			themePath = "themes/default"
 		}
 	}
-	themeLoader.LoadTheme(themePath)
 
 	// Theme management.
 	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes")
@@ -139,11 +142,9 @@ func main() {
 	// CoreAPI — unified API facade for extensions.
 	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, nil, nodeTypeSvc, emailDispatcher, app)
 
-	// Theme scripting engine.
+	// Theme scripting engine (theme .tgo scripts are loaded later, after
+	// extensions have subscribed and after the theme is activated).
 	scriptEngine := scripting.NewScriptEngine(eventBus, coreAPI)
-	if err := scriptEngine.LoadThemeScripts(themePath); err != nil {
-		log.Printf("WARN: theme script loading failed: %v", err)
-	}
 	// Extension loading.
 	extLoader := cms.NewExtensionLoader(database, "extensions")
 	extLoader.ScanAndRegister()
@@ -221,6 +222,22 @@ func main() {
 		if err := pluginManager.StartPlugins(ext.Path, ext.Slug, json.RawMessage(ext.Manifest), caps); err != nil {
 			log.Printf("WARN: extension %s plugin start failed: %v", ext.Slug, err)
 		}
+		// Announce the extension is active so other extensions can react —
+		// e.g. media-manager importing any assets shipped with it.
+		cms.PublishExtensionActivated(eventBus, ext.Slug, ext.Path, json.RawMessage(ext.Manifest))
+	}
+
+	// ──────────────────────────────────────────────────────────────
+	// Theme activation — runs AFTER extensions are subscribed so that
+	// lifecycle events (theme.activated / theme.deactivated) can be
+	// handled by extensions (e.g. media-manager importing theme assets).
+	// ──────────────────────────────────────────────────────────────
+	themeLoader.LoadTheme(themePath)
+	if err := scriptEngine.LoadThemeScripts(themePath); err != nil {
+		log.Printf("WARN: theme script loading failed: %v", err)
+	}
+	if err := themeLoader.PurgeInactiveThemes(); err != nil {
+		log.Printf("WARN: purge inactive themes: %v", err)
 	}
 
 	// Wire email dispatcher's send function to call the provider plugin directly.
@@ -262,6 +279,7 @@ func main() {
 	extHandler.SetScriptLoader(scriptEngine)
 	extHandler.SetPluginManager(pluginManager)
 	extHandler.SetAssetRegistry(themeAssets)
+	extHandler.SetEventBus(eventBus)
 	extHandler.RegisterRoutes(adminAPI)
 
 	// Theme deploy webhook (public, authenticated by secret).

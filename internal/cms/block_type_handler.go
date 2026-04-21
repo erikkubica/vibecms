@@ -16,11 +16,46 @@ import (
 // BlockTypeHandler provides HTTP handlers for block type CRUD operations.
 type BlockTypeHandler struct {
 	svc *BlockTypeService
+	db  *gorm.DB
 }
 
 // NewBlockTypeHandler creates a new BlockTypeHandler with the given BlockTypeService.
-func NewBlockTypeHandler(svc *BlockTypeService) *BlockTypeHandler {
-	return &BlockTypeHandler{svc: svc}
+func NewBlockTypeHandler(svc *BlockTypeService, db *gorm.DB) *BlockTypeHandler {
+	return &BlockTypeHandler{svc: svc, db: db}
+}
+
+// resolveTestDataSlice replaces any "theme-asset:<key>" or
+// "extension-asset:<slug>:<key>" references inside test_data with full media
+// objects. No-op when the media-manager extension hasn't run its ownership
+// migrations (columns missing → empty lookup). Mutates by index so
+// value-typed slices take effect.
+func (h *BlockTypeHandler) resolveTestDataSlice(bts []models.BlockType) {
+	if h.db == nil || len(bts) == 0 {
+		return
+	}
+	lookup := LoadAssetLookup(h.db, ActiveThemeName(h.db))
+	if lookup.Empty() {
+		return
+	}
+	for i := range bts {
+		if len(bts[i].TestData) == 0 {
+			continue
+		}
+		resolved := ResolveThemeAssetRefsInJSON([]byte(bts[i].TestData), lookup)
+		bts[i].TestData = models.JSONB(resolved)
+	}
+}
+
+// resolveTestDataOne resolves a single block type in place.
+func (h *BlockTypeHandler) resolveTestDataOne(bt *models.BlockType) {
+	if h.db == nil || bt == nil || len(bt.TestData) == 0 {
+		return
+	}
+	lookup := LoadAssetLookup(h.db, ActiveThemeName(h.db))
+	if lookup.Empty() {
+		return
+	}
+	bt.TestData = models.JSONB(ResolveThemeAssetRefsInJSON([]byte(bt.TestData), lookup))
 }
 
 // RegisterRoutes registers all block type routes on the provided router group.
@@ -51,6 +86,7 @@ func (h *BlockTypeHandler) List(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list block types")
 	}
 
+	h.resolveTestDataSlice(blockTypes)
 	return api.Paginated(c, blockTypes, total, page, perPage)
 }
 
@@ -69,6 +105,7 @@ func (h *BlockTypeHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch block type")
 	}
 
+	h.resolveTestDataOne(bt)
 	return api.Success(c, bt)
 }
 

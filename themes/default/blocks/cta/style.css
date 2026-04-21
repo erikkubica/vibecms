@@ -1,18 +1,28 @@
-/* CTA Block — scoped styles */
+/* CTA Block — Stitch-aligned */
 
-.vb-cta__button:hover {
-  transform: translateY(-2px);
+.vb-cta--accent {
+  background: linear-gradient(135deg, #630ed4 0%, #3d0886 100%);
+  color: #fff;
 }
 
-.vb-cta__button:active {
-  transform: translateY(0);
+.vb-cta--dark {
+  background:
+    radial-gradient(60% 80% at 85% 10%, rgba(99, 14, 212, 0.35) 0%, transparent 60%),
+    linear-gradient(135deg, #18122b 0%, #0c0a18 100%);
+  color: #fff;
 }
 
-.vb-cta--accent .vb-cta__button:hover {
-  background-color: rgba(255, 255, 255, 0.9);
+.vb-cta--light {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
 }
 
-.vb-cta--dark .vb-cta__button:hover,
-.vb-cta--light .vb-cta__button:hover {
-  filter: brightness(1.1);
+.vb-cta__grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
+.vb-cta--light .vb-cta__grid {
+  background-image: radial-gradient(rgba(99, 14, 212, 0.25) 1px, transparent 1px);
+}
+
+.vb-cta__button:active { transform: translateY(0); }

@@ -1,26 +1,18 @@
-<section class="vb-features-grid py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-7xl mx-auto">
-    {{if or .heading .subheading}}
-    <div class="text-center mb-12">
-      {{if .heading}}
-      <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4" style="color: var(--color-text);">{{.heading}}</h2>
-      {{end}}
-      {{if .subheading}}
-      <p class="text-lg leading-relaxed max-w-2xl mx-auto" style="color: var(--color-text-muted);">{{.subheading}}</p>
-      {{end}}
-    </div>
-    {{end}}
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {{range .features}}
-      <div class="vb-features-grid__card rounded-lg p-6 transition-all duration-200" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-        {{if .icon}}
-        <div class="vb-features-grid__icon text-3xl mb-4">{{.icon}}</div>
-        {{end}}
-        <h3 class="text-lg font-semibold mb-2" style="color: var(--color-text);">{{.title}}</h3>
-        <p class="text-sm leading-relaxed" style="color: var(--color-text-muted);">{{.description}}</p>
-      </div>
-      {{end}}
-    </div>
-  </div>
+{{- /* Features Grid — 1:1 Stitch markup, dynamic features array */ -}}
+<section class="space-y-12">
+{{if or .heading .subheading}}
+<div class="text-center space-y-4">
+{{if .heading}}<h2 class="text-4xl font-bold sora tracking-tight text-on-surface">{{.heading}}</h2>{{end}}
+{{if .subheading}}<p class="text-on-surface-variant max-w-xl mx-auto">{{.subheading}}</p>{{end}}
+</div>
+{{end}}
+<div class="grid md:grid-cols-3 gap-8">
+{{range $i, $f := .features}}
+<div class="bg-surface-container-lowest p-10 rounded-lg space-y-4 hover:scale-[1.01] transition-all shadow-sm group">
+<div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-2xl group-hover:bg-primary group-hover:text-white transition-colors">{{$f.icon}}</div>
+<h3 class="text-xl font-bold sora text-on-surface">{{$f.title}}</h3>
+<p class="text-on-surface-variant leading-relaxed">{{$f.description}}</p>
+</div>
+{{end}}
+</div>
 </section>

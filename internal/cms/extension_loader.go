@@ -95,6 +95,7 @@ type ExtensionManifest struct {
 	Layouts        []ThemeLayoutDef        `json:"layouts"`
 	Partials       []ThemePartialDef       `json:"partials"`
 	PublicRoutes   []PublicRouteEntry      `json:"public_routes"`
+	Assets         []ThemeMediaAssetDef    `json:"assets"`
 }
 
 // CapabilityMap returns the Capabilities slice as a map for quick lookup.

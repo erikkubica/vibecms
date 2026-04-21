@@ -8,15 +8,13 @@
     { "key": "heading", "label": "Heading", "type": "text", "required": true },
     { "key": "body", "label": "Content", "type": "richtext" },
     { "key": "image_position", "label": "Image Position", "type": "select", "options": ["left", "right"], "default": "left" },
-    { "key": "button_text", "label": "Button Text", "type": "text" },
-    { "key": "button_url", "label": "Button URL", "type": "text" }
+    { "key": "button", "label": "Button", "type": "link" }
   ],
   "test_data": {
-    "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-    "heading": "Powerful Content Management",
-    "body": "<p>Create and manage beautiful content with our intuitive block-based editor. Drag and drop blocks to build pages in minutes, not hours.</p><p>Every block is fully customizable with its own fields, styling, and responsive behavior.</p>",
+    "image": { "url": "theme-asset:content-web-stack" },
+    "heading": "Crafted for the modern web stack",
+    "body": "<p>Connect to Next.js, Remix, Astro, or any framework with our type-safe SDKs. We don't just deliver JSON; we deliver peace of mind.</p><ul><li>Real-time collaboration</li><li>Version branching</li></ul>",
     "image_position": "left",
-    "button_text": "Learn More",
-    "button_url": "/features"
+    "button": {}
   }
 }

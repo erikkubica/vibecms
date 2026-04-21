@@ -18,15 +18,15 @@
     }
   ],
   "test_data": {
-    "heading": "Everything You Need",
-    "subheading": "Powerful features to help you build and manage content with ease",
+    "heading": "Everything you need, nothing you don't.",
+    "subheading": "Engineered for speed, curated for aesthetic precision. The only CMS that feels like high-end furniture.",
     "features": [
-      { "icon": "⚡", "title": "Lightning Fast", "description": "Sub-50ms time to first byte with optimized rendering pipeline and intelligent caching." },
-      { "icon": "🧩", "title": "Block-Based Editor", "description": "Build pages with drag-and-drop blocks. Each block has its own fields, templates, and styling." },
-      { "icon": "🎨", "title": "Theme System", "description": "Fully customizable themes with CSS custom properties. Rebrand in minutes, not days." },
-      { "icon": "🔒", "title": "Role-Based Access", "description": "Fine-grained permissions with customizable roles. Control who can access what." },
-      { "icon": "🌍", "title": "Multi-Language", "description": "Built-in internationalization with language-specific content, menus, and layouts." },
-      { "icon": "🔌", "title": "Extensible", "description": "Zero-rebuild extensions via Tengo scripts. Add custom logic without recompiling." }
+      { "icon": "⚡", "title": "Instant Edge API", "description": "Deliver content globally in milliseconds with our native edge-first infrastructure." },
+      { "icon": "🎨", "title": "Visual Schema", "description": "Architect complex data models with an interface that feels like a design tool." },
+      { "icon": "🤖", "title": "AI Curation", "description": "Automated tagging, translation, and SEO optimization built into the workflow." },
+      { "icon": "🛡️", "title": "Enterprise Security", "description": "SSO, audit logs, and granular permissions for teams of all sizes." },
+      { "icon": "🌐", "title": "Multi-tenant Flow", "description": "Manage hundreds of projects from a single unified dashboard without the clutter." },
+      { "icon": "📈", "title": "Insight Engine", "description": "Real-time content performance metrics directly within your editor." }
     ]
   }
 }

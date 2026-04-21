@@ -1,32 +1,35 @@
-<section class="vb-testimonials py-16 md:py-24 px-4 sm:px-6 lg:px-8" style="background-color: var(--color-surface-alt);">
-  <div class="max-w-7xl mx-auto">
-    {{if .heading}}
-    <div class="text-center mb-12">
-      <h2 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: var(--color-text);">{{.heading}}</h2>
-    </div>
-    {{end}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {{range .testimonials}}
-      <div class="vb-testimonials__card flex flex-col rounded-lg p-6 transition-all duration-200" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-        <div class="vb-testimonials__quote-mark text-4xl leading-none mb-2" style="color: var(--color-border);">&ldquo;</div>
-        <blockquote class="italic mb-6 leading-relaxed" style="color: var(--color-text);">{{.quote}}</blockquote>
-        <div class="flex items-center mt-auto">
-          {{if .avatar}}
-          <img src="{{.avatar}}" alt="{{.author_name}}" class="w-10 h-10 rounded-full object-cover mr-3 flex-shrink-0" />
-          {{else}}
-          <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3 text-sm font-bold flex-shrink-0" style="background: var(--color-accent); color: var(--color-accent-text);">
-            {{slice .author_name 0 1}}
-          </div>
-          {{end}}
-          <div>
-            <div class="text-sm font-semibold" style="color: var(--color-text);">{{.author_name}}</div>
-            {{if .author_role}}
-            <div class="text-sm" style="color: var(--color-text-muted);">{{.author_role}}</div>
-            {{end}}
-          </div>
-        </div>
-      </div>
-      {{end}}
-    </div>
-  </div>
+{{- /* Testimonials — 1:1 Stitch markup */ -}}
+<section class="space-y-12">
+{{if .heading}}
+<h2 class="text-4xl font-bold sora text-center tracking-tight text-on-surface">{{.heading}}</h2>
+{{end}}
+<div class="grid md:grid-cols-3 gap-8">
+{{range $i, $t := .testimonials}}
+{{- $avatarUrl := "" -}}
+{{- with $t.avatar -}}{{- $avatarUrl = .url -}}{{- end -}}
+<div class="bg-surface-container-lowest p-10 rounded-lg space-y-6 shadow-sm border border-outline-variant/10">
+<div class="flex gap-1 text-primary">
+<span class="material-symbols-outlined" data-icon="star" data-weight="fill">star</span>
+<span class="material-symbols-outlined" data-icon="star" data-weight="fill">star</span>
+<span class="material-symbols-outlined" data-icon="star" data-weight="fill">star</span>
+<span class="material-symbols-outlined" data-icon="star" data-weight="fill">star</span>
+<span class="material-symbols-outlined" data-icon="star" data-weight="fill">star</span>
+</div>
+<p class="text-lg text-on-surface sora leading-relaxed italic">"{{$t.quote}}"</p>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-surface-container-high overflow-hidden">
+{{if $avatarUrl}}
+<img class="w-full h-full object-cover" src="{{$avatarUrl}}" alt="{{$t.author_name}}"/>
+{{else}}
+<div class="w-full h-full flex items-center justify-center text-sm font-bold text-white bg-primary">{{slice $t.author_name 0 1}}</div>
+{{end}}
+</div>
+<div>
+<div class="font-bold sora text-on-surface">{{$t.author_name}}</div>
+{{if $t.author_role}}<div class="text-sm text-on-surface-variant">{{$t.author_role}}</div>{{end}}
+</div>
+</div>
+</div>
+{{end}}
+</div>
 </section>

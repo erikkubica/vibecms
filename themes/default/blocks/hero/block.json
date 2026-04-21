@@ -4,19 +4,21 @@
   "icon": "image",
   "description": "Full-width hero section with heading, subheading, background image, and CTA button",
   "field_schema": [
+    { "key": "badge_text", "label": "Badge Text", "type": "text" },
     { "key": "heading", "label": "Heading", "type": "text", "required": true },
     { "key": "subheading", "label": "Subheading", "type": "textarea" },
-    { "key": "background_image", "label": "Background Image", "type": "image" },
-    { "key": "button_text", "label": "Button Text", "type": "text" },
-    { "key": "button_url", "label": "Button URL", "type": "text" },
+    { "key": "background_image", "label": "Hero Image", "type": "image" },
+    { "key": "button", "label": "Primary Button", "type": "link" },
+    { "key": "button_secondary", "label": "Secondary Button", "type": "link" },
     { "key": "alignment", "label": "Text Alignment", "type": "select", "options": ["left", "center", "right"], "default": "center" }
   ],
   "test_data": {
+    "badge_text": "The 2026 Standard",
     "heading": "Build Something Amazing",
-    "subheading": "A modern content management system designed for speed, flexibility, and beautiful results.",
-    "background_image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80",
-    "button_text": "Get Started",
-    "button_url": "/get-started",
-    "alignment": "center"
+    "subheading": "A headless CMS curated for humans, powered by intelligence. Experience a layout that breathes and scales with your ambition.",
+    "background_image": { "url": "theme-asset:hero-default" },
+    "button": { "text": "Start Building Free", "url": "/register" },
+    "button_secondary": { "text": "Watch Demo", "url": "#demo" },
+    "alignment": "left"
   }
 }

@@ -18,12 +18,12 @@
     }
   ],
   "test_data": {
-    "heading": "VibeCMS by the Numbers",
+    "heading": "",
     "stats": [
-      { "number": "50", "label": "Millisecond TTFB", "prefix": "<", "suffix": "ms" },
-      { "number": "500", "label": "Active Sites", "prefix": "", "suffix": "+" },
-      { "number": "99.9", "label": "Uptime", "prefix": "", "suffix": "%" },
-      { "number": "10", "label": "Block Types", "prefix": "", "suffix": "+" }
+      { "number": "50", "label": "Latency Baseline", "prefix": "", "suffix": "ms" },
+      { "number": "500", "label": "Integrations", "prefix": "", "suffix": "+" },
+      { "number": "99.9", "label": "Uptime SLA", "prefix": "", "suffix": "%" },
+      { "number": "10", "label": "Global Regions", "prefix": "", "suffix": "+" }
     ]
   }
 }

@@ -2,11 +2,15 @@
   "slug": "rich-text",
   "label": "Rich Text",
   "icon": "type",
-  "description": "Rich text content block with formatted HTML",
+  "description": "Editorial long-form content with optional eyebrow, heading, and rich HTML body (blockquotes, lists, subheadings)",
   "field_schema": [
+    { "key": "eyebrow", "label": "Eyebrow (small pill label)", "type": "text" },
+    { "key": "heading", "label": "Heading", "type": "text" },
     { "key": "body", "label": "Content", "type": "richtext", "required": true }
   ],
   "test_data": {
-    "body": "<h2>Welcome to VibeCMS</h2><p>This is a rich text block that supports <strong>bold</strong>, <em>italic</em>, <a href='#'>links</a>, and other formatting.</p><p>Use it for any free-form content on your pages. It automatically applies beautiful typography with proper spacing and readable line lengths.</p><ul><li>Easy to use</li><li>Beautiful typography</li><li>Responsive design</li></ul>"
+    "eyebrow": "Editorial",
+    "heading": "Why we built VibeCMS",
+    "body": "<p>The modern web has become a cacophony of fragmented tools and cluttered interfaces. We observed a growing divide between technical flexibility and creative intuition. VibeCMS was born from the desire to bridge this gap&mdash;to create a &ldquo;Luminous Curator&rdquo; that treats content management as an editorial art form rather than a database entry task.</p><blockquote>Great design is not just about how it looks, but how it feels to navigate the complexity of human knowledge.</blockquote><h3>A new paradigm of intelligence</h3><p>We didn't just want another dashboard. We wanted a space where AI assists rather than dominates. Our goal was to build an environment where complex data structures are distilled into a refined, high-performance gallery experience.</p><ul><li>Asymmetric layouts that respect the natural hierarchy of information.</li><li>Warm, high-contrast typography that reduces visual fatigue.</li><li>A design system that treats every card as a physical object.</li></ul>"
   }
 }

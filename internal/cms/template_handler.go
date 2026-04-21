@@ -14,11 +14,43 @@ import (
 // TemplateHandler provides HTTP handlers for template CRUD operations.
 type TemplateHandler struct {
 	svc *TemplateService
+	db  *gorm.DB
 }
 
 // NewTemplateHandler creates a new TemplateHandler with the given TemplateService.
-func NewTemplateHandler(svc *TemplateService) *TemplateHandler {
-	return &TemplateHandler{svc: svc}
+func NewTemplateHandler(svc *TemplateService, db *gorm.DB) *TemplateHandler {
+	return &TemplateHandler{svc: svc, db: db}
+}
+
+// resolveBlockConfig replaces any "theme-asset:<key>" or
+// "extension-asset:<slug>:<key>" references inside a template's
+// block_config with full media objects, so admins selecting a template see
+// real image previews.
+func (h *TemplateHandler) resolveBlockConfig(ts []models.Template) {
+	if h.db == nil || len(ts) == 0 {
+		return
+	}
+	lookup := LoadAssetLookup(h.db, ActiveThemeName(h.db))
+	if lookup.Empty() {
+		return
+	}
+	for i := range ts {
+		if len(ts[i].BlockConfig) == 0 {
+			continue
+		}
+		ts[i].BlockConfig = models.JSONB(ResolveThemeAssetRefsInJSON([]byte(ts[i].BlockConfig), lookup))
+	}
+}
+
+func (h *TemplateHandler) resolveBlockConfigOne(t *models.Template) {
+	if h.db == nil || t == nil || len(t.BlockConfig) == 0 {
+		return
+	}
+	lookup := LoadAssetLookup(h.db, ActiveThemeName(h.db))
+	if lookup.Empty() {
+		return
+	}
+	t.BlockConfig = models.JSONB(ResolveThemeAssetRefsInJSON([]byte(t.BlockConfig), lookup))
 }
 
 // RegisterRoutes registers all template routes on the provided router group.
@@ -48,6 +80,7 @@ func (h *TemplateHandler) List(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list templates")
 	}
 
+	h.resolveBlockConfig(templates)
 	return api.Paginated(c, templates, total, page, perPage)
 }
 
@@ -66,6 +99,7 @@ func (h *TemplateHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch template")
 	}
 
+	h.resolveBlockConfigOne(t)
 	return api.Success(c, t)
 }
 

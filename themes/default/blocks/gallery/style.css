@@ -1,10 +1,15 @@
-/* Gallery Block — scoped styles */
+/* Gallery Block — Stitch Bento Masonry styling */
 
-.vb-gallery__img-wrap {
-  transition: box-shadow 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+/* Auto-numbered captions: "01 — ...", "02 — ...", etc. */
+.vb-gallery__grid { counter-reset: gallery; }
+.vb-gallery__item { counter-increment: gallery; }
+.vb-gallery__num::before {
+  content: counter(gallery, decimal-leading-zero) " — ";
 }
 
-.vb-gallery__item:hover .vb-gallery__img-wrap {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+/* Captions use Sora */
+.vb-gallery__caption {
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }

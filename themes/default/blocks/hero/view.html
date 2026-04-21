@@ -1,36 +1,34 @@
-{{- $align := "center" -}}
-{{- if .alignment -}}{{- $align = .alignment -}}{{- end -}}
+{{- /* Hero — 1:1 Stitch markup, dynamic text/image */ -}}
+{{- $imgUrl := "" -}}{{- $imgAlt := "" -}}
+{{- with .background_image -}}{{- $imgUrl = .url -}}{{- if .alt -}}{{- $imgAlt = .alt -}}{{- end -}}{{- end -}}
+{{- $badge := or .badge_text "The 2026 Standard" -}}
 
-{{- $alignClass := "items-center text-center" -}}
-{{- if eq $align "left" -}}{{- $alignClass = "items-start text-left" -}}{{- end -}}
-{{- if eq $align "right" -}}{{- $alignClass = "items-end text-right" -}}{{- end -}}
-
-<section class="vb-hero relative w-full overflow-hidden"
-  {{- if .background_image }} style="background-image: url('{{ .background_image }}'); background-size: cover; background-position: center;"{{ end }}>
-
-  {{- if .background_image }}
-  <div class="vb-hero__overlay absolute inset-0"></div>
-  {{- end }}
-
-  <div class="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-20 md:py-32 flex flex-col {{ $alignClass }}">
-    <div class="max-w-3xl">
-      <h1 class="text-4xl md:text-6xl font-bold tracking-tight text-white mb-6">
-        {{ .heading }}
-      </h1>
-
-      {{- if .subheading }}
-      <p class="text-xl md:text-2xl text-white/80 mb-10 leading-relaxed">
-        {{ .subheading }}
-      </p>
-      {{- end }}
-
-      {{- if and .button_text .button_url }}
-      <a href="{{ .button_url }}"
-         class="vb-hero__cta inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
-         style="background-color: var(--color-accent); color: var(--color-accent-text);">
-        {{ .button_text }}
-      </a>
-      {{- end }}
-    </div>
-  </div>
+<section class="relative">
+<div class="bg-surface-container-lowest rounded-xl p-12 md:p-24 overflow-hidden relative shadow-[0_40px_40px_-10px_rgba(27,28,26,0.06)] bento-grid-bg">
+<div class="absolute top-0 right-0 -mr-32 -mt-32 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px]"></div>
+<div class="relative z-10 max-w-3xl space-y-8">
+<span class="inline-block px-4 py-1.5 rounded-full bg-surface-container-high text-primary font-semibold text-sm sora">{{$badge}}</span>
+<h1 class="text-6xl md:text-8xl font-extrabold tracking-tighter sora leading-none text-on-surface">{{ beforeLastWord .heading }} <span class="text-primary">{{ lastWord .heading }}</span>.</h1>
+{{- if .subheading }}
+<p class="text-xl md:text-2xl text-on-surface-variant font-light leading-relaxed max-w-2xl">
+{{ .subheading }}
+</p>
+{{- end }}
+<div class="flex items-center gap-4 pt-4">
+{{- if .button.url }}
+<a href="{{ .button.url }}" class="inline-block bg-primary text-white hover:text-white px-10 py-5 rounded-lg text-lg font-bold sora hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20">{{ .button.text }}</a>
+{{- end }}
+{{- if .button_secondary.url }}
+<a href="{{ .button_secondary.url }}" class="inline-block px-10 py-5 rounded-lg text-lg font-bold sora border-2 border-outline-variant hover:bg-surface-container transition-all text-on-surface hover:text-on-surface">{{ .button_secondary.text }}</a>
+{{- end }}
+</div>
+</div>
+{{- if $imgUrl }}
+<div class="mt-16 md:absolute md:top-24 md:right-12 md:mt-0 w-full md:w-1/3">
+<div class="bg-surface-container-low p-6 rounded-lg border border-outline-variant/20 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
+<img class="rounded-lg w-full" alt="{{ $imgAlt }}" src="{{ $imgUrl }}"/>
+</div>
+</div>
+{{- end }}
+</div>
 </section>

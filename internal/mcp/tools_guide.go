@@ -217,6 +217,36 @@ func themeStandards() map[string]any {
 				"description": "Every field definition must include a 'help' property with instructions for the CMS editor.",
 			},
 		},
+		"examples": map[string]string{
+			"theme.json": `{
+  "name": "My Theme",
+  "slug": "my-theme",
+  "blocks": ["my-hero", "my-features"],
+  "assets": {
+    "styles": ["assets/css/main.css"]
+  }
+}`,
+			"block.json": `{
+  "slug": "my-hero",
+  "description": "Hero section with title, image and CTA button.",
+  "field_schema": [
+    { "name": "title", "type": "text", "help": "Catchy headline" },
+    { "name": "cta", "type": "link", "help": "Primary call to action" }
+  ],
+  "test_data": {
+    "title": "Welcome to VibeCMS",
+    "cta": { "url": "/", "text": "Get Started" }
+  }
+}`,
+			"view.html": `{{ with .title }}<h1>{{ . }}</h1>{{ end }}
+{{ with .cta }}<a href="{{ .url }}">{{ .text }}</a>{{ end }}`,
+			"theme.tengo": `// Seed a page
+if page_missing("home") {
+    create_page("home", "Home", "base.html", [
+        { "slug": "my-hero", "data": { "title": "Auto Seeded" } }
+    ])
+}`,
+		},
 		"field_types": []map[string]any{
 			{"type": "term", "intent": "Taxonomies", "shape": `{"name": "...", "slug": "..."}`},
 			{"type": "link", "intent": "CTAs/Buttons", "shape": `{"url": "/...", "text": "...", "target": "_self"}`},
@@ -252,8 +282,8 @@ func onboardingGuide() string {
 Welcome! Your task is to build or modify a VibeCMS theme. To succeed without human intervention, you MUST follow this protocol:
 
 ## 1. Discovery Phase
-- **Read the Guide**: Call 'read_resource' on 'vibecms://guidelines/themes'. This is your technical bible.
-- **Audit Reference**: Use the 'hello-vietnam' theme as your Gold Standard reference for architecture and seeding.
+- **Read the Guide**: Call 'read_resource' on 'vibecms://guidelines/themes'. This contains both the Rules and the Canonical Examples.
+- **Reference Standards**: Use the 'examples' section in the MCP JSON response as your definitive architectural reference.
 
 ## 2. Implementation Protocol
 - **Schema First**: Define 'block.json' before 'view.html'. 
@@ -269,5 +299,5 @@ Welcome! Your task is to build or modify a VibeCMS theme. To succeed without hum
 - Use the 'core.theme.standards' tool to cross-reference your implementation against current rules.
 - Ensure 'layouts/base.html' correctly wraps all pages.
 
-Have fun coding! Use your tools to explore the existing blocks if you get stuck.`
+Have fun coding! Everything you need is in the guidelines and examples.`
 }

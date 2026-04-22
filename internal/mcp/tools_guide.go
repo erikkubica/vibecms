@@ -245,3 +245,29 @@ func themeStandards() map[string]any {
 		"authoritative_resource": "vibecms://guidelines/themes",
 	}
 }
+
+func onboardingGuide() string {
+	return `# VibeCMS Theme Onboarding for AI Agents
+
+Welcome! Your task is to build or modify a VibeCMS theme. To succeed without human intervention, you MUST follow this protocol:
+
+## 1. Discovery Phase
+- **Read the Guide**: Call 'read_resource' on 'vibecms://guidelines/themes'. This is your technical bible.
+- **Audit Reference**: Use the 'hello-vietnam' theme as your Gold Standard reference for architecture and seeding.
+
+## 2. Implementation Protocol
+- **Schema First**: Define 'block.json' before 'view.html'. 
+- **Test Data**: Every field MUST have on-brand 'test_data'. NO LOREM IPSUM.
+- **Editor Experience**: Every field MUST have 'help' text instructions.
+- **Portability**: Use 'theme-asset:<key>' for images and slugs for node references.
+
+## 3. Data Seeding (theme.tengo)
+- Use 'theme.tengo' to register taxonomies, terms, and nodes. 
+- Use 'page_missing(slug)' check to ensure idempotency.
+
+## 4. Verification
+- Use the 'core.theme.standards' tool to cross-reference your implementation against current rules.
+- Ensure 'layouts/base.html' correctly wraps all pages.
+
+Have fun coding! Use your tools to explore the existing blocks if you get stuck.`
+}

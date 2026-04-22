@@ -123,6 +123,25 @@ func (s *Server) registerResources() {
 			return contents, nil
 		},
 	)
+
+	// AI Onboarding resource — vibecms://guidelines/onboarding
+	s.mcp.AddResource(
+		mcp.NewResource(
+			"vibecms://guidelines/onboarding",
+			"AI Agent Onboarding Guide",
+			mcp.WithDescription("Mandatory protocol for AI agents building VibeCMS themes."),
+			mcp.WithMIMEType("text/markdown"),
+		),
+		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			return []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      req.Params.URI,
+					MIMEType: "text/markdown",
+					Text:     onboardingGuide(),
+				},
+			}, nil
+		},
+	)
 }
 
 func parseResourceID(uri, prefix string) (uint, error) {

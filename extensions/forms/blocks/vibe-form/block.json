@@ -1,0 +1,23 @@
+{
+  "slug": "vibe-form",
+  "label": "Custom Form",
+  "icon": "clipboard-list",
+  "description": "Render a form created in the Forms extension. Features AJAX submission, custom layouts, and automated email notifications.",
+  "field_schema": [
+    {
+      "label": "Select Form",
+      "type": "form_selector",
+      "key": "form_id",
+      "required": true
+    },
+    {
+      "label": "Custom Heading",
+      "type": "text",
+      "key": "heading"
+    }
+  ],
+  "test_data": {
+    "form_id": "0",
+    "heading": "Contact Us"
+  }
+}

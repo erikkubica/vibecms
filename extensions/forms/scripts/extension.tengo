@@ -1,0 +1,39 @@
+// extensions/forms/scripts/extension.tengo
+
+log := import("core/log")
+db := import("core/db")
+
+log.info("Forms extension: checking for demo forms...")
+
+// Helper to seed a form if it doesn't exist
+seed_form := func(slug, name, fields, layout) {
+    existing := db.query_one("SELECT id FROM forms WHERE slug = $1", slug)
+    if is_error(existing) || !existing {
+        log.info("Forms extension: seeding form '" + name + "'...")
+        db.exec("INSERT INTO forms (name, slug, fields_schema, layout, notifications) VALUES ($1, $2, $3, $4, $5)", 
+            name, slug, fields, layout, "[]")
+    }
+}
+
+// 1. Contact Form
+contact_fields := [
+    { name: "name", label: "Your Name", type: "text", required: true },
+    { name: "email", label: "Email Address", type: "email", required: true },
+    { name: "subject", label: "Subject", type: "select", options: ["General Question", "Custom Trip", "Support"] },
+    { name: "message", label: "Message", type: "textarea", required: true }
+]
+
+contact_layout := "<div class=\"vibe-form-grid\">\n  <div class=\"vibe-form-field\">\n    <label>{{.fields.name.label}}</label>\n    <input type=\"text\" name=\"name\" required>\n  </div>\n  <div class=\"vibe-form-field\">\n    <label>{{.fields.email.label}}</label>\n    <input type=\"email\" name=\"email\" required>\n  </div>\n  <div class=\"vibe-form-field\">\n    <label>{{.fields.subject.label}}</label>\n    <select name=\"subject\">\n      {{range .fields.subject.options}}\n        <option value=\"{{.}}\">{{.}}</option>\n      {{end}}\n    </select>\n  </div>\n  <div class=\"vibe-form-field\">\n    <label>{{.fields.message.label}}</label>\n    <textarea name=\"message\" required></textarea>\n  </div>\n  <button type=\"submit\">Send Message</button>\n</div>"
+
+seed_form("contact", "Contact Us", contact_fields, contact_layout)
+
+// 2. Newsletter Form
+newsletter_fields := [
+    { name: "email", label: "Email Address", type: "email", required: true }
+]
+
+newsletter_layout := "<div class=\"vibe-form-inline\">\n  <input type=\"email\" name=\"email\" placeholder=\"your@email.com\" required>\n  <button type=\"submit\">Subscribe</button>\n</div>"
+
+seed_form("newsletter", "Newsletter", newsletter_fields, newsletter_layout)
+
+log.info("Forms extension initialization complete")

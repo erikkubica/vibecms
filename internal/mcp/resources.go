@@ -90,8 +90,7 @@ func (s *Server) registerResources() {
 		mcp.NewResource(
 			"vibecms://guidelines/themes",
 			"Theme Development Standards",
-			mcp.WithDescription("Official VibeCMS theme development guidelines (Rules 1.1 - 1.6)."),
-			mcp.WithMIMEType("application/json"),
+			mcp.WithResourceDescription("Official VibeCMS theme development guidelines (Rules 1.1 - 1.6)."),
 		),
 		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 			// Return both structured JSON and raw Markdown
@@ -129,8 +128,7 @@ func (s *Server) registerResources() {
 		mcp.NewResource(
 			"vibecms://guidelines/onboarding",
 			"AI Agent Onboarding Guide",
-			mcp.WithDescription("Mandatory protocol for AI agents building VibeCMS themes."),
-			mcp.WithMIMEType("text/markdown"),
+			mcp.WithResourceDescription("Mandatory protocol for AI agents building VibeCMS themes."),
 		),
 		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 			return []mcp.ResourceContents{

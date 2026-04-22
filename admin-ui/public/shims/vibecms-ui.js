@@ -14,7 +14,7 @@ function getUI(name) {
 // React components need to be stable references for hooks to work.
 // We create wrapper components that forward all props.
 function wrap(name) {
-  const Component = function(props) {
+  const Component = function (props) {
     const Real = getUI(name);
     const React = window.__VIBECMS_SHARED__?.React;
     return React ? React.createElement(Real, props) : null;
@@ -60,3 +60,4 @@ export const TableFooter = wrap("TableFooter");
 export const TableCaption = wrap("TableCaption");
 export const Separator = wrap("Separator");
 export const Checkbox = wrap("Checkbox");
+export const Switch = wrap("Switch");

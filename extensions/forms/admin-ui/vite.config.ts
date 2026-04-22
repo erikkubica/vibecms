@@ -21,7 +21,6 @@ export default defineConfig({
         "react-dom/client",
         "react-router-dom",
         "sonner",
-        "lucide-react",
         "@vibecms/ui",
         "@vibecms/api",
         "@vibecms/icons",

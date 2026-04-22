@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS forms (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
-    fields_schema JSONB NOT NULL DEFAULT '[]',
+    fields JSONB NOT NULL DEFAULT '[]',
     layout TEXT NOT NULL DEFAULT '',
     notifications JSONB NOT NULL DEFAULT '[]',
     settings JSONB NOT NULL DEFAULT '{}',

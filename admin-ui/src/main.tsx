@@ -14,15 +14,46 @@ import * as LucideReact from "lucide-react";
 
 // shadcn/ui components — explicit named imports for reliable sharing
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, CardAction } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+  CardAction,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter, TableCaption } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter,
+  TableCaption,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 
 // API client
 import * as apiClient from "@/api/client";
@@ -45,15 +76,41 @@ window.__VIBECMS_SHARED__ = {
   icons: LucideReact,
   ui: {
     Button,
-    Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, CardAction,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardFooter,
+    CardAction,
     Input,
     Label,
     Badge,
-    Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-    Tabs, TabsList, TabsTrigger, TabsContent,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+    Tabs,
+    TabsList,
+    TabsTrigger,
+    TabsContent,
     Textarea,
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter, TableCaption,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+    TableFooter,
+    TableCaption,
+    Switch,
   },
   api: apiClient,
   ExtensionSlot,
@@ -66,5 +123,5 @@ createRoot(document.getElementById("root")!).render(
       <App />
       <Toaster position="top-right" richColors />
     </BrowserRouter>
-  </StrictMode>
+  </StrictMode>,
 );

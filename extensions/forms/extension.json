@@ -1,60 +1,51 @@
 {
-    "name": "Forms",
-    "slug": "forms",
-    "version": "1.0.0",
-    "author": "VibeCMS",
-    "description": "Powerful form builder with submission tracking and email notifications.",
-    "provides": ["forms"],
-    "capabilities": [
-        "data:read",
-        "data:write",
-        "data:delete",
-        "email:send",
-        "settings:read",
-        "log:write",
-        "routes:register",
-        "blocks"
-    ],
-    "blocks": [
-        { "slug": "vibe-form", "dir": "vibe-form" }
-    ],
-    "plugins": [
-        {
-            "binary": "bin/forms",
-            "events": []
-        }
-    ],
-    "public_routes": [
-        {"method": "POST", "path": "/forms/submit/*"}
-    ],
-    "admin_ui": {
-        "entry": "admin-ui/dist/index.js",
-        "routes": [
-            {"path": "/", "component": "FormsList"},
-            {"path": "/new", "component": "FormEditor"},
-            {"path": "/edit/:id", "component": "FormEditor"},
-            {"path": "/submissions", "component": "SubmissionsList"},
-            {"path": "/submissions/:id", "component": "SubmissionsList"}
-        ],
-        "menu": {
-            "label": "Forms",
-            "icon": "FormInput",
-            "position": "4"
-        },
-        "field_types": [
-            {
-                "type": "form_selector",
-                "label": "Form Selector",
-                "description": "Select a form from the Forms extension",
-                "icon": "ClipboardList",
-                "group": "Forms",
-                "component": "FormFieldSelector"
-            }
-        ],
-        "menu": {
-            "label": "Forms",
-            "icon": "FormInput",
-            "position": "4"
-        }
+  "name": "Forms",
+  "slug": "forms",
+  "version": "1.0.0",
+  "author": "VibeCMS",
+  "description": "Powerful form builder with submission tracking and email notifications.",
+  "provides": ["forms"],
+  "capabilities": [
+    "data:read",
+    "data:write",
+    "data:delete",
+    "email:send",
+    "settings:read",
+    "log:write",
+    "routes:register",
+    "blocks"
+  ],
+  "blocks": [{ "slug": "vibe-form", "dir": "vibe-form" }],
+  "plugins": [
+    {
+      "binary": "bin/forms",
+      "events": []
     }
+  ],
+  "public_routes": [{ "method": "POST", "path": "/forms/submit/*" }],
+  "admin_ui": {
+    "entry": "admin-ui/dist/index.js",
+    "routes": [
+      { "path": "/", "component": "FormsList" },
+      { "path": "/new", "component": "FormEditor" },
+      { "path": "/edit/:id", "component": "FormEditor" },
+      { "path": "/submissions", "component": "SubmissionsList" },
+      { "path": "/submissions/:id", "component": "SubmissionsList" }
+    ],
+    "menu": {
+      "label": "Forms",
+      "icon": "FormInput",
+      "position": "4"
+    },
+    "field_types": [
+      {
+        "type": "form_selector",
+        "label": "Form Selector",
+        "description": "Select a form from the Forms extension",
+        "icon": "ClipboardList",
+        "group": "Forms",
+        "component": "FormFieldSelector"
+      }
+    ]
+  }
 }

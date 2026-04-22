@@ -174,6 +174,16 @@ func (s *Server) toolIndex() []toolCatalogEntry {
 
 func themeStandards() map[string]any {
 	return map[string]any{
+		"philosophy": "A theme must render correctly from a cold boot with nothing but its own files — no manual DB edits, no magic.",
+		"structure": map[string]string{
+			"theme.json": "Theme manifest (assets, blocks, templates)",
+			"layouts/":   "Go html/template files (base.html, etc.)",
+			"partials/":  "Reusable template fragments",
+			"blocks/":    "Content block templates and block.json definitions",
+			"assets/":    "Static files (CSS, JS, images) - referenced via theme-asset:<key>",
+			"templates/": "Full page demo templates (JSON)",
+			"scripts/":   "Tengo hooks, filters, and seeding (theme.tengo)",
+		},
 		"rules": []map[string]any{
 			{
 				"id":          "1.1",
@@ -188,7 +198,7 @@ func themeStandards() map[string]any {
 			{
 				"id":          "1.3",
 				"title":       "No Fallback Defaults",
-				"description": "Templates must not carry hardcoded fallback strings. Gate UI parts with {{ with .field }} instead.",
+				"description": "Templates must not carry hardcoded fallback strings. Gate UI parts with {{ with .field }} instead of {{ or .field 'default' }}.",
 			},
 			{
 				"id":          "1.5",
@@ -200,12 +210,28 @@ func themeStandards() map[string]any {
 				"title":       "Mandatory Field Help Text",
 				"description": "Every field definition must include a 'help' property with instructions for the CMS editor.",
 			},
+			{
+				"id":          "2.1",
+				"title":       "Taxonomies -> term field",
+				"description": "Never use text fields for tags/categories. Use 'term' field type bound to a taxonomy.",
+			},
+			{
+				"id":          "2.3",
+				"title":       "Links/CTAs -> link field",
+				"description": "Never split a button into text/url fields. Use the unified 'link' field type.",
+			},
+			{
+				"id":          "6.1",
+				"title":       "Portable References",
+				"description": "Always reference core entities (nodes, assets, blocks) by slug, never by numeric ID.",
+			},
 		},
-		"conventions": []string{
-			"Use 'link' field type for all CTAs/URLs.",
-			"Use 'term' field type for taxonomies (tags/categories).",
-			"Reference assets as 'theme-asset:<key>'.",
-			"Use slugs for cross-references, never numeric IDs.",
+		"field_types": map[string]string{
+			"term":     `{"name": "...", "slug": "..."}`,
+			"image":    `{"url": "theme-asset:...", "alt": "..."}`,
+			"link":     `{"url": "/...", "text": "...", "target": "_self"}`,
+			"node":     `{"id": 123, "slug": "...", "title": "..."}`,
+			"repeater": "Array of objects matching sub_fields schema.",
 		},
 		"mcp_resource": "vibecms://guidelines/themes",
 	}

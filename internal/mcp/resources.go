@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -93,7 +94,33 @@ func (s *Server) registerResources() {
 			mcp.WithMIMEType("application/json"),
 		),
 		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-			return jsonResource(req.Params.URI, themeStandards())
+			// Return both structured JSON and raw Markdown
+			jsonContent, err := json.Marshal(themeStandards())
+			if err != nil {
+				return nil, err
+			}
+
+			// Try to read the README.md for full context
+			readmePath := "themes/README.md"
+			readmeContent, _ := os.ReadFile(readmePath) // Ignore error, we'll just return JSON if missing
+
+			contents := []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      req.Params.URI,
+					MIMEType: "application/json",
+					Text:     string(jsonContent),
+				},
+			}
+
+			if len(readmeContent) > 0 {
+				contents = append(contents, mcp.TextResourceContents{
+					URI:      req.Params.URI + "#markdown",
+					MIMEType: "text/markdown",
+					Text:     string(readmeContent),
+				})
+			}
+
+			return contents, nil
 		},
 	)
 }

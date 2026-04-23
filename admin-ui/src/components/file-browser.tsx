@@ -65,6 +65,7 @@ export interface FileBrowserProps {
   title: string;
   backUrl: string;
   backLabel: string;
+  defaultFile?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -251,7 +252,7 @@ function TreeItem({
 /*  FileBrowser                                                        */
 /* ------------------------------------------------------------------ */
 
-export default function FileBrowser({ apiBase, title, backUrl, backLabel }: FileBrowserProps) {
+export default function FileBrowser({ apiBase, title, backUrl, backLabel, defaultFile }: FileBrowserProps) {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [treeLoading, setTreeLoading] = useState(true);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -266,15 +267,32 @@ export default function FileBrowser({ apiBase, title, backUrl, backLabel }: File
   } | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
 
-  // Load root directory
+  // Load root directory, then auto-select defaultFile if present
   useEffect(() => {
     let cancelled = false;
     setTreeLoading(true);
     fetchDir(apiBase, "")
-      .then((entries) => {
-        if (!cancelled) {
-          setTree(entriesToNodes(entries));
-          setTreeLoading(false);
+      .then(async (entries) => {
+        if (cancelled) return;
+        setTree(entriesToNodes(entries));
+        setTreeLoading(false);
+        if (defaultFile) {
+          const match = entries.find((e) => !e.is_dir && e.name === defaultFile);
+          if (match) {
+            setSelectedPath(match.path);
+            setFileLoading(true);
+            try {
+              const data = await fetchFile(apiBase, match.path);
+              if (!cancelled) {
+                setFileMeta({ path: match.path, size: data.size, language: data.language || langFromName(match.name), binary: data.binary, too_large: data.too_large });
+                setFileContent(data.content ?? "");
+              }
+            } catch {
+              // ignore
+            } finally {
+              if (!cancelled) setFileLoading(false);
+            }
+          }
         }
       })
       .catch(() => {
@@ -283,7 +301,7 @@ export default function FileBrowser({ apiBase, title, backUrl, backLabel }: File
     return () => {
       cancelled = true;
     };
-  }, [apiBase]);
+  }, [apiBase, defaultFile]);
 
   // Deep-update a node inside the tree by path
   const updateNode = useCallback(
@@ -366,7 +384,7 @@ export default function FileBrowser({ apiBase, title, backUrl, backLabel }: File
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="shrink-0 flex items-center gap-3 border-b border-slate-200 bg-white px-6 py-3">
         <Link

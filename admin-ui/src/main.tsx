@@ -1,9 +1,17 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useNavigate } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import App from "@/App";
+import { queryClient } from "@/sdui/query-client";
+import { useSSE } from "@/hooks/use-sse";
+import { registerBuiltinComponents } from "@/sdui/register-builtins";
+import { setNavigate } from "@/sdui/action-handler";
 import "./index.css";
+
+// Register SDUI built-in components before any rendering.
+registerBuiltinComponents();
 
 // Expose shared libraries for extension micro-frontends
 import * as React from "react";
@@ -117,11 +125,36 @@ window.__VIBECMS_SHARED__ = {
   useExtensions,
 };
 
+// ---------------------------------------------------------------------------
+// SDUI integration components — must live inside BrowserRouter so they can
+// call useNavigate() from the router context.
+// ---------------------------------------------------------------------------
+
+/** Reads navigate from router context and wires it into the SDUI action handler. */
+function NavigateBridge() {
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
+  return null;
+}
+
+/** Activates the SSE connection for real-time state invalidation. */
+function SduiProviders({ children }: { children: React.ReactNode }) {
+  useSSE();
+  return <>{children}</>;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-      <Toaster position="top-right" richColors />
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <NavigateBridge />
+        <SduiProviders>
+          <App />
+          <Toaster position="top-right" richColors />
+        </SduiProviders>
+      </BrowserRouter>
+    </QueryClientProvider>
   </StrictMode>,
 );

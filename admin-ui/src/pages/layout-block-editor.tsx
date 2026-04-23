@@ -330,7 +330,7 @@ export default function LayoutBlockEditorPage() {
             <CardHeader>
               <CardTitle className="text-base font-semibold text-slate-900">Template Reference</CardTitle>
             </CardHeader>
-            <CardContent className="border-t border-slate-100 pt-4">
+            <CardContent>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
                   <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>

@@ -21,6 +21,7 @@ import (
 	"vibecms/internal/rbac"
 	"vibecms/internal/rendering"
 	"vibecms/internal/scripting"
+	"vibecms/internal/sdui"
 	pb "vibecms/pkg/plugin/coreapipb"
 
 	"github.com/gofiber/fiber/v2"
@@ -61,6 +62,10 @@ func main() {
 
 	// Event bus.
 	eventBus := events.New()
+
+	// SDUI — Server-Driven UI engine and SSE broadcaster.
+	sduiEngine := sdui.NewEngine(database, eventBus)
+	sduiBroadcaster := sdui.NewBroadcaster(eventBus)
 
 	// Fiber app.
 	app := fiber.New(fiber.Config{
@@ -121,6 +126,9 @@ func main() {
 	roleHandler := rbac.NewRoleHandler(database)
 	settingsHandler := cms.NewSettingsHandler(database, eventBus)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, eventBus)
+
+	// SDUI handlers — boot manifest, layout trees, and SSE events.
+	bootHandler := api.NewBootHandler(database, sduiEngine)
 
 	// Theme loader construction (NOT loading yet — must wait for extensions).
 	// Boot order is core → extensions → themes: we only construct the loader
@@ -210,6 +218,10 @@ func main() {
 	cacheHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)
 	cms.NewFieldTypeHandler().RegisterRoutes(adminAPI)
+
+	// SDUI endpoints — boot manifest, layout trees, and SSE event stream.
+	bootHandler.RegisterRoutes(adminAPI)
+	adminAPI.Get("/events", sduiBroadcaster.Handler())
 
 	// MCP — token admin CRUD (session-authed) + /mcp public endpoint (bearer-authed).
 	mcpTokenSvc := mcp.NewTokenService(database)

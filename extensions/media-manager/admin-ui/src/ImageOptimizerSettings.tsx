@@ -157,6 +157,14 @@ async function startReoptimizeAll(): Promise<void> {
   if (!res.ok && res.status !== 409) throw new Error("Failed to start re-optimization");
 }
 
+async function startOptimizePending(): Promise<void> {
+  const res = await fetch(`${BASE}/optimize-pending`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok && res.status !== 409) throw new Error("Failed to start optimization");
+}
+
 async function startRestoreAll(): Promise<void> {
   const res = await fetch(`${BASE}/restore-all`, {
     method: "POST",
@@ -420,6 +428,15 @@ export default function ImageOptimizerSettings() {
       setReoptimizeAllConfirm(false);
     } catch {
       toast.error("Failed to start re-optimization");
+    }
+  };
+
+  const handleOptimizePending = async () => {
+    try {
+      await startOptimizePending();
+      setReoptimizeJob({ running: true, total: optStats?.unoptimized_count ?? 0, processed: 0, failed: 0, total_saved: 0, status: "running" });
+    } catch {
+      toast.error("Failed to start optimization");
     }
   };
 
@@ -761,6 +778,21 @@ export default function ImageOptimizerSettings() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Optimization Overview</CardTitle>
             <div className="flex gap-2">
+              {optStats.unoptimized_count > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                  onClick={handleOptimizePending}
+                  disabled={reoptimizeJob?.running || restoreJob?.running}
+                >
+                  {reoptimizeJob?.running ? (
+                    <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {reoptimizeJob.processed}/{reoptimizeJob.total}</>
+                  ) : (
+                    <><Zap className="h-3.5 w-3.5 mr-1.5" /> Optimize Pending ({optStats.unoptimized_count})</>
+                  )}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"

@@ -4,97 +4,26 @@ import { useBoot } from "../hooks/use-boot";
 import { useSSE } from "../hooks/use-sse";
 import { useAuth } from "../hooks/use-auth";
 import type { NavItem } from "./types";
+import * as Lucide from "lucide-react";
 import {
-  LayoutDashboard,
-  Database,
-  Palette,
-  Code,
-  Settings,
-  FileText,
-  Newspaper,
-  Boxes,
-  PanelTop,
-  Component,
-  ListTree,
-  Tag,
-  Square,
-  LayoutTemplate,
-  Puzzle,
-  Users,
-  Shield,
-  Globe,
-  Key,
   ChevronDown,
   Menu,
   X,
   LogOut,
-  Bell,
   ChevronRight,
-  Home,
   ExternalLink,
-  MessageCircle,
-  Map,
-  Star,
-  Heart,
-  Zap,
+  Home,
+  Bell,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
-// Icon map — maps string icon names from boot manifest to Lucide components
+// Icon resolution — look up any icon name against the full lucide-react
+// export. Supports the PascalCase names lucide uses ("ImageDown") as well
+// as the kebab-case aliases themes/extensions may pass ("image-down").
 // ---------------------------------------------------------------------------
 
-const iconMap: Record<
-  string,
-  React.ComponentType<{ className?: string; size?: number }>
-> = {
-  LayoutDashboard,
-  Database,
-  Palette,
-  Code,
-  Settings,
-  FileText,
-  Newspaper,
-  Boxes,
-  PanelTop,
-  Component,
-  ListTree,
-  Tag,
-  Square,
-  LayoutTemplate,
-  Puzzle,
-  Users,
-  Shield,
-  Globe,
-  Key,
-  Bell,
-  FileCode: LayoutTemplate,
-  LayoutPanelTop: PanelTop,
-  Languages: Globe,
-  Brush: Palette,
-  Blocks: Boxes,
-  Mail: Bell,
-  FormInput: Square,
-  Image: Boxes,
-  ScrollText: FileText,
-  Gavel: Shield,
-  Layout: PanelTop,
-  Send: Bell,
-  Tags: Tag,
-  Shapes: Boxes,
-  Home: LayoutDashboard,
-  Menu: ListTree,
-  MessageCircle,
-  Map,
-  Camera: Boxes,
-  Star,
-  Heart,
-  Bookmark: Tag,
-  Calendar: FileText,
-  Clock: FileText,
-  Hash: Tag,
-  Type: FileText,
-  Zap,
-};
+type IconComponent = React.ComponentType<{ className?: string; size?: number }>;
+const lucideIcons = Lucide as unknown as Record<string, IconComponent>;
 
 function toPascalCase(name: string): string {
   return name
@@ -103,11 +32,14 @@ function toPascalCase(name: string): string {
     .join("");
 }
 
-function getIcon(
-  name: string,
-): React.ComponentType<{ className?: string; size?: number }> | null {
+function getIcon(name: string): IconComponent | null {
   if (!name) return null;
-  return iconMap[name] || iconMap[toPascalCase(name)] || null;
+  return (
+    lucideIcons[name] ||
+    lucideIcons[toPascalCase(name)] ||
+    lucideIcons["Puzzle"] ||
+    null
+  );
 }
 
 // ---------------------------------------------------------------------------

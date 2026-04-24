@@ -241,11 +241,97 @@ func (e *Engine) buildNavigation(nodeTypes []models.NodeType, taxonomies []model
 		}
 	}
 
+	// ── Parse extension manifests once and bucket items by section ──
+	// Extensions declare placement via:
+	//   admin_ui.menu.section      → "content" | "design" | "development" | "settings"
+	//   admin_ui.settings_menu[]   → shortcut; always lands in the Settings section
+	// Anything without a section (or an unknown value) is treated as top-level.
+	extContent := []NavItem{}
+	extDesign := []NavItem{}
+	extDev := []NavItem{}
+	extSettings := []NavItem{}
+	extTopLevel := []NavItem{}
+
+	for _, ext := range exts {
+		var manifest struct {
+			AdminUI *struct {
+				Menu *struct {
+					Label    string `json:"label"`
+					Icon     string `json:"icon"`
+					Section  string `json:"section"`
+					Children []struct {
+						Label string `json:"label"`
+						Route string `json:"route"`
+						Icon  string `json:"icon"`
+					} `json:"children"`
+				} `json:"menu"`
+				SettingsMenu []struct {
+					Label string `json:"label"`
+					Route string `json:"route"`
+					Icon  string `json:"icon"`
+				} `json:"settings_menu"`
+			} `json:"admin_ui"`
+		}
+		_ = json.Unmarshal(ext.Manifest, &manifest)
+		if manifest.AdminUI == nil {
+			continue
+		}
+
+		if m := manifest.AdminUI.Menu; m != nil {
+			var navItem NavItem
+			if len(m.Children) > 0 {
+				children := make([]NavItem, 0, len(m.Children))
+				for _, c := range m.Children {
+					children = append(children, NavItem{
+						ID:    "nav-ext-" + ext.Slug + "-" + c.Route,
+						Label: c.Label,
+						Icon:  c.Icon,
+						Path:  c.Route,
+					})}
+				navItem = NavItem{
+					ID:       "nav-ext-" + ext.Slug,
+					Label:    m.Label,
+					Icon:     m.Icon,
+					Children: children,
+				}
+			} else {
+				navItem = NavItem{
+					ID:    "nav-ext-" + ext.Slug,
+					Label: m.Label,
+					Icon:  m.Icon,
+					Path:  "/admin/ext/" + ext.Slug + "/",
+				}
+			}
+			switch strings.ToLower(m.Section) {
+			case "content":
+				extContent = append(extContent, navItem)
+			case "design":
+				extDesign = append(extDesign, navItem)
+			case "development", "dev":
+				extDev = append(extDev, navItem)
+			case "settings":
+				extSettings = append(extSettings, navItem)
+			default:
+				extTopLevel = append(extTopLevel, navItem)
+			}
+		}
+
+		for _, item := range manifest.AdminUI.SettingsMenu {
+			extSettings = append(extSettings, NavItem{
+				ID:    "nav-ext-" + ext.Slug + "-settings-" + item.Route,
+				Label: item.Label,
+				Icon:  item.Icon,
+				Path:  item.Route,
+			})
+		}
+	}
+
 	// ── Top level ──
 	nav = append(nav, NavItem{
 		ID: "nav-dashboard", Label: "Dashboard", Icon: "LayoutDashboard",
 		Path: "/admin/dashboard",
 	})
+	nav = append(nav, extTopLevel...)
 
 	// ── Content section ──
 	nav = append(nav, NavItem{ID: "section-content", Label: "Content", IsSection: true})
@@ -290,6 +376,7 @@ func (e *Engine) buildNavigation(nodeTypes []models.NodeType, taxonomies []model
 		}
 		nav = append(nav, item)
 	}
+	nav = append(nav, extContent...)
 
 	// ── Design section ──
 	nav = append(nav, NavItem{ID: "section-design", Label: "Design", IsSection: true})
@@ -300,6 +387,7 @@ func (e *Engine) buildNavigation(nodeTypes []models.NodeType, taxonomies []model
 		{ID: "nav-layout-blocks", Label: "Layout Blocks", Icon: "Component", Path: "/admin/layout-blocks"},
 		{ID: "nav-menus", Label: "Menus", Icon: "ListTree", Path: "/admin/menus"},
 	}...)
+	nav = append(nav, extDesign...)
 
 	// ── Development section ──
 	nav = append(nav, NavItem{ID: "section-dev", Label: "Development", IsSection: true})
@@ -309,6 +397,7 @@ func (e *Engine) buildNavigation(nodeTypes []models.NodeType, taxonomies []model
 		{ID: "nav-themes", Label: "Themes", Icon: "Brush", Path: "/admin/themes"},
 		{ID: "nav-extensions", Label: "Extensions", Icon: "Puzzle", Path: "/admin/extensions"},
 	}...)
+	nav = append(nav, extDev...)
 
 	// ── Settings section ──
 	nav = append(nav, NavItem{ID: "section-settings", Label: "Settings", IsSection: true})
@@ -319,85 +408,7 @@ func (e *Engine) buildNavigation(nodeTypes []models.NodeType, taxonomies []model
 		{ID: "nav-roles", Label: "Roles", Icon: "Shield", Path: "/admin/roles"},
 		{ID: "nav-mcp-tokens", Label: "MCP Tokens", Icon: "Key", Path: "/admin/mcp-tokens"},
 	}...)
-
-	// Extension-contributed settings items are appended here so they
-	// group with the rest of the Settings section.
-	for _, ext := range exts {
-		var manifest struct {
-			AdminUI *struct {
-				SettingsMenu []struct {
-					Label string `json:"label"`
-					Route string `json:"route"`
-					Icon  string `json:"icon"`
-				} `json:"settings_menu"`
-			} `json:"admin_ui"`
-		}
-		_ = json.Unmarshal(ext.Manifest, &manifest)
-		if manifest.AdminUI == nil {
-			continue
-		}
-		for _, item := range manifest.AdminUI.SettingsMenu {
-			nav = append(nav, NavItem{
-				ID:    "nav-ext-" + ext.Slug + "-settings-" + item.Route,
-				Label: item.Label,
-				Icon:  item.Icon,
-				Path:  item.Route,
-			})
-		}
-	}
-
-	// ── Extension navigation items ──
-	// Extensions declare which section their items belong to via the
-	// manifest's menu.section field. If no section or no children, the
-	// item is placed at the top level.
-	for _, ext := range exts {
-		var manifest struct {
-			AdminUI *struct {
-				Menu *struct {
-					Label    string `json:"label"`
-					Icon     string `json:"icon"`
-					Section  string `json:"section"`
-					Children []struct {
-						Label string `json:"label"`
-						Route string `json:"route"`
-						Icon  string `json:"icon"`
-					} `json:"children"`
-				} `json:"menu"`
-			} `json:"admin_ui"`
-		}
-		_ = json.Unmarshal(ext.Manifest, &manifest)
-
-		if manifest.AdminUI == nil || manifest.AdminUI.Menu == nil {
-			continue
-		}
-		m := manifest.AdminUI.Menu
-
-		if len(m.Children) > 0 {
-			children := make([]NavItem, 0, len(m.Children))
-			for _, c := range m.Children {
-				children = append(children, NavItem{
-					ID:    "nav-ext-" + ext.Slug + "-" + c.Route,
-					Label: c.Label,
-					Icon:  c.Icon,
-					Path:  c.Route,
-				})
-			}
-			nav = append(nav, NavItem{
-				ID:       "nav-ext-" + ext.Slug,
-				Label:    m.Label,
-				Icon:     m.Icon,
-				Children: children,
-			})
-		} else {
-			// Extension with no menu children — link directly to its route.
-			nav = append(nav, NavItem{
-				ID:    "nav-ext-" + ext.Slug,
-				Label: m.Label,
-				Icon:  m.Icon,
-				Path:  "/admin/ext/" + ext.Slug + "/",
-			})
-		}
-	}
+	nav = append(nav, extSettings...)
 
 	return nav
 }

@@ -37,11 +37,13 @@
         "menu": {
             "label": "Media",
             "icon": "Image",
-            "position": "3"
+            "section": "content",
+            "position": "3",
+            "children": [
+                {"label": "Library", "route": "/admin/ext/media-manager/", "icon": "Images"},
+                {"label": "Image Optimizer", "route": "/admin/ext/media-manager/optimizer", "icon": "ImageDown"}
+            ]
         },
-        "settings_menu": [
-            {"label": "Image Optimizer", "route": "/admin/ext/media-manager/optimizer", "icon": "ImageDown"}
-        ],
         "field_types": [
             {
                 "type": "media",

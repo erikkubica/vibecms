@@ -465,7 +465,7 @@ export default function ImageOptimizerSettings() {
   const busy = reoptimizeJob?.running || restoreJob?.running;
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-6 max-w-5xl">
       {/* Page header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -501,45 +501,45 @@ export default function ImageOptimizerSettings() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                    className="h-7 text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50"
                     onClick={handleOptimizePending}
                     disabled={busy}
                   >
                     {reoptimizeJob?.running ? (
-                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {reoptimizeJob.processed}/{reoptimizeJob.total}</>
+                      <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" /> {reoptimizeJob.processed}/{reoptimizeJob.total}</>
                     ) : (
-                      <><Zap className="h-3.5 w-3.5 mr-1.5" /> Optimize Pending ({optStats.unoptimized_count})</>
+                      <><Zap className="h-3 w-3 mr-1.5" /> Optimize Pending ({optStats.unoptimized_count})</>
                     )}
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                  className="h-7 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                   onClick={() => setReoptimizeAllConfirm(true)}
                   disabled={busy}
                 >
-                  <Zap className="h-3.5 w-3.5 mr-1.5" /> Re-optimize All
+                  <Zap className="h-3 w-3 mr-1.5" /> Re-optimize All
                 </Button>
                 {optStats.with_backup > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 text-amber-700 border-amber-200 hover:bg-amber-50"
+                    className="h-7 text-xs text-amber-700 border-amber-200 hover:bg-amber-50"
                     onClick={() => setRestoreAllConfirm(true)}
                     disabled={busy}
                   >
                     {restoreJob?.running ? (
-                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {restoreJob.processed}/{restoreJob.total}</>
+                      <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" /> {restoreJob.processed}/{restoreJob.total}</>
                     ) : (
-                      <><RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Restore All</>
+                      <><RotateCcw className="h-3 w-3 mr-1.5" /> Restore All</>
                     )}
                   </Button>
                 )}
               </>
             }
           />
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-5">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
                 <p className="text-[11px] uppercase tracking-wide text-slate-500">Total</p>
@@ -632,8 +632,8 @@ export default function ImageOptimizerSettings() {
           title="Upload &amp; Encoding"
           icon={<Settings className="h-4 w-4 text-slate-500" />}
           actions={
-            <Button size="sm" className="h-8" onClick={handleSaveSettings} disabled={settingsSaving}>
-              {settingsSaving && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+            <Button size="sm" className="h-7 text-xs" onClick={handleSaveSettings} disabled={settingsSaving}>
+              {settingsSaving && <Loader2 className="h-3 w-3 animate-spin mr-1.5" />}
               Save
             </Button>
           }
@@ -784,15 +784,15 @@ export default function ImageOptimizerSettings() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8"
+              className="h-7 text-xs"
               onClick={() => setShowAddForm(!showAddForm)}
             >
-              <Plus className="h-3.5 w-3.5 mr-1" />
+              <Plus className="h-3 w-3 mr-1" />
               Add Size
             </Button>
           }
         />
-        <CardContent className="pt-4">
+        <CardContent className="pt-5">
           {/* Add Size Form */}
           {showAddForm && (
             <div className="mb-4 p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
@@ -937,16 +937,16 @@ export default function ImageOptimizerSettings() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
               onClick={() => setClearAllConfirm(true)}
               disabled={cacheStats.total_files === 0}
             >
-              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              <Trash2 className="h-3 w-3 mr-1.5" />
               Clear All
             </Button>
           }
         />
-        <CardContent className="pt-4">
+        <CardContent className="pt-5">
           <div className="flex items-center gap-4">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100">
               <HardDrive className="h-5 w-5 text-slate-500" />

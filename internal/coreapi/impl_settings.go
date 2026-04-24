@@ -6,42 +6,40 @@ import (
 	"strings"
 
 	"vibecms/internal/models"
-
-	"gorm.io/gorm"
 )
 
 // GetSetting returns the value for a site setting key.
 // Returns an empty string (not an error) if the key is missing.
+// Uses Limit(1).Find instead of First so absent keys don't log
+// ErrRecordNotFound — "setting not configured" is an expected path,
+// not an error condition.
 func (c *coreImpl) GetSetting(_ context.Context, key string) (string, error) {
-	var s models.SiteSetting
-	if err := c.db.Where("\"key\" = ?", key).First(&s).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return "", nil
-		}
+	var rows []models.SiteSetting
+	if err := c.db.Where("\"key\" = ?", key).Limit(1).Find(&rows).Error; err != nil {
 		return "", fmt.Errorf("coreapi GetSetting: %w", err)
 	}
-	if s.Value == nil {
+	if len(rows) == 0 || rows[0].Value == nil {
 		return "", nil
 	}
-	return *s.Value, nil
+	return *rows[0].Value, nil
 }
 
 // SetSetting upserts a site setting (insert or update).
 func (c *coreImpl) SetSetting(_ context.Context, key, value string) error {
-	var s models.SiteSetting
-	result := c.db.Where("\"key\" = ?", key).First(&s)
+	var rows []models.SiteSetting
+	if err := c.db.Where("\"key\" = ?", key).Limit(1).Find(&rows).Error; err != nil {
+		return fmt.Errorf("coreapi SetSetting lookup: %w", err)
+	}
 
-	if result.Error == gorm.ErrRecordNotFound {
-		s = models.SiteSetting{Key: key, Value: &value}
+	if len(rows) == 0 {
+		s := models.SiteSetting{Key: key, Value: &value}
 		if err := c.db.Create(&s).Error; err != nil {
 			return fmt.Errorf("coreapi SetSetting create: %w", err)
 		}
 		return nil
 	}
-	if result.Error != nil {
-		return fmt.Errorf("coreapi SetSetting lookup: %w", result.Error)
-	}
 
+	s := rows[0]
 	s.Value = &value
 	if err := c.db.Save(&s).Error; err != nil {
 		return fmt.Errorf("coreapi SetSetting update: %w", err)

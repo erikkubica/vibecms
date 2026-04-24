@@ -17,10 +17,16 @@ export function SduiNodeListPage({
   const status = searchParams.get("status");
   const page = searchParams.get("page");
   const language = searchParams.get("language");
+  const sort = searchParams.get("sort");
+  const order = searchParams.get("order");
   if (search) params.search = search;
   if (status && status !== "all") params.status = status;
   if (page) params.page = page;
   if (language && language !== "all") params.language = language;
+  if (sort) params.sort = sort;
+  const per_page = searchParams.get("per_page");
+  if (per_page) params.per_page = per_page;
+  if (order) params.order = order;
 
   const {
     data: layout,

@@ -315,6 +315,10 @@ func (c *GRPCHostClient) UpdateMenu(_ context.Context, _ string, _ MenuInput) (*
 	return nil, NewInternal("not supported via gRPC")
 }
 
+func (c *GRPCHostClient) UpsertMenu(_ context.Context, _ MenuInput) (*Menu, error) {
+	return nil, NewInternal("not supported via gRPC")
+}
+
 func (c *GRPCHostClient) DeleteMenu(_ context.Context, _ string) error {
 	return NewInternal("not supported via gRPC")
 }

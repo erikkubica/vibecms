@@ -3,7 +3,9 @@ package sdui
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	"vibecms/internal/events"
@@ -251,11 +253,10 @@ func (e *Engine) buildNavigation(nodeTypes []models.NodeType, taxonomies []model
 		displayLabel := labelFor(nt)
 
 		taxChildren := []NavItem{}
-		// First child: link to the main listing (so clicking "All X" still
-		// navigates even though the parent item toggles the dropdown).
+		// First child: link to the main listing.
 		taxChildren = append(taxChildren, NavItem{
 			ID:    "nav-content-" + nt.Slug + "-all",
-			Label: "All " + displayLabel,
+			Label: displayLabel,
 			Icon:  iconForType(nt.Slug, nt.Icon),
 			Path:  basePath,
 		})
@@ -419,7 +420,7 @@ func (e *Engine) dashboardLayout(userName string) *LayoutNode {
 
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 6, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 6},
 		Children: []LayoutNode{
 			// Welcome banner
 			{
@@ -547,7 +548,7 @@ func (e *Engine) contentTypesLayout() *LayoutNode {
 
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 6, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 6},
 		Children: []LayoutNode{
 			{
 				Type:  "AdminHeader",
@@ -641,7 +642,7 @@ func (e *Engine) taxonomiesLayout() *LayoutNode {
 
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 6, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 6},
 		Children: []LayoutNode{
 			{
 				Type:  "AdminHeader",
@@ -718,8 +719,19 @@ func (e *Engine) nodeListLayout(params map[string]string) *LayoutNode {
 	if page < 1 {
 		page = 1
 	}
-	perPage := 20
+	perPage := getPerPage(params)
 	offset := (page - 1) * perPage
+
+	sortBy := params["sort"]
+	sortOrder := params["order"]
+	switch sortBy {
+	case "title", "updated_at", "created_at":
+	default:
+		sortBy = "updated_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
 
 	query := e.db.Model(&models.ContentNode{}).Where("node_type = ? AND deleted_at IS NULL", nodeTypeSlug)
 
@@ -810,7 +822,7 @@ func (e *Engine) nodeListLayout(params map[string]string) *LayoutNode {
 
 	// 8. Fetch paginated nodes
 	var nodes []models.ContentNode
-	query.Order("updated_at DESC").Offset(offset).Limit(perPage).Find(&nodes)
+	query.Order(sortBy + " " + sortOrder).Offset(offset).Limit(perPage).Find(&nodes)
 
 	// Calculate base path
 	basePath := basePathForNodeType(nodeTypeSlug)
@@ -896,6 +908,8 @@ func (e *Engine) nodeListLayout(params map[string]string) *LayoutNode {
 				"nodeTypeLabel":       nt.Label,
 				"nodeTypeLabelPlural": labelPlural,
 				"hasActiveFilters":    len(activeTaxFilters) > 0 || params["search"] != "" || (params["status"] != "" && params["status"] != "all"),
+				"sortBy":              sortBy,
+				"sortOrder":           sortOrder,
 			},
 			Actions: map[string]ActionDef{
 				"onRowDelete": {
@@ -913,7 +927,7 @@ func (e *Engine) nodeListLayout(params map[string]string) *LayoutNode {
 
 	return &LayoutNode{
 		Type:     "VerticalStack",
-		Props:    map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props:    map[string]interface{}{"gap": 4},
 		Children: children,
 	}
 }
@@ -943,12 +957,44 @@ func (e *Engine) taxonomyTermsLayout(params map[string]string) *LayoutNode {
 
 	basePath := basePathForNodeType(nodeTypeSlug)
 
-	// 3. Query taxonomy terms
-	var terms []models.TaxonomyTerm
-	e.db.Where("node_type = ? AND taxonomy = ?", nodeTypeSlug, taxonomySlug).
-		Order("name ASC").Find(&terms)
+	// 3. Sort + search params
+	termPage, _ := strconv.Atoi(params["page"])
+	if termPage < 1 {
+		termPage = 1
+	}
+	termPerPage := getPerPage(params)
+	termSearch := params["search"]
 
-	// 4. Build rows
+	termSortBy := params["sort"]
+	termSortOrder := params["order"]
+	switch termSortBy {
+	case "name", "count":
+	default:
+		termSortBy = "name"
+	}
+	if termSortOrder != "asc" && termSortOrder != "desc" {
+		if termSortBy == "count" {
+			termSortOrder = "desc"
+		} else {
+			termSortOrder = "asc"
+		}
+	}
+
+	// 4. Query taxonomy terms with search + sort + pagination
+	termQuery := e.db.Model(&models.TaxonomyTerm{}).
+		Where("node_type = ? AND taxonomy = ?", nodeTypeSlug, taxonomySlug)
+	if termSearch != "" {
+		termQuery = termQuery.Where("name ILIKE ? OR slug ILIKE ?", "%"+termSearch+"%", "%"+termSearch+"%")
+	}
+
+	var termTotal int64
+	termQuery.Count(&termTotal)
+
+	termOffset := (termPage - 1) * termPerPage
+	var terms []models.TaxonomyTerm
+	termQuery.Order(termSortBy + " " + termSortOrder).Offset(termOffset).Limit(termPerPage).Find(&terms)
+
+	// 5. Build rows
 	rows := make([]map[string]interface{}, 0, len(terms))
 	for _, t := range terms {
 		editPath := fmt.Sprintf("/admin/content/%s/taxonomies/%s/%d/edit", nodeTypeSlug, taxonomySlug, t.ID)
@@ -962,14 +1008,23 @@ func (e *Engine) taxonomyTermsLayout(params map[string]string) *LayoutNode {
 		})
 	}
 
+	termTotalPages := int(termTotal) / termPerPage
+	if int(termTotal)%termPerPage > 0 {
+		termTotalPages++
+	}
+
+	hasFilters := termSearch != ""
+
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 4},
 		Children: []LayoutNode{
 			{
 				Type: "PageHeader",
 				Props: map[string]interface{}{
-					"title": labelPlural,
+					"tabs":      []map[string]interface{}{{"value": "all", "label": "All", "count": int(termTotal)}},
+					"activeTab": "all",
+					"newLabel":  "New " + tax.Label,
 				},
 				Actions: map[string]ActionDef{
 					"onBack": {Type: "NAVIGATE", To: basePath},
@@ -985,9 +1040,16 @@ func (e *Engine) taxonomyTermsLayout(params map[string]string) *LayoutNode {
 			{
 				Type: "TaxonomyTermsTable",
 				Props: map[string]interface{}{
-					"taxonomy": taxonomySlug,
-					"nodeType": nodeTypeSlug,
-					"rows":     rows,
+					"taxonomy":         taxonomySlug,
+					"nodeType":         nodeTypeSlug,
+					"rows":             rows,
+					"sortBy":           termSortBy,
+					"sortOrder":        termSortOrder,
+					"hasActiveFilters": hasFilters,
+					"pagination": map[string]interface{}{
+						"page": termPage, "perPage": termPerPage,
+						"total": int(termTotal), "totalPages": termTotalPages,
+					},
 				},
 				Actions: map[string]ActionDef{
 					"onRowDelete": {
@@ -1005,73 +1067,304 @@ func (e *Engine) taxonomyTermsLayout(params map[string]string) *LayoutNode {
 	}
 }
 
+func sourceTabs(counts map[string]int, total int) []map[string]interface{} {
+	tabs := []map[string]interface{}{
+		{"value": "all", "label": "All", "count": total},
+	}
+	for _, s := range []string{"custom", "theme", "extension"} {
+		if n := counts[s]; n > 0 {
+			label := s
+			label = string([]rune(label)[:1]) + label[1:]
+			tabs = append(tabs, map[string]interface{}{"value": s, "label": label[:1] + label[1:], "count": n})
+		}
+	}
+	return tabs
+}
+
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	return string([]rune(s[:1])) + s[1:]
+}
+
+// prettySlug converts a kebab-case slug to Title Case ("my-theme" → "My Theme").
+func prettySlug(s string) string {
+	words := strings.Split(s, "-")
+	for i, w := range words {
+		words[i] = capitalize(w)
+	}
+	return strings.Join(words, " ")
+}
+
+// themeTabInfo holds per-theme tab display data.
+type themeTabInfo struct {
+	name  string
+	count int
+}
+
+// sourceDisplayLabel returns a human-readable label for a record's source field.
+// themeNames maps theme/extension slug → display name.
+func sourceDisplayLabel(source string, themeName *string, themeNames map[string]string, extNames map[string]string) string {
+	switch source {
+	case "custom":
+		return "Custom"
+	case "extension":
+		if themeName != nil {
+			if name, ok := extNames[*themeName]; ok && name != "" {
+				return name
+			}
+			return prettySlug(*themeName)
+		}
+		return "Extension"
+	case "theme":
+		if themeName != nil {
+			if name, ok := themeNames[*themeName]; ok && name != "" {
+				return name
+			}
+			return prettySlug(*themeName)
+		}
+		return "Theme"
+	}
+	return capitalize(source)
+}
+
+// buildSourceTabs creates tab entries where theme/extension items are each broken out by
+// their individual display name. Tab value = slug, so ?source=<slug> filters precisely.
+func buildSourceTabs(total, customCount int, themeTabMap, extTabMap map[string]*themeTabInfo) []map[string]interface{} {
+	tabs := []map[string]interface{}{{"value": "all", "label": "All", "count": total}}
+	if customCount > 0 {
+		tabs = append(tabs, map[string]interface{}{"value": "custom", "label": "Custom", "count": customCount})
+	}
+	// Theme tabs sorted alphabetically by slug
+	themeSlugs := make([]string, 0, len(themeTabMap))
+	for slug := range themeTabMap {
+		themeSlugs = append(themeSlugs, slug)
+	}
+	sort.Strings(themeSlugs)
+	for _, slug := range themeSlugs {
+		info := themeTabMap[slug]
+		tabs = append(tabs, map[string]interface{}{"value": slug, "label": info.name, "count": info.count})
+	}
+	// Extension tabs sorted alphabetically by slug
+	extSlugs := make([]string, 0, len(extTabMap))
+	for slug := range extTabMap {
+		extSlugs = append(extSlugs, slug)
+	}
+	sort.Strings(extSlugs)
+	for _, slug := range extSlugs {
+		info := extTabMap[slug]
+		tabs = append(tabs, map[string]interface{}{"value": "ext:" + slug, "label": info.name, "count": info.count})
+	}
+	return tabs
+}
+
+// isThemeSlugFilter returns true when sourceFilter holds a theme slug.
+func isThemeSlugFilter(s string) bool {
+	switch s {
+	case "", "all", "custom":
+		return false
+	}
+	return !strings.HasPrefix(s, "ext:")
+}
+
+// isExtSlugFilter returns true when sourceFilter holds an extension slug (prefixed with "ext:").
+func isExtSlugFilter(s string) bool {
+	return strings.HasPrefix(s, "ext:")
+}
+
+// getPerPage returns the per-page size from params, clamped to [5, 100], defaulting to 10.
+func getPerPage(params map[string]string) int {
+	if v, err := strconv.Atoi(params["per_page"]); err == nil && v >= 5 && v <= 100 {
+		return v
+	}
+	return 10
+}
+
+// themeNameMap fetches a lookup table for resolving a stored ThemeName value
+// to its proper display name. Indexed by both slug and display name so that
+// it works regardless of which value the model field stores.
+func (e *Engine) themeNameMap() map[string]string {
+	var themes []models.Theme
+	e.db.Select("slug, name").Find(&themes)
+	m := make(map[string]string, len(themes)*2)
+	for _, t := range themes {
+		if t.Slug != "" {
+			m[t.Slug] = t.Name
+		}
+		if t.Name != "" {
+			m[t.Name] = t.Name
+		}
+	}
+	return m
+}
+
+// extensionNameMap fetches a slug → display name map for active extensions.
+func (e *Engine) extensionNameMap() map[string]string {
+	var exts []models.Extension
+	e.db.Select("slug, name").Find(&exts)
+	m := make(map[string]string, len(exts))
+	for _, ex := range exts {
+		if ex.Slug != "" {
+			m[ex.Slug] = ex.Name
+		}
+	}
+	return m
+}
+
 func (e *Engine) templatesLayout(params map[string]string) *LayoutNode {
 	page, _ := strconv.Atoi(params["page"])
 	if page < 1 {
 		page = 1
 	}
-	perPage := 25
+	perPage := getPerPage(params)
+	sourceFilter := params["source"]
+	search := params["search"]
+
+	sortBy := params["sort"]
+	sortOrder := params["order"]
+	switch sortBy {
+	case "label", "slug", "updated_at":
+	default:
+		sortBy = "updated_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	themeNames := e.themeNameMap()
+	extNames := e.extensionNameMap()
+
+	// Load all (with search filter) for tab counts
+	baseQuery := e.db.Model(&models.Template{})
+	if search != "" {
+		baseQuery = baseQuery.Where("label ILIKE ? OR slug ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+	var allTemplates []models.Template
+	baseQuery.Order(sortBy + " " + sortOrder).Find(&allTemplates)
+
+	// Build per-source counts (theme/extension items grouped by their slug)
+	customCount := 0
+	themeTabMap := map[string]*themeTabInfo{}
+	extTabMap := map[string]*themeTabInfo{}
+	for _, t := range allTemplates {
+		switch t.Source {
+		case "custom":
+			customCount++
+		case "extension":
+			slug := ""
+			if t.ThemeName != nil {
+				slug = *t.ThemeName
+			}
+			if _, ok := extTabMap[slug]; !ok {
+				extTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("extension", t.ThemeName, themeNames, extNames)}
+			}
+			extTabMap[slug].count++
+		case "theme":
+			slug := ""
+			if t.ThemeName != nil {
+				slug = *t.ThemeName
+			}
+			if _, ok := themeTabMap[slug]; !ok {
+				themeTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("theme", t.ThemeName, themeNames, extNames)}
+			}
+			themeTabMap[slug].count++
+		}
+	}
+
+	// Filter in-memory: theme slug filters by source=theme + theme_name=slug,
+	// ext:<slug> filters by source=extension + theme_name=slug.
+	filtered := allTemplates
+	if sourceFilter != "" && sourceFilter != "all" {
+		filtered = filtered[:0]
+		for _, t := range allTemplates {
+			if isExtSlugFilter(sourceFilter) {
+				extSlug := strings.TrimPrefix(sourceFilter, "ext:")
+				if t.Source == "extension" && t.ThemeName != nil && *t.ThemeName == extSlug {
+					filtered = append(filtered, t)
+				}
+			} else if isThemeSlugFilter(sourceFilter) {
+				if t.Source == "theme" && t.ThemeName != nil && *t.ThemeName == sourceFilter {
+					filtered = append(filtered, t)
+				}
+			} else if t.Source == sourceFilter {
+				filtered = append(filtered, t)
+			}
+		}
+	}
+
+	total := len(filtered)
 	offset := (page - 1) * perPage
+	end := offset + perPage
+	if end > total {
+		end = total
+	}
+	pageData := filtered
+	if offset < total {
+		pageData = filtered[offset:end]
+	} else {
+		pageData = []models.Template{}
+	}
 
-	var totalCount int64
-	e.db.Model(&models.Template{}).Count(&totalCount)
-
-	var templates []models.Template
-	e.db.Order("label ASC").Offset(offset).Limit(perPage).Find(&templates)
-
-	rows := make([]map[string]interface{}, 0, len(templates))
-	for _, t := range templates {
-		// Parse block_config to get count
+	rows := make([]map[string]interface{}, 0, len(pageData))
+	for _, t := range pageData {
 		var blockConfigs []interface{}
 		if err := json.Unmarshal(t.BlockConfig, &blockConfigs); err != nil {
 			blockConfigs = []interface{}{}
 		}
-
-		isCustom := t.Source == "custom"
-		sourceLabel := t.Source
-		if t.Source == "theme" && t.ThemeName != nil {
-			sourceLabel = *t.ThemeName
-		}
-
 		description := t.Description
 		if description == "" {
 			description = "—"
 		}
-
-		row := map[string]interface{}{
+		rows = append(rows, map[string]interface{}{
 			"id":          t.ID,
 			"label":       t.Label,
 			"slug":        t.Slug,
 			"description": description,
 			"blockCount":  len(blockConfigs),
 			"source":      t.Source,
-			"sourceLabel": sourceLabel,
-			"isCustom":    isCustom,
+			"sourceLabel": sourceDisplayLabel(t.Source, t.ThemeName, themeNames, extNames),
+			"isCustom":    t.Source == "custom",
+			"updated_at":  t.UpdatedAt.Format("2006-01-02"),
 			"editPath":    fmt.Sprintf("/admin/templates/%d/edit", t.ID),
-		}
-		rows = append(rows, row)
+		})
 	}
 
-	totalPages := int(totalCount) / perPage
-	if int(totalCount)%perPage > 0 {
+	totalPages := total / perPage
+	if total%perPage > 0 {
 		totalPages++
 	}
 
+	tabs := buildSourceTabs(len(allTemplates), customCount, themeTabMap, extTabMap)
+
+	activeTab := sourceFilter
+	if activeTab == "" {
+		activeTab = "all"
+	}
+
+	hasFilters := search != "" || (sourceFilter != "" && sourceFilter != "all")
+
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 4},
 		Children: []LayoutNode{
 			{Type: "PageHeader", Props: map[string]interface{}{
-				"title":    "Templates",
-				"newLabel": "New Template",
-				"newPath":  "/admin/templates/new",
+				"newLabel":  "New Template",
+				"newPath":   "/admin/templates/new",
+				"tabs":      tabs,
+				"activeTab": activeTab,
+				"tabParam":  "source",
+			}},
+			{Type: "SearchToolbar", Props: map[string]interface{}{
+				"searchPlaceholder": "Search templates…",
 			}},
 			{Type: "GenericListTable", Props: map[string]interface{}{
 				"columns": []map[string]interface{}{
-					{"key": "label", "label": "Label"},
-					{"key": "blockCount", "label": "Blocks", "width": 100, "align": "center"},
-					{"key": "sourceLabel", "label": "Source", "width": 140},
+					{"key": "label", "label": "Label", "sortable": true},
+					{"key": "blockCount", "label": "Blocks", "width": 80, "align": "center"},
+					{"key": "sourceLabel", "label": "Source", "width": 130},
 					{"key": "description", "label": "Description"},
+					{"key": "updated_at", "label": "Updated", "width": 110, "sortable": true},
 					{"key": "actions", "label": "Actions", "width": 120, "align": "right"},
 				},
 				"rows":       rows,
@@ -1082,9 +1375,12 @@ func (e *Engine) templatesLayout(params map[string]string) *LayoutNode {
 				"newLabel":   "New Template",
 				"pagination": map[string]interface{}{
 					"page": page, "perPage": perPage,
-					"total": int(totalCount), "totalPages": totalPages,
+					"total": total, "totalPages": totalPages,
 				},
-				"label": "templates",
+				"label":      "templates",
+				"hasFilters": hasFilters,
+				"sortBy":     sortBy,
+				"sortOrder":  sortOrder,
 			}, Actions: map[string]ActionDef{
 				"onRowDelete": {
 					Type: "SEQUENCE",
@@ -1113,8 +1409,20 @@ func (e *Engine) layoutsLayout(params map[string]string) *LayoutNode {
 	if page < 1 {
 		page = 1
 	}
-	perPage := 25
-	offset := (page - 1) * perPage
+	perPage := getPerPage(params)
+	sourceFilter := params["source"]
+	search := params["search"]
+
+	sortBy := params["sort"]
+	sortOrder := params["order"]
+	switch sortBy {
+	case "name", "slug", "updated_at":
+	default:
+		sortBy = "updated_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
 
 	// Fetch languages for display and filter
 	var languages []models.Language
@@ -1131,26 +1439,86 @@ func (e *Engine) layoutsLayout(params map[string]string) *LayoutNode {
 		})
 	}
 
-	query := e.db.Model(&models.Layout{})
+	themeNames := e.themeNameMap()
+	extNames := e.extensionNameMap()
+
+	// Base query with language + search filters
+	baseQuery := e.db.Model(&models.Layout{})
 	if lang := params["language"]; lang != "" && lang != "all" {
 		if langID, err := strconv.Atoi(lang); err == nil {
-			query = query.Where("language_id = ?", langID)
+			baseQuery = baseQuery.Where("language_id = ?", langID)
+		}
+	}
+	if search != "" {
+		baseQuery = baseQuery.Where("name ILIKE ? OR slug ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	// Load all (for source counts, preserving sort order)
+	var allLayouts []models.Layout
+	baseQuery.Order(sortBy + " " + sortOrder).Find(&allLayouts)
+
+	customCount := 0
+	themeTabMap := map[string]*themeTabInfo{}
+	extTabMap := map[string]*themeTabInfo{}
+	for _, l := range allLayouts {
+		switch l.Source {
+		case "custom":
+			customCount++
+		case "extension":
+			slug := ""
+			if l.ThemeName != nil {
+				slug = *l.ThemeName
+			}
+			if _, ok := extTabMap[slug]; !ok {
+				extTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("extension", l.ThemeName, themeNames, extNames)}
+			}
+			extTabMap[slug].count++
+		case "theme":
+			slug := ""
+			if l.ThemeName != nil {
+				slug = *l.ThemeName
+			}
+			if _, ok := themeTabMap[slug]; !ok {
+				themeTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("theme", l.ThemeName, themeNames, extNames)}
+			}
+			themeTabMap[slug].count++
 		}
 	}
 
-	var totalCount int64
-	query.Count(&totalCount)
-
-	var layouts []models.Layout
-	query.Order("name ASC").Offset(offset).Limit(perPage).Find(&layouts)
-
-	rows := make([]map[string]interface{}, 0, len(layouts))
-	for _, l := range layouts {
-		isCustom := l.Source == "custom"
-		sourceLabel := l.Source
-		if l.Source == "theme" && l.ThemeName != nil {
-			sourceLabel = *l.ThemeName
+	filtered := allLayouts
+	if sourceFilter != "" && sourceFilter != "all" {
+		filtered = filtered[:0]
+		for _, l := range allLayouts {
+			if isExtSlugFilter(sourceFilter) {
+				extSlug := strings.TrimPrefix(sourceFilter, "ext:")
+				if l.Source == "extension" && l.ThemeName != nil && *l.ThemeName == extSlug {
+					filtered = append(filtered, l)
+				}
+			} else if isThemeSlugFilter(sourceFilter) {
+				if l.Source == "theme" && l.ThemeName != nil && *l.ThemeName == sourceFilter {
+					filtered = append(filtered, l)
+				}
+			} else if l.Source == sourceFilter {
+				filtered = append(filtered, l)
+			}
 		}
+	}
+
+	total := len(filtered)
+	offset := (page - 1) * perPage
+	end := offset + perPage
+	if end > total {
+		end = total
+	}
+	pageData := filtered
+	if offset < total {
+		pageData = filtered[offset:end]
+	} else {
+		pageData = []models.Layout{}
+	}
+
+	rows := make([]map[string]interface{}, 0, len(pageData))
+	for _, l := range pageData {
 		langDisplay := "All"
 		var langFlag, langCode string
 		if l.LanguageID != nil {
@@ -1162,48 +1530,61 @@ func (e *Engine) layoutsLayout(params map[string]string) *LayoutNode {
 				langDisplay = fmt.Sprintf("ID %d", *l.LanguageID)
 			}
 		}
-
 		rows = append(rows, map[string]interface{}{
 			"id":          l.ID,
 			"name":        l.Name,
 			"slug":        l.Slug,
 			"source":      l.Source,
-			"sourceLabel": sourceLabel,
-			"isCustom":    isCustom,
+			"sourceLabel": sourceDisplayLabel(l.Source, l.ThemeName, themeNames, extNames),
+			"isCustom":    l.Source == "custom",
 			"isDefault":   l.IsDefault,
 			"languageID":  l.LanguageID,
 			"langDisplay": langDisplay,
 			"langFlag":    langFlag,
 			"langCode":    langCode,
+			"updated_at":  l.UpdatedAt.Format("2006-01-02"),
 			"editPath":    fmt.Sprintf("/admin/layouts/%d", l.ID),
 		})
 	}
 
-	totalPages := int(totalCount) / perPage
-	if int(totalCount)%perPage > 0 {
+	totalPages := total / perPage
+	if total%perPage > 0 {
 		totalPages++
 	}
 
-	hasFilters := params["language"] != "" && params["language"] != "all"
+	tabs := buildSourceTabs(len(allLayouts), customCount, themeTabMap, extTabMap)
+
+	activeTab := sourceFilter
+	if activeTab == "" {
+		activeTab = "all"
+	}
+
+	hasFilters := search != "" || (params["language"] != "" && params["language"] != "all") || (sourceFilter != "" && sourceFilter != "all")
 
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 4},
 		Children: []LayoutNode{
 			{Type: "PageHeader", Props: map[string]interface{}{
-				"title":          "Layouts",
-				"newLabel":       "New Layout",
-				"newPath":        "/admin/layouts/new",
-				"languages":      langList,
-				"activeLanguage": params["language"],
+				"newLabel":  "New Layout",
+				"newPath":   "/admin/layouts/new",
+				"tabs":      tabs,
+				"activeTab": activeTab,
+				"tabParam":  "source",
+			}},
+			{Type: "SearchToolbar", Props: map[string]interface{}{
+				"searchPlaceholder": "Search layouts…",
+				"languages":         langList,
+				"activeLanguage":    params["language"],
 			}},
 			{Type: "GenericListTable", Props: map[string]interface{}{
 				"columns": []map[string]interface{}{
-					{"key": "name", "label": "Name"},
-					{"key": "slug", "label": "Slug", "width": 200},
-					{"key": "langDisplay", "label": "Language", "width": 140},
-					{"key": "sourceLabel", "label": "Source", "width": 140},
-					{"key": "isDefault", "label": "Default", "width": 110},
+					{"key": "name", "label": "Name", "sortable": true},
+					{"key": "slug", "label": "Slug", "width": 180},
+					{"key": "langDisplay", "label": "Language", "width": 130},
+					{"key": "sourceLabel", "label": "Source", "width": 130},
+					{"key": "isDefault", "label": "Default", "width": 90},
+					{"key": "updated_at", "label": "Updated", "width": 110, "sortable": true},
 					{"key": "actions", "label": "Actions", "width": 140, "align": "right"},
 				},
 				"rows":       rows,
@@ -1214,10 +1595,12 @@ func (e *Engine) layoutsLayout(params map[string]string) *LayoutNode {
 				"newLabel":   "New Layout",
 				"pagination": map[string]interface{}{
 					"page": page, "perPage": perPage,
-					"total": int(totalCount), "totalPages": totalPages,
+					"total": total, "totalPages": totalPages,
 				},
 				"label":      "layouts",
 				"hasFilters": hasFilters,
+				"sortBy":     sortBy,
+				"sortOrder":  sortOrder,
 			}, Actions: map[string]ActionDef{
 				"onRowDelete": {
 					Type: "SEQUENCE",
@@ -1246,35 +1629,102 @@ func (e *Engine) blockTypesLayout(params map[string]string) *LayoutNode {
 	if page < 1 {
 		page = 1
 	}
-	perPage := 25
+	perPage := getPerPage(params)
+	sourceFilter := params["source"]
+	search := params["search"]
+
+	sortBy := params["sort"]
+	sortOrder := params["order"]
+	switch sortBy {
+	case "label", "slug", "updated_at":
+	default:
+		sortBy = "updated_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	themeNames := e.themeNameMap()
+	extNames := e.extensionNameMap()
+
+	baseQuery := e.db.Model(&models.BlockType{})
+	if search != "" {
+		baseQuery = baseQuery.Where("label ILIKE ? OR slug ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+	var allBlockTypes []models.BlockType
+	baseQuery.Order(sortBy + " " + sortOrder).Find(&allBlockTypes)
+
+	customCount := 0
+	themeTabMap := map[string]*themeTabInfo{}
+	extTabMap := map[string]*themeTabInfo{}
+	for _, bt := range allBlockTypes {
+		switch bt.Source {
+		case "custom":
+			customCount++
+		case "extension":
+			slug := ""
+			if bt.ThemeName != nil {
+				slug = *bt.ThemeName
+			}
+			if _, ok := extTabMap[slug]; !ok {
+				extTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("extension", bt.ThemeName, themeNames, extNames)}
+			}
+			extTabMap[slug].count++
+		case "theme":
+			slug := ""
+			if bt.ThemeName != nil {
+				slug = *bt.ThemeName
+			}
+			if _, ok := themeTabMap[slug]; !ok {
+				themeTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("theme", bt.ThemeName, themeNames, extNames)}
+			}
+			themeTabMap[slug].count++
+		}
+	}
+
+	filtered := allBlockTypes
+	if sourceFilter != "" && sourceFilter != "all" {
+		filtered = filtered[:0]
+		for _, bt := range allBlockTypes {
+			if isExtSlugFilter(sourceFilter) {
+				extSlug := strings.TrimPrefix(sourceFilter, "ext:")
+				if bt.Source == "extension" && bt.ThemeName != nil && *bt.ThemeName == extSlug {
+					filtered = append(filtered, bt)
+				}
+			} else if isThemeSlugFilter(sourceFilter) {
+				if bt.Source == "theme" && bt.ThemeName != nil && *bt.ThemeName == sourceFilter {
+					filtered = append(filtered, bt)
+				}
+			} else if bt.Source == sourceFilter {
+				filtered = append(filtered, bt)
+			}
+		}
+	}
+
+	total := len(filtered)
 	offset := (page - 1) * perPage
+	end := offset + perPage
+	if end > total {
+		end = total
+	}
+	pageData := filtered
+	if offset < total {
+		pageData = filtered[offset:end]
+	} else {
+		pageData = []models.BlockType{}
+	}
 
-	var totalCount int64
-	e.db.Model(&models.BlockType{}).Count(&totalCount)
-
-	var blockTypes []models.BlockType
-	e.db.Order("label ASC").Offset(offset).Limit(perPage).Find(&blockTypes)
-
-	rows := make([]map[string]interface{}, 0, len(blockTypes))
-	for _, bt := range blockTypes {
-		// Parse field_schema to get field count
+	rows := make([]map[string]interface{}, 0, len(pageData))
+	for _, bt := range pageData {
 		var fields []interface{}
 		if err := json.Unmarshal(bt.FieldSchema, &fields); err != nil {
 			fields = []interface{}{}
 		}
-
-		isCustom := bt.Source == "custom"
-		sourceLabel := bt.Source
-		if bt.Source == "theme" && bt.ThemeName != nil {
-			sourceLabel = *bt.ThemeName
-		}
-
 		description := bt.Description
 		if description == "" {
 			description = "—"
 		}
-
-		row := map[string]interface{}{
+		rows = append(rows, map[string]interface{}{
 			"id":          bt.ID,
 			"label":       bt.Label,
 			"slug":        bt.Slug,
@@ -1282,34 +1732,49 @@ func (e *Engine) blockTypesLayout(params map[string]string) *LayoutNode {
 			"description": description,
 			"fieldCount":  len(fields),
 			"source":      bt.Source,
-			"sourceLabel": sourceLabel,
-			"isCustom":    isCustom,
+			"sourceLabel": sourceDisplayLabel(bt.Source, bt.ThemeName, themeNames, extNames),
+			"isCustom":    bt.Source == "custom",
+			"updated_at":  bt.UpdatedAt.Format("2006-01-02"),
 			"editPath":    fmt.Sprintf("/admin/block-types/%d/edit", bt.ID),
-		}
-		rows = append(rows, row)
+		})
 	}
 
-	totalPages := int(totalCount) / perPage
-	if int(totalCount)%perPage > 0 {
+	totalPages := total / perPage
+	if total%perPage > 0 {
 		totalPages++
 	}
 
+	tabs := buildSourceTabs(len(allBlockTypes), customCount, themeTabMap, extTabMap)
+
+	activeTab := sourceFilter
+	if activeTab == "" {
+		activeTab = "all"
+	}
+
+	hasFilters := search != "" || (sourceFilter != "" && sourceFilter != "all")
+
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 4},
 		Children: []LayoutNode{
 			{Type: "PageHeader", Props: map[string]interface{}{
-				"title":    "Block Types",
-				"newLabel": "New Block Type",
-				"newPath":  "/admin/block-types/new",
+				"newLabel":  "New Block Type",
+				"newPath":   "/admin/block-types/new",
+				"tabs":      tabs,
+				"activeTab": activeTab,
+				"tabParam":  "source",
+			}},
+			{Type: "SearchToolbar", Props: map[string]interface{}{
+				"searchPlaceholder": "Search block types…",
 			}},
 			{Type: "GenericListTable", Props: map[string]interface{}{
 				"columns": []map[string]interface{}{
-					{"key": "label", "label": "Label"},
-					{"key": "slug", "label": "Slug", "width": 160},
-					{"key": "fieldCount", "label": "Fields", "width": 100, "align": "center"},
-					{"key": "sourceLabel", "label": "Source", "width": 140},
+					{"key": "label", "label": "Label", "sortable": true},
+					{"key": "slug", "label": "Slug", "width": 150},
+					{"key": "fieldCount", "label": "Fields", "width": 80, "align": "center"},
+					{"key": "sourceLabel", "label": "Source", "width": 130},
 					{"key": "description", "label": "Description"},
+					{"key": "updated_at", "label": "Updated", "width": 110, "sortable": true},
 					{"key": "actions", "label": "Actions", "width": 120, "align": "right"},
 				},
 				"rows":       rows,
@@ -1320,9 +1785,12 @@ func (e *Engine) blockTypesLayout(params map[string]string) *LayoutNode {
 				"newLabel":   "New Block Type",
 				"pagination": map[string]interface{}{
 					"page": page, "perPage": perPage,
-					"total": int(totalCount), "totalPages": totalPages,
+					"total": total, "totalPages": totalPages,
 				},
-				"label": "block-types",
+				"label":      "block-types",
+				"hasFilters": hasFilters,
+				"sortBy":     sortBy,
+				"sortOrder":  sortOrder,
 			}, Actions: map[string]ActionDef{
 				"onRowDelete": {
 					Type: "SEQUENCE",
@@ -1351,8 +1819,20 @@ func (e *Engine) layoutBlocksLayout(params map[string]string) *LayoutNode {
 	if page < 1 {
 		page = 1
 	}
-	perPage := 25
-	offset := (page - 1) * perPage
+	perPage := getPerPage(params)
+	sourceFilter := params["source"]
+	search := params["search"]
+
+	sortBy := params["sort"]
+	sortOrder := params["order"]
+	switch sortBy {
+	case "name", "slug", "updated_at":
+	default:
+		sortBy = "updated_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
 
 	// Fetch languages for display and filter
 	var languages []models.Language
@@ -1369,27 +1849,84 @@ func (e *Engine) layoutBlocksLayout(params map[string]string) *LayoutNode {
 		})
 	}
 
-	query := e.db.Model(&models.LayoutBlock{})
+	themeNames := e.themeNameMap()
+	extNames := e.extensionNameMap()
+
+	baseQuery := e.db.Model(&models.LayoutBlock{})
 	if lang := params["language"]; lang != "" && lang != "all" {
 		if langID, err := strconv.Atoi(lang); err == nil {
-			query = query.Where("language_id = ?", langID)
+			baseQuery = baseQuery.Where("language_id = ?", langID)
+		}
+	}
+	if search != "" {
+		baseQuery = baseQuery.Where("name ILIKE ? OR slug ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	var allLayoutBlocks []models.LayoutBlock
+	baseQuery.Order(sortBy + " " + sortOrder).Find(&allLayoutBlocks)
+
+	customCount := 0
+	themeTabMap := map[string]*themeTabInfo{}
+	extTabMap := map[string]*themeTabInfo{}
+	for _, lb := range allLayoutBlocks {
+		switch lb.Source {
+		case "custom":
+			customCount++
+		case "extension":
+			slug := ""
+			if lb.ThemeName != nil {
+				slug = *lb.ThemeName
+			}
+			if _, ok := extTabMap[slug]; !ok {
+				extTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("extension", lb.ThemeName, themeNames, extNames)}
+			}
+			extTabMap[slug].count++
+		case "theme":
+			slug := ""
+			if lb.ThemeName != nil {
+				slug = *lb.ThemeName
+			}
+			if _, ok := themeTabMap[slug]; !ok {
+				themeTabMap[slug] = &themeTabInfo{name: sourceDisplayLabel("theme", lb.ThemeName, themeNames, extNames)}
+			}
+			themeTabMap[slug].count++
 		}
 	}
 
-	var totalCount int64
-	query.Count(&totalCount)
-
-	var layoutBlocks []models.LayoutBlock
-	query.Order("name ASC").Offset(offset).Limit(perPage).Find(&layoutBlocks)
-
-	rows := make([]map[string]interface{}, 0, len(layoutBlocks))
-	for _, lb := range layoutBlocks {
-		isCustom := lb.Source == "custom"
-		sourceLabel := lb.Source
-		if lb.Source == "theme" && lb.ThemeName != nil {
-			sourceLabel = *lb.ThemeName
+	filtered := allLayoutBlocks
+	if sourceFilter != "" && sourceFilter != "all" {
+		filtered = filtered[:0]
+		for _, lb := range allLayoutBlocks {
+			if isExtSlugFilter(sourceFilter) {
+				extSlug := strings.TrimPrefix(sourceFilter, "ext:")
+				if lb.Source == "extension" && lb.ThemeName != nil && *lb.ThemeName == extSlug {
+					filtered = append(filtered, lb)
+				}
+			} else if isThemeSlugFilter(sourceFilter) {
+				if lb.Source == "theme" && lb.ThemeName != nil && *lb.ThemeName == sourceFilter {
+					filtered = append(filtered, lb)
+				}
+			} else if lb.Source == sourceFilter {
+				filtered = append(filtered, lb)
+			}
 		}
+	}
 
+	total := len(filtered)
+	offset := (page - 1) * perPage
+	end := offset + perPage
+	if end > total {
+		end = total
+	}
+	pageData := filtered
+	if offset < total {
+		pageData = filtered[offset:end]
+	} else {
+		pageData = []models.LayoutBlock{}
+	}
+
+	rows := make([]map[string]interface{}, 0, len(pageData))
+	for _, lb := range pageData {
 		langDisplay := "All"
 		var langFlag, langCode string
 		if lb.LanguageID != nil {
@@ -1401,53 +1938,65 @@ func (e *Engine) layoutBlocksLayout(params map[string]string) *LayoutNode {
 				langDisplay = fmt.Sprintf("ID %d", *lb.LanguageID)
 			}
 		}
-
 		description := lb.Description
 		if description == "" {
 			description = "—"
 		}
-
 		rows = append(rows, map[string]interface{}{
 			"id":          lb.ID,
 			"name":        lb.Name,
 			"slug":        lb.Slug,
 			"description": description,
 			"source":      lb.Source,
-			"sourceLabel": sourceLabel,
-			"isCustom":    isCustom,
+			"sourceLabel": sourceDisplayLabel(lb.Source, lb.ThemeName, themeNames, extNames),
+			"isCustom":    lb.Source == "custom",
 			"languageID":  lb.LanguageID,
 			"langDisplay": langDisplay,
 			"langFlag":    langFlag,
 			"langCode":    langCode,
+			"updated_at":  lb.UpdatedAt.Format("2006-01-02"),
 			"editPath":    fmt.Sprintf("/admin/layout-blocks/%d/edit", lb.ID),
 		})
 	}
 
-	totalPages := int(totalCount) / perPage
-	if int(totalCount)%perPage > 0 {
+	totalPages := total / perPage
+	if total%perPage > 0 {
 		totalPages++
 	}
 
-	hasFilters := params["language"] != "" && params["language"] != "all"
+	tabs := buildSourceTabs(len(allLayoutBlocks), customCount, themeTabMap, extTabMap)
+
+	activeTab := sourceFilter
+	if activeTab == "" {
+		activeTab = "all"
+	}
+
+	hasFilters := search != "" || (params["language"] != "" && params["language"] != "all") || (sourceFilter != "" && sourceFilter != "all")
 
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 4},
 		Children: []LayoutNode{
 			{Type: "PageHeader", Props: map[string]interface{}{
-				"title":          "Layout Blocks",
-				"newLabel":       "New Layout Block",
-				"newPath":        "/admin/layout-blocks/new",
-				"languages":      langList,
-				"activeLanguage": params["language"],
+				"newLabel":  "New Layout Block",
+				"newPath":   "/admin/layout-blocks/new",
+				"tabs":      tabs,
+				"activeTab": activeTab,
+				"tabParam":  "source",
+			}},
+			{Type: "SearchToolbar", Props: map[string]interface{}{
+				"searchPlaceholder": "Search layout blocks…",
+				"languages":         langList,
+				"activeLanguage":    params["language"],
 			}},
 			{Type: "GenericListTable", Props: map[string]interface{}{
 				"columns": []map[string]interface{}{
-					{"key": "name", "label": "Name"},
-					{"key": "slug", "label": "Slug", "width": 200},
-					{"key": "langDisplay", "label": "Language", "width": 140},
-					{"key": "sourceLabel", "label": "Source", "width": 140},
+					{"key": "name", "label": "Name", "sortable": true},
+					{"key": "slug", "label": "Slug", "width": 180},
+					{"key": "langDisplay", "label": "Language", "width": 130},
+					{"key": "sourceLabel", "label": "Source", "width": 130},
 					{"key": "description", "label": "Description"},
+					{"key": "updated_at", "label": "Updated", "width": 110, "sortable": true},
 					{"key": "actions", "label": "Actions", "width": 120, "align": "right"},
 				},
 				"rows":       rows,
@@ -1458,10 +2007,12 @@ func (e *Engine) layoutBlocksLayout(params map[string]string) *LayoutNode {
 				"newLabel":   "New Layout Block",
 				"pagination": map[string]interface{}{
 					"page": page, "perPage": perPage,
-					"total": int(totalCount), "totalPages": totalPages,
+					"total": total, "totalPages": totalPages,
 				},
 				"label":      "layout-blocks",
 				"hasFilters": hasFilters,
+				"sortBy":     sortBy,
+				"sortOrder":  sortOrder,
 			}, Actions: map[string]ActionDef{
 				"onRowDelete": {
 					Type: "SEQUENCE",
@@ -1486,7 +2037,24 @@ func (e *Engine) layoutBlocksLayout(params map[string]string) *LayoutNode {
 }
 
 func (e *Engine) menusLayout(params map[string]string) *LayoutNode {
-	// Menus are usually few, so no pagination needed
+	page, _ := strconv.Atoi(params["page"])
+	if page < 1 {
+		page = 1
+	}
+	perPage := getPerPage(params)
+	search := params["search"]
+
+	sortBy := params["sort"]
+	sortOrder := params["order"]
+	switch sortBy {
+	case "name", "slug", "updated_at":
+	default:
+		sortBy = "updated_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
 	// Fetch languages for display and filter
 	var languages []models.Language
 	e.db.Where("is_active = ?", true).Order("sort_order ASC, name ASC").Find(&languages)
@@ -1508,9 +2076,16 @@ func (e *Engine) menusLayout(params map[string]string) *LayoutNode {
 			query = query.Where("language_id = ?", langID)
 		}
 	}
+	if search != "" {
+		query = query.Where("name ILIKE ? OR slug ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
 
+	var total int64
+	query.Count(&total)
+
+	offset := (page - 1) * perPage
 	var menus []models.Menu
-	query.Order("name ASC").Find(&menus)
+	query.Order(sortBy + " " + sortOrder).Offset(offset).Limit(perPage).Find(&menus)
 
 	// Count menu items per menu via separate query
 	menuIDs := make([]int, 0, len(menus))
@@ -1555,30 +2130,41 @@ func (e *Engine) menusLayout(params map[string]string) *LayoutNode {
 			"langDisplay": langDisplay,
 			"langFlag":    langFlag,
 			"langCode":    langCode,
+			"updated_at":  m.UpdatedAt.Format("2006-01-02"),
 			"editPath":    fmt.Sprintf("/admin/menus/%d/edit", m.ID),
 		})
 	}
 
-	hasFilters := params["language"] != "" && params["language"] != "all"
+	totalPages := int(total) / perPage
+	if int(total)%perPage > 0 {
+		totalPages++
+	}
+
+	hasFilters := search != "" || (params["language"] != "" && params["language"] != "all")
 
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 4},
 		Children: []LayoutNode{
 			{Type: "PageHeader", Props: map[string]interface{}{
-				"title":          "Menus",
-				"newLabel":       "New Menu",
-				"newPath":        "/admin/menus/new",
-				"languages":      langList,
-				"activeLanguage": params["language"],
+				"newLabel":  "New Menu",
+				"newPath":   "/admin/menus/new",
+				"tabs":      []map[string]interface{}{{"value": "all", "label": "All", "count": int(total)}},
+				"activeTab": "all",
+			}},
+			{Type: "SearchToolbar", Props: map[string]interface{}{
+				"searchPlaceholder": "Search menus…",
+				"languages":         langList,
+				"activeLanguage":    params["language"],
 			}},
 			{Type: "GenericListTable", Props: map[string]interface{}{
 				"columns": []map[string]interface{}{
-					{"key": "name", "label": "Name"},
-					{"key": "slug", "label": "Slug", "width": 200},
-					{"key": "langDisplay", "label": "Language", "width": 140},
-					{"key": "version", "label": "Version", "width": 100, "align": "center"},
-					{"key": "itemCount", "label": "Items", "width": 100, "align": "center"},
+					{"key": "name", "label": "Name", "sortable": true},
+					{"key": "slug", "label": "Slug", "width": 180},
+					{"key": "langDisplay", "label": "Language", "width": 130},
+					{"key": "version", "label": "Version", "width": 90, "align": "center"},
+					{"key": "itemCount", "label": "Items", "width": 80, "align": "center"},
+					{"key": "updated_at", "label": "Updated", "width": 110, "sortable": true},
 					{"key": "actions", "label": "Actions", "width": 140, "align": "right"},
 				},
 				"rows":       rows,
@@ -1589,6 +2175,12 @@ func (e *Engine) menusLayout(params map[string]string) *LayoutNode {
 				"newLabel":   "New Menu",
 				"label":      "menus",
 				"hasFilters": hasFilters,
+				"sortBy":     sortBy,
+				"sortOrder":  sortOrder,
+				"pagination": map[string]interface{}{
+					"page": page, "perPage": perPage,
+					"total": int(total), "totalPages": totalPages,
+				},
 			}, Actions: map[string]ActionDef{
 				"onRowDelete": {
 					Type: "SEQUENCE",
@@ -1685,7 +2277,7 @@ func basePathForNodeType(slug string) string {
 func (e *Engine) defaultLayout(pageSlug string) *LayoutNode {
 	return &LayoutNode{
 		Type:  "VerticalStack",
-		Props: map[string]interface{}{"gap": 4, "className": "p-6"},
+		Props: map[string]interface{}{"gap": 4},
 		Children: []LayoutNode{
 			{
 				Type:  "AdminHeader",

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, Plus, Pencil, Trash2, Loader2 } from "@vibecms/icons";
+import { Pencil, Trash2, Loader2, Settings } from "@vibecms/icons";
 import {
+  ListHeader,
+  ListToolbar,
+  ListSearch,
   Button,
   Badge,
   Table,
@@ -16,10 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
 } from "@vibecms/ui";
 import { toast } from "sonner";
 import {
@@ -53,12 +52,11 @@ interface EmailRule {
 export default function EmailRules() {
   const [rules, setRules] = useState<EmailRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  // Lookup data
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [actions, setActions] = useState<SystemAction[]>([]);
 
-  // Delete confirmation
   const [showDelete, setShowDelete] = useState(false);
   const [deletingRule, setDeletingRule] = useState<EmailRule | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -76,14 +74,11 @@ export default function EmailRules() {
 
   async function fetchLookups() {
     try {
-      const [tpls, acts] = await Promise.all([
-        getEmailTemplates(),
-        getSystemActions(),
-      ]);
+      const [tpls, acts] = await Promise.all([getEmailTemplates(), getSystemActions()]);
       setTemplates(tpls);
       setActions(acts);
     } catch {
-      // Non-fatal: lookups may partially fail
+      // Non-fatal
     }
   }
 
@@ -95,14 +90,8 @@ export default function EmailRules() {
   async function handleToggleEnabled(rule: EmailRule) {
     try {
       await updateEmailRule(rule.id, { enabled: !rule.enabled });
-      setRules((prev) =>
-        prev.map((r) =>
-          r.id === rule.id ? { ...r, enabled: !r.enabled } : r
-        )
-      );
-      toast.success(
-        `Rule ${!rule.enabled ? "enabled" : "disabled"}`
-      );
+      setRules((prev) => prev.map((r) => r.id === rule.id ? { ...r, enabled: !r.enabled } : r));
+      toast.success(`Rule ${!rule.enabled ? "enabled" : "disabled"}`);
     } catch {
       toast.error("Failed to update rule");
     }
@@ -123,150 +112,134 @@ export default function EmailRules() {
       setDeletingRule(null);
       await fetchRules();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to delete email rule";
+      const message = err instanceof Error ? err.message : "Failed to delete email rule";
       toast.error(message);
     } finally {
       setDeleting(false);
     }
   }
 
-  function getTemplateName(templateId: number): string {
-    const tpl = templates.find((t) => t.id === templateId);
-    return tpl?.name || `Template #${templateId}`;
+  function getTemplateName(id: number): string {
+    return templates.find((t) => t.id === id)?.name || `Template #${id}`;
   }
 
-  function getActionLabel(actionSlug: string): string {
-    const act = actions.find((a) => a.slug === actionSlug);
-    return act?.label || actionSlug;
+  function getActionLabel(slug: string): string {
+    return actions.find((a) => a.slug === slug)?.label || slug;
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-      </div>
-    );
-  }
+  const q = search.toLowerCase();
+  const filtered = q
+    ? rules.filter(
+        (r) =>
+          getActionLabel(r.action).toLowerCase().includes(q) ||
+          (r.node_type || "").toLowerCase().includes(q) ||
+          getTemplateName(r.template_id).toLowerCase().includes(q) ||
+          r.recipient_value.toLowerCase().includes(q),
+      )
+    : rules;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Mail className="h-7 w-7 text-indigo-600" />
-          <h1 className="text-2xl font-bold text-slate-900">Email Rules</h1>
-        </div>
-        <Button
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
-          asChild
-        >
-          <Link to="/admin/ext/email-manager/rules/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Rule
-          </Link>
-        </Button>
+    <div className="w-full pb-8">
+      <ListHeader
+        title="Email Rules"
+        tabs={[{ value: "all", label: "All", count: rules.length }]}
+        activeTab="all"
+        newLabel="Add Rule"
+        newHref="/admin/ext/email-manager/rules/new"
+      />
+
+      <ListToolbar>
+        <ListSearch value={search} onChange={setSearch} placeholder="Search rules…" />
+      </ListToolbar>
+
+      <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex h-64 items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex h-64 flex-col items-center justify-center gap-3 text-slate-400">
+            <Settings className="h-12 w-12" />
+            <p className="text-[15px] font-medium text-slate-600">No email rules found</p>
+            {rules.length === 0 && (
+              <p className="text-[13px] text-slate-400">Click &ldquo;Add Rule&rdquo; to get started.</p>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table className="w-full border-separate border-spacing-0">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Action</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Node Type</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Template</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Recipient</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Enabled</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((rule) => (
+                  <TableRow key={rule.id} className="group bg-white hover:bg-slate-50">
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100 text-[13px] font-medium text-slate-800">
+                      {getActionLabel(rule.action)}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100">
+                      {rule.node_type ? (
+                        <Badge variant="outline" className="text-xs">{rule.node_type}</Badge>
+                      ) : (
+                        <span className="text-slate-400 text-[13px]">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100 text-[13px] text-slate-600">
+                      {getTemplateName(rule.template_id)}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-0 text-xs">
+                          {rule.recipient_type}
+                        </Badge>
+                        {rule.recipient_value && (
+                          <span className="text-[13px] text-slate-500">{rule.recipient_value}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleEnabled(rule)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${rule.enabled ? "bg-indigo-600" : "bg-slate-300"}`}
+                      >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${rule.enabled ? "translate-x-[18px]" : "translate-x-[2px]"}`} />
+                      </button>
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100 text-right whitespace-nowrap">
+                      <div className="inline-flex gap-0.5 opacity-55 group-hover:opacity-100 transition-opacity">
+                        <Link
+                          to={`/admin/ext/email-manager/rules/${rule.id}`}
+                          title="Edit"
+                          className="w-[26px] h-[26px] grid place-items-center text-slate-500 hover:bg-slate-100 hover:border-slate-200 border border-transparent rounded-[2px]"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Link>
+                        <button
+                          type="button"
+                          title="Delete"
+                          onClick={() => openDeleteDialog(rule)}
+                          className="w-[26px] h-[26px] grid place-items-center text-red-500/80 hover:text-red-600 hover:bg-red-50 hover:border-red-200 border border-transparent rounded-[2px] cursor-pointer bg-transparent"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      {/* Table */}
-      <Card className="rounded-xl border border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-slate-900">
-            All Email Rules
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-slate-200 hover:bg-transparent">
-                <TableHead className="text-slate-500 font-medium">Action</TableHead>
-                <TableHead className="text-slate-500 font-medium">Node Type</TableHead>
-                <TableHead className="text-slate-500 font-medium">Template</TableHead>
-                <TableHead className="text-slate-500 font-medium">Recipient</TableHead>
-                <TableHead className="text-slate-500 font-medium">Enabled</TableHead>
-                <TableHead className="text-slate-500 font-medium text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-slate-400">
-                    No email rules configured yet. Click &quot;Add Rule&quot; to get started.
-                  </TableCell>
-                </TableRow>
-              )}
-              {rules.map((rule) => (
-                <TableRow key={rule.id} className="border-slate-100">
-                  <TableCell className="font-medium text-slate-800">
-                    {getActionLabel(rule.action)}
-                  </TableCell>
-                  <TableCell>
-                    {rule.node_type ? (
-                      <Badge variant="outline" className="text-xs">
-                        {rule.node_type}
-                      </Badge>
-                    ) : (
-                      <span className="text-slate-400 text-sm">All</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-slate-600">
-                    {getTemplateName(rule.template_id)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-0 text-xs">
-                        {rule.recipient_type}
-                      </Badge>
-                      {rule.recipient_value && (
-                        <span className="text-sm text-slate-500">{rule.recipient_value}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleEnabled(rule)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
-                        rule.enabled ? "bg-indigo-600" : "bg-slate-300"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          rule.enabled ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-slate-500 hover:text-indigo-600"
-                        asChild
-                      >
-                        <Link to={`/admin/ext/email-manager/rules/${rule.id}`}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-slate-500 hover:text-red-600"
-                        onClick={() => openDeleteDialog(rule)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Delete confirmation dialog */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>
           <DialogHeader>
@@ -276,18 +249,10 @@ export default function EmailRules() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDelete(false)}
-              disabled={deleting}
-            >
+            <Button variant="outline" onClick={() => setShowDelete(false)} disabled={deleting}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>

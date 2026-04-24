@@ -21,9 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog,
   DialogContent,
@@ -282,10 +281,8 @@ export default function TemplateEditorPage() {
         <div className="space-y-6 lg:col-span-2">
           {/* Basic info */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Basic Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <SectionHeader title="Basic Info" />
+            <CardContent className="space-y-4 p-6">
               <div className="space-y-2">
                 <Label htmlFor="label" className="text-sm font-medium text-slate-700">Label</Label>
                 <Input
@@ -338,36 +335,11 @@ export default function TemplateEditorPage() {
           </Card>
 
             {/* Blocks */}
-            <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <div 
-                className="flex items-center justify-between px-4 py-3"
-                style={{
-                  background: "var(--sub-bg)",
-                  borderBottom: "1px solid var(--border)",
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <h2 
-                    className="font-semibold"
-                    style={{ fontSize: 13, color: "var(--fg)" }}
-                  >
-                    Blocks
-                  </h2>
-                  <Badge
-                   variant="secondary"
-                   className="ml-auto"
-                   style={{
-                     fontSize: 10,
-                     background: "color-mix(in oklab, var(--accent) 12%, transparent)",
-                     color: "var(--accent-strong)",
-                     border: "1px solid color-mix(in oklab, var(--accent) 20%, transparent)",
-                    }}
-                  >
-                   {blockConfig.length}
-                  </Badge>
-                </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-semibold" style={{ fontSize: 14, color: "var(--fg)" }}>Blocks</h2>
               </div>
-              <CardContent className="space-y-3 pt-3">
+              <div className="space-y-2">
                 {blockConfig.length === 0 && (
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 py-12 text-slate-400">
                     <span className="text-sm font-medium">No blocks yet</span>
@@ -458,7 +430,8 @@ export default function TemplateEditorPage() {
                     })}
                   </div>
                 )}
-
+              </div>
+              <div className="mt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -468,8 +441,8 @@ export default function TemplateEditorPage() {
                   <Plus className="mr-2 h-4 w-4" />
                   Add Block
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
         </div>
 
         {/* Sidebar */}

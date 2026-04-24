@@ -221,6 +221,13 @@ func (g *capabilityGuard) UpdateMenu(ctx context.Context, slug string, input Men
 	return g.inner.UpdateMenu(ctx, slug, input)
 }
 
+func (g *capabilityGuard) UpsertMenu(ctx context.Context, input MenuInput) (*Menu, error) {
+	if err := checkCapability(ctx, "menus:write"); err != nil {
+		return nil, err
+	}
+	return g.inner.UpsertMenu(ctx, input)
+}
+
 func (g *capabilityGuard) DeleteMenu(ctx context.Context, slug string) error {
 	if err := checkCapability(ctx, "menus:delete"); err != nil {
 		return err

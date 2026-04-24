@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { SduiAdminShell } from "../sdui/admin-shell";
 import { useLayout } from "../hooks/use-layout";
 import { LayoutRenderer } from "../sdui/renderer";
@@ -10,10 +10,21 @@ export function SduiTaxonomyTermsPage() {
     taxonomy: string;
   }>();
 
+  const [searchParams] = useSearchParams();
   const params: Record<string, string> = {
     nodeType: nodeType || "page",
     taxonomy: taxonomy || "",
   };
+  const search = searchParams.get("search");
+  const sort = searchParams.get("sort");
+  const order = searchParams.get("order");
+  const page = searchParams.get("page");
+  if (search) params.search = search;
+  if (sort) params.sort = sort;
+  const per_page = searchParams.get("per_page");
+  if (per_page) params.per_page = per_page;
+  if (order) params.order = order;
+  if (page) params.page = page;
 
   const {
     data: layout,

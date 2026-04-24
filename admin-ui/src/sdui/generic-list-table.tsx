@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
-import { Unplug } from "lucide-react";
+import { Unplug, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import {
   ListCard,
   ListTable,
@@ -28,6 +28,14 @@ function toPascalCase(s: string): string {
     .join("");
 }
 
+interface Column {
+  key: string;
+  label: string;
+  width?: number;
+  align?: "left" | "right" | "center";
+  sortable?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // GenericListTable — SDUI table driven entirely by backend layout data
 // ---------------------------------------------------------------------------
@@ -43,15 +51,12 @@ export function GenericListTable({
   pagination,
   label,
   hasFilters,
+  sortBy,
+  sortOrder,
   onRowDelete,
   onRowDetach,
 }: {
-  columns: Array<{
-    key: string;
-    label: string;
-    width?: number;
-    align?: "left" | "right" | "center";
-  }>;
+  columns: Column[];
   rows?: Array<Record<string, any>>;
   emptyIcon?: string;
   emptyTitle?: string;
@@ -66,12 +71,30 @@ export function GenericListTable({
   };
   label?: string;
   hasFilters?: boolean;
+  sortBy?: string;
+  sortOrder?: string;
   onRowDelete?: (row: Record<string, any>) => void;
   onRowDetach?: (row: Record<string, any>) => void;
 }) {
   const [, setSearchParams] = useSearchParams();
 
   const IconComp = emptyIcon ? iconMap[toPascalCase(emptyIcon)] : null;
+
+  const handleSort = (colKey: string) => {
+    setSearchParams((prev) => {
+      const currentSort = prev.get("sort");
+      const currentOrder = prev.get("order") || "desc";
+      if (currentSort === colKey) {
+        prev.set("order", currentOrder === "asc" ? "desc" : "asc");
+      } else {
+        prev.set("sort", colKey);
+        // Date fields default desc (newest first); text fields default asc
+        prev.set("order", colKey === "updated_at" || colKey === "created_at" ? "desc" : "asc");
+      }
+      prev.delete("page");
+      return prev;
+    });
+  };
 
   // --- Loading state ---
   if (!rows) {
@@ -116,7 +139,7 @@ export function GenericListTable({
   // --- Cell renderer ---
   function renderCell(
     row: Record<string, any>,
-    col: { key: string; width?: number; align?: string },
+    col: Column,
   ) {
     const { key } = col;
     const val = row[key];
@@ -214,6 +237,13 @@ export function GenericListTable({
         return <Td className="text-slate-600">{val}</Td>;
       }
 
+      case "updated_at":
+        return (
+          <Td className="font-mono text-[12px] text-slate-500 tabular-nums">
+            {val || "—"}
+          </Td>
+        );
+
       case "actions":
         return (
           <Td align="right" className="whitespace-nowrap">
@@ -253,6 +283,29 @@ export function GenericListTable({
     }
   }
 
+  // --- Sortable header cell ---
+  function SortableHeader({ col }: { col: Column }) {
+    if (!col.sortable) {
+      return <Th key={col.key} width={col.width} align={col.align as any}>{col.label}</Th>;
+    }
+    const isActive = sortBy === col.key;
+    const Icon = isActive
+      ? sortOrder === "asc" ? ArrowUp : ArrowDown
+      : ArrowUpDown;
+    return (
+      <Th key={col.key} width={col.width} align={col.align as any}>
+        <button
+          type="button"
+          onClick={() => handleSort(col.key)}
+          className={`inline-flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 font-[inherit] text-[inherit] ${isActive ? "text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+        >
+          {col.label}
+          <Icon className={`w-3 h-3 ${isActive ? "text-indigo-600" : "text-slate-400"}`} />
+        </button>
+      </Th>
+    );
+  }
+
   // --- Main table ---
   return (
     <ListCard>
@@ -260,9 +313,7 @@ export function GenericListTable({
         <thead>
           <tr>
             {columns.map((col) => (
-              <Th key={col.key} width={col.width} align={col.align as any}>
-                {col.label}
-              </Th>
+              <SortableHeader key={col.key} col={col} />
             ))}
           </tr>
         </thead>
@@ -287,6 +338,13 @@ export function GenericListTable({
           onPage={(p: number) => {
             setSearchParams((prev) => {
               prev.set("page", String(p));
+              return prev;
+            });
+          }}
+          onPerPage={(n: number) => {
+            setSearchParams((prev) => {
+              prev.set("per_page", String(n));
+              prev.delete("page");
               return prev;
             });
           }}

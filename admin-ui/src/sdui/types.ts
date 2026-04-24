@@ -69,10 +69,25 @@ export interface ActionDef {
   steps?: ActionDef[];
   bind?: string;
   then?: ActionDef;
+  // CORE_API mutation feedback
+  success_message?: string;
+  error_message?: string;
+  silent?: boolean;
 }
 
-// SSE Events
+// SSE Events — mirrors internal/sdui/types.go SSEEvent.
+// See that file for the full taxonomy.
 export interface SSEEventData {
-  type: "CONNECTED" | "UI_STALE" | "NODE_TYPE_CHANGED" | "NOTIFY";
+  type:
+    | "CONNECTED"
+    | "NAV_STALE"
+    | "ENTITY_CHANGED"
+    | "SETTING_CHANGED"
+    | "NOTIFY"
+    | "UI_STALE";
+  entity?: string;
+  id?: string | number;
+  op?: string;
+  key?: string;
   data?: unknown;
 }

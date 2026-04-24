@@ -9,8 +9,16 @@ export function SduiMenusPage() {
   const params: Record<string, string> = {};
   const page = searchParams.get("page");
   const language = searchParams.get("language");
+  const search = searchParams.get("search");
+  const sort = searchParams.get("sort");
+  const order = searchParams.get("order");
   if (page) params.page = page;
   if (language && language !== "all") params.language = language;
+  if (search) params.search = search;
+  if (sort) params.sort = sort;
+  const per_page = searchParams.get("per_page");
+  if (per_page) params.per_page = per_page;
+  if (order) params.order = order;
 
   const {
     data: layout,

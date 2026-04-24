@@ -626,47 +626,33 @@ admin-ui/src/components/
 
 ## Implementation Status
 
-### Phase 1: Foundation (Current)
+### Done (shell + page ports)
 
-- [x] Go SDUI types (`internal/sdui/types.go`)
-- [x] Layout engine with caching (`internal/sdui/engine.go`)
-- [x] SSE broadcaster (`internal/sdui/broadcaster.go`)
-- [x] Boot + Layout API endpoints (`internal/api/boot_handler.go`)
-- [x] TanStack Query integration
-- [x] Component registry
-- [x] Recursive renderer with RemoteComponent support
-- [x] Action handler (CORE_API, NAVIGATE, TOAST, INVALIDATE, CONFIRM, SEQUENCE, SET_STORE)
+- [x] Go SDUI types, layout engine (~2.3k lines), SSE broadcaster, boot + layout API endpoints
+- [x] TanStack Query integration, component registry, recursive renderer with `RemoteComponent`
+- [x] Action handler: `CORE_API`, `NAVIGATE`, `TOAST`, `INVALIDATE`, `CONFIRM`, `SEQUENCE`, `SET_STORE`
 - [x] SSE hook with auto-reconnect
-- [x] Built-in component library (~20 components)
-- [x] Route wiring in main.go and App.tsx
+- [x] Built-in component library (~30 components: layout primitives, page composites, UI primitives, dashboard widgets, generic list table, extensions grid, themes grid)
+- [x] Admin shell with sidebar + top bar driven by `useBoot()`
+- [x] ~40 pages ported to SDUI (see `docs/VDUS_HANDOFF.md` for the inventory)
 
-### Phase 2: Data Binding
+### Hardening pass (in progress — `docs/plans/2026-04-25-vdus-hardening.md`)
 
-- [ ] DataProvider component (fetches from API, provides to children)
-- [ ] QueryListener component (watches URL params, fetches data)
-- [ ] DataTable component (full implementation with columns, sorting, pagination)
-- [ ] Reactive page store with subscribers (currently simple Map)
+- [ ] Typed SSE taxonomy: `ENTITY_CHANGED(entity, id, op)`, `NAV_STALE`, `SETTING_CHANGED(key)`
+- [ ] Broadcaster subscribes to all emitted events (user, setting, menu, layout, layout_block, block_type, node, theme, taxonomy)
+- [ ] Query-key factory (`qk.boot`, `qk.layout`, `qk.list`, `qk.entity`, `qk.settings`) — replaces ad-hoc keys
+- [ ] Fine-grained invalidation: SSE event → specific query keys
+- [ ] shadcn `AlertDialog`-based `CONFIRM` action (replace `window.confirm`)
+- [ ] Optimistic updates + consistent save toasts in the `CORE_API` action path
+- [ ] E2E verification via playwright-cli
 
-### Phase 3: Extension Integration
+### Later (post-hardening)
 
-- [ ] `admin:layout:render` filter chain in Go
-- [ ] Extension layout JSON serving from gRPC plugins
-- [ ] Update hello-extension to return layout JSON
-- [ ] RemoteComponent entry path resolution from extension manifest
-
-### Phase 4: Page Migration
-
-- [ ] Dashboard page via SDUI (with real data widgets)
-- [ ] List pages via SDUI (posts, pages, custom types)
-- [ ] Settings page via SDUI
-- [ ] Evaluate node editor migration
-
-### Phase 5: Polish
-
-- [ ] shadcn/ui Dialog for CONFIRM actions (replace native `confirm()`)
-- [ ] Optimistic updates for CORE_API actions
-- [ ] Layout tree versioning for smarter cache invalidation
-- [ ] Server-side layout tree validation
+- [ ] Port remaining non-SDUI pages and decompose complex components
+- [ ] `DataProvider` + `QueryListener` components (Phase 2 data binding)
+- [ ] `admin:layout:render` filter chain for extension-side layout injection (Phase 3)
+- [ ] Extension layout JSON served from gRPC plugins
+- [ ] Layout tree versioning + server-side validation
 - [ ] Component prop TypeScript generation from Go structs
 
 ---

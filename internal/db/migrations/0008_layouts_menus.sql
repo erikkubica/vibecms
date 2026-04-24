@@ -101,5 +101,5 @@ SELECT 'default', 'Default Layout', 'Default page layout', NULL,
     {{.app.block_scripts}}
 </body>
 </html>',
-'custom', true
+'seed', true
 WHERE NOT EXISTS (SELECT 1 FROM layouts WHERE slug = 'default' AND language_id IS NULL);

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import CodeEditor from "@/components/ui/code-editor";
+import { CodeWindow } from "@/components/ui/code-window";
 import FieldSchemaEditor from "@/components/ui/field-schema-editor";
 import {
   Select,
@@ -29,7 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -292,32 +293,24 @@ export default function LayoutBlockEditorPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-900">Template Code</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CodeEditor
-                value={templateCode}
-                onChange={setTemplateCode}
-                disabled={isManaged}
-                height="400px"
-                placeholder="Enter your Go html/template code here..."
-                variables={TEMPLATE_VARIABLES}
-              />
-            </CardContent>
-          </Card>
+          <CodeWindow
+            title="Template Code — Go html/template"
+            value={templateCode}
+            onChange={setTemplateCode}
+            disabled={isManaged}
+            height="400px"
+            placeholder="Enter your Go html/template code here..."
+            variables={TEMPLATE_VARIABLES}
+          />
 
           {/* Field Schema */}
           <Card className="rounded-xl border border-purple-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-900">Partial Fields</CardTitle>
-              <p className="text-xs text-slate-500 mt-1">
+            <SectionHeader title="Partial Fields" />
+            <CardContent>
+              <p className="text-xs text-slate-500 mb-4">
                 Define editable fields for this partial. When a layout uses this partial, pages will show these fields in the node editor.
                 Use <code className="bg-slate-100 px-1 rounded text-[10px]">{"{{.partial.field_key}}"}</code> in the template.
               </p>
-            </CardHeader>
-            <CardContent>
               <FieldSchemaEditor
                 fields={fieldSchema}
                 onChange={setFieldSchema}
@@ -327,9 +320,7 @@ export default function LayoutBlockEditorPage() {
 
           {/* Template Reference */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-900">Template Reference</CardTitle>
-            </CardHeader>
+            <SectionHeader title="Template Reference" />
             <CardContent>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
@@ -374,9 +365,7 @@ export default function LayoutBlockEditorPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-900">Details</CardTitle>
-            </CardHeader>
+            <SectionHeader title="Details" />
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>

@@ -15,10 +15,8 @@ import {
   LayoutTemplate,
   Square,
   ExternalLink,
-  Search,
   Code as CodeIcon,
   Tag,
-  Image as ImageIcon,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +27,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Select,
   SelectContent,
@@ -1010,10 +1009,8 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
 
           {/* Excerpt */}
           <Card>
-            <div className="flex items-center gap-2 p-4 pb-0">
-              <span className="font-semibold" style={{ fontSize: 13, color: "var(--fg)" }}>Excerpt</span>
-            </div>
-            <CardContent className="space-y-2 px-4 pb-4 pt-3">
+            <SectionHeader title="Excerpt" />
+            <CardContent className="space-y-2">
               <Textarea
                 placeholder="Enter a short summary or teaser..."
                 value={excerpt}
@@ -1028,10 +1025,8 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
           {/* Custom Fields */}
           {customFields.length > 0 && (
             <Card>
-              <div className="flex items-center gap-2 p-4 pb-0">
-                <span className="font-semibold" style={{ fontSize: 13, color: "var(--fg)" }}>Custom Fields</span>
-              </div>
-              <CardContent className="px-4 pb-4 pt-3">
+              <SectionHeader title="Custom Fields" />
+              <CardContent>
                 <div className="flex flex-wrap" style={{ gap: "16px 14px" }}>
                   {customFields.map((field) => {
                     const w = getFieldWidth(field);
@@ -1161,7 +1156,8 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
         {/* Sidebar */}
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardContent className="space-y-4 p-5">
+            <SectionHeader title="Publish" />
+            <CardContent className="space-y-4">
               {/* Status + Language row */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
@@ -1370,11 +1366,8 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
 
           {/* Featured Image */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 p-4 pb-0">
-              <ImageIcon className="h-4 w-4 text-slate-400" />
-              <span className="text-sm font-semibold text-slate-900">Featured Image</span>
-            </div>
-            <CardContent className="space-y-2 px-4 pb-4 pt-3">
+            <SectionHeader title="Featured Image" />
+            <CardContent className="space-y-2">
               <CustomFieldInput
                 field={{ name: "featured_image", key: "featured_image", label: "Featured Image", type: "image" }}
                 value={featuredImage}
@@ -1387,11 +1380,8 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
           {/* Taxonomies */}
           {nodeTypeDef?.taxonomies && (nodeTypeDef.taxonomies as Array<{slug: string; label: string; multiple?: boolean}>).length > 0 && (
             <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 p-4 pb-0">
-                <Tag className="h-4 w-4 text-slate-400" />
-                <span className="text-sm font-semibold text-slate-900">Taxonomies</span>
-              </div>
-              <CardContent className="space-y-4 px-4 pb-4 pt-3">
+              <SectionHeader title="Taxonomies" />
+              <CardContent className="space-y-4">
                 {(nodeTypeDef.taxonomies as Array<{slug: string; label: string; multiple?: boolean}>).map((tax) => {
                   const searchValue = taxonomySearch[tax.slug] || "";
                   const isOpen = taxonomyDropdownOpen[tax.slug] || false;
@@ -1499,22 +1489,21 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
           {/* Translations (edit mode) */}
           {isEdit && (
             <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between p-4 pb-0">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm font-semibold text-slate-900">Translations</span>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-xs text-indigo-600 hover:text-indigo-700 px-2"
-                  onClick={() => setShowCreateTranslation(true)}
-                >
-                  + Add
-                </Button>
-              </div>
-              <CardContent className="px-4 pb-4 pt-3">
+              <SectionHeader
+                title="Translations"
+                actions={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-indigo-600 hover:text-indigo-700 px-2"
+                    onClick={() => setShowCreateTranslation(true)}
+                  >
+                    + Add
+                  </Button>
+                }
+              />
+              <CardContent>
                 {/* Current language */}
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-2">
@@ -1548,11 +1537,8 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
 
           {/* SEO Settings */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 p-4 pb-0">
-              <Search className="h-4 w-4 text-slate-400" />
-              <span className="text-sm font-semibold text-slate-900">SEO</span>
-            </div>
-            <CardContent className="space-y-3 px-4 pb-4 pt-3">
+            <SectionHeader title="SEO" />
+            <CardContent className="space-y-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-slate-500">
                     Meta Title

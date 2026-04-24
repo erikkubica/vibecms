@@ -2,7 +2,9 @@ import { useState, useEffect, memo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
-  ChevronDown,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   FileText,
   Globe,
   Home,
@@ -99,8 +101,6 @@ const LANG_FLAGS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export function PageHeader({
-  title,
-  count,
   newLabel,
   newPath,
   backPath,
@@ -108,11 +108,11 @@ export function PageHeader({
   onBack,
   tabs,
   activeTab,
+  tabParam = "status",
   languages,
   activeLanguage,
 }: {
-  title: string;
-  count?: number;
+  title?: string;
   newLabel?: string;
   newPath?: string;
   backPath?: string;
@@ -120,6 +120,7 @@ export function PageHeader({
   onBack?: () => void;
   tabs?: Array<{ value: string; label: string; count?: number }>;
   activeTab?: string;
+  tabParam?: string;
   languages?: Array<{ id?: number; code: string; name: string; flag: string }>;
   activeLanguage?: string;
 }) {
@@ -127,33 +128,23 @@ export function PageHeader({
   const [, setSearchParams] = useSearchParams();
 
   return (
-    <div className="flex items-center gap-4 border-b border-slate-200 mb-3">
-      <h1 className="pb-[10px] inline-flex items-baseline gap-1.5 text-[16px] font-semibold text-slate-900 m-0">
-        {title}
-        {count !== undefined && (
-          <span className="font-mono text-[11.5px] font-medium text-slate-500">
-            {count}
-          </span>
-        )}
-      </h1>
+    <div className="flex items-center gap-0 border-b border-slate-200 mb-3">
       {tabs && tabs.length > 0 ? (
-        <>
-          <div className="h-[18px] w-px bg-slate-200" />
-          <nav className="flex-1 flex items-center gap-0.5 -mb-px">
-            {tabs.map((t) => {
-              const active = t.value === activeTab;
-              return (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => {
-                    setSearchParams((prev) => {
-                      if (t.value === "all") prev.delete("status");
-                      else prev.set("status", t.value);
-                      prev.delete("page");
-                      return prev;
-                    });
-                  }}
+        <nav className="flex-1 flex items-center gap-0.5 -mb-px">
+          {tabs.map((t) => {
+            const active = t.value === activeTab;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => {
+                  setSearchParams((prev) => {
+                    if (t.value === "all") prev.delete(tabParam);
+                    else prev.set(tabParam, t.value);
+                    prev.delete("page");
+                    return prev;
+                  });
+                }}
                   className={`px-2.5 pt-[7px] pb-[9px] inline-flex items-center gap-1.5 text-[12.5px] cursor-pointer border-b-2 bg-transparent ${
                     active
                       ? "font-semibold text-slate-900 border-indigo-600"
@@ -176,7 +167,6 @@ export function PageHeader({
               );
             })}
           </nav>
-        </>
       ) : (
         <div className="flex-1" />
       )}
@@ -270,7 +260,7 @@ export const SearchToolbar = memo(
     searchPlaceholder?: string;
     value?: string;
     onChange?: (v: string) => void;
-    languages?: Array<{ code: string; name: string; flag: string }>;
+    languages?: Array<{ id?: number; code: string; name: string; flag: string }>;
     activeLanguage?: string;
   }) {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -322,7 +312,10 @@ export const SearchToolbar = memo(
             >
               <option value="all">All languages</option>
               {languages.map((lang) => (
-                <option key={lang.code} value={lang.code}>
+                <option
+                  key={lang.code}
+                  value={lang.id != null ? String(lang.id) : lang.code}
+                >
                   {lang.flag} {lang.name}
                 </option>
               ))}
@@ -343,7 +336,7 @@ export const SearchToolbar = memo(
       prev.languages?.length === next.languages?.length &&
       (!prev.languages ||
         !next.languages ||
-        prev.languages.every((l, i) => l.code === next.languages![i].code))
+        prev.languages.every((l, i) => l.code === next.languages![i].code && l.id === next.languages![i].id))
     );
   },
 );
@@ -419,6 +412,8 @@ export function ContentNodeTable({
   nodeTypeLabel,
   nodeTypeLabelPlural,
   basePath,
+  sortBy,
+  sortOrder,
 }: {
   nodeType?: string;
   rows?: ContentNodeRow[];
@@ -434,8 +429,25 @@ export function ContentNodeTable({
   nodeTypeLabel?: string;
   nodeTypeLabelPlural?: string;
   basePath?: string;
+  sortBy?: string;
+  sortOrder?: string;
 }) {
   const [, setSearchParams] = useSearchParams();
+
+  const handleSort = (colKey: string) => {
+    setSearchParams((prev) => {
+      const currentSort = prev.get("sort");
+      const currentOrder = prev.get("order") || "desc";
+      if (currentSort === colKey) {
+        prev.set("order", currentOrder === "asc" ? "desc" : "asc");
+      } else {
+        prev.set("sort", colKey);
+        prev.set("order", colKey === "title" ? "asc" : "desc");
+      }
+      prev.delete("page");
+      return prev;
+    });
+  };
 
   if (!rows) {
     return (
@@ -488,9 +500,18 @@ export function ContentNodeTable({
             <Th width={240}>Taxonomies</Th>
             <Th width={80}>Lang</Th>
             <Th width={110}>
-              <span className="inline-flex items-center gap-1 text-slate-900">
-                Updated <ChevronDown className="w-2.5 h-2.5" />
-              </span>
+              <button
+                type="button"
+                onClick={() => handleSort("updated_at")}
+                className={`inline-flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 font-[inherit] text-[inherit] ${sortBy === "updated_at" ? "text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Updated
+                {sortBy === "updated_at" ? (
+                  sortOrder === "asc" ? <ArrowUp className="w-2.5 h-2.5 text-indigo-600" /> : <ArrowDown className="w-2.5 h-2.5 text-indigo-600" />
+                ) : (
+                  <ArrowUpDown className="w-2.5 h-2.5 text-slate-400" />
+                )}
+              </button>
             </Th>
             <Th width={110} align="right">
               Actions
@@ -575,6 +596,13 @@ export function ContentNodeTable({
               return prev;
             });
           }}
+          onPerPage={(n) => {
+            setSearchParams((prev) => {
+              prev.set("per_page", String(n));
+              prev.delete("page");
+              return prev;
+            });
+          }}
           label={(nodeTypeLabelPlural || nodeType || "items").toLowerCase()}
         />
       )}
@@ -600,6 +628,9 @@ export function TaxonomyTermsTable({
   taxonomyLabel,
   taxonomyLabelPlural,
   basePath: basePathProp,
+  sortBy,
+  sortOrder,
+  pagination,
 }: {
   taxonomy?: string;
   nodeType?: string;
@@ -609,7 +640,26 @@ export function TaxonomyTermsTable({
   taxonomyLabel?: string;
   taxonomyLabelPlural?: string;
   basePath?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  pagination?: { page: number; perPage: number; total: number; totalPages: number };
 }) {
+  const [, setSearchParams] = useSearchParams();
+
+  const handleSort = (colKey: string) => {
+    setSearchParams((prev) => {
+      const currentSort = prev.get("sort");
+      const currentOrder = prev.get("order") || "asc";
+      if (currentSort === colKey) {
+        prev.set("order", currentOrder === "asc" ? "desc" : "asc");
+      } else {
+        prev.set("sort", colKey);
+        prev.set("order", colKey === "count" ? "desc" : "asc");
+      }
+      prev.delete("page");
+      return prev;
+    });
+  };
   if (!rows) {
     return (
       <ListCard>
@@ -659,15 +709,42 @@ export function TaxonomyTermsTable({
         : `/admin/content/${nodeType}`
     : "/admin/content/page";
 
+  const nameActive = sortBy === "name";
+  const countActive = sortBy === "count";
+
   return (
     <ListCard>
       <ListTable minWidth={640}>
         <thead>
           <tr>
-            <Th>Name</Th>
+            <Th>
+              <button
+                type="button"
+                onClick={() => handleSort("name")}
+                className={`inline-flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 font-[inherit] text-[inherit] ${nameActive ? "text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Name
+                {nameActive ? (
+                  sortOrder === "asc" ? <ArrowUp className="w-2.5 h-2.5 text-indigo-600" /> : <ArrowDown className="w-2.5 h-2.5 text-indigo-600" />
+                ) : (
+                  <ArrowUpDown className="w-2.5 h-2.5 text-slate-400" />
+                )}
+              </button>
+            </Th>
             <Th width={200}>Slug</Th>
             <Th width={80} align="center">
-              Count
+              <button
+                type="button"
+                onClick={() => handleSort("count")}
+                className={`inline-flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0 font-[inherit] text-[inherit] ${countActive ? "text-slate-900" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Count
+                {countActive ? (
+                  sortOrder === "asc" ? <ArrowUp className="w-2.5 h-2.5 text-indigo-600" /> : <ArrowDown className="w-2.5 h-2.5 text-indigo-600" />
+                ) : (
+                  <ArrowUpDown className="w-2.5 h-2.5 text-slate-400" />
+                )}
+              </button>
             </Th>
             <Th width={110} align="right">
               Actions
@@ -706,6 +783,28 @@ export function TaxonomyTermsTable({
           ))}
         </tbody>
       </ListTable>
+      {pagination && (
+        <ListFooter
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          perPage={pagination.perPage}
+          onPage={(p) => {
+            setSearchParams((prev) => {
+              prev.set("page", String(p));
+              return prev;
+            });
+          }}
+          onPerPage={(n) => {
+            setSearchParams((prev) => {
+              prev.set("per_page", String(n));
+              prev.delete("page");
+              return prev;
+            });
+          }}
+          label="terms"
+        />
+      )}
     </ListCard>
   );
 }

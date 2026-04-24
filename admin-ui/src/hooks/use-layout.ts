@@ -1,5 +1,6 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { LayoutNode } from "../sdui/types";
+import { qk } from "../sdui/query-keys";
 
 async function fetchLayout(
   page: string,
@@ -16,7 +17,7 @@ async function fetchLayout(
 
 export function useLayout(page: string, params?: Record<string, string>) {
   return useQuery({
-    queryKey: ["layout", page, params],
+    queryKey: qk.layout(page, params),
     queryFn: () => fetchLayout(page, params),
     enabled: !!page,
     placeholderData: keepPreviousData,

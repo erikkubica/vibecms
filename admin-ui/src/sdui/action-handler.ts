@@ -1,5 +1,6 @@
 import type { ActionDef } from "./types";
 import { queryClient } from "./query-client";
+import { confirmDialog } from "./confirm-dialog";
 import { toast } from "sonner";
 
 // Simple page store per rendered SDUI page
@@ -61,25 +62,52 @@ async function executeAction(
 
       // Map method to endpoint
       const endpoint = buildEndpoint(method, resolved);
+      const httpMethod = getHTTPMethod(method);
+      const isMutation = httpMethod !== "GET" && httpMethod !== "HEAD";
       const init: RequestInit = {
-        method: getHTTPMethod(method),
+        method: httpMethod,
         credentials: "include",
         headers: { "Content-Type": "application/json" },
       };
-      if (init.method !== "GET" && init.method !== "HEAD") {
+      if (isMutation) {
         init.body = JSON.stringify(resolved);
       }
 
-      const res = await fetch(`/admin/api${endpoint}`, init);
-      if (!res.ok) {
-        const err = await res
-          .json()
-          .catch(() => ({ error: { message: res.statusText } }));
-        throw new Error(err.error?.message || `API error: ${res.status}`);
+      let res: Response;
+      try {
+        res = await fetch(`/admin/api${endpoint}`, init);
+      } catch (err) {
+        if (isMutation && !action.silent) {
+          toast.error(
+            action.error_message ??
+              `Network error: ${err instanceof Error ? err.message : "unknown"}`,
+          );
+        }
+        throw err;
       }
 
-      const json = await res.json();
-      return json.data;
+      if (!res.ok) {
+        const errBody = await res
+          .json()
+          .catch(() => ({ error: { message: res.statusText } }));
+        const msg =
+          errBody.error?.message || `Request failed (${res.status})`;
+        if (isMutation && !action.silent) {
+          toast.error(action.error_message ?? msg);
+        }
+        throw new Error(msg);
+      }
+
+      if (isMutation && !action.silent) {
+        toast.success(action.success_message ?? defaultSuccessMessage(method));
+      }
+
+      if (res.status === 204 || res.headers.get("content-length") === "0") {
+        return null;
+      }
+      const text = await res.text();
+      if (!text) return null;
+      return JSON.parse(text).data;
     }
 
     case "NAVIGATE": {
@@ -125,12 +153,18 @@ async function executeAction(
     }
 
     case "CONFIRM": {
-      return new Promise((resolve) => {
-        const msg = action.message
-          ? resolveActionField(action.message, context)
-          : "Are you sure?";
-        const ok = window.confirm(msg);
-        resolve(ok);
+      const message = action.message
+        ? resolveActionField(action.message, context)
+        : "Are you sure?";
+      const title = action.title
+        ? resolveActionField(action.title, context)
+        : undefined;
+      return confirmDialog({
+        title,
+        message,
+        variant: action.variant === "error" || action.variant === "destructive"
+          ? "destructive"
+          : "default",
       });
     }
 
@@ -246,6 +280,34 @@ function buildEndpoint(
     return basePath;
   }
   return `/${method}`;
+}
+
+/** Default success toast copy keyed off the action suffix. */
+function defaultSuccessMessage(sduiMethod: string): string {
+  const parts = sduiMethod.split(":");
+  const op = parts.length > 1 ? parts[1] : parts[0];
+  switch (op) {
+    case "create":
+      return "Created";
+    case "update":
+      return "Saved";
+    case "delete":
+      return "Deleted";
+    case "activate":
+      return "Activated";
+    case "deactivate":
+      return "Deactivated";
+    case "detach":
+      return "Detached";
+    case "reattach":
+      return "Reattached";
+    case "pull":
+      return "Pulled";
+    case "upload":
+      return "Uploaded";
+    default:
+      return "Done";
+  }
 }
 
 function getHTTPMethod(sduiMethod: string): string {

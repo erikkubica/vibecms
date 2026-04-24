@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, Plus, Pencil, Trash2, Loader2 } from "@vibecms/icons";
+import { Pencil, Trash2, Loader2, Mail } from "@vibecms/icons";
 import {
+  ListHeader,
+  ListToolbar,
+  ListSearch,
   Button,
   Table,
   TableBody,
@@ -15,10 +18,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
 } from "@vibecms/ui";
 import { toast } from "sonner";
 import { getEmailTemplates, deleteEmailTemplate } from "@vibecms/api";
@@ -30,14 +29,14 @@ interface EmailTemplate {
   language_id: number | null;
   subject_template: string;
   body_template: string;
-  test_data: Record<string, any>;
+  test_data: Record<string, unknown>;
 }
 
 export default function EmailTemplates() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  // Delete confirmation
   const [showDelete, setShowDelete] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState<EmailTemplate | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -72,105 +71,100 @@ export default function EmailTemplates() {
       setDeletingTemplate(null);
       await fetchTemplates();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to delete email template";
+      const message = err instanceof Error ? err.message : "Failed to delete email template";
       toast.error(message);
     } finally {
       setDeleting(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-      </div>
-    );
-  }
+  const q = search.toLowerCase();
+  const filtered = q
+    ? templates.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.slug.toLowerCase().includes(q) ||
+          t.subject_template.toLowerCase().includes(q),
+      )
+    : templates;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Mail className="h-7 w-7 text-indigo-600" />
-          <h1 className="text-2xl font-bold text-slate-900">Email Templates</h1>
-        </div>
-        <Button
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
-          asChild
-        >
-          <Link to="/admin/ext/email-manager/templates/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Template
-          </Link>
-        </Button>
+    <div className="w-full pb-8">
+      <ListHeader
+        title="Email Templates"
+        tabs={[{ value: "all", label: "All", count: templates.length }]}
+        activeTab="all"
+        newLabel="Add Template"
+        newHref="/admin/ext/email-manager/templates/new"
+      />
+
+      <ListToolbar>
+        <ListSearch value={search} onChange={setSearch} placeholder="Search templates…" />
+      </ListToolbar>
+
+      <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex h-64 items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex h-64 flex-col items-center justify-center gap-3 text-slate-400">
+            <Mail className="h-12 w-12" />
+            <p className="text-[15px] font-medium text-slate-600">No email templates found</p>
+            {templates.length === 0 && (
+              <p className="text-[13px] text-slate-400">Click &ldquo;Add Template&rdquo; to get started.</p>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table className="w-full border-separate border-spacing-0">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Name</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Slug</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">Subject</TableHead>
+                  <TableHead className="px-3 py-2.5 bg-slate-50 border-b border-slate-200 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((tpl) => (
+                  <TableRow key={tpl.id} className="group bg-white hover:bg-slate-50">
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100 text-[13px] font-medium text-slate-900">
+                      {tpl.name}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100">
+                      <span className="font-mono text-[11px] text-indigo-600">{tpl.slug}</span>
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100 text-[13px] text-slate-600 max-w-xs truncate">
+                      {tpl.subject_template}
+                    </TableCell>
+                    <TableCell className="px-3 py-2.5 border-b border-slate-100 text-right whitespace-nowrap">
+                      <div className="inline-flex gap-0.5 opacity-55 group-hover:opacity-100 transition-opacity">
+                        <Link
+                          to={`/admin/ext/email-manager/templates/${tpl.id}`}
+                          title="Edit"
+                          className="w-[26px] h-[26px] grid place-items-center text-slate-500 hover:bg-slate-100 hover:border-slate-200 border border-transparent rounded-[2px]"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Link>
+                        <button
+                          type="button"
+                          title="Delete"
+                          onClick={() => openDeleteDialog(tpl)}
+                          className="w-[26px] h-[26px] grid place-items-center text-red-500/80 hover:text-red-600 hover:bg-red-50 hover:border-red-200 border border-transparent rounded-[2px] cursor-pointer bg-transparent"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      {/* Table */}
-      <Card className="rounded-xl border border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-slate-900">
-            All Email Templates
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-slate-200 hover:bg-transparent">
-                <TableHead className="text-slate-500 font-medium">Name</TableHead>
-                <TableHead className="text-slate-500 font-medium">Slug</TableHead>
-                <TableHead className="text-slate-500 font-medium">Subject</TableHead>
-                <TableHead className="text-slate-500 font-medium text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templates.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12 text-slate-400">
-                    No email templates found. Click "Add Template" to get started.
-                  </TableCell>
-                </TableRow>
-              )}
-              {templates.map((tpl) => (
-                <TableRow key={tpl.id} className="border-slate-100">
-                  <TableCell className="font-medium text-slate-800">{tpl.name}</TableCell>
-                  <TableCell>
-                    <span className="font-mono text-sm text-indigo-600">{tpl.slug}</span>
-                  </TableCell>
-                  <TableCell className="text-slate-600 max-w-xs truncate">
-                    {tpl.subject_template}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-slate-500 hover:text-indigo-600"
-                        asChild
-                      >
-                        <Link to={`/admin/ext/email-manager/templates/${tpl.id}`}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-slate-500 hover:text-red-600"
-                        onClick={() => openDeleteDialog(tpl)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Delete confirmation dialog */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>
         <DialogContent>
           <DialogHeader>
@@ -180,18 +174,10 @@ export default function EmailTemplates() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDelete(false)}
-              disabled={deleting}
-            >
+            <Button variant="outline" onClick={() => setShowDelete(false)} disabled={deleting}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>

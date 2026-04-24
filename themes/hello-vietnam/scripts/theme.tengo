@@ -8,14 +8,15 @@ taxonomies := import("core/taxonomies")
 nodes := import("core/nodes")
 filters := import("core/filters")
 settings := import("core/settings")
+menus := import("core/menus")
 
 log.info("Hello Vietnam theme initializing...")
 
 // ─── Taxonomies ──────────────────────────────────────────────
 taxonomies.register({
 	slug: "trip_tag",
-	label: "Trip Tag",
-	label_plural: "Trip Tags",
+	label: "Trip tag",
+	label_plural: "Trip tags",
 	description: "Foodie / Adventure / Relaxing",
 	hierarchical: false,
 	node_types: ["trip"]
@@ -23,8 +24,8 @@ taxonomies.register({
 
 taxonomies.register({
 	slug: "gallery_category",
-	label: "Gallery Category",
-	label_plural: "Gallery Categories",
+	label: "Gallery category",
+	label_plural: "Gallery categories",
 	description: "Street Food / Landscapes / People / Workshops",
 	hierarchical: false,
 	node_types: ["gallery_photo"]
@@ -85,7 +86,7 @@ nodetypes.register({
 
 nodetypes.register({
 	slug: "crew_member",
-	label: "Crew Member",
+	label: "Crew member",
 	label_plural: "Crew",
 	icon: "users",
 	description: "A Hello Vietnam guide or staff member",
@@ -116,8 +117,8 @@ nodetypes.register({
 
 nodetypes.register({
 	slug: "gallery_photo",
-	label: "Gallery Photo",
-	label_plural: "Gallery Photos",
+	label: "Gallery photo",
+	label_plural: "Gallery photos",
 	icon: "image",
 	description: "An image for the public gallery",
 	field_schema: [
@@ -612,5 +613,34 @@ if page_missing("legal") {
 	})
 	log.info("Hello Vietnam seed: legal page created")
 }
+
+// ─── Navigation Menus ────────────────────────────────────────
+// Seed / refresh primary and footer navigation on every activation.
+// Items use { page: "<slug>" } so they follow the node if an editor
+// renames the page's URL — no manual menu edits required.
+menus.upsert({
+	slug: "main-nav",
+	name: "Primary Navigation",
+	items: [
+		{ label: "Home",    page: "home" },
+		{ label: "About",   page: "about" },
+		{ label: "Trips",   page: "trips" },
+		{ label: "Gallery", page: "gallery" },
+		{ label: "Contact", page: "contact" }
+	]
+})
+
+menus.upsert({
+	slug: "footer-nav",
+	name: "Footer Navigation",
+	items: [
+		{ label: "All Trips", page: "trips" },
+		{ label: "Gallery",   page: "gallery" },
+		{ label: "Our Story", page: "about" },
+		{ label: "Contact",   page: "contact" },
+		{ label: "Privacy",   page: "legal" }
+	]
+})
+log.info("Hello Vietnam: navigation menus seeded (main-nav, footer-nav)")
 
 log.info("Hello Vietnam theme initialization complete")

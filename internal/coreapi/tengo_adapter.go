@@ -15,9 +15,10 @@ import (
 
 // ScriptCallbacks allows the ScriptEngine to communicate back to the CMS.
 type ScriptCallbacks struct {
-	OnRoute  func(method, path, scriptPath string)
-	OnFilter func(name, scriptPath string, priority int)
-	OnEvent  func(action, scriptPath string, priority int)
+	OnRoute     func(method, path, scriptPath string)
+	OnFilter    func(name, scriptPath string, priority int)
+	OnEvent     func(action, scriptPath string, priority int)
+	OnWellKnown func(path, scriptPath string)
 }
 
 // BuildTengoModules creates a new ModuleMap and registers all VibeCMS modules.
@@ -49,6 +50,7 @@ func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, r
 	modules.AddBuiltinModule("core/helpers", helpersModule())
 	modules.AddBuiltinModule("core/events", eventsModule(api, ctx, cb))
 	modules.AddBuiltinModule("core/settings", settingsModule(api, ctx))
+	modules.AddBuiltinModule("core/wellknown", wellKnownModule(cb))
 
 	if renderCtx != nil {
 		modules.AddBuiltinModule("core/routing", routingModule(api, ctx, renderCtx))
@@ -167,7 +169,148 @@ func menusModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 			}
 			return &tengo.ImmutableArray{Value: results}, nil
 		}},
+		// upsert({ slug, name, items: [ { label, url | page, target, children: [...] } ] })
+		// Creates the menu if missing, replaces all items with the given tree.
+		// Item forms:
+		//   { label, url }            — custom link, URL is authoritative
+		//   { label, page: "<slug>" } — link to a node; URL derived at render
+		//                                time from the node's current full_url
+		//                                (editors renaming the page don't break
+		//                                the menu)
+		// Idempotent — call from theme seeds.
+		"upsert": &tengo.UserFunction{Name: "upsert", Value: func(args ...tengo.Object) (tengo.Object, error) {
+			if len(args) < 1 {
+				return wrapError(fmt.Errorf("menus.upsert: requires input map")), nil
+			}
+			m := getTengoMap(args[0])
+			if m == nil {
+				return wrapError(fmt.Errorf("menus.upsert: input must be a map")), nil
+			}
+			items, err := menuItemsFromTengoResolvingNodes(ctx, api, m["items"])
+			if err != nil {
+				return wrapError(err), nil
+			}
+			input := MenuInput{
+				Name:  tengoToString(m["name"]),
+				Slug:  tengoToString(m["slug"]),
+				Items: items,
+			}
+			res, err := api.UpsertMenu(ctx, input)
+			if err != nil {
+				return wrapError(err), nil
+			}
+			return menuToTengoObj(res), nil
+		}},
 	}
+}
+
+// menuItemsFromTengoResolvingNodes walks a Tengo menu-items tree and resolves
+// any { page: "<slug>" } or { node: "<slug>" } fields into a NodeID lookup so
+// the rendered menu picks up the current full_url if the node is renamed.
+// An item with an unresolvable page slug is dropped with a log warning rather
+// than poisoning the whole seed.
+func menuItemsFromTengoResolvingNodes(ctx context.Context, api CoreAPI, obj tengo.Object) ([]MenuItem, error) {
+	raw := menuItemsFromTengo(obj)
+	out := make([]MenuItem, 0, len(raw))
+	for _, it := range raw {
+		if it.ItemType == "node" && it.NodeID == nil && it.URL != "" {
+			// URL holds the page slug when Tengo used { page: "<slug>" } form.
+			list, err := api.QueryNodes(ctx, NodeQuery{Slug: it.URL, Limit: 1})
+			if err != nil || list == nil || len(list.Nodes) == 0 {
+				// Slug didn't resolve — keep as custom with /<slug> URL so the
+				// site still links somewhere plausible.
+				it.ItemType = "custom"
+				it.URL = "/" + it.URL
+			} else {
+				id := list.Nodes[0].ID
+				it.NodeID = &id
+				it.URL = list.Nodes[0].FullURL
+			}
+		}
+		if len(it.Children) > 0 {
+			childObj := rewrapForRecursion(it.Children)
+			resolved, err := menuItemsFromTengoResolvingNodes(ctx, api, childObj)
+			if err != nil {
+				return nil, err
+			}
+			it.Children = resolved
+		}
+		out = append(out, it)
+	}
+	return out, nil
+}
+
+// rewrapForRecursion converts already-extracted MenuItems back into a
+// Tengo-shaped array so the recursion helper can process children uniformly.
+// Cheaper than duplicating the resolver logic.
+func rewrapForRecursion(items []MenuItem) tengo.Object {
+	arr := &tengo.Array{Value: make([]tengo.Object, 0, len(items))}
+	for _, it := range items {
+		m := map[string]tengo.Object{
+			"label":  &tengo.String{Value: it.Label},
+			"url":    &tengo.String{Value: it.URL},
+			"target": &tengo.String{Value: it.Target},
+		}
+		if it.ItemType != "" {
+			m["item_type"] = &tengo.String{Value: it.ItemType}
+		}
+		if len(it.Children) > 0 {
+			m["children"] = rewrapForRecursion(it.Children)
+		}
+		arr.Value = append(arr.Value, &tengo.Map{Value: m})
+	}
+	return arr
+}
+
+// menuItemsFromTengo converts a Tengo array of maps into MenuItem structs.
+// Each map supports: label (or title), url, page, node, target, children.
+// When "page" or "node" is given, we mark ItemType="node" and stash the slug
+// in URL as a placeholder — the caller (menuItemsFromTengoResolvingNodes)
+// resolves that slug into a NodeID + full_url.
+func menuItemsFromTengo(obj tengo.Object) []MenuItem {
+	arr, ok := obj.(*tengo.Array)
+	if !ok {
+		if imm, ok := obj.(*tengo.ImmutableArray); ok {
+			out := make([]MenuItem, 0, len(imm.Value))
+			for _, v := range imm.Value {
+				out = append(out, menuItemFromTengo(v))
+			}
+			return out
+		}
+		return nil
+	}
+	out := make([]MenuItem, 0, len(arr.Value))
+	for _, v := range arr.Value {
+		out = append(out, menuItemFromTengo(v))
+	}
+	return out
+}
+
+func menuItemFromTengo(v tengo.Object) MenuItem {
+	m := getTengoMap(v)
+	if m == nil {
+		return MenuItem{}
+	}
+	label := tengoToString(m["label"])
+	if label == "" {
+		label = tengoToString(m["title"])
+	}
+	item := MenuItem{
+		Label:    label,
+		URL:      tengoToString(m["url"]),
+		Target:   tengoToString(m["target"]),
+		ItemType: tengoToString(m["item_type"]),
+	}
+	// page/node keys accept a slug; resolver translates to NodeID.
+	if slug := tengoToString(m["page"]); slug != "" {
+		item.ItemType = "node"
+		item.URL = slug
+	} else if slug := tengoToString(m["node"]); slug != "" {
+		item.ItemType = "node"
+		item.URL = slug
+	}
+	item.Children = menuItemsFromTengo(m["children"])
+	return item
 }
 
 // ---------------------------------------------------------------------------
@@ -469,6 +612,31 @@ func routesModule(cb *ScriptCallbacks) map[string]tengo.Object {
 			scriptPath := tengoToString(args[2])
 			if cb != nil && cb.OnRoute != nil {
 				cb.OnRoute(method, path, scriptPath)
+			}
+			return tengo.UndefinedValue, nil
+		}},
+	}
+}
+
+// ---------------------------------------------------------------------------
+// core/wellknown (engine handles registration, mounts on WellKnownRegistry)
+// ---------------------------------------------------------------------------
+
+// wellKnownModule exposes wellknown.register(path, script_path).
+// `path` is the suffix after "/.well-known/" (e.g. "security.txt",
+// "nodeinfo/2.0", "acme-challenge/*"). A trailing "*" registers a
+// prefix handler. The script receives `request` and sets `response`
+// using the same shape as core/http route handlers.
+func wellKnownModule(cb *ScriptCallbacks) map[string]tengo.Object {
+	return map[string]tengo.Object{
+		"register": &tengo.UserFunction{Name: "register", Value: func(args ...tengo.Object) (tengo.Object, error) {
+			if len(args) < 2 {
+				return tengo.UndefinedValue, fmt.Errorf("wellknown.register: requires path and script_path")
+			}
+			path := tengoToString(args[0])
+			scriptPath := tengoToString(args[1])
+			if cb != nil && cb.OnWellKnown != nil {
+				cb.OnWellKnown(path, scriptPath)
 			}
 			return tengo.UndefinedValue, nil
 		}},

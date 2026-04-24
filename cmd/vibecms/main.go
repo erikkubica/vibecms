@@ -149,6 +149,7 @@ func main() {
 
 	// Theme management.
 	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes")
+	themeMgmtSvc.ScanAndRegister()
 	themeHandler := cms.NewThemeHandler(database, themeMgmtSvc)
 
 	// CoreAPI — unified API facade for extensions.
@@ -334,7 +335,21 @@ func main() {
 	app.Static("/media", "./storage/media")
 
 	// --- Theme static assets ---
-	app.Static("/theme/assets", filepath.Join(themePath, "assets"))
+	// Dynamic: the active theme can change at runtime via
+	// /admin/api/themes/:id/activate. We resolve the active theme's assets
+	// directory per request (with an atomic-pointer cache refreshed on
+	// theme.activated events) so asset URLs always point at the live theme.
+	themeAssetsDir := newThemeAssetsResolver(database, eventBus, themePath)
+	app.Get("/theme/assets/*", func(c *fiber.Ctx) error {
+		rel := c.Params("*")
+		// Reject any path that tries to escape via "..".
+		clean := filepath.Clean("/" + rel)
+		if clean == "/" || clean == "." {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		full := filepath.Join(themeAssetsDir.Get(), clean)
+		return c.SendFile(full, true)
+	})
 
 	// --- Admin SPA ---
 	// Hashed assets: cache forever
@@ -357,6 +372,11 @@ func main() {
 
 	// --- Theme script API routes ---
 	scriptEngine.MountHTTPRoutes(app)
+
+	// --- .well-known/* registry (short-circuit before public catch-all) ---
+	wellKnown := cms.NewWellKnownRegistry()
+	scriptEngine.MountWellKnown(wellKnown)
+	wellKnown.Mount(app)
 
 	// --- Public content routes (must be last) ---
 	publicHandler.RegisterRoutes(app)

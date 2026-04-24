@@ -120,4 +120,10 @@ Core proxies `/admin/api/ext/{slug}/*` → plugin's `HandleHTTPRequest` RPC. Plu
 
 - **[Extension API](docs/extension_api.md)**: Comprehensive handoff guide for building extensions (gRPC and Tengo).
 - **[Scripting API](docs/scripting_api.md)**: Detailed reference for the embedded Tengo scripting engine.
-- **[Design Spec](DESIGN_SPEC.md)**: Technical architecture and design decisions.
+- **[VDUS](docs/vdus.md)**: VibeCMS Dynamic UI System — how the SDUI layer works (boot manifest, layout trees, SSE, action handler, component registry).
+- **[Architecture](docs/architecture.md)**: Kernel + extension architecture reference.
+
+### Plans
+
+- Active plans: `docs/plans/`
+- Archived (pre-VDUS): `docs/superpowers/archive/`

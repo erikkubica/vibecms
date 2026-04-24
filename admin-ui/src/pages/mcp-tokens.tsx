@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import {
   ListPageShell,
   ListHeader,
+  ListToolbar,
+  ListSearch,
   ListCard,
   ListTable,
   Th,
@@ -86,6 +88,7 @@ function tokenStatusLabel(t: McpToken): string {
 export default function McpTokensPage() {
   const [tokens, setTokens] = useState<McpToken[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<McpToken | null>(null);
   const [revealed, setRevealed] = useState<{ token: string; record: McpToken } | null>(null);
@@ -158,11 +161,17 @@ export default function McpTokensPage() {
     }
   }
 
+  const q = search.toLowerCase();
+  const filteredTokens = q
+    ? tokens.filter((t) => t.name.toLowerCase().includes(q) || t.token_prefix.toLowerCase().includes(q))
+    : tokens;
+
   return (
     <ListPageShell>
       <ListHeader
         title="MCP Tokens"
-        count={tokens.length}
+        tabs={[{ value: "all", label: "All", count: tokens.length }]}
+        activeTab="all"
         newLabel="New token"
         onNew={() => setCreateOpen(true)}
       />
@@ -171,6 +180,10 @@ export default function McpTokensPage() {
         Bearer tokens that let AI clients control this VibeCMS instance via the Model Context
         Protocol. Each token is shown once at creation — store it somewhere safe.
       </p>
+
+      <ListToolbar>
+        <ListSearch value={search} onChange={setSearch} placeholder="Search tokens…" />
+      </ListToolbar>
 
       <ListCard>
         {loading ? (
@@ -195,7 +208,7 @@ export default function McpTokensPage() {
               </tr>
             </thead>
             <tbody>
-              {tokens.map((t) => (
+              {filteredTokens.map((t) => (
                 <Tr key={t.id}>
                   <Td>
                     <TitleCell title={t.name} slug={`${t.token_prefix}…`} />

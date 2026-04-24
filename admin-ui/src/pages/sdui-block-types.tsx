@@ -1,15 +1,31 @@
+import { useSearchParams } from "react-router-dom";
 import { SduiAdminShell } from "../sdui/admin-shell";
 import { useLayout } from "../hooks/use-layout";
 import { LayoutRenderer } from "../sdui/renderer";
 import { getPageStore } from "../sdui/action-handler";
 
 export function SduiBlockTypesPage() {
+  const [searchParams] = useSearchParams();
+  const params: Record<string, string> = {};
+  const page = searchParams.get("page");
+  const source = searchParams.get("source");
+  const search = searchParams.get("search");
+  const sort = searchParams.get("sort");
+  const order = searchParams.get("order");
+  if (page) params.page = page;
+  if (source && source !== "all") params.source = source;
+  if (search) params.search = search;
+  if (sort) params.sort = sort;
+  const per_page = searchParams.get("per_page");
+  if (per_page) params.per_page = per_page;
+  if (order) params.order = order;
+
   const {
     data: layout,
     isLoading,
     isFetching,
     error,
-  } = useLayout("block-types");
+  } = useLayout("block-types", params);
   const store = getPageStore("block-types");
 
   const showSpinner = isLoading && !layout;

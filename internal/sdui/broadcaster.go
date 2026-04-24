@@ -20,50 +20,91 @@ type Broadcaster struct {
 	clients map[chan SSEEvent]bool
 }
 
-// NewBroadcaster creates a new Broadcaster and subscribes to relevant
-// event bus actions to forward state changes as SSE events.
+// NewBroadcaster creates a new Broadcaster and subscribes to the event bus.
+// A single SubscribeAll handler routes every backend event to one of the
+// typed SSE events consumed by the admin client.
 func NewBroadcaster(eventBus *events.EventBus) *Broadcaster {
 	b := &Broadcaster{
 		clients: make(map[chan SSEEvent]bool),
 	}
-
-	// UI_STALE: extension lifecycle changes invalidate cached layouts.
-	eventBus.Subscribe("extension.activated", b.handleEvent("UI_STALE"))
-	eventBus.Subscribe("extension.deactivated", b.handleEvent("UI_STALE"))
-
-	// NODE_TYPE_CHANGED: node type CRUD changes navigation and list layouts.
-	eventBus.Subscribe("node_type.created", b.handleEvent("NODE_TYPE_CHANGED"))
-	eventBus.Subscribe("node_type.updated", b.handleEvent("NODE_TYPE_CHANGED"))
-	eventBus.Subscribe("node_type.deleted", b.handleEvent("NODE_TYPE_CHANGED"))
-
-	// Forward notification-type events to connected clients.
-	eventBus.SubscribeAll(b.handleAllEvents)
-
+	eventBus.SubscribeAll(b.route)
 	return b
 }
 
-// handleEvent returns an events.Handler that wraps the payload into an
-// SSEEvent with the given event type.
-func (b *Broadcaster) handleEvent(eventType string) events.Handler {
-	return func(action string, payload events.Payload) {
-		b.Broadcast(SSEEvent{
-			Type: eventType,
-			Data: map[string]interface{}{
-				"action":  action,
-				"payload": payload,
-			},
-		})
+// route maps a backend event.Bus action to the SSE event(s) the admin UI
+// expects. See the SSEEvent type comment in types.go for the taxonomy.
+//
+// A single backend event may fan out into multiple SSE events — e.g. a
+// node_type.updated both flips the sidebar (NAV_STALE) and invalidates the
+// entity's own query caches (ENTITY_CHANGED).
+func (b *Broadcaster) route(action string, payload events.Payload) {
+	// Pass-through notifications for toasts.
+	if action == "notify" || action == "user.notification" {
+		b.Broadcast(SSEEvent{Type: "NOTIFY", Data: payload})
+		return
+	}
+
+	// Settings have their own channel because query keys are scoped by key.
+	if action == "setting.updated" {
+		key, _ := payload["key"].(string)
+		b.Broadcast(SSEEvent{Type: "SETTING_CHANGED", Key: key, Data: payload})
+		return
+	}
+
+	// Navigation-affecting events: sidebar + boot manifest need a refetch.
+	// These ALSO fan out to ENTITY_CHANGED so per-entity list/detail queries
+	// (e.g. the node-types list page) refresh too.
+	switch action {
+	case "extension.activated", "extension.deactivated",
+		"theme.activated", "theme.deactivated",
+		"taxonomies:register":
+		b.Broadcast(SSEEvent{Type: "NAV_STALE", Data: payload})
+		return
+	}
+
+	// Everything else is an entity CRUD event of the form "<entity>.<op>".
+	entity, op := splitEntityAction(action)
+	if entity == "" {
+		return // unknown shape — drop silently
+	}
+	ev := SSEEvent{
+		Type:   "ENTITY_CHANGED",
+		Entity: entity,
+		Op:     op,
+		ID:     extractID(payload),
+		Data:   payload,
+	}
+	b.Broadcast(ev)
+
+	// node_type changes also rebuild the sidebar.
+	if entity == "node_type" {
+		b.Broadcast(SSEEvent{Type: "NAV_STALE", Data: payload})
 	}
 }
 
-// handleAllEvents forwards notification-type events to connected clients.
-func (b *Broadcaster) handleAllEvents(action string, payload events.Payload) {
-	if action == "notify" || action == "user.notification" {
-		b.Broadcast(SSEEvent{
-			Type: "NOTIFY",
-			Data: payload,
-		})
+// splitEntityAction splits "layout_block.updated" → ("layout_block", "updated").
+// Returns ("", "") if the action is not a dotted entity.op form.
+func splitEntityAction(action string) (string, string) {
+	for i := 0; i < len(action); i++ {
+		if action[i] == '.' {
+			return action[:i], action[i+1:]
+		}
 	}
+	return "", ""
+}
+
+// extractID pulls an id-shaped field out of a payload. Backend publishers use
+// a few different field names — "id" is canonical, but some older publishers
+// emit "user_id", "node_id", etc. We accept any of them.
+func extractID(p events.Payload) interface{} {
+	for _, k := range []string{"id", "user_id", "node_id", "menu_id", "layout_id",
+		"layout_block_id", "block_type_id", "template_id", "taxonomy_id", "term_id",
+		"role_id", "node_type_id", "extension_id"} {
+		if v, ok := p[k]; ok {
+			return v
+		}
+	}
+	return nil
 }
 
 // Subscribe creates a new client channel that will receive broadcast events.

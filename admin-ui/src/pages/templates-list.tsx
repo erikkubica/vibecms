@@ -16,14 +16,12 @@ import {
   deleteTemplate,
   detachTemplate,
   type Template,
-  type PaginationMeta,
 } from "@/api/client";
 import {
   ListPageShell,
   ListHeader,
   ListCard,
   ListTable,
-  ListFooter,
   Th,
   Tr,
   Td,
@@ -34,27 +32,27 @@ import {
   LoadingRow,
 } from "@/components/ui/list-page";
 
+type SourceFilter = "all" | "custom" | "theme" | "extension";
+
 export default function TemplatesListPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Template | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [page, setPage] = useState(1);
-  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [source, setSource] = useState<SourceFilter>("all");
   const [detachingId, setDetachingId] = useState<number | null>(null);
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getTemplatesPaginated({ page, per_page: 25 });
+      const res = await getTemplatesPaginated({ page: 1, per_page: 500 });
       setTemplates(res.data);
-      setMeta(res.meta);
     } catch {
       toast.error("Failed to load templates");
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, []);
 
   useEffect(() => {
     fetchTemplates();
@@ -88,11 +86,23 @@ export default function TemplatesListPage() {
     }
   }
 
+  const countBy = (s: string) => templates.filter((t) => t.source === s).length;
+  const sourceTabs = [
+    { value: "all", label: "All", count: templates.length },
+    { value: "custom", label: "Custom", count: countBy("custom") },
+    { value: "theme", label: "Theme", count: countBy("theme") },
+    { value: "extension", label: "Extension", count: countBy("extension") },
+  ].filter((t) => t.value === "all" || t.count > 0);
+
+  const displayed = source === "all" ? templates : templates.filter((t) => t.source === source);
+
   return (
     <ListPageShell>
       <ListHeader
         title="Templates"
-        count={meta?.total}
+        tabs={sourceTabs}
+        activeTab={source}
+        onTabChange={(v) => setSource(v as SourceFilter)}
         newLabel="New Template"
         newHref="/admin/templates/new"
       />
@@ -100,96 +110,82 @@ export default function TemplatesListPage() {
       <ListCard>
         {loading ? (
           <LoadingRow />
-        ) : templates.length === 0 ? (
+        ) : displayed.length === 0 ? (
           <EmptyState
             icon={LayoutTemplate}
-            title="No templates found"
-            description="Create your first template to get started"
+            title={source === "all" ? "No templates found" : `No ${source} templates`}
+            description={source === "all" ? "Create your first template to get started" : ""}
             action={
-              <Link
-                to="/admin/templates/new"
-                className="h-[30px] px-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                New Template
-              </Link>
+              source === "all" ? (
+                <Link
+                  to="/admin/templates/new"
+                  className="h-[30px] px-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New Template
+                </Link>
+              ) : undefined
             }
           />
         ) : (
-          <>
-            <ListTable>
-              <thead>
-                <tr>
-                  <Th>Label</Th>
-                  <Th width={100}>Blocks</Th>
-                  <Th width={140}>Source</Th>
-                  <Th>Description</Th>
-                  <Th width={120} align="right">Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {templates.map((tpl) => (
-                  <Tr key={tpl.id}>
-                    <Td>
-                      <TitleCell
-                        to={`/admin/templates/${tpl.id}/edit`}
-                        title={tpl.label}
-                        slug={tpl.slug}
-                      />
-                    </Td>
-                    <Td className="font-mono text-[12px] text-slate-500 tabular-nums">
-                      {tpl.block_config?.length ?? 0}
-                    </Td>
-                    <Td>
-                      {tpl.source === "theme" ? (
-                        <Chip>{tpl.theme_name || "Theme"}</Chip>
-                      ) : tpl.source === "extension" ? (
-                        <Chip>Extension</Chip>
-                      ) : (
-                        <Chip>Custom</Chip>
-                      )}
-                    </Td>
-                    <Td className="text-slate-500">
-                      <span className="block max-w-xs truncate" title={tpl.description || ""}>
-                        {tpl.description || "—"}
-                      </span>
-                    </Td>
-                    <Td align="right" className="whitespace-nowrap">
-                      <RowActions
-                        editTo={`/admin/templates/${tpl.id}/edit`}
-                        onDelete={() => setDeleteTarget(tpl)}
-                        disableDelete={tpl.source !== "custom"}
-                        deleteTitle={tpl.source !== "custom" ? "Only custom templates can be deleted" : "Delete"}
-                        extra={
-                          tpl.source !== "custom" ? (
-                            <button
-                              type="button"
-                              title="Detach from source"
-                              onClick={() => handleDetach(tpl)}
-                              disabled={detachingId === tpl.id}
-                              className="w-[26px] h-[26px] grid place-items-center text-amber-600 hover:text-amber-700 hover:bg-amber-50 hover:border-amber-200 border border-transparent rounded-[2px] cursor-pointer bg-transparent disabled:opacity-40"
-                            >
-                              <Unplug className="w-3 h-3" />
-                            </button>
-                          ) : null
-                        }
-                      />
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </ListTable>
-            {meta && (
-              <ListFooter
-                page={meta.page}
-                totalPages={meta.total_pages}
-                total={meta.total}
-                perPage={meta.per_page}
-                onPage={setPage}
-                label="templates"
-              />
-            )}
-          </>
+          <ListTable>
+            <thead>
+              <tr>
+                <Th>Label</Th>
+                <Th width={100}>Blocks</Th>
+                <Th width={140}>Source</Th>
+                <Th>Description</Th>
+                <Th width={120} align="right">Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayed.map((tpl) => (
+                <Tr key={tpl.id}>
+                  <Td>
+                    <TitleCell to={`/admin/templates/${tpl.id}/edit`} title={tpl.label} slug={tpl.slug} />
+                  </Td>
+                  <Td className="font-mono text-[12px] text-slate-500 tabular-nums">
+                    {tpl.block_config?.length ?? 0}
+                  </Td>
+                  <Td>
+                    {tpl.source === "theme" ? (
+                      <Chip>{tpl.theme_name || "Theme"}</Chip>
+                    ) : tpl.source === "extension" ? (
+                      <Chip>Extension</Chip>
+                    ) : (
+                      <Chip>Custom</Chip>
+                    )}
+                  </Td>
+                  <Td className="text-slate-500">
+                    <span className="block max-w-xs truncate" title={tpl.description || ""}>
+                      {tpl.description || "—"}
+                    </span>
+                  </Td>
+                  <Td align="right" className="whitespace-nowrap">
+                    <RowActions
+                      editTo={`/admin/templates/${tpl.id}/edit`}
+                      onDelete={() => setDeleteTarget(tpl)}
+                      disableDelete={tpl.source !== "custom"}
+                      deleteTitle={tpl.source !== "custom" ? "Only custom templates can be deleted" : "Delete"}
+                      extra={
+                        tpl.source !== "custom" ? (
+                          <button
+                            type="button"
+                            title="Detach from source"
+                            onClick={() => handleDetach(tpl)}
+                            disabled={detachingId === tpl.id}
+                            className="w-[26px] h-[26px] grid place-items-center text-amber-600 hover:text-amber-700 hover:bg-amber-50 hover:border-amber-200 border border-transparent rounded-[2px] cursor-pointer bg-transparent disabled:opacity-40"
+                          >
+                            <Unplug className="w-3 h-3" />
+                          </button>
+                        ) : null
+                      }
+                    />
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </ListTable>
         )}
       </ListCard>
 

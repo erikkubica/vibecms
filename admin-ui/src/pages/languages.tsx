@@ -22,6 +22,8 @@ import {
 import {
   ListPageShell,
   ListHeader,
+  ListToolbar,
+  ListSearch,
   ListCard,
   ListTable,
   Th,
@@ -38,6 +40,7 @@ export default function LanguagesPage() {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingLanguage, setEditingLanguage] = useState<Language | null>(null);
@@ -159,14 +162,29 @@ export default function LanguagesPage() {
     }
   }
 
+  const q = search.toLowerCase();
+  const filteredLanguages = q
+    ? languages.filter(
+        (l) =>
+          l.name.toLowerCase().includes(q) ||
+          l.code.toLowerCase().includes(q) ||
+          l.native_name.toLowerCase().includes(q),
+      )
+    : languages;
+
   return (
     <ListPageShell>
       <ListHeader
         title="Languages"
-        count={languages.length}
+        tabs={[{ value: "all", label: "All", count: languages.length }]}
+        activeTab="all"
         newLabel="Add Language"
         onNew={openAddDialog}
       />
+
+      <ListToolbar>
+        <ListSearch value={search} onChange={setSearch} placeholder="Search languages…" />
+      </ListToolbar>
 
       <ListCard>
         {loading ? (
@@ -191,7 +209,7 @@ export default function LanguagesPage() {
               </tr>
             </thead>
             <tbody>
-              {languages.map((lang) => (
+              {filteredLanguages.map((lang) => (
                 <Tr key={lang.id}>
                   <Td className="text-xl leading-none">{lang.flag}</Td>
                   <Td className="font-mono text-[12px] text-slate-700">{lang.code}</Td>

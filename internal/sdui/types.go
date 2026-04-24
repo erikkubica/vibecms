@@ -75,10 +75,33 @@ type ActionDef struct {
 
 	// For CONFIRM
 	Then *ActionDef `json:"then,omitempty"`
+
+	// For CORE_API mutations: override the default "Saved." / "Failed: <err>"
+	// toasts. Set Silent=true to suppress all user-facing feedback.
+	SuccessMessage string `json:"success_message,omitempty"`
+	ErrorMessage   string `json:"error_message,omitempty"`
+	Silent         bool   `json:"silent,omitempty"`
 }
 
 // SSEEvent is sent over the Server-Sent Events stream.
+//
+// Type values:
+//   - CONNECTED         — sent once on stream open
+//   - NAV_STALE         — sidebar / boot manifest needs a refetch
+//     (extension toggled, theme activated, node type changed)
+//   - ENTITY_CHANGED    — a CRUD event on a specific entity; Entity + ID + Op are set
+//   - SETTING_CHANGED   — a setting was written; Key is set
+//   - NOTIFY            — pass-through notification payload for toasts
+//   - UI_STALE          — coarse fallback, equivalent to "refetch boot + every layout"
+//
+// The client maps these to TanStack Query invalidations via a routing table in
+// admin-ui/src/hooks/use-sse.ts. Keep the shape stable; prefer extending Data
+// over renaming top-level fields.
 type SSEEvent struct {
-	Type string      `json:"type"` // UI_STALE, NODE_TYPE_CHANGED, NOTIFY
-	Data interface{} `json:"data"`
+	Type   string      `json:"type"`
+	Entity string      `json:"entity,omitempty"` // e.g. "user", "node", "menu", "layout", "layout_block", "block_type", "node_type", "term", "taxonomy", "template", "role"
+	ID     interface{} `json:"id,omitempty"`     // numeric or string id from events.Payload
+	Op     string      `json:"op,omitempty"`     // created | updated | deleted | published | unpublished | login | registered
+	Key    string      `json:"key,omitempty"`    // SETTING_CHANGED: the setting key
+	Data   interface{} `json:"data,omitempty"`   // pass-through payload (NOTIFY, or extra context)
 }

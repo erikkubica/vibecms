@@ -28,6 +28,13 @@ type httpRoute struct {
 	baseDir    string // scripts directory for this route (extension or theme)
 }
 
+// wellKnownRoute represents a script-backed /.well-known/* endpoint.
+type wellKnownRoute struct {
+	path       string // suffix after "/.well-known/", may end with "*"
+	scriptPath string
+	baseDir    string
+}
+
 // ---------------------------------------------------------------------------
 // Event handler registration (used during theme/extension script loading)
 // ---------------------------------------------------------------------------
@@ -278,6 +285,43 @@ func (e *ScriptEngine) MountRoutes(app *fiber.App) {
 	}
 	if apiLevel > 0 {
 		log.Printf("[script] mounted %d HTTP routes under /api/theme", apiLevel)
+	}
+}
+
+// WellKnownRegister records a .well-known handler from a Tengo script.
+func (e *ScriptEngine) WellKnownRegister(path, scriptPath string) {
+	if path == "" || scriptPath == "" {
+		return
+	}
+	if len(scriptPath) > 2 && scriptPath[:2] == "./" {
+		scriptPath = scriptPath[2:]
+	}
+	e.mu.Lock()
+	e.wellKnown = append(e.wellKnown, wellKnownRoute{
+		path:       path,
+		scriptPath: scriptPath,
+		baseDir:    e.activeScriptsDir,
+	})
+	e.mu.Unlock()
+	log.Printf("[script] registered well-known: /.well-known/%s -> %s", path, scriptPath)
+}
+
+// MountWellKnown registers all script-defined .well-known handlers on the
+// provided registry. Call after script loading and before the server starts.
+func (e *ScriptEngine) MountWellKnown(reg WellKnownRegistrar) {
+	if reg == nil {
+		return
+	}
+	e.mu.RLock()
+	routes := make([]wellKnownRoute, len(e.wellKnown))
+	copy(routes, e.wellKnown)
+	e.mu.RUnlock()
+
+	for _, r := range routes {
+		reg.Register(r.path, e.makeHTTPHandler(r.scriptPath, r.baseDir))
+	}
+	if len(routes) > 0 {
+		log.Printf("[script] mounted %d .well-known handlers", len(routes))
 	}
 }
 

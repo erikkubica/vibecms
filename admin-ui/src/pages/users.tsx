@@ -11,10 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { getUsers, type User, type PaginationMeta } from "@/api/client";
+import { getUsers, type User } from "@/api/client";
 import {
   ListPageShell,
   ListHeader,
+  ListToolbar,
+  ListSearch,
   ListCard,
   ListTable,
   Th,
@@ -83,7 +85,9 @@ function formatDateTime(dateStr: string | null | undefined): string {
 export default function UsersPage() {
   const [users, setUsers] = useState<UserDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [_meta, setMeta] = useState<PaginationMeta | undefined>();
+  const [search, setSearch] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
   const [showDelete, setShowDelete] = useState(false);
   const [deletingUser, setDeletingUser] = useState<UserDetail | null>(null);
@@ -93,7 +97,6 @@ export default function UsersPage() {
     try {
       const usersRes = await getUsers();
       setUsers(usersRes.data as UserDetail[]);
-      setMeta(usersRes.meta);
     } catch {
       toast.error("Failed to load users");
     } finally {
@@ -127,14 +130,41 @@ export default function UsersPage() {
     }
   }
 
+  const uniqueRoles = Array.from(new Set(users.map((u) => getRoleName(u.role)))).sort();
+
+  const q = search.toLowerCase();
+  const filteredUsers = users.filter((u) => {
+    if (q && !u.full_name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+    if (filterRole && getRoleName(u.role) !== filterRole) return false;
+    if (filterStatus === "active" && u.is_active === false) return false;
+    if (filterStatus === "inactive" && u.is_active !== false) return false;
+    return true;
+  });
+
+  const selectCls = "h-[30px] pl-2 pr-7 bg-white border border-slate-300 rounded text-[13px] text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 outline-none appearance-none cursor-pointer";
+
   return (
     <ListPageShell>
       <ListHeader
         title="Users"
-        count={users.length}
+        tabs={[{ value: "all", label: "All", count: users.length }]}
+        activeTab="all"
         newLabel="Add User"
         newHref="/admin/users/new"
       />
+
+      <ListToolbar>
+        <ListSearch value={search} onChange={setSearch} placeholder="Search users…" />
+        <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className={selectCls}>
+          <option value="">All roles</option>
+          {uniqueRoles.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={selectCls}>
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </ListToolbar>
 
       <ListCard>
         {loading ? (
@@ -168,7 +198,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
+              {filteredUsers.map((user) => {
                 const isActive = user.is_active !== false;
                 return (
                   <Tr key={user.id}>

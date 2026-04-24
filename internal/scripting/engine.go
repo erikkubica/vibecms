@@ -38,6 +38,13 @@ type ScriptEngine struct {
 	eventHandlers  map[string][]scriptHandler // event name -> handlers sorted by priority
 	filterHandlers map[string][]scriptHandler // filter name -> handlers sorted by priority
 	httpRoutes     []httpRoute
+	wellKnown      []wellKnownRoute
+}
+
+// WellKnownRegistrar is satisfied by cms.WellKnownRegistry. Declared here
+// to avoid a scripting → cms import cycle.
+type WellKnownRegistrar interface {
+	Register(path string, handler fiber.Handler)
 }
 
 // NewScriptEngine creates a new ScriptEngine.
@@ -57,9 +64,10 @@ func NewScriptEngine(
 // registration methods (EventsOn, FiltersAdd, HTTPRegister).
 func (e *ScriptEngine) scriptCallbacks() *coreapi.ScriptCallbacks {
 	return &coreapi.ScriptCallbacks{
-		OnEvent:  e.EventsOn,
-		OnFilter: e.FiltersAdd,
-		OnRoute:  e.HTTPRegister,
+		OnEvent:     e.EventsOn,
+		OnFilter:    e.FiltersAdd,
+		OnRoute:     e.HTTPRegister,
+		OnWellKnown: e.WellKnownRegister,
 	}
 }
 

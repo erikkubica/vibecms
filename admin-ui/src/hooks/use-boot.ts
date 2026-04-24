@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { BootManifest } from '../sdui/types';
+import { qk } from '../sdui/query-keys';
 
 async function fetchBoot(): Promise<BootManifest> {
   const res = await fetch('/admin/api/boot', { credentials: 'include' });
@@ -10,7 +11,7 @@ async function fetchBoot(): Promise<BootManifest> {
 
 export function useBoot() {
   return useQuery({
-    queryKey: ['boot'],
+    queryKey: qk.boot(),
     queryFn: fetchBoot,
     staleTime: 60_000, // 1 minute — boot manifest changes rarely
   });

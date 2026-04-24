@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @source "../src/**/*.{ts,tsx}";
 @source "../node_modules/@radix-ui/**/*.{js,jsx}";
+/* Extension micro-frontends ship their own compiled JS but share the
+   admin's Tailwind CSS. Including their sources here ensures any class
+   used in an extension (e.g. pt-5 in the image optimizer) gets picked
+   up by the main stylesheet — otherwise the class silently has no
+   effect because no rule was generated for it. */
+@source "../../extensions/*/admin-ui/src/**/*.{ts,tsx}";
 
 /* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');

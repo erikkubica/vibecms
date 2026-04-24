@@ -1,20 +1,33 @@
+import { useSearchParams } from "react-router-dom";
 import { SduiAdminShell } from "../sdui/admin-shell";
 import { useLayout } from "../hooks/use-layout";
 import { LayoutRenderer } from "../sdui/renderer";
 import { getPageStore } from "../sdui/action-handler";
 
 export function SduiTaxonomiesPage() {
+  const [searchParams] = useSearchParams();
+  const params: Record<string, string> = {};
+  const page = searchParams.get("page");
+  const tab = searchParams.get("tab");
+  const search = searchParams.get("search");
+  const sort = searchParams.get("sort");
+  const order = searchParams.get("order");
+  const per_page = searchParams.get("per_page");
+  if (page) params.page = page;
+  if (tab && tab !== "all") params.tab = tab;
+  if (search) params.search = search;
+  if (sort) params.sort = sort;
+  if (order) params.order = order;
+  if (per_page) params.per_page = per_page;
+
   const {
     data: layout,
     isLoading,
     isFetching,
     error,
-  } = useLayout("taxonomies");
+  } = useLayout("taxonomies", params);
   const store = getPageStore("taxonomies");
 
-  // Only show full-page spinner on initial load (no data yet).
-  // When refetching, keep the previous layout mounted so interactive
-  // elements don't lose focus.
   const showSpinner = isLoading && !layout;
 
   return (

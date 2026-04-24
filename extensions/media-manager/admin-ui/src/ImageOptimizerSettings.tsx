@@ -22,8 +22,7 @@ import {
   SelectValue,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
+  SectionHeader,
   Separator,
   Badge,
   Dialog,
@@ -460,27 +459,186 @@ export default function ImageOptimizerSettings() {
     );
   }
 
+  const optPercent = optStats && optStats.total_images > 0
+    ? Math.round((optStats.optimized_count / optStats.total_images) * 100)
+    : 0;
+  const busy = reoptimizeJob?.running || restoreJob?.running;
+
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600">
-          <Settings className="h-5 w-5" />
+    <div className="space-y-5 max-w-5xl">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Image Optimizer</h2>
+            <p className="text-sm text-slate-500">
+              Shrink uploads, pre-render responsive variants, keep the library fast.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Image Optimizer</h2>
-          <p className="text-sm text-slate-500">
-            Configure upload normalization, image sizes, and cache settings
-          </p>
-        </div>
+        {optStats && optStats.total_images > 0 && optStats.total_savings > 0 && (
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">You've saved</span>
+            <span className="font-mono text-base font-semibold text-indigo-600">
+              {formatBytes(optStats.total_savings)}
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* ==================== Optimization Overview ==================== */}
+      {optStats && optStats.total_images > 0 && (
+        <Card>
+          <SectionHeader
+            title="Overview"
+            icon={<Sparkles className="h-4 w-4 text-indigo-500" />}
+            actions={
+              <>
+                {optStats.unoptimized_count > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                    onClick={handleOptimizePending}
+                    disabled={busy}
+                  >
+                    {reoptimizeJob?.running ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {reoptimizeJob.processed}/{reoptimizeJob.total}</>
+                    ) : (
+                      <><Zap className="h-3.5 w-3.5 mr-1.5" /> Optimize Pending ({optStats.unoptimized_count})</>
+                    )}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                  onClick={() => setReoptimizeAllConfirm(true)}
+                  disabled={busy}
+                >
+                  <Zap className="h-3.5 w-3.5 mr-1.5" /> Re-optimize All
+                </Button>
+                {optStats.with_backup > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-amber-700 border-amber-200 hover:bg-amber-50"
+                    onClick={() => setRestoreAllConfirm(true)}
+                    disabled={busy}
+                  >
+                    {restoreJob?.running ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {restoreJob.processed}/{restoreJob.total}</>
+                    ) : (
+                      <><RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Restore All</>
+                    )}
+                  </Button>
+                )}
+              </>
+            }
+          />
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">Total</p>
+                <p className="text-2xl font-bold text-slate-800 mt-0.5">{optStats.total_images}</p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-emerald-700">Optimized</p>
+                <p className="text-2xl font-bold text-emerald-700 mt-0.5">{optStats.optimized_count}</p>
+              </div>
+              <div className={`rounded-lg border p-3 ${optStats.unoptimized_count > 0 ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
+                <p className={`text-[11px] uppercase tracking-wide ${optStats.unoptimized_count > 0 ? "text-amber-700" : "text-slate-500"}`}>Pending</p>
+                <p className={`text-2xl font-bold mt-0.5 ${optStats.unoptimized_count > 0 ? "text-amber-700" : "text-slate-400"}`}>
+                  {optStats.unoptimized_count}
+                </p>
+              </div>
+              <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-indigo-700">Saved</p>
+                <p className="text-2xl font-bold text-indigo-700 mt-0.5">{formatBytes(optStats.total_savings)}</p>
+              </div>
+            </div>
+
+            {/* Progress / live job state */}
+            {reoptimizeJob?.running ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                  <span className="text-sm font-medium text-emerald-800">
+                    Re-optimizing {reoptimizeJob.processed + reoptimizeJob.failed} / {reoptimizeJob.total}
+                  </span>
+                  {reoptimizeJob.total_saved > 0 && (
+                    <span className="text-xs text-emerald-600 ml-auto">
+                      {formatBytes(reoptimizeJob.total_saved)} saved so far
+                    </span>
+                  )}
+                </div>
+                <div className="h-2 rounded-full bg-emerald-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${reoptimizeJob.total > 0 ? ((reoptimizeJob.processed + reoptimizeJob.failed) / reoptimizeJob.total) * 100 : 0}%` }}
+                  />
+                </div>
+                {reoptimizeJob.failed > 0 && (
+                  <p className="text-[10px] text-amber-700">{reoptimizeJob.failed} failed</p>
+                )}
+              </div>
+            ) : restoreJob?.running ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                  <span className="text-sm font-medium text-amber-800">
+                    Restoring {restoreJob.processed + restoreJob.failed} / {restoreJob.total}
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-amber-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                    style={{ width: `${restoreJob.total > 0 ? ((restoreJob.processed + restoreJob.failed) / restoreJob.total) * 100 : 0}%` }}
+                  />
+                </div>
+                {restoreJob.failed > 0 && (
+                  <p className="text-[10px] text-red-600">{restoreJob.failed} failed</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="flex justify-between text-[11px] text-slate-500 mb-1.5">
+                  <span>{optPercent}% optimized</span>
+                  <span>{optStats.with_backup} with backup</span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${optPercent}%` }}
+                  />
+                </div>
+                {optStats.unoptimized_count === 0 && optStats.total_images > 0 && (
+                  <p className="text-[11px] text-emerald-600 mt-2 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" /> Every image in the library has been processed.
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ==================== Settings Section ==================== */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Upload &amp; Optimization Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <SectionHeader
+          title="Upload &amp; Encoding"
+          icon={<Settings className="h-4 w-4 text-slate-500" />}
+          actions={
+            <Button size="sm" className="h-8" onClick={handleSaveSettings} disabled={settingsSaving}>
+              {settingsSaving && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+              Save
+            </Button>
+          }
+        />
+        <CardContent className="space-y-6 pt-5">
           {/* Upload Normalization Toggle */}
           <div className="flex items-center justify-between">
             <div>
@@ -614,29 +772,27 @@ export default function ImageOptimizerSettings() {
             </button>
           </div>
 
-          <div className="pt-2">
-            <Button onClick={handleSaveSettings} disabled={settingsSaving}>
-              {settingsSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Save Settings
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
       {/* ==================== Registered Sizes ==================== */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Registered Sizes</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddForm(!showAddForm)}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Size
-          </Button>
-        </CardHeader>
-        <CardContent>
+        <SectionHeader
+          title="Image Sizes"
+          icon={<ImageIcon className="h-4 w-4 text-slate-500" />}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => setShowAddForm(!showAddForm)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add Size
+            </Button>
+          }
+        />
+        <CardContent className="pt-4">
           {/* Add Size Form */}
           {showAddForm && (
             <div className="mb-4 p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
@@ -772,171 +928,38 @@ export default function ImageOptimizerSettings() {
         </CardContent>
       </Card>
 
-      {/* ==================== Optimization Overview ==================== */}
-      {optStats && optStats.total_images > 0 && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Optimization Overview</CardTitle>
-            <div className="flex gap-2">
-              {optStats.unoptimized_count > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-indigo-700 border-indigo-200 hover:bg-indigo-50"
-                  onClick={handleOptimizePending}
-                  disabled={reoptimizeJob?.running || restoreJob?.running}
-                >
-                  {reoptimizeJob?.running ? (
-                    <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {reoptimizeJob.processed}/{reoptimizeJob.total}</>
-                  ) : (
-                    <><Zap className="h-3.5 w-3.5 mr-1.5" /> Optimize Pending ({optStats.unoptimized_count})</>
-                  )}
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                onClick={() => setReoptimizeAllConfirm(true)}
-                disabled={reoptimizeJob?.running || restoreJob?.running}
-              >
-                {reoptimizeJob?.running ? (
-                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {reoptimizeJob.processed}/{reoptimizeJob.total}</>
-                ) : (
-                  <><Zap className="h-3.5 w-3.5 mr-1.5" /> Re-optimize All</>
-                )}
-              </Button>
-              {optStats.with_backup > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-amber-700 border-amber-200 hover:bg-amber-50"
-                  onClick={() => setRestoreAllConfirm(true)}
-                  disabled={reoptimizeJob?.running || restoreJob?.running}
-                >
-                  {restoreJob?.running ? (
-                    <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> {restoreJob.processed}/{restoreJob.total}</>
-                  ) : (
-                    <><RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Restore All</>
-                  )}
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Total images */}
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-center">
-                <p className="text-2xl font-bold text-slate-800">{optStats.total_images}</p>
-                <p className="text-xs text-slate-500 mt-0.5">Total Images</p>
-              </div>
-              {/* Optimized */}
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-center">
-                <p className="text-2xl font-bold text-emerald-700">{optStats.optimized_count}</p>
-                <p className="text-xs text-emerald-600 mt-0.5">Optimized</p>
-              </div>
-              {/* Not optimized */}
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-center">
-                <p className="text-2xl font-bold text-amber-700">{optStats.unoptimized_count}</p>
-                <p className="text-xs text-amber-600 mt-0.5">Not Optimized</p>
-              </div>
-              {/* Space saved */}
-              <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-3 text-center">
-                <p className="text-2xl font-bold text-indigo-700">{formatBytes(optStats.total_savings)}</p>
-                <p className="text-xs text-indigo-600 mt-0.5">Total Saved</p>
-              </div>
-            </div>
-            {/* Bulk operation progress */}
-            {reoptimizeJob?.running && (
-              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                  <span className="text-sm font-medium text-emerald-800">
-                    Re-optimizing... {reoptimizeJob.processed + reoptimizeJob.failed} / {reoptimizeJob.total}
-                  </span>
-                  {reoptimizeJob.total_saved > 0 && (
-                    <span className="text-xs text-emerald-600 ml-auto">
-                      Saved {formatBytes(reoptimizeJob.total_saved)} so far
-                    </span>
-                  )}
-                </div>
-                <div className="h-2.5 rounded-full bg-emerald-200 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
-                    style={{ width: `${reoptimizeJob.total > 0 ? ((reoptimizeJob.processed + reoptimizeJob.failed) / reoptimizeJob.total) * 100 : 0}%` }}
-                  />
-                </div>
-                {reoptimizeJob.failed > 0 && (
-                  <p className="text-[10px] text-amber-600">{reoptimizeJob.failed} failed</p>
-                )}
-              </div>
-            )}
-            {restoreJob?.running && (
-              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
-                  <span className="text-sm font-medium text-amber-800">
-                    Restoring... {restoreJob.processed + restoreJob.failed} / {restoreJob.total}
-                  </span>
-                </div>
-                <div className="h-2.5 rounded-full bg-amber-200 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-amber-500 transition-all duration-300"
-                    style={{ width: `${restoreJob.total > 0 ? ((restoreJob.processed + restoreJob.failed) / restoreJob.total) * 100 : 0}%` }}
-                  />
-                </div>
-                {restoreJob.failed > 0 && (
-                  <p className="text-[10px] text-red-600">{restoreJob.failed} failed</p>
-                )}
-              </div>
-            )}
-            {/* Optimization progress bar */}
-            {optStats.total_images > 0 && !reoptimizeJob?.running && !restoreJob?.running && (
-              <div className="mt-4">
-                <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-                  <span>{Math.round((optStats.optimized_count / optStats.total_images) * 100)}% optimized</span>
-                  <span>{optStats.with_backup} with backup</span>
-                </div>
-                <div className="h-2.5 rounded-full bg-slate-200 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                    style={{ width: `${(optStats.optimized_count / optStats.total_images) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ==================== Cache Management ==================== */}
+      {/* ==================== Cache Storage ==================== */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Cache Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100">
-                <HardDrive className="h-5 w-5 text-slate-500" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-800">
-                  Total cache size: <span className="font-mono text-indigo-600">{formatBytes(cacheStats.total_size)}</span>
-                </p>
-                <p className="text-xs text-slate-500">
-                  {cacheStats.total_files} cached file{cacheStats.total_files !== 1 ? "s" : ""} across {sizes.length} size{sizes.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
+        <SectionHeader
+          title="Cache Storage"
+          icon={<HardDrive className="h-4 w-4 text-slate-500" />}
+          actions={
             <Button
               variant="outline"
-              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              size="sm"
+              className="h-8 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
               onClick={() => setClearAllConfirm(true)}
+              disabled={cacheStats.total_files === 0}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear All Cache
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Clear All
             </Button>
+          }
+        />
+        <CardContent className="pt-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100">
+              <HardDrive className="h-5 w-5 text-slate-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800">
+                {formatBytes(cacheStats.total_size)} across{" "}
+                <span className="font-mono text-indigo-600">{cacheStats.total_files}</span> cached file{cacheStats.total_files !== 1 ? "s" : ""}
+              </p>
+              <p className="text-xs text-slate-500">
+                {sizes.length} registered size{sizes.length !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

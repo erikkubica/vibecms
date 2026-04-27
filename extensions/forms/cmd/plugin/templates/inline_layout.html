@@ -1,0 +1,26 @@
+{{/* Inline Layout — compact, side-by-side fields, placeholder-only (no labels) */}}
+<div class="max-w-2xl mx-auto">
+  <form class="flex flex-wrap gap-2 items-end">
+    {{range .fields_list}}
+      {{if not (eq .type "hidden")}}
+        <div class="flex-1 min-w-[160px]">
+          {{if eq .type "textarea"}}
+            <textarea name="{{.id}}" rows="2" placeholder="{{.label}}{{if .required}} *{{end}}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}}></textarea>
+          {{else if eq .type "select"}}
+            <select name="{{.id}}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}}>
+              <option value="" disabled selected>{{.label}}{{if .required}} *{{end}}</option>
+              {{range .options}}<option value="{{.value}}">{{.label}}</option>{{end}}
+            </select>
+          {{else}}
+            <input type="{{.type}}" name="{{.id}}" placeholder="{{.label}}{{if .required}} *{{end}}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}} />
+          {{end}}
+        </div>
+      {{else}}
+        <input type="hidden" name="{{.id}}" value="{{.default_value}}" />
+      {{end}}
+    {{end}}
+    <div>
+      <button type="submit" class="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none active:scale-[0.98] transition-all duration-150 cursor-pointer whitespace-nowrap">Send</button>
+    </div>
+  </form>
+</div>

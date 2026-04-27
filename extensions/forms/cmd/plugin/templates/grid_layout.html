@@ -1,0 +1,42 @@
+{{/* Grid Layout — two-column grid with field width support
+     Fields use .width: "full" (12 cols), "half" (6 cols), "third" (4 cols).
+     Falls back to "full" when .width is unset.
+*/}}
+<style>
+.vibe-form-fields { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+.vibe-form-field-full  { grid-column: span 12; }
+.vibe-form-field-half  { grid-column: span 6; }
+.vibe-form-field-third { grid-column: span 4; }
+@media (max-width: 640px) {
+  .vibe-form-field-half, .vibe-form-field-third { grid-column: span 12; }
+}
+</style>
+<div class="max-w-2xl mx-auto">
+  <form class="space-y-2">
+    <div class="vibe-form-fields">
+      {{range .fields_list}}
+        {{$width := "full"}}{{if .width}}{{$width = .width}}{{end}}
+        <div class="vibe-form-field-{{$width}} space-y-1">
+          {{if not (eq .type "hidden")}}
+            <label class="block text-sm font-semibold text-gray-700">{{.label}}{{if .required}} <span class="text-red-500">*</span>{{end}}</label>
+          {{end}}
+          {{if eq .type "textarea"}}
+            <textarea name="{{.id}}" rows="4" placeholder="{{.placeholder}}" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}}></textarea>
+          {{else if eq .type "select"}}
+            <select name="{{.id}}" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}}>
+              <option value="" disabled selected>{{.placeholder}}</option>
+              {{range .options}}<option value="{{.value}}">{{.label}}</option>{{end}}
+            </select>
+          {{else if eq .type "hidden"}}
+            <input type="hidden" name="{{.id}}" value="{{.default_value}}" />
+          {{else}}
+            <input type="{{.type}}" name="{{.id}}" placeholder="{{.placeholder}}" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}} />
+          {{end}}
+        </div>
+      {{end}}
+    </div>
+    <div class="pt-2">
+      <button type="submit" class="w-full sm:w-auto rounded-lg bg-indigo-600 px-8 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none active:scale-[0.98] transition-all duration-150 cursor-pointer">Send Message</button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,34 @@
+{{/* Card Layout — single centered card with shadow */}}
+<div class="max-w-xl mx-auto">
+  <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="px-8 py-6 bg-indigo-600">
+      <h2 class="text-xl font-bold text-white">{{.name}}</h2>
+      <p class="text-indigo-200 text-sm mt-1">Fill in the form below and we'll be in touch.</p>
+    </div>
+    <form class="px-8 py-6 space-y-5">
+      {{range .fields_list}}
+        {{if not (eq .type "hidden")}}
+          <div class="space-y-1.5">
+            <label class="block text-sm font-semibold text-gray-700">{{.label}}{{if .required}} <span class="text-red-500">*</span>{{end}}</label>
+            {{if .help}}<p class="text-xs text-gray-500">{{.help}}</p>{{end}}
+            {{if eq .type "textarea"}}
+              <textarea name="{{.id}}" rows="4" placeholder="{{.placeholder}}" class="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}}></textarea>
+            {{else if eq .type "select"}}
+              <select name="{{.id}}" class="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}}>
+                <option value="" disabled selected>{{.placeholder}}</option>
+                {{range .options}}<option value="{{.value}}">{{.label}}</option>{{end}}
+              </select>
+            {{else}}
+              <input type="{{.type}}" name="{{.id}}" placeholder="{{.placeholder}}" class="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all duration-200" {{if .required}}required{{end}} />
+            {{end}}
+          </div>
+        {{else}}
+          <input type="hidden" name="{{.id}}" value="{{.default_value}}" />
+        {{end}}
+      {{end}}
+      <div class="pt-2">
+        <button type="submit" class="w-full rounded-lg bg-indigo-600 px-8 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none active:scale-[0.98] transition-all duration-150 cursor-pointer">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>

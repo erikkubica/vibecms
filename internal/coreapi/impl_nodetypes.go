@@ -8,7 +8,7 @@ import (
 	"vibecms/internal/models"
 )
 
-func (c *coreImpl) RegisterNodeType(_ context.Context, input NodeTypeInput) (*NodeType, error) {
+func (c *coreImpl) RegisterNodeType(ctx context.Context, input NodeTypeInput) (*NodeType, error) {
 	if input.Slug == "" {
 		return nil, NewValidation("slug is required")
 	}
@@ -90,7 +90,7 @@ func (c *coreImpl) RegisterNodeType(_ context.Context, input NodeTypeInput) (*No
 	return nodeTypeFromModel(nt), nil
 }
 
-func (c *coreImpl) GetNodeType(_ context.Context, slug string) (*NodeType, error) {
+func (c *coreImpl) GetNodeType(ctx context.Context, slug string) (*NodeType, error) {
 	nt, err := c.nodeTypeSvc.GetBySlug(slug)
 	if err != nil {
 		return nil, NewNotFound("node_type", slug)
@@ -98,7 +98,7 @@ func (c *coreImpl) GetNodeType(_ context.Context, slug string) (*NodeType, error
 	return nodeTypeFromModel(nt), nil
 }
 
-func (c *coreImpl) ListNodeTypes(_ context.Context) ([]*NodeType, error) {
+func (c *coreImpl) ListNodeTypes(ctx context.Context) ([]*NodeType, error) {
 	list, err := c.nodeTypeSvc.ListAll()
 	if err != nil {
 		return nil, NewInternal(err.Error())
@@ -110,7 +110,7 @@ func (c *coreImpl) ListNodeTypes(_ context.Context) ([]*NodeType, error) {
 	return out, nil
 }
 
-func (c *coreImpl) UpdateNodeType(_ context.Context, slug string, input NodeTypeInput) (*NodeType, error) {
+func (c *coreImpl) UpdateNodeType(ctx context.Context, slug string, input NodeTypeInput) (*NodeType, error) {
 	existing, err := c.nodeTypeSvc.GetBySlug(slug)
 	if err != nil {
 		return nil, NewNotFound("node_type", slug)
@@ -156,7 +156,7 @@ func (c *coreImpl) UpdateNodeType(_ context.Context, slug string, input NodeType
 	return nodeTypeFromModel(updated), nil
 }
 
-func (c *coreImpl) DeleteNodeType(_ context.Context, slug string) error {
+func (c *coreImpl) DeleteNodeType(ctx context.Context, slug string) error {
 	existing, err := c.nodeTypeSvc.GetBySlug(slug)
 	if err != nil {
 		return NewNotFound("node_type", slug)

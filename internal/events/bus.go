@@ -3,6 +3,7 @@ package events
 import (
 	"log"
 	"sync"
+	"sync/atomic"
 )
 
 // Payload is the data carried by an event.
@@ -17,52 +18,124 @@ type Handler func(action string, payload Payload)
 // for templates via {{event "forms:render" ...}}).
 type ResultHandler func(action string, payload Payload) string
 
+// UnsubscribeFunc removes the corresponding subscription. Calling it more
+// than once is safe and a no-op.
+type UnsubscribeFunc func()
+
+// handlerEntry pairs a handler with an opaque registration id so the
+// returned UnsubscribeFunc can locate the right slot to remove. Without
+// this, comparing function values (Go forbids ==/!= on funcs) or their
+// stack-slot addresses (the original filter-unsub bug) doesn't work.
+type handlerEntry struct {
+	id uint64
+	fn Handler
+}
+
+type resultEntry struct {
+	id uint64
+	fn ResultHandler
+}
+
 // EventBus is a thread-safe publish/subscribe event dispatcher.
 type EventBus struct {
 	mu             sync.RWMutex
-	handlers       map[string][]Handler
-	resultHandlers map[string][]ResultHandler
-	allHandlers    []Handler
+	nextID         atomic.Uint64
+	handlers       map[string][]handlerEntry
+	resultHandlers map[string][]resultEntry
+	allHandlers    []handlerEntry
 }
 
 // New creates and returns a new EventBus.
 func New() *EventBus {
 	return &EventBus{
-		handlers:       make(map[string][]Handler),
-		resultHandlers: make(map[string][]ResultHandler),
+		handlers:       make(map[string][]handlerEntry),
+		resultHandlers: make(map[string][]resultEntry),
 	}
 }
 
-// Subscribe registers a handler for a specific action.
-func (b *EventBus) Subscribe(action string, handler Handler) {
+// Subscribe registers a handler for a specific action. The returned
+// UnsubscribeFunc removes the subscription — call it during teardown
+// (theme/extension reload, test cleanup) so handler dispatch doesn't
+// multiply on every reload.
+func (b *EventBus) Subscribe(action string, handler Handler) UnsubscribeFunc {
+	id := b.nextID.Add(1)
 	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.handlers[action] = append(b.handlers[action], handler)
+	b.handlers[action] = append(b.handlers[action], handlerEntry{id: id, fn: handler})
+	b.mu.Unlock()
+	return func() { b.removeAction(action, id) }
 }
 
 // SubscribeAll registers a handler that receives ALL events.
-func (b *EventBus) SubscribeAll(handler Handler) {
+func (b *EventBus) SubscribeAll(handler Handler) UnsubscribeFunc {
+	id := b.nextID.Add(1)
+	b.mu.Lock()
+	b.allHandlers = append(b.allHandlers, handlerEntry{id: id, fn: handler})
+	b.mu.Unlock()
+	return func() { b.removeAll(id) }
+}
+
+// SubscribeResult registers a handler that returns a string result. Used by
+// extensions that render content for templates via PublishCollect (e.g. the
+// forms extension returning rendered form HTML for {{event "forms:render"}}).
+// Result handlers run synchronously, separately from regular Subscribe handlers.
+func (b *EventBus) SubscribeResult(action string, handler ResultHandler) UnsubscribeFunc {
+	id := b.nextID.Add(1)
+	b.mu.Lock()
+	b.resultHandlers[action] = append(b.resultHandlers[action], resultEntry{id: id, fn: handler})
+	b.mu.Unlock()
+	return func() { b.removeResult(action, id) }
+}
+
+func (b *EventBus) removeAction(action string, id uint64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.allHandlers = append(b.allHandlers, handler)
+	list := b.handlers[action]
+	for i, e := range list {
+		if e.id == id {
+			b.handlers[action] = append(list[:i], list[i+1:]...)
+			return
+		}
+	}
+}
+
+func (b *EventBus) removeAll(id uint64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for i, e := range b.allHandlers {
+		if e.id == id {
+			b.allHandlers = append(b.allHandlers[:i], b.allHandlers[i+1:]...)
+			return
+		}
+	}
+}
+
+func (b *EventBus) removeResult(action string, id uint64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	list := b.resultHandlers[action]
+	for i, e := range list {
+		if e.id == id {
+			b.resultHandlers[action] = append(list[:i], list[i+1:]...)
+			return
+		}
+	}
 }
 
 // Publish fires an event. Handlers run in goroutines (non-blocking).
 // Panics in handlers are recovered and logged.
 func (b *EventBus) Publish(action string, payload Payload) {
 	b.mu.RLock()
-	// Copy handler slices under the lock to avoid races.
-	specific := make([]Handler, len(b.handlers[action]))
+	specific := make([]handlerEntry, len(b.handlers[action]))
 	copy(specific, b.handlers[action])
-	all := make([]Handler, len(b.allHandlers))
+	all := make([]handlerEntry, len(b.allHandlers))
 	copy(all, b.allHandlers)
 	b.mu.RUnlock()
 
-	for _, h := range specific {
-		go safeCall(h, action, payload)
+	for _, e := range specific {
+		go safeCall(e.fn, action, payload)
 	}
-	for _, h := range all {
-		go safeCall(h, action, payload)
+	for _, e := range all {
+		go safeCall(e.fn, action, payload)
 	}
 }
 
@@ -77,28 +150,50 @@ func (b *EventBus) HasHandlers(action string) bool {
 // Use for cases where the caller needs to know delivery succeeded (e.g. SendEmail).
 func (b *EventBus) PublishSync(action string, payload Payload) {
 	b.mu.RLock()
-	specific := make([]Handler, len(b.handlers[action]))
+	specific := make([]handlerEntry, len(b.handlers[action]))
 	copy(specific, b.handlers[action])
-	all := make([]Handler, len(b.allHandlers))
+	all := make([]handlerEntry, len(b.allHandlers))
 	copy(all, b.allHandlers)
 	b.mu.RUnlock()
 
 	var wg sync.WaitGroup
-	for _, h := range specific {
+	for _, e := range specific {
 		wg.Add(1)
 		go func(fn Handler) {
 			defer wg.Done()
 			safeCall(fn, action, payload)
-		}(h)
+		}(e.fn)
 	}
-	for _, h := range all {
+	for _, e := range all {
 		wg.Add(1)
 		go func(fn Handler) {
 			defer wg.Done()
 			safeCall(fn, action, payload)
-		}(h)
+		}(e.fn)
 	}
 	wg.Wait()
+}
+
+// PublishCollect runs all result handlers for an action synchronously and
+// returns their non-empty results in registration order. Regular fire-and-forget
+// handlers (Subscribe) are NOT invoked — callers that need both should call
+// Publish in addition.
+func (b *EventBus) PublishCollect(action string, payload Payload) []string {
+	b.mu.RLock()
+	entries := make([]resultEntry, len(b.resultHandlers[action]))
+	copy(entries, b.resultHandlers[action])
+	b.mu.RUnlock()
+
+	if len(entries) == 0 {
+		return nil
+	}
+	results := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if r := safeCallResult(e.fn, action, payload); r != "" {
+			results = append(results, r)
+		}
+	}
+	return results
 }
 
 func safeCall(h Handler, action string, payload Payload) {
@@ -108,38 +203,6 @@ func safeCall(h Handler, action string, payload Payload) {
 		}
 	}()
 	h(action, payload)
-}
-
-// SubscribeResult registers a handler that returns a string result. Used by
-// extensions that render content for templates via PublishCollect (e.g. the
-// forms extension returning rendered form HTML for {{event "forms:render"}}).
-// Result handlers run synchronously, separately from regular Subscribe handlers.
-func (b *EventBus) SubscribeResult(action string, handler ResultHandler) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.resultHandlers[action] = append(b.resultHandlers[action], handler)
-}
-
-// PublishCollect runs all result handlers for an action synchronously and
-// returns their non-empty results in registration order. Regular fire-and-forget
-// handlers (Subscribe) are NOT invoked — callers that need both should call
-// Publish in addition.
-func (b *EventBus) PublishCollect(action string, payload Payload) []string {
-	b.mu.RLock()
-	handlers := make([]ResultHandler, len(b.resultHandlers[action]))
-	copy(handlers, b.resultHandlers[action])
-	b.mu.RUnlock()
-
-	if len(handlers) == 0 {
-		return nil
-	}
-	results := make([]string, 0, len(handlers))
-	for _, h := range handlers {
-		if r := safeCallResult(h, action, payload); r != "" {
-			results = append(results, r)
-		}
-	}
-	return results
 }
 
 func safeCallResult(h ResultHandler, action string, payload Payload) (result string) {

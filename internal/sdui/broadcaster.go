@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"vibecms/internal/events"
@@ -12,12 +14,26 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// sseClientBuffer is the per-client SSE event buffer. Sized to absorb a
+// short burst (e.g. the slew of NAV_STALE events fired when an extension
+// activates) without dropping; over that, the client is considered slow
+// and events drop rather than block the publisher.
+const sseClientBuffer = 64
+
 // Broadcaster manages Server-Sent Events connections and pushes events
 // to connected admin clients. It wires into the event bus to automatically
 // forward relevant state changes.
 type Broadcaster struct {
-	mu      sync.RWMutex
-	clients map[chan SSEEvent]bool
+	mu          sync.RWMutex
+	clients     map[chan SSEEvent]*clientStats
+	totalDrops  atomic.Uint64 // diagnostic — incremented every time a per-client buffer was full and an event was dropped.
+}
+
+// clientStats tracks per-client diagnostics. Kept off the hot path of
+// the broadcast loop — only updated on drops, read by /admin/api/stats.
+type clientStats struct {
+	connectedAt time.Time
+	dropped     atomic.Uint64
 }
 
 // NewBroadcaster creates a new Broadcaster and subscribes to the event bus.
@@ -25,7 +41,7 @@ type Broadcaster struct {
 // typed SSE events consumed by the admin client.
 func NewBroadcaster(eventBus *events.EventBus) *Broadcaster {
 	b := &Broadcaster{
-		clients: make(map[chan SSEEvent]bool),
+		clients: make(map[chan SSEEvent]*clientStats),
 	}
 	eventBus.SubscribeAll(b.route)
 	return b
@@ -109,9 +125,9 @@ func extractID(p events.Payload) interface{} {
 
 // Subscribe creates a new client channel that will receive broadcast events.
 func (b *Broadcaster) Subscribe() chan SSEEvent {
-	ch := make(chan SSEEvent, 32)
+	ch := make(chan SSEEvent, sseClientBuffer)
 	b.mu.Lock()
-	b.clients[ch] = true
+	b.clients[ch] = &clientStats{connectedAt: time.Now()}
 	b.mu.Unlock()
 	return ch
 }
@@ -126,17 +142,31 @@ func (b *Broadcaster) Unsubscribe(ch chan SSEEvent) {
 }
 
 // Broadcast sends an event to all connected clients. Events are dropped
-// for slow clients rather than blocking the broadcaster.
+// for slow clients rather than blocking the broadcaster — slow consumers
+// must never delay event delivery for the rest of the fleet. Per-client
+// drop counts are tracked so /admin/api/stats can flag stale subscribers.
 func (b *Broadcaster) Broadcast(event SSEEvent) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	for ch := range b.clients {
+	for ch, stats := range b.clients {
 		select {
 		case ch <- event:
 		default:
-			// Client is slow, drop event (don't block the broadcaster).
+			n := stats.dropped.Add(1)
+			b.totalDrops.Add(1)
+			// Log every 100th drop per client — frequent enough to surface
+			// the issue, infrequent enough not to flood logs.
+			if n%100 == 1 {
+				log.Printf("sdui: SSE client dropped %d events (slow consumer)", n)
+			}
 		}
 	}
+}
+
+// TotalDrops returns the cumulative number of dropped SSE events across
+// all clients since process start. Exposed for monitoring.
+func (b *Broadcaster) TotalDrops() uint64 {
+	return b.totalDrops.Load()
 }
 
 // ClientCount returns the number of connected SSE clients (for diagnostics).

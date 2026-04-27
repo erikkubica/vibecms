@@ -7,7 +7,7 @@ import (
 	"vibecms/internal/models"
 )
 
-func (c *coreImpl) SendEmail(_ context.Context, req EmailRequest) error {
+func (c *coreImpl) SendEmail(ctx context.Context, req EmailRequest) error {
 	if len(req.To) == 0 {
 		return NewValidation("at least one recipient is required")
 	}

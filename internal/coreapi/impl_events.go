@@ -5,7 +5,7 @@ import (
 	"vibecms/internal/events"
 )
 
-func (c *coreImpl) Emit(_ context.Context, action string, payload map[string]any) error {
+func (c *coreImpl) Emit(ctx context.Context, action string, payload map[string]any) error {
 	p := make(events.Payload, len(payload))
 	for k, v := range payload {
 		p[k] = v
@@ -14,7 +14,7 @@ func (c *coreImpl) Emit(_ context.Context, action string, payload map[string]any
 	return nil
 }
 
-func (c *coreImpl) Subscribe(_ context.Context, action string, handler EventHandler) (UnsubscribeFunc, error) {
+func (c *coreImpl) Subscribe(ctx context.Context, action string, handler EventHandler) (UnsubscribeFunc, error) {
 	wrapped := func(a string, p events.Payload) {
 		m := make(map[string]any, len(p))
 		for k, v := range p {

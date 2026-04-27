@@ -66,7 +66,7 @@ func nodeFromModel(m *models.ContentNode) *Node {
 }
 
 // GetNode retrieves a single content node by ID.
-func (c *coreImpl) GetNode(_ context.Context, id uint) (*Node, error) {
+func (c *coreImpl) GetNode(ctx context.Context, id uint) (*Node, error) {
 	m, err := c.contentSvc.GetByID(int(id))
 	if err != nil {
 		return nil, fmt.Errorf("coreapi GetNode: %w", err)
@@ -83,7 +83,7 @@ func (c *coreImpl) GetNode(_ context.Context, id uint) (*Node, error) {
 // QueryNodes searches content nodes with optional filters and pagination.
 // Nodes whose node_type is no longer registered are treated as dormant and
 // excluded (they return on their own once the type is re-registered).
-func (c *coreImpl) QueryNodes(_ context.Context, q NodeQuery) (*NodeList, error) {
+func (c *coreImpl) QueryNodes(ctx context.Context, q NodeQuery) (*NodeList, error) {
 	query := c.db.Model(&models.ContentNode{}).
 		Where("node_type IN (?)", c.db.Model(&models.NodeType{}).Select("slug"))
 
@@ -261,7 +261,7 @@ func matchThemeAssetRef(s string, lookup map[string]assetRef) (assetRef, bool) {
 	return ref, ok
 }
 
-func (c *coreImpl) ListTaxonomyTerms(_ context.Context, nodeType string, taxonomy string) ([]string, error) {
+func (c *coreImpl) ListTaxonomyTerms(ctx context.Context, nodeType string, taxonomy string) ([]string, error) {
 	var terms []string
 	// Subquery to extract array elements as text
 	// select distinct term from (select jsonb_array_elements_text(taxonomies->'category') as term from content_nodes where node_type = 'post') as t
@@ -280,7 +280,7 @@ func (c *coreImpl) ListTaxonomyTerms(_ context.Context, nodeType string, taxonom
 }
 
 // CreateNode creates a new content node, defaulting type to "page" and status to "draft".
-func (c *coreImpl) CreateNode(_ context.Context, input NodeInput) (*Node, error) {
+func (c *coreImpl) CreateNode(ctx context.Context, input NodeInput) (*Node, error) {
 	m := &models.ContentNode{
 		Title:        input.Title,
 		Slug:         input.Slug,
@@ -356,7 +356,7 @@ func (c *coreImpl) CreateNode(_ context.Context, input NodeInput) (*Node, error)
 }
 
 // UpdateNode updates an existing node, applying only non-zero fields from input.
-func (c *coreImpl) UpdateNode(_ context.Context, id uint, input NodeInput) (*Node, error) {
+func (c *coreImpl) UpdateNode(ctx context.Context, id uint, input NodeInput) (*Node, error) {
 	updates := make(map[string]interface{})
 
 	if input.Title != "" {
@@ -419,7 +419,7 @@ func (c *coreImpl) UpdateNode(_ context.Context, id uint, input NodeInput) (*Nod
 }
 
 // DeleteNode soft-deletes a content node by ID.
-func (c *coreImpl) DeleteNode(_ context.Context, id uint) error {
+func (c *coreImpl) DeleteNode(ctx context.Context, id uint) error {
 	if err := c.contentSvc.Delete(int(id)); err != nil {
 		return fmt.Errorf("coreapi DeleteNode: %w", err)
 	}

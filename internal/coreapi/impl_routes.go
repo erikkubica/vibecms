@@ -17,7 +17,7 @@ func routeKey(method, path string) string {
 	return strings.ToUpper(method) + " " + path
 }
 
-func (c *coreImpl) RegisterRoute(_ context.Context, method, path string, meta RouteMeta) error {
+func (c *coreImpl) RegisterRoute(ctx context.Context, method, path string, meta RouteMeta) error {
 	method = strings.ToUpper(strings.TrimSpace(method))
 	path = strings.TrimSpace(path)
 
@@ -48,7 +48,7 @@ func (c *coreImpl) RegisterRoute(_ context.Context, method, path string, meta Ro
 	return nil
 }
 
-func (c *coreImpl) RemoveRoute(_ context.Context, method, path string) error {
+func (c *coreImpl) RemoveRoute(ctx context.Context, method, path string) error {
 	method = strings.ToUpper(strings.TrimSpace(method))
 	path = strings.TrimSpace(path)
 	key := routeKey(method, path)

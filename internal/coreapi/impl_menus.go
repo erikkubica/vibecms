@@ -7,7 +7,7 @@ import (
 	"vibecms/internal/models"
 )
 
-func (c *coreImpl) GetMenu(_ context.Context, slug string) (*Menu, error) {
+func (c *coreImpl) GetMenu(ctx context.Context, slug string) (*Menu, error) {
 	var m models.Menu
 	if err := c.db.Where("slug = ?", slug).First(&m).Error; err != nil {
 		return nil, NewNotFound("menu", slug)
@@ -22,7 +22,7 @@ func (c *coreImpl) GetMenu(_ context.Context, slug string) (*Menu, error) {
 	return &result, nil
 }
 
-func (c *coreImpl) GetMenus(_ context.Context) ([]*Menu, error) {
+func (c *coreImpl) GetMenus(ctx context.Context) ([]*Menu, error) {
 	list, err := c.menuSvc.List(nil)
 	if err != nil {
 		return nil, NewInternal(err.Error())
@@ -36,7 +36,7 @@ func (c *coreImpl) GetMenus(_ context.Context) ([]*Menu, error) {
 	return out, nil
 }
 
-func (c *coreImpl) CreateMenu(_ context.Context, input MenuInput) (*Menu, error) {
+func (c *coreImpl) CreateMenu(ctx context.Context, input MenuInput) (*Menu, error) {
 	slug := input.Slug
 	if slug == "" {
 		slug = strings.ToLower(strings.ReplaceAll(input.Name, " ", "-"))
@@ -57,7 +57,7 @@ func (c *coreImpl) CreateMenu(_ context.Context, input MenuInput) (*Menu, error)
 	return &result, nil
 }
 
-func (c *coreImpl) UpdateMenu(_ context.Context, slug string, input MenuInput) (*Menu, error) {
+func (c *coreImpl) UpdateMenu(ctx context.Context, slug string, input MenuInput) (*Menu, error) {
 	var existing models.Menu
 	if err := c.db.Where("slug = ?", slug).First(&existing).Error; err != nil {
 		return nil, NewNotFound("menu", slug)
@@ -82,7 +82,7 @@ func (c *coreImpl) UpdateMenu(_ context.Context, slug string, input MenuInput) (
 	return &result, nil
 }
 
-func (c *coreImpl) UpsertMenu(_ context.Context, input MenuInput) (*Menu, error) {
+func (c *coreImpl) UpsertMenu(ctx context.Context, input MenuInput) (*Menu, error) {
 	slug := input.Slug
 	if slug == "" {
 		slug = strings.ToLower(strings.ReplaceAll(input.Name, " ", "-"))
@@ -156,7 +156,7 @@ func menuInputItemsToTree(items []MenuItem) []models.MenuItemTree {
 	return out
 }
 
-func (c *coreImpl) DeleteMenu(_ context.Context, slug string) error {
+func (c *coreImpl) DeleteMenu(ctx context.Context, slug string) error {
 	var existing models.Menu
 	if err := c.db.Where("slug = ?", slug).First(&existing).Error; err != nil {
 		return NewNotFound("menu", slug)

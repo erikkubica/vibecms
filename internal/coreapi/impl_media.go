@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func (c *coreImpl) UploadMedia(_ context.Context, req MediaUploadRequest) (*MediaFile, error) {
+func (c *coreImpl) UploadMedia(ctx context.Context, req MediaUploadRequest) (*MediaFile, error) {
 	if c.mediaSvc == nil {
 		return nil, NewInternal("media service not configured")
 	}
@@ -25,7 +25,7 @@ func (c *coreImpl) UploadMedia(_ context.Context, req MediaUploadRequest) (*Medi
 	}, nil
 }
 
-func (c *coreImpl) GetMedia(_ context.Context, id uint) (*MediaFile, error) {
+func (c *coreImpl) GetMedia(ctx context.Context, id uint) (*MediaFile, error) {
 	if c.mediaSvc == nil {
 		return nil, NewInternal("media service not configured")
 	}
@@ -45,7 +45,7 @@ func (c *coreImpl) GetMedia(_ context.Context, id uint) (*MediaFile, error) {
 	}, nil
 }
 
-func (c *coreImpl) QueryMedia(_ context.Context, query MediaQuery) ([]*MediaFile, error) {
+func (c *coreImpl) QueryMedia(ctx context.Context, query MediaQuery) ([]*MediaFile, error) {
 	if c.mediaSvc == nil {
 		return nil, NewInternal("media service not configured")
 	}
@@ -70,7 +70,7 @@ func (c *coreImpl) QueryMedia(_ context.Context, query MediaQuery) ([]*MediaFile
 	return result, nil
 }
 
-func (c *coreImpl) DeleteMedia(_ context.Context, id uint) error {
+func (c *coreImpl) DeleteMedia(ctx context.Context, id uint) error {
 	if c.mediaSvc == nil {
 		return NewInternal("media service not configured")
 	}

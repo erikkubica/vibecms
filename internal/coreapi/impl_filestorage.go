@@ -18,7 +18,7 @@ func safeStoragePath(path string) (string, error) {
 	return cleanPath, nil
 }
 
-func (c *coreImpl) StoreFile(_ context.Context, path string, data []byte) (string, error) {
+func (c *coreImpl) StoreFile(ctx context.Context, path string, data []byte) (string, error) {
 	fullPath, err := safeStoragePath(path)
 	if err != nil {
 		return "", err
@@ -32,7 +32,7 @@ func (c *coreImpl) StoreFile(_ context.Context, path string, data []byte) (strin
 	return "/" + path, nil
 }
 
-func (c *coreImpl) DeleteFile(_ context.Context, path string) error {
+func (c *coreImpl) DeleteFile(ctx context.Context, path string) error {
 	fullPath, err := safeStoragePath(path)
 	if err != nil {
 		return err

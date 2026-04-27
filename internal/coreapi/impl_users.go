@@ -26,16 +26,16 @@ func ptrUint(v uint) *uint {
 	return &v
 }
 
-func (c *coreImpl) GetUser(_ context.Context, id uint) (*User, error) {
+func (c *coreImpl) GetUser(ctx context.Context, id uint) (*User, error) {
 	var u models.User
-	if err := c.db.Preload("Role").First(&u, id).Error; err != nil {
+	if err := c.db.WithContext(ctx).Preload("Role").First(&u, id).Error; err != nil {
 		return nil, NewNotFound("user", id)
 	}
 	return userFromModel(&u), nil
 }
 
-func (c *coreImpl) QueryUsers(_ context.Context, query UserQuery) ([]*User, error) {
-	tx := c.db.Model(&models.User{}).Preload("Role")
+func (c *coreImpl) QueryUsers(ctx context.Context, query UserQuery) ([]*User, error) {
+	tx := c.db.WithContext(ctx).Model(&models.User{}).Preload("Role")
 
 	if query.RoleSlug != "" {
 		tx = tx.Joins("JOIN roles ON roles.id = users.role_id").

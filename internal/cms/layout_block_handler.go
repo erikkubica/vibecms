@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -22,14 +23,16 @@ func NewLayoutBlockHandler(svc *LayoutBlockService) *LayoutBlockHandler {
 }
 
 // RegisterRoutes registers all layout block routes on the provided router group.
+// Reads are open to authenticated users; mutations require manage_layouts.
 func (h *LayoutBlockHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/layout-blocks", h.List)
 	router.Get("/layout-blocks/:id", h.Get)
-	router.Post("/layout-blocks", h.Create)
-	router.Patch("/layout-blocks/:id", h.Update)
-	router.Delete("/layout-blocks/:id", h.Delete)
-	router.Post("/layout-blocks/:id/detach", h.Detach)
-	router.Post("/layout-blocks/:id/reattach", h.Reattach)
+	manage := auth.CapabilityRequired("manage_layouts")
+	router.Post("/layout-blocks", manage, h.Create)
+	router.Patch("/layout-blocks/:id", manage, h.Update)
+	router.Delete("/layout-blocks/:id", manage, h.Delete)
+	router.Post("/layout-blocks/:id/detach", manage, h.Detach)
+	router.Post("/layout-blocks/:id/reattach", manage, h.Reattach)
 }
 
 // List handles GET /layout-blocks to retrieve all layout blocks with optional filters and pagination.

@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -107,15 +108,17 @@ func (h *BlockTypeHandler) resolveTestDataOne(bt *models.BlockType) {
 }
 
 // RegisterRoutes registers all block type routes on the provided router group.
+// Reads + preview are open to authenticated users; mutations require manage_layouts.
 func (h *BlockTypeHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/block-types", h.List)
 	router.Post("/block-types/preview", h.PreviewBlockTemplate)
 	router.Get("/block-types/:id", h.Get)
-	router.Post("/block-types", h.Create)
-	router.Patch("/block-types/:id", h.Update)
-	router.Delete("/block-types/:id", h.Delete)
-	router.Post("/block-types/:id/detach", h.Detach)
-	router.Post("/block-types/:id/reattach", h.Reattach)
+	manage := auth.CapabilityRequired("manage_layouts")
+	router.Post("/block-types", manage, h.Create)
+	router.Patch("/block-types/:id", manage, h.Update)
+	router.Delete("/block-types/:id", manage, h.Delete)
+	router.Post("/block-types/:id/detach", manage, h.Detach)
+	router.Post("/block-types/:id/reattach", manage, h.Reattach)
 }
 
 // List handles GET /block-types to retrieve paginated block types.

@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -54,14 +55,16 @@ func (h *TemplateHandler) resolveBlockConfigOne(t *models.Template) {
 }
 
 // RegisterRoutes registers all template routes on the provided router group.
+// Reads are open to authenticated users; mutations require manage_layouts.
 func (h *TemplateHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/templates", h.List)
 	router.Get("/templates/:id", h.Get)
-	router.Post("/templates", h.Create)
-	router.Patch("/templates/:id", h.Update)
-	router.Delete("/templates/:id", h.Delete)
-	router.Post("/templates/:id/detach", h.Detach)
-	router.Post("/templates/:id/reattach", h.Reattach)
+	manage := auth.CapabilityRequired("manage_layouts")
+	router.Post("/templates", manage, h.Create)
+	router.Patch("/templates/:id", manage, h.Update)
+	router.Delete("/templates/:id", manage, h.Delete)
+	router.Post("/templates/:id/detach", manage, h.Detach)
+	router.Post("/templates/:id/reattach", manage, h.Reattach)
 }
 
 // List handles GET /templates to retrieve all templates with pagination.

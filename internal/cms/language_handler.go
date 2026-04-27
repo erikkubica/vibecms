@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -22,12 +23,15 @@ func NewLanguageHandler(svc *LanguageService) *LanguageHandler {
 }
 
 // RegisterRoutes registers all language routes on the provided router group.
+// Reads are open (theme code reads the active language list); mutations
+// require manage_settings.
 func (h *LanguageHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/languages", h.List)
 	router.Get("/languages/:id", h.Get)
-	router.Post("/languages", h.Create)
-	router.Patch("/languages/:id", h.Update)
-	router.Delete("/languages/:id", h.Delete)
+	manage := auth.CapabilityRequired("manage_settings")
+	router.Post("/languages", manage, h.Create)
+	router.Patch("/languages/:id", manage, h.Update)
+	router.Delete("/languages/:id", manage, h.Delete)
 }
 
 // List handles GET /languages to retrieve all languages.

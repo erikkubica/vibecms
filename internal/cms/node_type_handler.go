@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -22,12 +23,15 @@ func NewNodeTypeHandler(svc *NodeTypeService) *NodeTypeHandler {
 }
 
 // RegisterRoutes registers all node type routes on the provided router group.
+// Reads are open (lots of admin-UI flows enumerate types); mutations
+// require manage_settings (node types are structural site config).
 func (h *NodeTypeHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/node-types", h.List)
 	router.Get("/node-types/:id", h.Get)
-	router.Post("/node-types", h.Create)
-	router.Patch("/node-types/:id", h.Update)
-	router.Delete("/node-types/:id", h.Delete)
+	manage := auth.CapabilityRequired("manage_settings")
+	router.Post("/node-types", manage, h.Create)
+	router.Patch("/node-types/:id", manage, h.Update)
+	router.Delete("/node-types/:id", manage, h.Delete)
 }
 
 // List handles GET /node-types to retrieve paginated node types.

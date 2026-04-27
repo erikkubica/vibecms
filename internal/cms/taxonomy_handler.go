@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
@@ -32,9 +33,11 @@ func (h *TaxonomyHandler) emit(action string, id int, slug string) {
 func (h *TaxonomyHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/taxonomies", h.List)
 	router.Get("/taxonomies/:slug", h.Get)
-	router.Post("/taxonomies", h.Create)
-	router.Patch("/taxonomies/:slug", h.Update)
-	router.Delete("/taxonomies/:slug", h.Delete)
+	// Taxonomies are content-structure: gate mutations behind manage_settings.
+	manage := auth.CapabilityRequired("manage_settings")
+	router.Post("/taxonomies", manage, h.Create)
+	router.Patch("/taxonomies/:slug", manage, h.Update)
+	router.Delete("/taxonomies/:slug", manage, h.Delete)
 }
 
 func (h *TaxonomyHandler) List(c *fiber.Ctx) error {

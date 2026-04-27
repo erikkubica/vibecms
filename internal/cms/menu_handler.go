@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -22,13 +23,15 @@ func NewMenuHandler(svc *MenuService) *MenuHandler {
 }
 
 // RegisterRoutes registers all menu routes on the provided router group.
+// Reads are open to authenticated users; mutations require manage_menus.
 func (h *MenuHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/menus", h.List)
 	router.Get("/menus/:id", h.Get)
-	router.Post("/menus", h.Create)
-	router.Patch("/menus/:id", h.Update)
-	router.Delete("/menus/:id", h.Delete)
-	router.Put("/menus/:id/items", h.ReplaceItems)
+	manage := auth.CapabilityRequired("manage_menus")
+	router.Post("/menus", manage, h.Create)
+	router.Patch("/menus/:id", manage, h.Update)
+	router.Delete("/menus/:id", manage, h.Delete)
+	router.Put("/menus/:id/items", manage, h.ReplaceItems)
 }
 
 // List handles GET /menus to retrieve all menus with optional language filter.

@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -34,15 +35,17 @@ func (h *LayoutHandler) SetDB(db *gorm.DB) {
 }
 
 // RegisterRoutes registers all layout routes on the provided router group.
+// Reads are open to authenticated users; mutations require manage_layouts.
 func (h *LayoutHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/layouts", h.List)
 	router.Get("/layouts/:id", h.Get)
-	router.Post("/layouts", h.Create)
-	router.Patch("/layouts/:id", h.Update)
-	router.Delete("/layouts/:id", h.Delete)
 	router.Get("/layouts/:id/partials", h.Partials)
-	router.Post("/layouts/:id/detach", h.Detach)
-	router.Post("/layouts/:id/reattach", h.Reattach)
+	manage := auth.CapabilityRequired("manage_layouts")
+	router.Post("/layouts", manage, h.Create)
+	router.Patch("/layouts/:id", manage, h.Update)
+	router.Delete("/layouts/:id", manage, h.Delete)
+	router.Post("/layouts/:id/detach", manage, h.Detach)
+	router.Post("/layouts/:id/reattach", manage, h.Reattach)
 }
 
 // List handles GET /layouts to retrieve all layouts with optional filters and pagination.

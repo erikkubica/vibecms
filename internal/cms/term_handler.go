@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/auth"
 	"vibecms/internal/models"
 )
 
@@ -23,12 +24,15 @@ func NewTermHandler(db *gorm.DB) *TermHandler {
 }
 
 // RegisterRoutes registers all term routes on the provided router group.
+// Reads are open; mutations require manage_settings (terms are scoped to
+// taxonomy definitions, which require the same cap).
 func (h *TermHandler) RegisterRoutes(router fiber.Router) {
 	router.Get("/terms/:nodeType/:taxonomy", h.List)
-	router.Post("/terms/:nodeType/:taxonomy", h.Create)
 	router.Get("/terms/:id", h.Get)
-	router.Patch("/terms/:id", h.Update)
-	router.Delete("/terms/:id", h.Delete)
+	manage := auth.CapabilityRequired("manage_settings")
+	router.Post("/terms/:nodeType/:taxonomy", manage, h.Create)
+	router.Patch("/terms/:id", manage, h.Update)
+	router.Delete("/terms/:id", manage, h.Delete)
 }
 
 // List returns all terms for a given node type and taxonomy.

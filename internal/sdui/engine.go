@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"vibecms/internal/events"
 	"vibecms/internal/models"
@@ -422,69 +423,126 @@ type recentNode struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+// greetingFor returns a time-of-day greeting based on the local hour.
+func greetingFor(now time.Time) string {
+	h := now.Hour()
+	switch {
+	case h < 5:
+		return "Working late"
+	case h < 12:
+		return "Good morning"
+	case h < 18:
+		return "Good afternoon"
+	default:
+		return "Good evening"
+	}
+}
+
+// firstName returns the first whitespace-separated token of a full name,
+// or "Admin" when empty.
+func firstName(full string) string {
+	full = strings.TrimSpace(full)
+	if full == "" {
+		return "Admin"
+	}
+	if i := strings.IndexAny(full, " \t"); i > 0 {
+		return full[:i]
+	}
+	return full
+}
+
 func (e *Engine) dashboardLayout(userName string) *LayoutNode {
-	// Query total content nodes (non-deleted)
-	var totalContent int64
+	var totalContent, published, drafts, totalUsers int64
 	e.db.Model(&models.ContentNode{}).Where("deleted_at IS NULL").Count(&totalContent)
-
-	// Query published content nodes
-	var published int64
 	e.db.Model(&models.ContentNode{}).Where("deleted_at IS NULL AND status = ?", "published").Count(&published)
-
-	// Query draft content nodes
-	var drafts int64
 	e.db.Model(&models.ContentNode{}).Where("deleted_at IS NULL AND status = ?", "draft").Count(&drafts)
-
-	// Query total users
-	var totalUsers int64
 	e.db.Model(&models.User{}).Count(&totalUsers)
 
-	// Query 5 most recent content nodes
+	// 5 most recent content nodes (any status)
 	var nodes []models.ContentNode
 	e.db.Where("deleted_at IS NULL").Order("updated_at DESC").Limit(5).Find(&nodes)
-
 	recentNodes := make([]recentNode, 0, len(nodes))
 	for _, n := range nodes {
 		recentNodes = append(recentNodes, recentNode{
-			ID:        n.ID,
-			Title:     n.Title,
-			NodeType:  n.NodeType,
-			Status:    n.Status,
-			UpdatedAt: n.UpdatedAt.Format("2006-01-02"),
+			ID: n.ID, Title: n.Title, NodeType: n.NodeType,
+			Status: n.Status, UpdatedAt: n.UpdatedAt.Format("2006-01-02"),
 		})
 	}
 
-	totalStr := fmt.Sprintf("%d", totalContent)
-	pubStr := fmt.Sprintf("%d", published)
-	draftStr := fmt.Sprintf("%d", drafts)
-	usersStr := fmt.Sprintf("%d", totalUsers)
+	// 5 most-recently-updated drafts → "Needs attention"
+	var draftNodes []models.ContentNode
+	e.db.Where("deleted_at IS NULL AND status = ?", "draft").
+		Order("updated_at DESC").Limit(5).Find(&draftNodes)
+	draftItems := make([]map[string]interface{}, 0, len(draftNodes))
+	for _, n := range draftNodes {
+		title := n.Title
+		if title == "" {
+			title = "Untitled"
+		}
+		draftItems = append(draftItems, map[string]interface{}{
+			"id":      n.ID,
+			"message": title + " · " + n.NodeType,
+			"time":    n.UpdatedAt.Format("Jan 2"),
+			"type":    "update",
+		})
+	}
+
+	now := time.Now()
+	greeting := greetingFor(now) + ", " + firstName(userName)
 
 	return &LayoutNode{
 		Type:  "VerticalStack",
 		Props: map[string]interface{}{"gap": 6},
 		Children: []LayoutNode{
-			// Welcome banner
 			{
 				Type: "WelcomeBanner",
 				Props: map[string]interface{}{
-					"title":       "Welcome back, " + userName,
-					"subtitle":    "Here's what's happening with your site.",
+					"title":       greeting,
+					"subtitle":    now.Format("Monday, January 2"),
 					"actionLabel": "Create New Page",
 					"actionPath":  "/admin/pages/new",
 				},
 			},
-			// Stats grid
+			// Stats
 			{
 				Type:  "Grid",
 				Props: map[string]interface{}{"cols": 4, "gap": 4},
 				Children: []LayoutNode{
-					{Type: "StatCard", Props: map[string]interface{}{"label": "Total Content", "value": totalStr, "icon": "FileText", "color": "indigo"}},
-					{Type: "StatCard", Props: map[string]interface{}{"label": "Published", "value": pubStr, "icon": "Eye", "color": "emerald"}},
-					{Type: "StatCard", Props: map[string]interface{}{"label": "Drafts", "value": draftStr, "icon": "PenLine", "color": "amber"}},
-					{Type: "StatCard", Props: map[string]interface{}{"label": "Users", "value": usersStr, "icon": "Users", "color": "violet"}},
+					{Type: "StatCard", Props: map[string]interface{}{"label": "Total Content", "value": fmt.Sprintf("%d", totalContent), "icon": "FileText", "color": "indigo"}},
+					{Type: "StatCard", Props: map[string]interface{}{"label": "Published", "value": fmt.Sprintf("%d", published), "icon": "Eye", "color": "emerald"}},
+					{Type: "StatCard", Props: map[string]interface{}{"label": "Drafts", "value": fmt.Sprintf("%d", drafts), "icon": "PenLine", "color": "amber"}},
+					{Type: "StatCard", Props: map[string]interface{}{"label": "Users", "value": fmt.Sprintf("%d", totalUsers), "icon": "Users", "color": "violet"}},
 				},
 			},
-			// Recent content table
+			// Working area: drafts + quick actions
+			{
+				Type:  "Grid",
+				Props: map[string]interface{}{"cols": 2, "gap": 6},
+				Children: []LayoutNode{
+					{
+						Type: "ActivityFeed",
+						Props: map[string]interface{}{
+							"items":        draftItems,
+							"title":        "Needs attention",
+							"emptyMessage": "No drafts waiting — nice.",
+						},
+					},
+					{
+						Type: "QuickActions",
+						Props: map[string]interface{}{
+							"actions": []map[string]interface{}{
+								{"label": "Pages", "path": "/admin/content/page", "icon": "FileText"},
+								{"label": "Forms", "path": "/admin/ext/forms", "icon": "FormInput"},
+								{"label": "Media", "path": "/admin/ext/media-manager", "icon": "Image"},
+								{"label": "Users", "path": "/admin/users", "icon": "Users"},
+								{"label": "Themes", "path": "/admin/themes", "icon": "Palette"},
+								{"label": "Extensions", "path": "/admin/extensions", "icon": "Puzzle"},
+							},
+						},
+					},
+				},
+			},
+			// Recent content
 			{
 				Type:  "RecentContentTable",
 				Props: map[string]interface{}{"items": recentNodes},

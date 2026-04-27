@@ -230,6 +230,18 @@
     background-color: var(--border) !important;
   }
 
+  /* Pointer cursor on every interactive element — Tailwind v4 / preflight
+     ships `cursor: default` on buttons, which feels broken in an admin UI. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label[for],
+  select:not(:disabled),
+  [data-clickable="true"] {
+    cursor: pointer;
+  }
+
   /* Dropdown menu items: visible hover + pointer cursor */
   [data-slot="dropdown-menu-item"],
   [data-slot="dropdown-menu-checkbox-item"],
@@ -259,16 +271,15 @@
     color: var(--accent-strong) !important;
   }
 
-  /* Admin page headings — compact, token-colored */
-  main > * h1,
-  main > h1 {
+  /* Admin page headings — compact, token-colored.
+     :where() keeps specificity at (0,1,0) so any utility class can override. */
+  main :where(h1) {
     font-size: 18px;
     font-weight: 600;
     color: var(--fg);
     letter-spacing: -0.01em;
   }
-  main > * h2,
-  main > h2 {
+  main :where(h2) {
     font-size: 14px;
     font-weight: 600;
     color: var(--fg);

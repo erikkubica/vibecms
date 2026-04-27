@@ -106,7 +106,7 @@ export function WelcomeBanner({
     <div className="rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-800 p-6 text-white">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
+          <h1 className="text-2xl font-bold text-white">{title}</h1>
           <p className="mt-1 text-sm text-indigo-200">{subtitle}</p>
         </div>
         {actionLabel && actionPath && (
@@ -274,6 +274,8 @@ export function RecentContentTable({ items }: { items: RecentContentItem[] }) {
 
 export function ActivityFeed({
   items,
+  title = "Recent Activity",
+  emptyMessage = "No recent activity.",
 }: {
   items: Array<{
     id: number | string;
@@ -281,11 +283,18 @@ export function ActivityFeed({
     time: string;
     type?: string;
   }>;
+  title?: string;
+  emptyMessage?: string;
 }) {
   if (!items || items.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-        No recent activity.
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="px-6 py-4">
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        </div>
+        <p className="px-6 pb-6 text-center text-sm text-slate-500">
+          {emptyMessage}
+        </p>
       </div>
     );
   }
@@ -301,9 +310,7 @@ export function ActivityFeed({
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="px-6 py-4">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Recent Activity
-        </h2>
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
       </div>
       <ul className="divide-y divide-slate-100">
         {items.map((item) => (

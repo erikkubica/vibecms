@@ -21,11 +21,18 @@ func NewExtensionProxy(pm *PluginManager) *ExtensionProxy {
 	return &ExtensionProxy{pluginMgr: pm}
 }
 
-// RegisterRoutes registers the catch-all proxy route on the given router.
+// RegisterRoutes registers the catch-all proxy route on the given
+// router. Gated by `admin_access` because plugins themselves don't
+// enforce per-user RBAC — they trust the kernel-side gate to have
+// done so. Without this, any authenticated user (including a
+// freshly-registered member) could hit /admin/api/ext/forms/submissions
+// and dump every PII-bearing form submission. admin / editor / author
+// roles all carry admin_access; member does not.
 func (ep *ExtensionProxy) RegisterRoutes(router fiber.Router) {
-	log.Println("[extension-proxy] registering routes on /ext/:slug/*")
-	router.All("/ext/:slug/*", ep.handleRequest)
-	router.All("/ext/:slug", ep.handleRequest)
+	log.Println("[extension-proxy] registering routes on /ext/:slug/* (gated: admin_access)")
+	guard := auth.CapabilityRequired("admin_access")
+	router.All("/ext/:slug/*", guard, ep.handleRequest)
+	router.All("/ext/:slug", guard, ep.handleRequest)
 }
 
 func (ep *ExtensionProxy) handleRequest(c *fiber.Ctx) error {
@@ -40,16 +47,25 @@ func (ep *ExtensionProxy) handleRequest(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "extension not found or not running"})
 	}
 
-	// Build headers map, stripping sensitive headers to prevent token leakage to plugins.
+	// Build headers map, stripping sensitive headers to prevent token
+	// leakage to plugins. Also drop any client-supplied
+	// X-Forwarded-For / X-Real-IP — those are spoofable, and plugins
+	// rely on them for per-IP rate limiting; the kernel rewrites them
+	// below with c.IP() (Fiber's authoritative remote address).
 	headers := make(map[string]string)
 	c.Request().Header.VisitAll(func(key, value []byte) {
 		k := string(key)
 		kLower := strings.ToLower(k)
-		if kLower == "cookie" || kLower == "authorization" {
+		switch kLower {
+		case "cookie", "authorization", "x-forwarded-for", "x-real-ip":
 			return
 		}
 		headers[k] = string(value)
 	})
+	// Insert the trusted remote IP. Plugins read X-Forwarded-For for
+	// historical reasons; this overwrite means downstream code keeps
+	// working without each plugin having to learn a new header name.
+	headers["X-Forwarded-For"] = c.IP()
 
 	// Build query params map.
 	queryParams := make(map[string]string)

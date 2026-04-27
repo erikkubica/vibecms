@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"runtime"
 	"time"
 
@@ -85,7 +86,10 @@ func BearerTokenRequired(token string) fiber.Handler {
 			return Error(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Invalid authorization format")
 		}
 
-		if auth[len(prefix):] != token {
+		// Use constant-time compare to deny a timing-oracle attack on the
+		// bearer token. Plain != would terminate at the first mismatching
+		// byte, leaking the prefix one byte at a time.
+		if subtle.ConstantTimeCompare([]byte(auth[len(prefix):]), []byte(token)) != 1 {
 			return Error(c, fiber.StatusUnauthorized, "UNAUTHORIZED", "Invalid bearer token")
 		}
 

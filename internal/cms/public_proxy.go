@@ -22,9 +22,57 @@ func NewPublicExtensionProxy(pm *PluginManager) *PublicExtensionProxy {
 	return &PublicExtensionProxy{pluginMgr: pm}
 }
 
+// reservedPublicPathPrefixes are kernel-owned URL spaces that
+// extensions MUST NOT register through their public_routes manifest.
+// An extension that lists path: "/login" would otherwise mount a
+// no-auth handler that shadows the kernel login form — perfect for
+// credential phishing once installed. Defense in depth: the kernel
+// installer doesn't audit manifests today, so we filter at boot.
+//
+// Stored without trailing slashes; isReservedPublicPath matches both
+// the exact prefix and prefix-followed-by-/ : * (Fiber path
+// separators). That keeps "/auth/" reserved while leaving
+// "/auth-callback" free for an extension to claim.
+var reservedPublicPathPrefixes = []string{
+	"/admin",           // entire admin SPA + API
+	"/auth",            // login/register/forgot/reset POST handlers
+	"/api/v1",          // versioned public API (theme webhook, etc.)
+	"/me",              // /me identity endpoint
+	"/login",           // login page
+	"/logout",          // logout endpoint
+	"/register",        // registration page
+	"/forgot-password", // password reset request page
+	"/reset-password",  // password reset completion page
+}
+
+// isReservedPublicPath reports whether path belongs to a kernel-owned
+// namespace and so cannot be claimed by an extension public_route.
+// The match is exact-or-followed-by-Fiber-separator so /auth-callback
+// stays free while /auth/login stays reserved.
+func isReservedPublicPath(path string) bool {
+	if path == "" || path == "/" {
+		// Root catch-alls would shadow every other route Fiber resolves.
+		return true
+	}
+	for _, p := range reservedPublicPathPrefixes {
+		if path == p {
+			return true
+		}
+		if len(path) > len(p) && strings.HasPrefix(path, p) {
+			next := path[len(p)]
+			if next == '/' || next == '*' || next == ':' {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // RegisterPublicRoutes reads the manifest for each active extension, and for
 // every entry in public_routes registers the declared Fiber route that proxies
-// to the extension plugin — without any auth middleware.
+// to the extension plugin — without any auth middleware. Reserved kernel
+// paths (login, admin, auth flows, …) are refused with a warning so a
+// hostile or careless manifest can't shadow auth-critical routes.
 func (pp *PublicExtensionProxy) RegisterPublicRoutes(app *fiber.App, activeExts []models.Extension) {
 	for _, ext := range activeExts {
 		var manifest ExtensionManifest
@@ -39,6 +87,12 @@ func (pp *PublicExtensionProxy) RegisterPublicRoutes(app *fiber.App, activeExts 
 		for _, route := range manifest.PublicRoutes {
 			method := strings.ToUpper(route.Method)
 			path := route.Path
+
+			if isReservedPublicPath(path) {
+				log.Printf("[public-proxy] REFUSING %s %s for extension %s — path is kernel-reserved", method, path, slug)
+				continue
+			}
+
 			log.Printf("[public-proxy] %s %s -> extension %s", method, path, slug)
 
 			handler := pp.makeHandler(slug, path)
@@ -70,16 +124,22 @@ func (pp *PublicExtensionProxy) makeHandler(slug, routePath string) fiber.Handle
 			return c.SendStatus(fiber.StatusServiceUnavailable)
 		}
 
-		// Build headers map (strip sensitive headers).
+		// Build headers map. Strip sensitive auth headers AND any
+		// client-supplied X-Forwarded-For / X-Real-IP — those are
+		// trivially spoofable and plugins use them for per-IP rate
+		// limiting (forms extension does for spam control). The
+		// kernel writes the trusted value (c.IP()) below.
 		headers := make(map[string]string)
 		c.Request().Header.VisitAll(func(key, value []byte) {
 			k := string(key)
 			kLower := strings.ToLower(k)
-			if kLower == "cookie" || kLower == "authorization" {
+			switch kLower {
+			case "cookie", "authorization", "x-forwarded-for", "x-real-ip":
 				return
 			}
 			headers[k] = string(value)
 		})
+		headers["X-Forwarded-For"] = c.IP()
 
 		// Build query params.
 		queryParams := make(map[string]string)

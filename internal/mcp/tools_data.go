@@ -10,6 +10,25 @@ import (
 	"vibecms/internal/coreapi"
 )
 
+// guardKernelTable refuses access to kernel-private tables for tokens
+// that aren't scope=full. dispatch.go runs every tool as
+// coreapi.InternalCaller — handy for typed APIs but it makes the
+// per-table data guard a no-op. Without this gate, a scope=read token
+// could `core.data.query` the `users` table and dump every
+// password_hash; scope=content could overwrite sessions or
+// mcp_tokens. scope=full is admin-equivalent by design and stays
+// permissive (operator opted in when issuing the token).
+func guardKernelTable(ctx context.Context, table string) error {
+	if !coreapi.IsKernelPrivateTable(table) {
+		return nil
+	}
+	tok := tokenFromCtx(ctx)
+	if tok != nil && tok.Scope == ScopeFull {
+		return nil
+	}
+	return fmt.Errorf("table %q is kernel-private; scope=full required for direct access", table)
+}
+
 func (s *Server) registerDataTools() {
 	api := s.deps.CoreAPI
 
@@ -18,7 +37,11 @@ func (s *Server) registerDataTools() {
 		mcp.WithString("table", mcp.Required()),
 		mcp.WithNumber("id", mcp.Required()),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
-		return api.DataGet(ctx, stringArg(args, "table"), uintArg(args, "id"))
+		table := stringArg(args, "table")
+		if err := guardKernelTable(ctx, table); err != nil {
+			return nil, err
+		}
+		return api.DataGet(ctx, table, uintArg(args, "id"))
 	})
 
 	s.addTool(mcp.NewTool("core.data.query",
@@ -32,6 +55,10 @@ func (s *Server) registerDataTools() {
 		mcp.WithString("raw"),
 		mcp.WithArray("args"),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
+		table := stringArg(args, "table")
+		if err := guardKernelTable(ctx, table); err != nil {
+			return nil, err
+		}
 		q := coreapi.DataStoreQuery{
 			Where:   mapArg(args, "where"),
 			Search:  stringArg(args, "search"),
@@ -44,7 +71,7 @@ func (s *Server) registerDataTools() {
 			b, _ := json.Marshal(raw)
 			_ = json.Unmarshal(b, &q.Args)
 		}
-		return api.DataQuery(ctx, stringArg(args, "table"), q)
+		return api.DataQuery(ctx, table, q)
 	})
 
 	s.addTool(mcp.NewTool("core.data.create",
@@ -52,7 +79,11 @@ func (s *Server) registerDataTools() {
 		mcp.WithString("table", mcp.Required()),
 		mcp.WithObject("data", mcp.Required()),
 	), "content", func(ctx context.Context, args map[string]any) (any, error) {
-		return api.DataCreate(ctx, stringArg(args, "table"), mapArg(args, "data"))
+		table := stringArg(args, "table")
+		if err := guardKernelTable(ctx, table); err != nil {
+			return nil, err
+		}
+		return api.DataCreate(ctx, table, mapArg(args, "data"))
 	})
 
 	s.addTool(mcp.NewTool("core.data.update",
@@ -61,7 +92,11 @@ func (s *Server) registerDataTools() {
 		mcp.WithNumber("id", mcp.Required()),
 		mcp.WithObject("data", mcp.Required()),
 	), "content", func(ctx context.Context, args map[string]any) (any, error) {
-		err := api.DataUpdate(ctx, stringArg(args, "table"), uintArg(args, "id"), mapArg(args, "data"))
+		table := stringArg(args, "table")
+		if err := guardKernelTable(ctx, table); err != nil {
+			return nil, err
+		}
+		err := api.DataUpdate(ctx, table, uintArg(args, "id"), mapArg(args, "data"))
 		return map[string]any{"ok": err == nil}, err
 	})
 
@@ -70,7 +105,11 @@ func (s *Server) registerDataTools() {
 		mcp.WithString("table", mcp.Required()),
 		mcp.WithNumber("id", mcp.Required()),
 	), "content", func(ctx context.Context, args map[string]any) (any, error) {
-		err := api.DataDelete(ctx, stringArg(args, "table"), uintArg(args, "id"))
+		table := stringArg(args, "table")
+		if err := guardKernelTable(ctx, table); err != nil {
+			return nil, err
+		}
+		err := api.DataDelete(ctx, table, uintArg(args, "id"))
 		return map[string]any{"ok": err == nil}, err
 	})
 

@@ -3,16 +3,15 @@ package cms
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"vibecms/internal/models"
+	"vibecms/internal/secrets"
 
 	"gorm.io/gorm"
 )
@@ -31,7 +30,8 @@ type themeMgmtManifest struct {
 type ThemeMgmtService struct {
 	db          *gorm.DB
 	themeLoader *ThemeLoader
-	themesDir   string // base directory e.g. "themes"
+	themesDir   string           // base directory e.g. "themes"
+	secrets     *secrets.Service // may be nil; transparently encrypts/decrypts git tokens
 
 	// Callbacks for loading/unloading Tengo scripts. Set via SetScriptLoader
 	// to avoid an import cycle on the scripting package.
@@ -39,13 +39,40 @@ type ThemeMgmtService struct {
 	unloadThemeScripts func()
 }
 
-// NewThemeMgmtService creates a new ThemeMgmtService.
-func NewThemeMgmtService(db *gorm.DB, themeLoader *ThemeLoader, themesDir string) *ThemeMgmtService {
+// NewThemeMgmtService creates a new ThemeMgmtService. Pass a non-nil
+// *secrets.Service to encrypt git tokens at rest; nil keeps tokens
+// plaintext (legacy behaviour).
+func NewThemeMgmtService(db *gorm.DB, themeLoader *ThemeLoader, themesDir string, secretsSvc *secrets.Service) *ThemeMgmtService {
 	return &ThemeMgmtService{
 		db:          db,
 		themeLoader: themeLoader,
 		themesDir:   themesDir,
+		secrets:     secretsSvc,
 	}
+}
+
+// resolveGitToken returns the plaintext token from a stored model, decrypting
+// the envelope when present. Legacy plaintext rows pass through unchanged.
+func (s *ThemeMgmtService) resolveGitToken(stored *string) (string, error) {
+	if stored == nil || *stored == "" {
+		return "", nil
+	}
+	if s.secrets == nil {
+		return *stored, nil
+	}
+	return s.secrets.Decrypt(*stored)
+}
+
+// wrapGitToken encrypts a plaintext token for storage if the secrets service
+// is configured. Empty input returns empty (no zero-length token wrapping).
+func (s *ThemeMgmtService) wrapGitToken(plaintext string) (string, error) {
+	if plaintext == "" {
+		return "", nil
+	}
+	if s.secrets == nil {
+		return plaintext, nil
+	}
+	return s.secrets.Encrypt(plaintext)
 }
 
 // SetScriptLoader wires callbacks for loading/unloading Tengo scripts during
@@ -253,127 +280,10 @@ func (s *ThemeMgmtService) InstallFromZip(file io.Reader, filename string) (*mod
 }
 
 // InstallFromGit clones a git repository and installs the theme.
-func (s *ThemeMgmtService) InstallFromGit(gitURL, branch, token string) (*models.Theme, error) {
-	if branch == "" {
-		branch = "main"
-	}
-
-	// Build the clone URL, injecting token for HTTPS if provided.
-	cloneURL := gitURL
-	if token != "" && strings.HasPrefix(gitURL, "https://") {
-		// Inject oauth2 token: https://oauth2:{token}@host/path
-		cloneURL = strings.Replace(gitURL, "https://", fmt.Sprintf("https://oauth2:%s@", token), 1)
-	}
-
-	// Clone to a temp directory first to parse theme.json for the slug.
-	tmpDir, err := os.MkdirTemp("", "vibecms-git-theme-*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	cmd := exec.Command("git", "clone", "--branch", branch, "--single-branch", "--depth", "1", cloneURL, tmpDir)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("git clone failed: %s: %w", strings.TrimSpace(string(output)), err)
-	}
-
-	// Parse theme.json from cloned directory.
-	manifest, _, err := findAndParseManifest(tmpDir)
-	if err != nil {
-		return nil, err
-	}
-
-	if manifest.Slug == "" {
-		return nil, fmt.Errorf("theme.json missing required 'slug' field")
-	}
-
-	// Move cloned directory to final destination.
-	destDir := filepath.Join(s.themesDir, manifest.Slug)
-	if err := os.RemoveAll(destDir); err != nil {
-		return nil, fmt.Errorf("failed to clean destination dir: %w", err)
-	}
-	if err := os.Rename(tmpDir, destDir); err != nil {
-		// Rename may fail across filesystems; fall back to copy.
-		if err := copyDir(tmpDir, destDir); err != nil {
-			return nil, fmt.Errorf("failed to move theme to %s: %w", destDir, err)
-		}
-	}
-
-	// Create DB record.
-	var gitToken *string
-	if token != "" {
-		gitToken = &token
-	}
-	theme := models.Theme{
-		Slug:        manifest.Slug,
-		Name:        manifest.Name,
-		Description: manifest.Description,
-		Version:     manifest.Version,
-		Author:      manifest.Author,
-		Source:      "git",
-		GitURL:      &gitURL,
-		GitBranch:   branch,
-		GitToken:    gitToken,
-		Path:        destDir,
-	}
-	if err := s.db.Create(&theme).Error; err != nil {
-		os.RemoveAll(destDir)
-		return nil, fmt.Errorf("failed to create theme record: %w", err)
-	}
-
-	return &theme, nil
-}
-
-// PullUpdate pulls the latest changes for a git-sourced theme.
-func (s *ThemeMgmtService) PullUpdate(id int) (*models.Theme, error) {
-	theme, err := s.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	if theme.Source != "git" {
-		return nil, fmt.Errorf("theme %q is not git-sourced (source=%s)", theme.Slug, theme.Source)
-	}
-
-	// Run git pull.
-	cmd := exec.Command("git", "-C", theme.Path, "pull", "origin", theme.GitBranch)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("git pull failed: %s: %w", strings.TrimSpace(string(output)), err)
-	}
-
-	// Re-parse theme.json to pick up version changes.
-	manifest, _, err := findAndParseManifest(theme.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to re-parse theme.json after pull: %w", err)
-	}
-
-	// Update version (and other metadata) in DB.
-	updates := map[string]interface{}{
-		"version":     manifest.Version,
-		"name":        manifest.Name,
-		"description": manifest.Description,
-		"author":      manifest.Author,
-	}
-	if err := s.db.Model(theme).Updates(updates).Error; err != nil {
-		return nil, fmt.Errorf("failed to update theme record: %w", err)
-	}
-
-	// If theme is active, reload it.
-	if theme.IsActive {
-		if err := s.Reload(theme.Path); err != nil {
-			log.Printf("WARN: failed to reload active theme after pull: %v", err)
-		}
-	}
-
-	// Re-fetch from DB.
-	return s.GetByID(id)
-}
-
-// Activate sets the given theme as the active theme (deactivating all others).
-// The previously active theme is fully deregistered (emitting theme.deactivated
-// so extensions like media-manager can clean up) before the new theme is loaded.
+// Hardening (see theme_git_safety.go for details):
+//   - URL validated against scheme allowlist + private-CIDR block
+//   - Token never lands in argv (GIT_ASKPASS via temp helper)
+//   - Hostile-config defenses (-c core.hooksPath=/dev/null, fsmonitor=false)
 func (s *ThemeMgmtService) Activate(id int) error {
 	theme, err := s.GetByID(id)
 	if err != nil {
@@ -486,111 +396,3 @@ func (s *ThemeMgmtService) Reload(themePath string) error {
 // --- Helper functions ---
 
 // extractZipFile extracts a single file from a zip archive to destPath.
-func extractZipFile(f *zip.File, destPath string) error {
-	rc, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer rc.Close()
-
-	out, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// Limit copy size to prevent zip bombs (256 MB per file).
-	_, err = io.Copy(out, io.LimitReader(rc, 256<<20))
-	return err
-}
-
-// findAndParseManifest looks for theme.json in dir or one level deep.
-func findAndParseManifest(dir string) (*themeMgmtManifest, string, error) {
-	// Check root.
-	rootManifest := filepath.Join(dir, "theme.json")
-	if data, err := os.ReadFile(rootManifest); err == nil {
-		var m themeMgmtManifest
-		if err := json.Unmarshal(data, &m); err != nil {
-			return nil, "", fmt.Errorf("failed to parse theme.json: %w", err)
-		}
-		return &m, dir, nil
-	}
-
-	// Check one level deep.
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to read temp dir: %w", err)
-	}
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		subManifest := filepath.Join(dir, entry.Name(), "theme.json")
-		if data, err := os.ReadFile(subManifest); err == nil {
-			var m themeMgmtManifest
-			if err := json.Unmarshal(data, &m); err != nil {
-				return nil, "", fmt.Errorf("failed to parse theme.json: %w", err)
-			}
-			return &m, filepath.Join(dir, entry.Name()), nil
-		}
-	}
-
-	return nil, "", fmt.Errorf("theme.json not found in archive (checked root and one level deep)")
-}
-
-// copyDir recursively copies a directory tree from src to dst.
-func copyDir(src, dst string) error {
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
-		return err
-	}
-
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			if err := copyDir(srcPath, dstPath); err != nil {
-				return err
-			}
-		} else {
-			if err := copyFile(srcPath, dstPath); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// copyFile copies a single file from src to dst.
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	info, err := in.Stat()
-	if err != nil {
-		return err
-	}
-
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	return err
-}

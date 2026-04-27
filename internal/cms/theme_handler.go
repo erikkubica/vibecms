@@ -14,6 +14,7 @@ import (
 	"vibecms/internal/api"
 	"vibecms/internal/auth"
 	"vibecms/internal/models"
+	"vibecms/internal/secrets"
 )
 
 // themeResponse is the API representation of a theme, hiding the git_token.
@@ -60,11 +61,15 @@ func toThemeResponse(t *models.Theme) themeResponse {
 type ThemeHandler struct {
 	db      *gorm.DB
 	mgmtSvc *ThemeMgmtService
+	secrets *secrets.Service // optional; used to encrypt user-supplied git tokens and decrypt the webhook secret
 }
 
-// NewThemeHandler creates a new ThemeHandler.
-func NewThemeHandler(db *gorm.DB, mgmtSvc *ThemeMgmtService) *ThemeHandler {
-	return &ThemeHandler{db: db, mgmtSvc: mgmtSvc}
+// NewThemeHandler creates a new ThemeHandler. secretsSvc may be nil
+// (legacy plaintext storage); when set, git tokens written via the
+// admin API are encrypted before save and the webhook secret stored
+// in site_settings is decrypted before comparison.
+func NewThemeHandler(db *gorm.DB, mgmtSvc *ThemeMgmtService, secretsSvc *secrets.Service) *ThemeHandler {
+	return &ThemeHandler{db: db, mgmtSvc: mgmtSvc, secrets: secretsSvc}
 }
 
 // RegisterRoutes registers all admin API theme routes on the provided router group.
@@ -334,7 +339,17 @@ func (h *ThemeHandler) UpdateGitConfig(c *fiber.Ctx) error {
 		updates["git_branch"] = *req.GitBranch
 	}
 	if req.GitToken != nil {
-		updates["git_token"] = *req.GitToken
+		// Encrypt the supplied token before persisting so a DB dump
+		// doesn't expose the raw upstream PAT. Empty string clears.
+		stored := *req.GitToken
+		if stored != "" && h.secrets != nil {
+			enc, err := h.secrets.MaybeEncrypt(stored)
+			if err != nil {
+				return api.Error(c, fiber.StatusInternalServerError, "ENCRYPT_FAILED", "Failed to encrypt git token")
+			}
+			stored = enc
+		}
+		updates["git_token"] = stored
 	}
 
 	if len(updates) == 0 {
@@ -361,20 +376,38 @@ type webhookPayload struct {
 }
 
 // webhookDeploy handles POST /api/v1/theme-deploy — public webhook for auto-deploy.
+//
+// Authenticates via, in order of preference:
+//  1. GitHub HMAC: X-Hub-Signature-256 = "sha256=" + hmac_sha256(secret, body)
+//  2. GitLab token: X-Gitlab-Token plain-equality (constant-time)
+//  3. Plain shared secret: X-Webhook-Secret plain-equality (constant-time)
+//
+// HMAC binds the request body to the signature, so an attacker who somehow
+// captures the signature for one payload cannot replay it on a different
+// body. Plain shared secret remains as a fallback for non-GitHub/GitLab
+// integrations.
 func (h *ThemeHandler) webhookDeploy(c *fiber.Ctx) error {
-	// 1. Validate webhook secret.
+	// 1. Validate webhook secret. Stored values may be plaintext
+	// (legacy) or AES-GCM envelopes (current); decrypt is a passthrough
+	// for the former so existing deployments aren't broken by enabling
+	// VIBECMS_SECRET_KEY.
 	var setting models.SiteSetting
 	err := h.db.Where("`key` = ?", "theme_webhook_secret").First(&setting).Error
 	if err != nil || setting.Value == nil || *setting.Value == "" {
 		return api.Error(c, fiber.StatusForbidden, "WEBHOOK_DISABLED", "Webhook secret is not configured")
 	}
-
-	secret := c.Get("X-Webhook-Secret")
-	if secret == "" {
-		secret = c.Query("secret")
+	secret := *setting.Value
+	if h.secrets != nil {
+		decrypted, derr := h.secrets.Decrypt(secret)
+		if derr != nil {
+			return api.Error(c, fiber.StatusInternalServerError, "DECRYPT_FAILED", "Webhook secret could not be decrypted")
+		}
+		secret = decrypted
 	}
-	if secret != *setting.Value {
-		return api.Error(c, fiber.StatusForbidden, "INVALID_SECRET", "Invalid webhook secret")
+	body := c.Body()
+
+	if !verifyWebhookAuth(c, secret, body) {
+		return api.Error(c, fiber.StatusForbidden, "INVALID_SECRET", "Invalid webhook signature")
 	}
 
 	// 2. Extract repo URL from payload or use theme_slug query param.

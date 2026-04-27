@@ -62,6 +62,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState<ContentNode | null>(null);
@@ -108,7 +109,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
     try {
       const res = await getNodes({
         page,
-        per_page: 20,
+        per_page: perPage,
         node_type: nodeType,
         status: status === "all" ? undefined : status,
         language_code: effectiveLangCode || undefined,
@@ -123,7 +124,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, nodeType, status, effectiveLangCode, searchDebounce, labelPlural, JSON.stringify(taxQuery)]);
+  }, [page, perPage, nodeType, status, effectiveLangCode, searchDebounce, labelPlural, JSON.stringify(taxQuery)]);
 
   useEffect(() => {
     setPage(1);
@@ -339,6 +340,7 @@ export default function NodesListPage({ nodeType }: NodesListProps) {
                 total={meta.total}
                 perPage={meta.per_page}
                 onPage={setPage}
+                onPerPage={(n) => { setPerPage(n); setPage(1); }}
                 label={labelPlural.toLowerCase()}
               />
             )}

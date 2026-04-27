@@ -255,9 +255,10 @@ Describes the React micro-frontend loaded into the admin SPA shell:
 - **`entry`**: Path to the built ES module (relative to extension directory).
 - **`slots`**: Named UI injection points. The key (e.g. `"email-settings"`) matches a slot defined by another extension's admin UI. This is how `smtp-provider` and `resend-provider` inject their settings into `email-manager`.
 - **`routes`**: SPA routes registered under `/admin/ext/{slug}/`. The `path` is relative to that prefix.
-- **`menu`**: Sidebar menu entry. `section` can be `"content"` (default), `"design"`, `"development"`, or `"settings"`. Set to `null` to hide from sidebar (useful for slot-only extensions).
-- **`settings_menu`**: Links that appear in the global Settings area of the admin UI.
+- **`menu`**: Sidebar menu entry. `section` is **honored** by the SDUI sidebar engine (`internal/sdui/engine.go`) and routes the entry into the named group: `"content"` (default), `"design"`, `"development"`, or `"settings"`. Items with no/unknown section land at the top level. Set the whole `menu` to `null` to hide from sidebar (useful for slot-only extensions or extensions that only contribute via `settings_menu`).
+- **`settings_menu`**: Links that appear in the global Settings section of the sidebar. The SDUI engine iterates `settings_menu` alongside `menu` and splices each entry into the Settings group — extensions that only contribute a single settings page can omit `menu` entirely and still appear in the right place.
 - **`field_types`**: Custom field types registered for use in node type schemas.
+- **Icons**: any valid `lucide-react` icon name works (e.g. `"ImageDown"`, `"Images"`, `"Puzzle"`). The admin shell resolves names dynamically against the full lucide export; unknown names fall back to `Puzzle` rather than rendering blank.
 
 #### `settings_schema`
 
@@ -444,10 +445,10 @@ import { Button } from '@vibecms/ui' // Resolved via import map to shared UI lib
 ```
 
 The admin shell provides these shared dependencies:
-- `react`, `react-dom`, `react-router-dom`
-- `@vibecms/ui` (shadcn/ui components)
+- `react`, `react-dom`, `react-router-dom`, `sonner`
+- `@vibecms/ui` (shadcn/ui components — Card, Button, Switch, Select, Tabs, AccordionRow, ListPageShell, etc.)
 - `@vibecms/api` (API client helpers)
-- `@vibecms/icons` (Lucide icon components)
+- `@vibecms/icons` (Lucide icon components — every Lucide name available as a lazy-loaded export)
 
 Configure Vite to externalize these:
 
@@ -458,14 +459,168 @@ export default defineConfig({
     lib: {
       entry: 'src/index.tsx',
       formats: ['es'],
-      fileName: () => 'index.js',
+      fileName: 'index',
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react-router-dom', '@vibecms/ui', '@vibecms/api', '@vibecms/icons'],
+      external: [
+        'react', 'react/jsx-runtime', 'react-dom', 'react-dom/client',
+        'react-router-dom', 'sonner',
+        '@vibecms/ui', '@vibecms/api', '@vibecms/icons',
+      ],
     },
+    cssCodeSplit: false,
   },
 });
 ```
+
+#### CSS / Tailwind — Each Extension Owns Its Build
+
+**This is the most common source of "my layout is broken in Docker" bugs.** Every non-trivial extension admin UI should ship its own compiled CSS. As of the 2026-04-25 hardening pass the admin shell's stylesheet **also** declares a fallback `@source "../../extensions/*/admin-ui/src/**/*.{ts,tsx}"` (see `admin-ui/src/index.css`), so simple Tailwind classes used in extension code (e.g. `pt-5`, `gap-x-6`) get picked up by the main scan even if the extension hasn't wired up its own Tailwind build yet — but this only works in the local checkout. Inside the Docker `frontend` stage only `admin-ui/` is copied, so any `@source` pointing at `extensions/` silently sees nothing and drops every extension-only class. **Per-extension Tailwind builds remain the only Docker-safe option** — treat the shared `@source` as a developer convenience, not a substitute.
+
+Required setup:
+
+1. Install Tailwind v4:
+   ```bash
+   npm install -D tailwindcss @tailwindcss/vite
+   ```
+
+2. Add the plugin and `cssFileName` to `vite.config.ts`:
+   ```ts
+   import tailwindcss from "@tailwindcss/vite";
+   export default defineConfig({
+     plugins: [react(), tailwindcss()],
+     build: {
+       lib: { entry: "src/index.tsx", formats: ["es"], fileName: "index", cssFileName: "index" },
+       // ... rollupOptions.external as above
+       cssCodeSplit: false,
+     },
+   });
+   ```
+
+3. Create `src/index.css` containing only scanner directives — design tokens, base styles, and `@vibecms/ui` `data-slot` overrides come from the admin shell's stylesheet:
+   ```css
+   @import "tailwindcss";
+   @source "./**/*.{ts,tsx}";
+   ```
+
+4. Import it once from your entry, before component imports:
+   ```tsx
+   // src/index.tsx
+   import "./index.css";
+   import MyComponent from "./MyComponent";
+   export { MyComponent };
+   ```
+
+The build emits `dist/index.css` next to `dist/index.js`. The extension loader (`admin-ui/src/lib/extension-loader.ts`) auto-injects a `<link rel="stylesheet">` for the sibling CSS when loading the JS — extensions that ship no CSS get a harmless 404. **Do not declare the CSS in your manifest** — the loader derives the URL from the JS entry.
+
+#### Editor Layout Pattern
+
+Match `admin-ui/src/pages/node-editor.tsx` for any "edit X" page so the experience is consistent across the CMS:
+
+```tsx
+<div className="space-y-4">
+  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="space-y-4 min-w-0">
+      {/* 1. Compact pill header: ArrowLeft + Title input + / + Slug input + Auto/Edit toggle */}
+      {/* 2. Tabs (rounded-xl bg-slate-100 p-1, white-on-active) */}
+      {/* 3. TabsContent for each tab */}
+    </div>
+    <div className="space-y-4">
+      {/* Sidebar: Publish card with Save / Cancel, optional Actions card */}
+    </div>
+  </div>
+</div>
+```
+
+Rules:
+- Pill goes **inside** the left column (not full-width above the grid).
+- Use `lg:grid-cols-[minmax(0,1fr)_320px]` (fluid main + fixed sidebar). Don't use 2/3+1/3 grids.
+- `min-w-0` on the main column or long content overflows the grid.
+- Listing pages always show an "All (N)" tab via `ListHeader`'s `tabs={[{value:"all", label:"All", count:N}]}` — even when there's only one filter — to match the rest of the CMS.
+
+#### Things That Are Easy To Get Wrong
+
+| Symptom | Real cause | Fix |
+|---|---|---|
+| Tailwind class has no effect (e.g. `gap-x-6`, `pt-3`, `md:col-span-2`) | Extension has no own Tailwind build, or `dist/index.css` is stale in Docker | Add per-extension Tailwind setup above. Verify with `grep "\.gap-x-6{" extensions/<slug>/admin-ui/dist/index.css` |
+| Layout fine in `npm run dev`, broken after `docker build --no-cache` | `Dockerfile` `frontend` stage only copies `admin-ui/`, never extensions; centralized `@source` finds zero files | Per-extension Tailwind build (above) — admin shell doesn't need to know about extension classes |
+| Inline `style={{padding: 12, gap: 16}}` "fixes" | Patching around a missing class — bug hides and rots | Make Tailwind scan correctly. Inline styles are only for dynamic CSS-variable interpolation (`var(--accent)`) |
+| Switches invisible (white on white) when checked | Old shadcn defaults — `data-[state=checked]:bg-slate-900` looks like "off" | Already fixed CMS-wide in `admin-ui/src/components/ui/switch.tsx` to indigo. If touching that file, rebuild admin-ui too |
+| `<Select>` doesn't fill its row like `<Input>` does | shadcn default `w-fit` on SelectTrigger | Already fixed CMS-wide to `w-full`. Avoid re-introducing `w-fit` |
+| Tabs / clickable controls without pointer cursor | Missing `cursor-pointer` | Add it. Every clickable thing needs it; this is a recurring review note |
+| "Open public form" links on items that have no public URL | Don't add public-facing links unless the extension actually serves a public route | Check `public_routes` in the manifest before linking |
+| Sidebar covers main content on every admin page after adding an extension that uses common Tailwind utilities (`.fixed`, `.grid`, `.absolute`); themes/extensions grids collapse from 4-col to 2-col | The extension's stylesheet was injected *after* admin-ui's, putting its `.fixed` later in the merged `@layer utilities` cascade than admin-ui's `.lg:relative` on `<aside>` | The `extension-loader` already prepends extension `<link>` tags before admin-ui's stylesheet so admin-ui's responsive utilities win. Don't change `appendChild` back to anything that puts extension CSS later in source order |
+
+#### Accessing Externalized Libraries
+
+`react-router-dom`, `sonner`, `react`, `react-dom`, `@vibecms/ui`, `@vibecms/icons`, `@vibecms/api` are externalized by every extension's `vite.config.ts`. The admin shell exposes them on `window.__VIBECMS_SHARED__`:
+
+```tsx
+const { useSearchParams, useNavigate } =
+  (window as any).__VIBECMS_SHARED__.ReactRouterDOM;
+const { toast } = (window as any).__VIBECMS_SHARED__.Sonner;
+
+// `@vibecms/ui` and `@vibecms/icons` resolve via the externalize config;
+// import them like normal — no shim access needed.
+import { Button } from "@vibecms/ui";
+import { Upload } from "@vibecms/icons"; // → lucide-react at runtime
+```
+
+`__VIBECMS_SHARED__.ui` exposes the design-system list-page primitives: `ListPageShell`, `ListHeader` (with `tabs={[{value, label, count}]}` for tab+count pills), `ListSearch`, `ListFooter`, `EmptyState`, `LoadingRow`, `Chip`, `StatusPill`, `TitleCell`, `RowActions`, `Th`, `Td`, `Tr`, `Checkbox`, `AccordionRow`, `SectionHeader`, `CodeWindow`. Reach for these before rolling your own — they're what makes pages look like nodes/forms/media. The reference implementations are `extensions/media-manager/admin-ui/src/MediaLibrary.tsx` (drawer + upload modal + URL state) and `extensions/forms/admin-ui/src/FormsList.tsx`.
+
+#### List Page Pattern
+
+For any "browse a collection" admin page (forms list, media library, submissions, custom node types), match the canonical layout used CMS-wide:
+
+```tsx
+<ListPageShell>
+  <ListHeader
+    tabs={[
+      { value: "all", label: "All", count: 42 },
+      { value: "image", label: "Images", count: 30 },
+      // ...
+    ]}
+    activeTab={activeTab}
+    onTabChange={setActiveTab}
+    extra={<UploadButton />}
+  />
+  {/* Toolbar: search + view switcher + sort + (density when grid) + select-all */}
+  <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+    <ListSearch value={search} onChange={setSearch} placeholder="Search…" />
+    {/* your view/sort/density controls */}
+  </div>
+  {/* Grid or table */}
+  <ListFooter
+    page={page} totalPages={totalPages} total={meta.total}
+    perPage={perPage} onPage={setPage} onPerPage={setPerPage} label="files"
+  />
+</ListPageShell>
+```
+
+Key conventions:
+- **Drop the `<h1>page-title</h1>`** — the active tab pill is the title.
+- **Tabs replace a separate type/status filter dropdown.** `?type=image` lives in the tabs.
+- **All filter / sort / view / pagination state in URL search params.** Default values omit the param (`?view=grid` is implicit). Refresh preserves state. Use `replace: true` for search-input keystrokes so they don't pollute history. Use `resetPage: true` when changing filters so users don't strand on page 7 of a 2-page result.
+- **Tab counts:** if no aggregate-counts endpoint exists, fire one parallel `per_page=1` fetch per tab on mount (and after search/upload/delete). Cheap and lets you skip backend work for v1.
+- **Sortable column headers + sort dropdown share `?sort=`.** Both controls write to the same URL state — clicking a column header updates the dropdown selection, and vice versa.
+
+See `extensions/media-manager/admin-ui/src/MediaLibrary.tsx` for the reference implementation of all of the above.
+
+#### Hot-Deploy Without Rebuilding the Image
+
+For tight iteration during development, copy built assets directly into the running container instead of rebuilding the Docker image:
+
+```bash
+# After npm run build in both admin-ui and your extension
+docker cp admin-ui/dist/. vibecms-app-1:/app/admin-ui/dist/
+docker cp extensions/<slug>/admin-ui/dist/. vibecms-app-1:/app/extensions/<slug>/admin-ui/dist/
+```
+
+The Go binary serves these as static files — no container restart needed. Hard-refresh the browser (Cmd+Shift+R) to bypass cached `index.html`.
+
+#### Editing Shared `@vibecms/ui` Primitives
+
+Shared components live in `admin-ui/src/components/ui/` and are exposed via `window.__VIBECMS_SHARED__.ui`. Editing them changes behavior **CMS-wide** — every extension picks up the change automatically. After any edit, **rebuild admin-ui** (`cd admin-ui && npm run build`) and hot-deploy. Do not duplicate these primitives inside an extension.
 
 #### Route Registration
 
@@ -668,6 +823,10 @@ events.on("after_main_content", "handlers/powered_by", 99)
 | `extension.deactivated` | Extension is deactivated (before cleanup) | `slug` |
 | `theme.activated` | Any theme is activated | `name`, `path`, `version`, `assets` |
 | `theme.deactivated` | Any theme is deactivated | `name` |
+| `node_type.created` / `.updated` / `.deleted` | Custom post type registered/changed/removed | `slug` |
+| `taxonomy.created` / `.updated` / `.deleted` | Taxonomy registered/changed/removed | `slug` |
+
+The node-type and taxonomy lifecycle events were added in the 2026-04-25 hardening pass — the SDUI engine subscribes to them to evict its content-types/taxonomies layout cache, and extensions can subscribe to react to schema changes (e.g. invalidate a per-type derived view).
 
 ### Using Lifecycle Events
 

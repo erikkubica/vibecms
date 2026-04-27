@@ -25,12 +25,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog,
   DialogContent,
@@ -243,10 +239,8 @@ export default function NodeTypeEditorPage() {
         <div className="space-y-6 lg:col-span-2">
           {/* Basic info */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Basic Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <SectionHeader title="Basic Info" />
+            <CardContent className="space-y-4 p-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="label" className="text-sm font-medium text-slate-700">Label (singular)</Label>
@@ -355,10 +349,8 @@ export default function NodeTypeEditorPage() {
 
           {/* URL Prefixes */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">URL Prefixes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <SectionHeader title="URL Prefixes" />
+            <CardContent className="space-y-4 p-6">
               <p className="text-sm text-slate-500">
                 Set the URL prefix per language. For example, a "Team Member" type could use
                 <span className="font-mono text-indigo-600"> /en/team/</span> in English and
@@ -394,10 +386,8 @@ export default function NodeTypeEditorPage() {
 
           {/* Taxonomies */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-lg font-semibold text-slate-900">Taxonomies</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <SectionHeader title="Taxonomies" />
+            <CardContent className="space-y-4 p-6">
               <p className="text-sm text-slate-500">
                 Register custom taxonomies (e.g. Categories, Tags, Genres) to classify your content.
               </p>
@@ -530,10 +520,8 @@ export default function NodeTypeEditorPage() {
 
           {/* Fields */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Fields</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <SectionHeader title="Fields" />
+            <CardContent className="space-y-4 p-6">
               <FieldSchemaEditor fields={fields} onChange={setFields} />
             </CardContent>
           </Card>
@@ -542,10 +530,8 @@ export default function NodeTypeEditorPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Save</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <SectionHeader title="Save" />
+            <CardContent className="space-y-4 p-6">
               <Button
                 type="submit"
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm"
@@ -560,10 +546,8 @@ export default function NodeTypeEditorPage() {
           {/* Actions (edit mode only) */}
           {isEdit && (
             <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-slate-900">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 p-6 pt-0">
+              <SectionHeader title="Actions" />
+              <CardContent className="space-y-2 p-6">
                 <Button
                   type="button"
                   variant="outline"

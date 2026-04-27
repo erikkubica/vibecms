@@ -130,13 +130,14 @@
     var price = parseFloat(card.getAttribute("data-price") || "0");
     var adultsInput = card.querySelector("[data-adults]");
     var kidsInput = card.querySelector("[data-kids]");
-    var totalEl = card.querySelector("[data-total]");
+    var totalEls = card.querySelectorAll("[data-total]");
 
     function recalc() {
       var a = parseInt(adultsInput ? adultsInput.value : "1", 10) || 0;
       var k = parseInt(kidsInput ? kidsInput.value : "0", 10) || 0;
       var total = price * a + price * 0.5 * k;
-      if (totalEl) totalEl.textContent = "$" + total.toFixed(0);
+      var label = "$" + total.toFixed(0);
+      totalEls.forEach(function (el) { el.textContent = label; });
     }
     card.querySelectorAll("[data-step]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -154,26 +155,11 @@
     [adultsInput, kidsInput].forEach(function (i) { if (i) i.addEventListener("input", recalc); });
     recalc();
 
-    var form = card.querySelector("form");
-    var success = card.querySelector("[data-booking-success]");
-    var body = card.querySelector("[data-booking-body]");
-    if (form) {
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var fn = (form.querySelector("[name=firstName]") || {}).value;
-        var em = (form.querySelector("[name=email]") || {}).value;
-        if (!fn || !em) return;
-        if (body) body.style.display = "none";
-        if (success) success.style.display = "";
-      });
-    }
-    var again = card.querySelector("[data-booking-again]");
-    if (again) {
-      again.addEventListener("click", function () {
-        if (body) body.style.display = "";
-        if (success) success.style.display = "none";
-      });
-    }
+    // Submission is owned by the forms extension's vibe-form runtime, which
+    // performs the actual AJAX POST + validation + success rendering. Theme JS
+    // here only handles steppers + live total. The data-booking-success and
+    // data-booking-again hooks are kept for theme polish but aren't wired —
+    // forms-ext renders its own success state inside .vibe-form-wrapper.
   }
 
   // Newsletter form (footer): prevent submit, swap to thank-you message.

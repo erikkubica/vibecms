@@ -1,11 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ChevronDown,
-  ChevronRight,
-  GripVertical,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
+  ChevronUp,
+  X,
   ArrowRight,
   ArrowLeft,
   Globe,
@@ -13,9 +10,8 @@ import {
   FileText,
   Search,
   Loader2,
-  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AccordionRow } from "@/components/ui/accordion-row";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { getNodes, type MenuItem, type ContentNode } from "@/api/client";
@@ -227,7 +223,6 @@ function getItemUid(item: MenuItem): string {
 }
 
 export default function MenuTree({ items, onChange, autoEditId }: MenuTreeProps) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Ensure all items have stable UIDs
@@ -248,18 +243,6 @@ export default function MenuTree({ items, onChange, autoEditId }: MenuTreeProps)
   }, [autoEditId]);
 
   const flat = flattenItems(items);
-
-  function toggleExpanded(uid: string) {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(uid)) {
-        next.delete(uid);
-      } else {
-        next.add(uid);
-      }
-      return next;
-    });
-  }
 
   function toggleEditing(uid: string) {
     setEditingId((prev) => (prev === uid ? null : uid));
@@ -331,227 +314,165 @@ export default function MenuTree({ items, onChange, autoEditId }: MenuTreeProps)
     onChange(next);
   }
 
-  function hasChildren(item: MenuItem): boolean {
-    return !!(item.children && item.children.length > 0);
-  }
-
   return (
     <div className="space-y-0">
       {flat.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400">
-          No menu items yet. Add items using the buttons above.
+        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 py-12 text-slate-400">
+          <LinkIcon className="h-10 w-10 opacity-40" />
+          <p className="text-sm font-medium">No menu items</p>
+          <p className="text-xs">Add a page link or custom URL to get started</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 overflow-hidden divide-y divide-slate-100">
+        <div className="space-y-2">
           {flat.map((fi) => {
             const uid = getItemUid(fi.item);
             const isEditing = editingId === uid;
-            const isChildExpanded = hasChildren(fi.item) && expandedIds.has(uid);
 
             return (
-              <div key={uid || fi.path.join("-")} className="bg-white">
-                {/* Collapsed row */}
-                <div
-                  className={`flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 transition-colors ${
-                    isEditing ? "bg-indigo-50/50" : ""
-                  }`}
-                  style={{ paddingLeft: `${fi.depth * 24 + 12}px` }}
-                >
-                  {/* Expand toggle for children */}
-                  <button
-                    className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex-shrink-0"
-                    onClick={() => toggleExpanded(uid)}
-                    title={hasChildren(fi.item) ? (isChildExpanded ? "Collapse" : "Expand") : "No children"}
-                  >
-                    {hasChildren(fi.item) ? (
-                      isChildExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )
+              <AccordionRow
+                key={uid || fi.path.join("-")}
+                open={isEditing}
+                onToggle={() => toggleEditing(uid)}
+                depth={fi.depth}
+                headerLeft={
+                  <>
+                    {fi.item.item_type === "custom" ? (
+                      <Globe size={14} className="shrink-0" style={{ color: "var(--fg-muted)" }} />
                     ) : (
-                      <GripVertical className="h-3.5 w-3.5 text-slate-300" />
+                      <FileText size={14} className="shrink-0" style={{ color: "var(--fg-muted)" }} />
                     )}
-                  </button>
-
-                  {/* Title */}
-                  <span className="flex-1 text-sm font-medium text-slate-700 truncate">
-                    {fi.item.title || "(untitled)"}
-                  </span>
-
-                  {/* Type badge */}
-                  {itemTypeBadge(fi.item.item_type)}
-
-                  {/* Edit toggle */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => toggleEditing(uid)}
-                  >
-                    {isEditing ? "Close" : "Edit"}
-                  </Button>
-
-                  {/* Delete */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-red-400 hover:text-red-600"
-                    onClick={() => deleteItem(fi.path)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-
-                {/* Expanded editing panel */}
-                {isEditing && (
-                  <div
-                    className="border-t border-slate-100 bg-slate-50/70 px-4 py-4 space-y-3"
-                    style={{ paddingLeft: `${fi.depth * 24 + 16}px` }}
-                  >
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {/* Title */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                          Title
-                        </label>
-                        <Input
-                          value={fi.item.title}
-                          onChange={(e) => updateItemField(fi.path, "title", e.target.value)}
-                          placeholder="Menu item title"
-                          className="h-9"
-                        />
-                      </div>
-
-                      {/* Item Type */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                          Type
-                        </label>
-                        <select
-                          className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                          value={fi.item.item_type}
-                          onChange={(e) => updateItemField(fi.path, "item_type", e.target.value)}
-                        >
-                          <option value="node">Page (Node)</option>
-                          <option value="custom">Custom URL</option>
-                        </select>
-                      </div>
-
-                      {/* Type-specific field */}
-                      {fi.item.item_type === "custom" && (
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            URL
-                          </label>
-                          <div className="relative">
-                            <LinkIcon className="absolute left-2.5 top-2 h-4 w-4 text-slate-400" />
-                            <Input
-                              value={fi.item.url || ""}
-                              onChange={(e) => updateItemField(fi.path, "url", e.target.value)}
-                              placeholder="https://example.com or #anchor"
-                              className="h-9 pl-8"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {fi.item.item_type === "node" && (
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">
-                            Page / Content Node
-                          </label>
-                          <NodeSearchInput
-                            value={fi.item.node_id ?? null}
-                            onChange={(nodeId, title) => {
-                              const next = cloneItems(items);
-                              const item = getItemAtPath(next, fi.path);
-                              (item as unknown as Record<string, unknown>)["node_id"] = nodeId;
-                              if (title && !item.title) {
-                                item.title = title;
-                              }
-                              onChange(next);
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Target */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                          Target
-                        </label>
-                        <select
-                          className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                          value={fi.item.target}
-                          onChange={(e) => updateItemField(fi.path, "target", e.target.value)}
-                        >
-                          <option value="_self">Same Window (_self)</option>
-                          <option value="_blank">New Window (_blank)</option>
-                        </select>
-                      </div>
-
-                      {/* CSS Class */}
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-600">
-                          CSS Class
-                        </label>
-                        <Input
-                          value={fi.item.css_class || ""}
-                          onChange={(e) => updateItemField(fi.path, "css_class", e.target.value)}
-                          placeholder="optional-class"
-                          className="h-9"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Move buttons */}
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <span className="text-xs text-slate-500 mr-1">Move:</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs gap-1"
-                        disabled={fi.indexInParent === 0}
-                        onClick={() => moveUp(fi.path)}
-                      >
-                        <ArrowUp className="h-3 w-3" />
-                        Up
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs gap-1"
-                        disabled={fi.indexInParent >= fi.siblingCount - 1}
-                        onClick={() => moveDown(fi.path)}
-                      >
-                        <ArrowDown className="h-3 w-3" />
-                        Down
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs gap-1"
-                        disabled={fi.indexInParent === 0 || fi.depth >= MAX_DEPTH - 1}
-                        onClick={() => indent(fi.path)}
-                      >
-                        <ArrowRight className="h-3 w-3" />
-                        Indent
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs gap-1"
-                        disabled={fi.depth === 0}
-                        onClick={() => outdent(fi.path)}
-                      >
-                        <ArrowLeft className="h-3 w-3" />
-                        Outdent
-                      </Button>
-                    </div>
+                    <span className="font-semibold min-w-0 truncate" style={{ fontSize: 12.5, color: "var(--fg)" }}>
+                      {fi.item.title || "(untitled)"}
+                    </span>
+                    {itemTypeBadge(fi.item.item_type)}
+                  </>
+                }
+                headerRight={
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => moveUp(fi.path)}
+                      disabled={fi.indexInParent === 0}
+                      className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                      style={{ color: "var(--fg-muted)" }}
+                      title="Move up"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveDown(fi.path)}
+                      disabled={fi.indexInParent === fi.siblingCount - 1}
+                      className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                      style={{ color: "var(--fg-muted)" }}
+                      title="Move down"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => indent(fi.path)}
+                      disabled={fi.indexInParent === 0 || fi.depth >= MAX_DEPTH - 1}
+                      className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                      style={{ color: "var(--fg-muted)" }}
+                      title="Indent"
+                    >
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => outdent(fi.path)}
+                      disabled={fi.depth === 0}
+                      className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                      style={{ color: "var(--fg-muted)" }}
+                      title="Outdent"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteItem(fi.path)}
+                      className="p-1 rounded hover:bg-red-50"
+                      style={{ color: "var(--danger)" }}
+                      title="Delete"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                }
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Title</label>
+                    <Input
+                      value={fi.item.title}
+                      onChange={(e) => updateItemField(fi.path, "title", e.target.value)}
+                      placeholder="Menu item title"
+                      className="h-9"
+                    />
                   </div>
-                )}
-              </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Type</label>
+                    <select
+                      className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      value={fi.item.item_type}
+                      onChange={(e) => updateItemField(fi.path, "item_type", e.target.value)}
+                    >
+                      <option value="node">Page (Node)</option>
+                      <option value="custom">Custom URL</option>
+                    </select>
+                  </div>
+                  {fi.item.item_type === "custom" && (
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">URL</label>
+                      <div className="relative">
+                        <LinkIcon className="absolute left-2.5 top-2 h-4 w-4 text-slate-400" />
+                        <Input
+                          value={fi.item.url || ""}
+                          onChange={(e) => updateItemField(fi.path, "url", e.target.value)}
+                          placeholder="https://example.com or #anchor"
+                          className="h-9 pl-8"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {fi.item.item_type === "node" && (
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Page / Content Node</label>
+                      <NodeSearchInput
+                        value={fi.item.node_id ?? null}
+                        onChange={(nodeId, title) => {
+                          const next = cloneItems(items);
+                          const item = getItemAtPath(next, fi.path);
+                          (item as unknown as Record<string, unknown>)["node_id"] = nodeId;
+                          if (title && !item.title) item.title = title;
+                          onChange(next);
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Target</label>
+                    <select
+                      className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      value={fi.item.target}
+                      onChange={(e) => updateItemField(fi.path, "target", e.target.value)}
+                    >
+                      <option value="_self">Same Window (_self)</option>
+                      <option value="_blank">New Window (_blank)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">CSS Class</label>
+                    <Input
+                      value={fi.item.css_class || ""}
+                      onChange={(e) => updateItemField(fi.path, "css_class", e.target.value)}
+                      placeholder="optional-class"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+              </AccordionRow>
             );
           })}
         </div>

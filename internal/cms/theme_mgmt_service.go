@@ -57,6 +57,91 @@ func (s *ThemeMgmtService) SetScriptLoader(load func(string) error, unload func(
 	s.unloadThemeScripts = unload
 }
 
+// ScanAndRegister walks themesDir and upserts a Theme row for every
+// subdirectory that has a valid theme.json. Mirrors the extension loader's
+// scan behaviour: new themes are registered with is_active=false; existing
+// rows have their metadata (name/version/description/author/path) refreshed
+// from disk, is_active is left untouched.
+//
+// Called at startup so on-disk themes don't have to be manually uploaded after
+// a fresh install or DB reset.
+func (s *ThemeMgmtService) ScanAndRegister() {
+	entries, err := os.ReadDir(s.themesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("[themes] no themes directory found at %s", s.themesDir)
+			return
+		}
+		log.Printf("[themes] error reading themes directory: %v", err)
+		return
+	}
+
+	registered := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		themeDir := filepath.Join(s.themesDir, entry.Name())
+		manifest, _, err := findAndParseManifest(themeDir)
+		if err != nil {
+			// Missing/invalid theme.json — ignore this directory.
+			continue
+		}
+		if manifest.Slug == "" {
+			// Derive slug from name the same way ThemeLoader.upsertThemeRecord
+			// does, so both registration paths agree on the row identity.
+			if manifest.Name != "" {
+				manifest.Slug = strings.ToLower(strings.ReplaceAll(manifest.Name, " ", "-"))
+			} else {
+				manifest.Slug = entry.Name()
+			}
+		}
+
+		// Look up by path first (stable across slug derivation changes) then
+		// fall back to slug.
+		var existing models.Theme
+		err = s.db.Where("path = ?", themeDir).First(&existing).Error
+		if err == gorm.ErrRecordNotFound {
+			err = s.db.Where("slug = ?", manifest.Slug).First(&existing).Error
+		}
+		if err == nil {
+			// Refresh metadata + path; leave IsActive and Source alone.
+			existing.Name = manifest.Name
+			existing.Description = manifest.Description
+			existing.Version = manifest.Version
+			existing.Author = manifest.Author
+			existing.Path = themeDir
+			if err := s.db.Save(&existing).Error; err != nil {
+				log.Printf("[themes] refresh %s failed: %v", manifest.Slug, err)
+				continue
+			}
+			registered++
+			continue
+		}
+		if err != gorm.ErrRecordNotFound {
+			log.Printf("[themes] lookup %s failed: %v", manifest.Slug, err)
+			continue
+		}
+
+		theme := models.Theme{
+			Slug:        manifest.Slug,
+			Name:        manifest.Name,
+			Description: manifest.Description,
+			Version:     manifest.Version,
+			Author:      manifest.Author,
+			Source:      "local",
+			Path:        themeDir,
+		}
+		if err := s.db.Create(&theme).Error; err != nil {
+			log.Printf("[themes] register %s failed: %v", manifest.Slug, err)
+			continue
+		}
+		registered++
+	}
+
+	log.Printf("[themes] scanned %d themes from %s", registered, s.themesDir)
+}
+
 // List returns all installed themes ordered by name.
 func (s *ThemeMgmtService) List() ([]models.Theme, error) {
 	var themes []models.Theme

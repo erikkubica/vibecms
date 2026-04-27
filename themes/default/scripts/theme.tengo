@@ -4,8 +4,33 @@
 log := import("core/log")
 events := import("core/events")
 http := import("core/http")
+menus := import("core/menus")
 
 log.info("Default theme scripts initializing...")
+
+// ─── Navigation Menus ────────────────────────────────────────
+// Seed primary + footer menus on first activation so site-header
+// and site-footer render a real menu out of the box.
+menus.upsert({
+	slug: "main-nav",
+	name: "Primary Navigation",
+	items: [
+		{ label: "Home",    page: "home" },
+		{ label: "About",   page: "about" },
+		{ label: "Contact", page: "contact" }
+	]
+})
+
+menus.upsert({
+	slug: "footer-nav",
+	name: "Footer Navigation",
+	items: [
+		{ label: "Home",    page: "home" },
+		{ label: "About",   page: "about" },
+		{ label: "Privacy", page: "privacy" }
+	]
+})
+log.info("Default theme: nav menus seeded")
 
 // ─── Events ──────────────────────────────────────────────────────
 // Register scripts for any event — lifecycle, template, or custom.

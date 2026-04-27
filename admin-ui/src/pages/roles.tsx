@@ -15,6 +15,8 @@ import { getRoles, deleteRole, type Role } from "@/api/client";
 import {
   ListPageShell,
   ListHeader,
+  ListToolbar,
+  ListSearch,
   ListCard,
   ListTable,
   Th,
@@ -35,6 +37,7 @@ export default function RolesPage() {
   const navigate = useNavigate();
   const [roles, setRoles] = useState<RoleWithPerms[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const [showDelete, setShowDelete] = useState(false);
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
@@ -85,14 +88,29 @@ export default function RolesPage() {
     return 0;
   }
 
+  const q = search.toLowerCase();
+  const filteredRoles = q
+    ? roles.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.slug.toLowerCase().includes(q) ||
+          (r.description || "").toLowerCase().includes(q),
+      )
+    : roles;
+
   return (
     <ListPageShell>
       <ListHeader
         title="Roles"
-        count={roles.length}
+        tabs={[{ value: "all", label: "All", count: roles.length }]}
+        activeTab="all"
         newLabel="Add Role"
         onNew={() => navigate("/admin/roles/new")}
       />
+
+      <ListToolbar>
+        <ListSearch value={search} onChange={setSearch} placeholder="Search roles…" />
+      </ListToolbar>
 
       <ListCard>
         {loading ? (
@@ -115,7 +133,7 @@ export default function RolesPage() {
               </tr>
             </thead>
             <tbody>
-              {roles.map((role) => (
+              {filteredRoles.map((role) => (
                 <Tr key={role.id}>
                   <Td>
                     <TitleCell

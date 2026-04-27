@@ -9,15 +9,24 @@ import (
 	"gorm.io/gorm"
 
 	"vibecms/internal/api"
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
 type TaxonomyHandler struct {
-	db *gorm.DB
+	db       *gorm.DB
+	eventBus *events.EventBus
 }
 
-func NewTaxonomyHandler(db *gorm.DB) *TaxonomyHandler {
-	return &TaxonomyHandler{db: db}
+func NewTaxonomyHandler(db *gorm.DB, eventBus *events.EventBus) *TaxonomyHandler {
+	return &TaxonomyHandler{db: db, eventBus: eventBus}
+}
+
+func (h *TaxonomyHandler) emit(action string, id int, slug string) {
+	if h.eventBus == nil {
+		return
+	}
+	h.eventBus.Publish(action, events.Payload{"id": id, "slug": slug})
 }
 
 func (h *TaxonomyHandler) RegisterRoutes(router fiber.Router) {
@@ -62,6 +71,7 @@ func (h *TaxonomyHandler) Create(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "CREATE_FAILED", "Failed to create taxonomy")
 	}
 
+	h.emit("taxonomy.created", t.ID, t.Slug)
 	return api.Created(c, t)
 }
 
@@ -135,13 +145,22 @@ func (h *TaxonomyHandler) Update(c *fiber.Ctx) error {
 	}
 
 	h.db.Where("slug = ?", slug).First(&existing)
+	h.emit("taxonomy.updated", existing.ID, existing.Slug)
 	return api.Success(c, existing)
 }
 
 func (h *TaxonomyHandler) Delete(c *fiber.Ctx) error {
 	slug := c.Params("slug")
-	if err := h.db.Where("slug = ?", slug).Delete(&models.Taxonomy{}).Error; err != nil {
+	var existing models.Taxonomy
+	if err := h.db.Where("slug = ?", slug).First(&existing).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Taxonomy not found")
+		}
+		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch taxonomy")
+	}
+	if err := h.db.Delete(&existing).Error; err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "DELETE_FAILED", "Failed to delete taxonomy")
 	}
+	h.emit("taxonomy.deleted", existing.ID, existing.Slug)
 	return c.SendStatus(fiber.StatusNoContent)
 }

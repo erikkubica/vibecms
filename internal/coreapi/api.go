@@ -46,6 +46,11 @@ type CoreAPI interface {
 	GetMenus(ctx context.Context) ([]*Menu, error)
 	CreateMenu(ctx context.Context, input MenuInput) (*Menu, error)
 	UpdateMenu(ctx context.Context, slug string, input MenuInput) (*Menu, error)
+	// UpsertMenu creates the menu if it doesn't exist and then replaces its
+	// items with input.Items. Idempotent — safe to call from theme seeds on
+	// every activation. Name/Slug are taken from input; items tree may nest
+	// one level deep (Children).
+	UpsertMenu(ctx context.Context, input MenuInput) (*Menu, error)
 	DeleteMenu(ctx context.Context, slug string) error
 
 	// Routes
@@ -144,6 +149,7 @@ type NodeInput struct {
 	LanguageCode string            `json:"language_code,omitempty"`
 	Slug         string            `json:"slug,omitempty"`
 	Title        string            `json:"title,omitempty"`
+	LayoutSlug    string             `json:"layout_slug,omitempty"`
 	FeaturedImage any               `json:"featured_image,omitempty"`
 	Excerpt       string            `json:"excerpt,omitempty"`
 	Taxonomies    map[string][]string `json:"taxonomies,omitempty"`
@@ -169,6 +175,10 @@ type MenuItem struct {
 	ParentID *uint      `json:"parent_id,omitempty"`
 	Position int        `json:"position"`
 	Children []MenuItem `json:"children,omitempty"`
+	// ItemType is "custom" (URL is authoritative) or "node" (URL is derived
+	// from NodeID's current full_url at render time).
+	ItemType string `json:"item_type,omitempty"`
+	NodeID   *uint  `json:"node_id,omitempty"`
 }
 
 type MenuInput struct {

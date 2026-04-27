@@ -8,14 +8,17 @@ taxonomies := import("core/taxonomies")
 nodes := import("core/nodes")
 filters := import("core/filters")
 settings := import("core/settings")
+menus := import("core/menus")
+core_events := import("core/events")
+core_assets := import("core/assets")
 
 log.info("Hello Vietnam theme initializing...")
 
 // ─── Taxonomies ──────────────────────────────────────────────
 taxonomies.register({
 	slug: "trip_tag",
-	label: "Trip Tag",
-	label_plural: "Trip Tags",
+	label: "Trip tag",
+	label_plural: "Trip tags",
 	description: "Foodie / Adventure / Relaxing",
 	hierarchical: false,
 	node_types: ["trip"]
@@ -23,8 +26,8 @@ taxonomies.register({
 
 taxonomies.register({
 	slug: "gallery_category",
-	label: "Gallery Category",
-	label_plural: "Gallery Categories",
+	label: "Gallery category",
+	label_plural: "Gallery categories",
 	description: "Street Food / Landscapes / People / Workshops",
 	hierarchical: false,
 	node_types: ["gallery_photo"]
@@ -72,7 +75,9 @@ nodetypes.register({
 				{ name: "q", label: "Question", type: "text" },
 				{ name: "a", label: "Answer",   type: "textarea" }
 			]
-		}
+		},
+		{ name: "order_form",   label: "Order Form",          type: "form_selector",
+			help: "Form rendered in the trip booking sidebar. Defaults to 'trip-order' for seeded trips." }
 	],
 	taxonomies: ["trip_tag"]
 })
@@ -85,7 +90,7 @@ nodetypes.register({
 
 nodetypes.register({
 	slug: "crew_member",
-	label: "Crew Member",
+	label: "Crew member",
 	label_plural: "Crew",
 	icon: "users",
 	description: "A Hello Vietnam guide or staff member",
@@ -116,8 +121,8 @@ nodetypes.register({
 
 nodetypes.register({
 	slug: "gallery_photo",
-	label: "Gallery Photo",
-	label_plural: "Gallery Photos",
+	label: "Gallery photo",
+	label_plural: "Gallery photos",
 	icon: "image",
 	description: "An image for the public gallery",
 	field_schema: [
@@ -171,8 +176,61 @@ seed_setting("hv.lead_magnet.body",   "Every dish worth a detour, every egg-coff
 seed_setting("hv.lead_magnet.cta",    "Send me the map")
 log.info("Hello Vietnam: hv.* settings seeded")
 
+// ─── Form Seeding ────────────────────────────────────────────
+// Idempotent per-slug upsert via the forms extension's forms:upsert event.
+// First-run creates the form; subsequent runs no-op so editor changes survive
+// theme re-imports. Pass `force: true` to overwrite.
+seed_form := func(spec) {
+	core_events.emit("forms:upsert", spec)
+}
+
+// Layout HTML lives in themes/hello-vietnam/forms/trip-order.html — full
+// theme-styled markup (same .input/.btn/.card classes + data-* hooks the
+// original inline form used). Read at activation and shipped to the forms
+// extension so the form looks 1:1 with the theme out of the box.
+trip_order_layout := core_assets.read("forms/trip-order.html")
+if is_error(trip_order_layout) {
+	log.warn("Hello Vietnam: failed to read trip-order layout: " + string(trip_order_layout))
+	trip_order_layout = ""
+}
+
+seed_form({
+	slug: "trip-order",
+	name: "Trip Booking",
+	force: true,
+	layout: trip_order_layout,
+	settings: {
+		success_message: "You're in! Confirmation sent to your inbox.",
+		store_ip: true,
+		honeypot_enabled: true
+	},
+	fields: [
+		{ id: "first_name", type: "text",     label: "First name",         required: true },
+		{ id: "surname",    type: "text",     label: "Surname" },
+		{ id: "email",      type: "email",    label: "Email",              required: true },
+		{ id: "phone",      type: "tel",      label: "WhatsApp / Phone",   placeholder: "+84 …" },
+		{ id: "date",       type: "date",     label: "Trip date" },
+		{ id: "adults",     type: "number",   label: "Adults",             default: "2", min: 1 },
+		{ id: "kids",       type: "number",   label: "Kids (under 12)",    default: "0", min: 0 },
+		{ id: "dietary",    type: "select",   label: "Dietary needs",
+			options: [
+				{ label: "None",                 value: "none" },
+				{ label: "Vegetarian",           value: "vegetarian" },
+				{ label: "Vegan",                value: "vegan" },
+				{ label: "Gluten-free",          value: "gluten_free" },
+				{ label: "Allergies (specify)", value: "allergies" }
+			]
+		},
+		{ id: "vibe",       type: "textarea", label: "The Vibe Check",
+			placeholder: "Any specific foods you're dying to try? Or absolutely hate?" }
+	]
+})
+log.info("Hello Vietnam: trip-order form upsert emitted")
+
 // ─── Demo Node Seeding ───────────────────────────────────────
-seed := func(node_type, label, items) {
+// `default_layout` pins seeded nodes to a specific layout via layout_slug, so
+// pages render correctly without manual intervention after theme import.
+seed := func(node_type, label, items, default_layout) {
 	res := nodes.query({ node_type: node_type, limit: 1 })
 	if res.total > 0 {
 		log.info("Hello Vietnam seed: " + label + " already exist, skipping")
@@ -182,6 +240,11 @@ seed := func(node_type, label, items) {
 	for item in items {
 		item.node_type = node_type
 		item.status = "published"
+		if !is_undefined(default_layout) && default_layout != "" {
+			if is_undefined(item.layout) || item.layout == "" {
+				item.layout = default_layout
+			}
+		}
 		nodes.create(item)
 	}
 	log.info("Hello Vietnam seed: " + string(len(items)) + " " + label + " created")
@@ -195,7 +258,7 @@ seed("trip", "trips", [
 		fields_data: {
 			hero_image: { url: "theme-asset:trip-hanoi-street-food", alt: "Bustling Hanoi street food alley" },
 			tag: "Foodie", duration: "4 hrs", price: 45, location: "Hanoi Old Quarter",
-			rating: 4.9, reviews: 312, staff_pick: true, color: "red",
+			rating: 4.9, reviews: 312, staff_pick: true, color: "red", order_form: "trip-order",
 			short: "Plastic stools, bubbling pots, and twelve things you've never eaten before.",
 			stops: [
 				{ title: "Bun Cha lunch with a grandma", brief: "Juicy pork patties over rice noodles on a tiny plastic stool near Hang Ca." },
@@ -229,7 +292,7 @@ seed("trip", "trips", [
 		slug: "ha-giang-loop",
 		fields_data: {
 			hero_image: { url: "theme-asset:trip-ha-giang-loop", alt: "Ha Giang mountain road with motorbikes" },
-			tag: "Adventure", duration: "4 days", price: 320, location: "Northern Highlands",
+			tag: "Adventure", duration: "4 days", price: 320, location: "Northern Highlands", order_form: "trip-order",
 			rating: 4.95, reviews: 187, staff_pick: false, color: "green",
 			short: "Three mountain passes, one unforgettable homestay, zero tourist buses.",
 			stops: [
@@ -253,7 +316,7 @@ seed("trip", "trips", [
 		slug: "hoi-an-lantern",
 		fields_data: {
 			hero_image: { url: "theme-asset:trip-hoi-an-lantern", alt: "Hoi An lanterns glowing at dusk" },
-			tag: "Foodie", duration: "5 hrs", price: 68, location: "Hoi An",
+			tag: "Foodie", duration: "5 hrs", price: 68, location: "Hoi An", order_form: "trip-order",
 			rating: 4.85, reviews: 241, staff_pick: false, color: "yellow",
 			short: "Market, boat, kitchen, feast. A full sensory dive into Central cuisine.",
 			stops: [
@@ -277,7 +340,7 @@ seed("trip", "trips", [
 		slug: "mekong-homestay",
 		fields_data: {
 			hero_image: { url: "theme-asset:trip-mekong-homestay", alt: "Mekong Delta stilt house at sunset" },
-			tag: "Relaxing", duration: "2 days", price: 140, location: "Ben Tre",
+			tag: "Relaxing", duration: "2 days", price: 140, location: "Ben Tre", order_form: "trip-order",
 			rating: 4.8, reviews: 156, staff_pick: false, color: "green",
 			short: "Coconut channels, hammocks, home-cooked elephant-ear fish — and zero rush.",
 			stops: [
@@ -296,7 +359,7 @@ seed("trip", "trips", [
 			]
 		}
 	}
-])
+], "trip")
 
 // Crew — mirrored from CREW.
 seed("crew_member", "crew", [
@@ -306,7 +369,7 @@ seed("crew_member", "crew", [
 	{ title: "Dat Le",       slug: "dat-le",       fields_data: { role: "Saigon Night Owl",       based: "District 4",  fun: "Knows every late-night pho spot.",  color: "red"    , photo: { url: "theme-asset:crew-minh", alt: "Dat, Saigon night owl" } } },
 	{ title: "Huong Vu",     slug: "huong-vu",     fields_data: { role: "Trip Planner",           based: "Hanoi",       fun: "Speaks 4 languages + sarcasm.",     color: "green"  , photo: { url: "theme-asset:crew-linh", alt: "Huong, trip planner" } } },
 	{ title: "Ben Carter",   slug: "ben-carter",   fields_data: { role: "Content & Comms",        based: "Da Nang",     fun: "Aussie who moved for the beach.",   color: "yellow" , photo: { url: "theme-asset:crew-tuan", alt: "Ben, content and comms" } } }
-])
+], "default")
 
 // Testimonials — mirrored from TESTIMONIALS.
 seed("testimonial", "testimonials", [
@@ -314,7 +377,7 @@ seed("testimonial", "testimonials", [
 	{ title: "Jake & Ana", slug: "jake-ana", fields_data: { quote: "The Ha Giang loop was the best 4 days of our lives. Tuan is a legend. Book it yesterday.",          author: "Jake & Ana", handle: "@theanajaketravels", color: "green"  , photo: { url: "theme-asset:review-david", alt: "Jake and Ana" } } },
 	{ title: "Priya K.",   slug: "priya-k",  fields_data: { quote: "Mai taught me to make cao lau and now I cry a little every time I eat it at home.",                  author: "Priya K.",  handle: "@priyaeats",          color: "yellow" , photo: { url: "theme-asset:review-priya", alt: "Priya K." } } },
 	{ title: "The Kim Family", slug: "kim-family", fields_data: { quote: "Homestay with kids = perfection. The family adopted our 7-year-old by the second breakfast.",  author: "The Kim Family", handle: "@kimsabroad",     color: "red"    , photo: { url: "theme-asset:review-marcus", alt: "The Kim family" } } }
-])
+], "default")
 
 // Gallery photos — placeholders with captions, 12 tiles, alternating tall/short.
 seed("gallery_photo", "gallery photos", [
@@ -330,7 +393,7 @@ seed("gallery_photo", "gallery photos", [
 	{ title: "Mekong hammock",         slug: "photo-10", fields_data: { caption: "mekong hammock",             category: "Landscapes",  color: "green",  tall: false , photo: { url: "theme-asset:gal-mekong-hammock", alt: "photo-10" } } },
 	{ title: "Tuan on his bike",       slug: "photo-11", fields_data: { caption: "tuan on his bike",           category: "People",      color: "red",    tall: true  , photo: { url: "theme-asset:gal-tuan-bike", alt: "photo-11" } } },
 	{ title: "Egg coffee pour",        slug: "photo-12", fields_data: { caption: "egg coffee pour",            category: "Workshops",   color: "ink",    tall: false , photo: { url: "theme-asset:gal-egg-coffee", alt: "photo-12" } } }
-])
+], "default")
 
 // ─── Page Seeding ────────────────────────────────────────────
 
@@ -612,5 +675,34 @@ if page_missing("legal") {
 	})
 	log.info("Hello Vietnam seed: legal page created")
 }
+
+// ─── Navigation Menus ────────────────────────────────────────
+// Seed / refresh primary and footer navigation on every activation.
+// Items use { page: "<slug>" } so they follow the node if an editor
+// renames the page's URL — no manual menu edits required.
+menus.upsert({
+	slug: "main-nav",
+	name: "Primary Navigation",
+	items: [
+		{ label: "Home",    page: "home" },
+		{ label: "About",   page: "about" },
+		{ label: "Trips",   page: "trips" },
+		{ label: "Gallery", page: "gallery" },
+		{ label: "Contact", page: "contact" }
+	]
+})
+
+menus.upsert({
+	slug: "footer-nav",
+	name: "Footer Navigation",
+	items: [
+		{ label: "All Trips", page: "trips" },
+		{ label: "Gallery",   page: "gallery" },
+		{ label: "Our Story", page: "about" },
+		{ label: "Contact",   page: "contact" },
+		{ label: "Privacy",   page: "legal" }
+	]
+})
+log.info("Hello Vietnam: navigation menus seeded (main-nav, footer-nav)")
 
 log.info("Hello Vietnam theme initialization complete")

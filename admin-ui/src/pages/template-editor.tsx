@@ -21,9 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog,
   DialogContent,
@@ -81,7 +80,7 @@ export default function TemplateEditorPage() {
   const [originalTemplate, setOriginalTemplate] = useState<Template | null>(null);
   const [source, setSource] = useState("custom");
   const [themeName, setThemeName] = useState<string | null>(null);
-
+  
   const isManaged = source !== "custom";
 
   usePageMeta([
@@ -282,10 +281,8 @@ export default function TemplateEditorPage() {
         <div className="space-y-6 lg:col-span-2">
           {/* Basic info */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Basic Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
+            <SectionHeader title="Basic Info" />
+            <CardContent className="space-y-4 p-6">
               <div className="space-y-2">
                 <Label htmlFor="label" className="text-sm font-medium text-slate-700">Label</Label>
                 <Input
@@ -337,85 +334,115 @@ export default function TemplateEditorPage() {
             </CardContent>
           </Card>
 
-          {/* Blocks */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">Blocks</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 p-6 pt-0">
-              {blockConfig.length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-4">
-                  No blocks added yet. Add blocks to define the structure of this template.
-                </p>
-              )}
+            {/* Blocks */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-semibold" style={{ fontSize: 14, color: "var(--fg)" }}>Blocks</h2>
+              </div>
+              <div className="space-y-2">
+                {blockConfig.length === 0 && (
+                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 py-12 text-slate-400">
+                    <span className="text-sm font-medium">No blocks yet</span>
+                    <span className="text-xs">Add blocks or insert a template to get started</span>
+                  </div>
+                )}
 
-              {blockConfig.length > 0 && (
-                <div className="space-y-2">
-                  {blockConfig.map((block, index) => {
-                    const IconComp = getBlockIcon(block.block_type_slug);
-                    return (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
-                      >
-                        {/* Move buttons */}
-                        <div className="flex flex-col gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => handleMoveBlock(index, "up")}
-                            disabled={index === 0}
-                            className="text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMoveBlock(index, "down")}
-                            disabled={index === blockConfig.length - 1}
-                            className="text-slate-400 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </button>
-                        </div>
+                {blockConfig.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {blockConfig.map((block, index) => {
+                      const IconComp = getBlockIcon(block.block_type_slug);
+                      const typeCategory = block.block_type_slug.split("-")[0];
 
-                        {/* Block info */}
-                        <IconComp className="h-5 w-5 text-slate-500 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-slate-800">
-                            {getBlockLabel(block.block_type_slug)}
-                          </span>
-                          <span className="ml-2 text-xs text-slate-400 font-mono">
-                            {block.block_type_slug}
-                          </span>
-                        </div>
-
-                        {/* Remove button */}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-600 shrink-0"
-                          onClick={() => handleRemoveBlock(index)}
+                      return (
+                        <div
+                          key={index}
+                          className="overflow-hidden"
+                          style={{
+                            border: "1px solid var(--border)",
+                            borderRadius: "var(--radius-lg)",
+                          }}
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full rounded-lg border-dashed border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-600"
-                onClick={() => setShowAddBlock(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Block
-              </Button>
-            </CardContent>
-          </Card>
+                          <div
+                            className="flex items-center gap-2 select-none"
+                            style={{ padding: "8px 10px", background: "var(--sub-bg)" }}
+                          >
+                            <IconComp size={14} className="shrink-0" style={{ color: "var(--fg-muted)" }} />
+                            <span
+                              className="font-semibold"
+                              style={{ fontSize: 12.5, color: "var(--fg)" }}
+                            >
+                              {getBlockLabel(block.block_type_slug)}
+                            </span>
+                            <span
+                              className="font-mono"
+                              style={{ fontSize: 11, color: "var(--fg-muted)" }}
+                            >
+                              {block.block_type_slug}
+                            </span>
+                            {typeCategory && typeCategory !== block.block_type_slug && (
+                              <Badge
+                                variant="secondary"
+                                style={{
+                                  fontSize: 10,
+                                  background: "color-mix(in oklab, var(--accent) 10%, transparent)",
+                                  color: "var(--accent-strong)",
+                                  border: "1px solid color-mix(in oklab, var(--accent) 20%, transparent)",
+                                }}
+                              >
+                                {typeCategory}
+                              </Badge>
+                            )}
+                            <div className="flex-1" />
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveBlock(index, "up")}
+                                disabled={index === 0}
+                                className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                                style={{ color: "var(--fg-muted)" }}
+                                title="Move up"
+                              >
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveBlock(index, "down")}
+                                disabled={index === blockConfig.length - 1}
+                                className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                                style={{ color: "var(--fg-muted)" }}
+                                title="Move down"
+                              >
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveBlock(index)}
+                                className="p-1 rounded hover:bg-red-50"
+                                style={{ color: "var(--danger)" }}
+                                title="Delete block"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full rounded-lg border-dashed border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-600 py-2"
+                  onClick={() => setShowAddBlock(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Block
+                </Button>
+              </div>
+            </div>
         </div>
 
         {/* Sidebar */}

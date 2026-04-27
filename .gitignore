@@ -19,4 +19,5 @@ extensions/*/bin/
 *.jpg
 *.png
 .playwright-mcp/
+.playwright-cli/
 .claude/scheduled_tasks.lock

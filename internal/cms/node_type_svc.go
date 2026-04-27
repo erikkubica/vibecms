@@ -7,17 +7,26 @@ import (
 
 	"gorm.io/gorm"
 
+	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
 // NodeTypeService provides business logic for managing custom node types.
 type NodeTypeService struct {
-	db *gorm.DB
+	db       *gorm.DB
+	eventBus *events.EventBus
 }
 
 // NewNodeTypeService creates a new NodeTypeService with the given database connection.
-func NewNodeTypeService(db *gorm.DB) *NodeTypeService {
-	return &NodeTypeService{db: db}
+func NewNodeTypeService(db *gorm.DB, eventBus *events.EventBus) *NodeTypeService {
+	return &NodeTypeService{db: db, eventBus: eventBus}
+}
+
+func (s *NodeTypeService) emit(action string, id int, slug string) {
+	if s.eventBus == nil {
+		return
+	}
+	s.eventBus.Publish(action, events.Payload{"id": id, "slug": slug})
 }
 
 // List retrieves a paginated list of node types ordered by label.
@@ -89,6 +98,7 @@ func (s *NodeTypeService) Create(nt *models.NodeType) error {
 		return fmt.Errorf("creating node type: %w", err)
 	}
 
+	s.emit("node_type.created", nt.ID, nt.Slug)
 	return nil
 }
 
@@ -131,6 +141,7 @@ func (s *NodeTypeService) Update(id int, updates map[string]interface{}) (*model
 	if err != nil {
 		return nil, err
 	}
+	s.emit("node_type.updated", updated.ID, updated.Slug)
 	return updated, nil
 }
 
@@ -155,5 +166,6 @@ func (s *NodeTypeService) Delete(id int) error {
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
+	s.emit("node_type.deleted", existing.ID, existing.Slug)
 	return nil
 }

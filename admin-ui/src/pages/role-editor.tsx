@@ -5,12 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Table,
   TableBody,
@@ -346,11 +342,7 @@ export default function RoleEditorPage() {
       <form onSubmit={handleSave} className="space-y-6">
         {/* Card 1: Basic Info */}
         <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-slate-900">
-              Basic Info
-            </CardTitle>
-          </CardHeader>
+          <SectionHeader title="Basic Info" />
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -419,11 +411,7 @@ export default function RoleEditorPage() {
 
         {/* Card 2: Capabilities */}
         <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-slate-900">
-              Capabilities
-            </CardTitle>
-          </CardHeader>
+          <SectionHeader title="Capabilities" />
           <CardContent>
             <div className="grid gap-2 sm:grid-cols-2">
               {CAPABILITY_KEYS.map(({ key, label }) => (
@@ -446,11 +434,7 @@ export default function RoleEditorPage() {
 
         {/* Card 3: Node Access */}
         <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-slate-900">
-              Node Access
-            </CardTitle>
-          </CardHeader>
+          <SectionHeader title="Node Access" />
           <CardContent className="p-0">
             <div className="rounded-lg overflow-hidden">
               <Table>
@@ -566,15 +550,11 @@ export default function RoleEditorPage() {
         {/* Card 4: Email Subscriptions */}
         {systemActions.length > 0 && (
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-slate-900">
-                Email Subscriptions
-              </CardTitle>
+            <SectionHeader title="Email Subscriptions" />
+            <CardContent className="space-y-4">
               <p className="text-xs text-slate-500">
                 Users with this role will receive email notifications for checked actions.
               </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
               {Object.entries(actionsByCategory).map(([category, actions]) => (
                 <div key={category} className="space-y-2">
                   <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">

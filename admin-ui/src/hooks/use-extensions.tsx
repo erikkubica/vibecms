@@ -14,6 +14,7 @@ import {
   type AdminUIMenu,
   type AdminUIMenuItem,
 } from "@/lib/extension-loader";
+import { useAuth } from "@/hooks/use-auth";
 
 export interface ResolvedFieldType {
   type: string;
@@ -53,14 +54,17 @@ const ExtensionsContext = createContext<ExtensionsContextValue>({
 });
 
 export function ExtensionsProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [manifests, setManifests] = useState<ExtensionManifestEntry[]>([]);
   const [loaded, setLoaded] = useState<Map<string, LoadedExtension>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     let cancelled = false;
 
     async function init() {
+      setLoading(true);
       const entries = await fetchExtensionManifests();
       if (cancelled) return;
       setManifests(entries);
@@ -81,7 +85,7 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
 
     init();
     return () => { cancelled = true; };
-  }, []);
+  }, [isAuthenticated]);
 
   function getSlotExtensions(slotName: string) {
     const results: Array<{

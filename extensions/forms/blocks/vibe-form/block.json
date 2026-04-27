@@ -7,7 +7,7 @@
     {
       "label": "Select Form",
       "type": "form_selector",
-      "key": "form_id",
+      "key": "form_slug",
       "required": true
     },
     {
@@ -17,7 +17,7 @@
     }
   ],
   "test_data": {
-    "form_id": "0",
+    "form_slug": "contact-us",
     "heading": "Contact Us"
   }
 }

@@ -84,14 +84,15 @@ type ContentNode struct {
 // BeforeSave keeps LayoutSlug in sync with LayoutID so a node's layout
 // reference survives theme deactivate/reactivate cycles (layouts may be
 // deleted/recreated; slugs persist across such cycles).
+//
+// LayoutSlug set directly (without LayoutID) is preserved — that path is used
+// by theme seeds and the slug-first cascade in LayoutService.ResolveForNode.
 func (n *ContentNode) BeforeSave(tx *gorm.DB) error {
 	if n.LayoutID != nil {
 		var slug string
 		if err := tx.Model(&Layout{}).Select("slug").Where("id = ?", *n.LayoutID).Scan(&slug).Error; err == nil && slug != "" {
 			n.LayoutSlug = &slug
 		}
-	} else {
-		n.LayoutSlug = nil
 	}
 	return nil
 }

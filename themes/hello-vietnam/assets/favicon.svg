@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hello Vietnam Adventures">
+  <rect width="64" height="64" rx="14" fill="#E31D2B"/>
+  <path
+    fill="#FFD200"
+    d="M32 11l5.6 17.3h18.2l-14.7 10.7 5.6 17.3L32 45.6l-14.7 10.7 5.6-17.3L8.2 28.3h18.2z"/>
+</svg>

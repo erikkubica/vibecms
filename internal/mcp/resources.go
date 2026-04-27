@@ -123,6 +123,37 @@ func (s *Server) registerResources() {
 		},
 	)
 
+	// Extension Guidelines resource — vibecms://guidelines/extensions
+	s.mcp.AddResource(
+		mcp.NewResource(
+			"vibecms://guidelines/extensions",
+			"Extension Development Standards",
+			mcp.WithResourceDescription("Official VibeCMS extension development guidelines (manifest, capabilities, gRPC plugin lifecycle, admin-UI micro-frontend, list-page primitives, lifecycle events)."),
+		),
+		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+			jsonContent, err := json.Marshal(extensionStandards())
+			if err != nil {
+				return nil, err
+			}
+			readmeContent, _ := os.ReadFile("extensions/README.md")
+			contents := []mcp.ResourceContents{
+				mcp.TextResourceContents{
+					URI:      req.Params.URI,
+					MIMEType: "application/json",
+					Text:     string(jsonContent),
+				},
+			}
+			if len(readmeContent) > 0 {
+				contents = append(contents, mcp.TextResourceContents{
+					URI:      req.Params.URI + "#markdown",
+					MIMEType: "text/markdown",
+					Text:     string(readmeContent),
+				})
+			}
+			return contents, nil
+		},
+	)
+
 	// AI Onboarding resource — vibecms://guidelines/onboarding
 	s.mcp.AddResource(
 		mcp.NewResource(

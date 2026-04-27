@@ -4,13 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Select,
   SelectContent,
@@ -171,20 +166,9 @@ export default function SiteSettingsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* General */}
         <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-indigo-500" />
-              <div>
-                <CardTitle className="text-base font-semibold text-slate-900">
-                  General
-                </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
-                  Basic site identity
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
+          <SectionHeader title="General" icon={<Globe className="h-4 w-4 text-indigo-500" />} />
+          <CardContent className="space-y-4">
+            <p className="text-xs text-slate-500 -mt-1">Basic site identity</p>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-slate-700">
                 Site Name
@@ -227,20 +211,9 @@ export default function SiteSettingsPage() {
 
         {/* Homepage */}
         <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Home className="h-5 w-5 text-emerald-500" />
-              <div>
-                <CardTitle className="text-base font-semibold text-slate-900">
-                  Homepage
-                </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
-                  Choose which page visitors see first
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
+          <SectionHeader title="Homepage" icon={<Home className="h-4 w-4 text-emerald-500" />} />
+          <CardContent className="space-y-3">
+            <p className="text-xs text-slate-500 -mt-1">Choose which page visitors see first</p>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-slate-700">
                 Homepage
@@ -272,20 +245,9 @@ export default function SiteSettingsPage() {
 
         {/* Code Injection */}
         <Card className="rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-amber-500" />
-              <div>
-                <CardTitle className="text-base font-semibold text-slate-900">
-                  Code Injection
-                </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
-                  Add custom code to your site's &lt;head&gt; section
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
+          <SectionHeader title="Code Injection" icon={<FileText className="h-4 w-4 text-amber-500" />} />
+          <CardContent className="space-y-4">
+            <p className="text-xs text-slate-500 -mt-1">Add custom code to your site's &lt;head&gt; section</p>
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-slate-700">

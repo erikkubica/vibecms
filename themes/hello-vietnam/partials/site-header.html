@@ -1,5 +1,5 @@
-{{- $page := or .node.slug "home" -}}
-{{- if eq $page "" -}}{{- $page = "home" -}}{{- end -}}
 {{- $cta_label := or (index .app.settings "hv.primary_cta_label") "Find Your Adventure →" -}}
 {{- $cta_url := or (index .app.settings "hv.primary_cta_url") "/trips" -}}
-<nav class="nav"><div class="container nav-inner"><a class="logo" href="/"><span class="logo-mark"></span><span>Hello <span style="color: var(--red);">Vietnam</span></span></a><div class="nav-links"><a class="nav-link {{if eq $page "home"}}active{{end}}" href="/">Home</a><a class="nav-link {{if eq $page "about"}}active{{end}}" href="/about">About</a><a class="nav-link {{if eq $page "trips"}}active{{end}}" href="/trips">Trips</a><a class="nav-link {{if eq $page "gallery"}}active{{end}}" href="/gallery">Gallery</a><a class="nav-link {{if eq $page "contact"}}active{{end}}" href="/contact">Contact</a></div><a class="nav-cta" href="{{$cta_url}}">{{$cta_label}}</a></div></nav>
+{{- $menu := index .app.menus "main-nav" -}}
+{{- $currentURL := or .node.full_url "/" -}}
+<nav class="nav"><div class="container nav-inner"><a class="logo" href="/"><span class="logo-mark"></span><span>Hello <span style="color: var(--red);">Vietnam</span></span></a><div class="nav-links">{{- if $menu -}}{{- range $menu.items -}}{{- $href := or .url "#" -}}<a class="nav-link {{if eq $currentURL $href}}active{{end}}" href="{{$href}}">{{.title}}</a>{{- end -}}{{- end -}}</div><a class="nav-cta" href="{{$cta_url}}">{{$cta_label}}</a></div></nav>

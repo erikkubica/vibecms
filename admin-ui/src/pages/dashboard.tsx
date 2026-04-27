@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FileText, Eye, PenLine, Users, Plus, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -155,9 +156,7 @@ export default function DashboardPage() {
 
       {/* Recent content */}
       <Card className="rounded-xl border border-slate-200 shadow-sm py-0 gap-0 overflow-hidden">
-        <CardHeader className="px-6 py-4">
-          <CardTitle className="text-lg font-semibold text-slate-900">Recent Content</CardTitle>
-        </CardHeader>
+        <SectionHeader title="Recent Content" />
         <CardContent className="p-0">
           {recentNodes.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">

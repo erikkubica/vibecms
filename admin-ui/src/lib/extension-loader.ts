@@ -67,6 +67,38 @@ export async function fetchExtensionManifests(): Promise<ExtensionManifestEntry[
   return json.data || [];
 }
 
+const injectedStylesheets = new Set<string>();
+
+function injectExtensionStylesheet(slug: string, entry: string): void {
+  const cleanEntry = entry.replace(/^admin-ui\/dist\//, "");
+  // Sibling CSS file next to the JS entry — Vite lib build with cssFileName: "index"
+  // emits <name>.css alongside <name>.js. Extensions that ship no CSS get a 404
+  // which is harmless (the <link> just fails to load).
+  const cssEntry = cleanEntry.replace(/\.(m?js)$/, ".css");
+  if (cssEntry === cleanEntry) return;
+
+  const href = `/admin/api/extensions/${encodeURIComponent(slug)}/assets/${cssEntry}`;
+  if (injectedStylesheets.has(href)) return;
+  injectedStylesheets.add(href);
+
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = href;
+  link.dataset.extensionSlug = slug;
+  // Insert BEFORE the first <link rel="stylesheet"> in <head> so admin-ui's
+  // own stylesheet stays later in source order and wins the cascade. Without
+  // this, the extension's utility rules (e.g. `.fixed`) — which sit in the
+  // same `@layer utilities` as admin-ui's — beat admin-ui's responsive
+  // overrides like `lg:relative` and break the shell layout.
+  const firstLink = document.head.querySelector('link[rel="stylesheet"]');
+  if (firstLink) {
+    document.head.insertBefore(link, firstLink);
+  } else {
+    // No admin-ui stylesheet found yet — prepend so any later link still wins.
+    document.head.insertBefore(link, document.head.firstChild);
+  }
+}
+
 export async function loadExtensionModule(
   slug: string,
   entry: string,
@@ -78,6 +110,8 @@ export async function loadExtensionModule(
   if (url.includes("..") || /^[a-z]+:/i.test(url)) {
     throw new Error(`Invalid extension entry path for ${slug}`);
   }
+
+  injectExtensionStylesheet(slug, entry);
 
   try {
     const mod = await import(/* @vite-ignore */ url);

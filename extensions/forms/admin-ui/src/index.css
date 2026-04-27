@@ -1,0 +1,5 @@
+/* Forms extension Tailwind utilities.
+   Scans only this extension's source — admin-ui ships the design tokens,
+   base styles, and component overrides this builds on top of. */
+@import "tailwindcss";
+@source "./**/*.{ts,tsx}";

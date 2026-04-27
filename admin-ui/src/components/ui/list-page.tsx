@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Pencil, Trash2, Eye, ExternalLink } from "lucide-react";
 
 export function ListPageShell({ children }: { children: ReactNode }) {
-  return <div className="w-full px-1 pt-1 pb-8">{children}</div>;
+  return <div className="w-full pb-8">{children}</div>;
 }
 
 interface ListHeaderProps {
@@ -16,53 +16,51 @@ interface ListHeaderProps {
   newHref?: string;
   onNew?: () => void;
   extra?: ReactNode;
+  leading?: ReactNode;
 }
 
-export function ListHeader({ title, count, tabs, activeTab, onTabChange, newLabel, newHref, onNew, extra }: ListHeaderProps) {
+export function ListHeader({ count, tabs, activeTab, onTabChange, newLabel, newHref, onNew, extra, leading }: ListHeaderProps) {
   return (
-    <div className="flex items-center gap-4 border-b border-slate-200 mb-3">
-      <h1 className="pb-[10px] inline-flex items-baseline gap-1.5 text-[16px] font-semibold text-slate-900 m-0">
-        {title}
-        {count !== undefined && (
-          <span className="font-mono text-[11.5px] font-medium text-slate-500">{count}</span>
-        )}
-      </h1>
-      {tabs && tabs.length > 0 && (
-        <>
-          <div className="h-[18px] w-px bg-slate-200" />
-          <nav className="flex-1 flex items-center gap-0.5 -mb-px">
-            {tabs.map((t) => {
-              const active = t.value === activeTab;
-              return (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => onTabChange?.(t.value)}
-                  className={`px-2.5 pt-[7px] pb-[9px] inline-flex items-center gap-1.5 text-[12.5px] cursor-pointer border-b-2 bg-transparent ${
-                    active
-                      ? "font-semibold text-slate-900 border-indigo-600"
-                      : "font-medium text-slate-500 border-transparent hover:text-slate-700"
-                  }`}
-                >
-                  {t.label}
-                  {t.count !== undefined && (
-                    <span
-                      className={`font-mono text-[10.5px] px-1.5 py-px rounded-full border ${
-                        active
-                          ? "border-slate-200 bg-indigo-50 text-indigo-600"
-                          : "border-slate-200 bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {t.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </>
+    <div className="flex items-center gap-0 border-b border-slate-200 mb-3">
+      {leading && <div className="flex items-center pb-1.5 pr-1.5">{leading}</div>}
+      {tabs && tabs.length > 0 ? (
+        <nav className="flex-1 flex items-center gap-0.5 -mb-px">
+          {tabs.map((t) => {
+            const active = t.value === activeTab;
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => onTabChange?.(t.value)}
+                className={`px-2.5 pt-[7px] pb-[9px] inline-flex items-center gap-1.5 text-[12.5px] cursor-pointer border-b-2 bg-transparent ${
+                  active
+                    ? "font-semibold text-slate-900 border-indigo-600"
+                    : "font-medium text-slate-500 border-transparent hover:text-slate-700"
+                }`}
+              >
+                {t.label}
+                {t.count !== undefined && (
+                  <span
+                    className={`font-mono text-[10.5px] px-1.5 py-px rounded-full border ${
+                      active
+                        ? "border-slate-200 bg-indigo-50 text-indigo-600"
+                        : "border-slate-200 bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {t.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      ) : (
+        <div className="flex-1 pb-[10px]">
+          {count !== undefined && (
+            <span className="font-mono text-[11.5px] font-medium text-slate-500">{count} items</span>
+          )}
+        </div>
       )}
-      {!tabs && <div className="flex-1" />}
       <div className="flex gap-1.5 pb-1.5">
         {extra}
         {(newHref || onNew) && (
@@ -172,9 +170,22 @@ export function Th({
   );
 }
 
-export function Tr({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Tr({
+  children,
+  className = "",
+  onClick,
+}: {
+  children: ReactNode;
+  className?: string;
+  onClick?: (e: ReactMouseEvent<HTMLTableRowElement>) => void;
+}) {
   return (
-    <tr className={`group bg-white hover:bg-slate-50 ${className}`}>{children}</tr>
+    <tr
+      className={`group bg-white hover:bg-slate-50 ${className}`}
+      onClick={onClick}
+    >
+      {children}
+    </tr>
   );
 }
 
@@ -182,14 +193,19 @@ export function Td({
   children,
   className = "",
   align = "left",
+  onClick,
 }: {
   children?: ReactNode;
   className?: string;
   align?: "left" | "right" | "center";
+  onClick?: (e: ReactMouseEvent<HTMLTableCellElement>) => void;
 }) {
   const alignCls = align === "right" ? "text-right" : align === "center" ? "text-center" : "";
   return (
-    <td className={`px-3 py-2.5 border-b border-slate-100 text-[13px] text-slate-800 group-last:border-0 ${alignCls} ${className}`}>
+    <td
+      onClick={onClick}
+      className={`px-3 py-2.5 border-b border-slate-100 text-[13px] text-slate-800 group-last:border-0 ${alignCls} ${className}`}
+    >
       {children}
     </td>
   );
@@ -336,12 +352,15 @@ export function RowActions({
   );
 }
 
+const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
 export function ListFooter({
   page,
   totalPages,
   total,
   perPage,
   onPage,
+  onPerPage,
   label = "items",
 }: {
   page: number;
@@ -349,9 +368,10 @@ export function ListFooter({
   total: number;
   perPage: number;
   onPage: (p: number) => void;
+  onPerPage?: (n: number) => void;
   label?: string;
 }) {
-  if (totalPages <= 1 && total <= perPage) return null;
+  if (totalPages <= 1 && total <= perPage && !onPerPage) return null;
   const start = total === 0 ? 0 : (page - 1) * perPage + 1;
   const end = Math.min(page * perPage, total);
   const pages: number[] = [];
@@ -362,9 +382,25 @@ export function ListFooter({
   for (let i = lo; i <= hi; i++) pages.push(i);
   return (
     <div className="flex items-center justify-between px-3.5 py-2.5 border-t border-slate-200 bg-slate-50">
-      <div className="text-[12px] text-slate-500">
-        Showing <span className="text-slate-900 font-medium">{start}–{end}</span> of{" "}
-        <span className="text-slate-900 font-medium">{total}</span> {label}
+      <div className="flex items-center gap-3 text-[12px] text-slate-500">
+        <span>
+          Showing <span className="text-slate-900 font-medium">{start}–{end}</span> of{" "}
+          <span className="text-slate-900 font-medium">{total}</span> {label}
+        </span>
+        {onPerPage && (
+          <label className="flex items-center gap-1.5">
+            <span className="text-slate-400">Per page</span>
+            <select
+              value={perPage}
+              onChange={(e) => onPerPage(Number(e.target.value))}
+              className="h-[24px] pl-1.5 pr-5 text-[12px] text-slate-700 bg-white border border-slate-200 rounded appearance-none cursor-pointer focus:outline-none focus:border-indigo-400"
+            >
+              {PER_PAGE_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       <div className="flex items-center gap-1.5">
         <button

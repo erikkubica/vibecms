@@ -1,73 +1,133 @@
-import React from "react";
-import { RotateCcw, Info } from "@vibecms/icons";
+import React, { useCallback, useState } from "react";
+import { RotateCcw } from "@vibecms/icons";
 
-const { Button, Card, CardContent, Textarea, Label } = (window as any)
-  .__VIBECMS_SHARED__.ui;
+const {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  CodeWindow,
+} = (window as any).__VIBECMS_SHARED__.ui;
+
+const STARTER_TEMPLATES = [
+  { value: "simple", label: "Simple (default)" },
+  { value: "grid", label: "Grid (multi-column)" },
+  { value: "card", label: "Card (shadowed box)" },
+  { value: "inline", label: "Inline (compact, no labels)" },
+];
+
+async function fetchDefaultLayout(style?: string): Promise<string> {
+  const url = style
+    ? `/admin/api/ext/forms/defaults/layout?style=${encodeURIComponent(style)}`
+    : "/admin/api/ext/forms/defaults/layout";
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch default layout");
+  const data = await res.json();
+  return data.layout as string;
+}
 
 export default function LayoutTab({ form, setForm }: any) {
-  const defaultLayout =
-    '<!-- Default layout -->\n<div class="vibe-form">\n  {{range .fields_list}}\n    <div class="vibe-form-field">\n      <label>{{.label}}</label>\n      <input type="{{.type}}" name="{{.id}}" placeholder="{{.placeholder}}" {{if .required}}required{{end}} />\n    </div>\n  {{end}}\n  <button type="submit">Submit</button>\n</div>';
+  const [starterStyle, setStarterStyle] = useState<string>("");
+
+  const handleReset = useCallback(async () => {
+    try {
+      const layout = await fetchDefaultLayout();
+      setForm({ ...form, layout });
+      setStarterStyle("");
+    } catch { /* ignore */ }
+  }, [form, setForm]);
+
+  const handleStarterChange = useCallback(
+    async (style: string) => {
+      if (!style) return;
+      const currentLayout = form.layout || "";
+      if (
+        currentLayout.trim() !== "" &&
+        !window.confirm("Replace the current layout with the selected starter template?")
+      ) {
+        return;
+      }
+      try {
+        const layout = await fetchDefaultLayout(style === "simple" ? undefined : style);
+        setForm({ ...form, layout });
+        setStarterStyle(style);
+      } catch { /* ignore */ }
+    },
+    [form, setForm],
+  );
 
   return (
-    <div className="space-y-4">
-      <Card className="border-slate-200 shadow-none">
-        <CardContent className="p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Label className="text-lg font-semibold">
-                Form Layout (HTML + Go Templates)
-              </Label>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setForm({ ...form, layout: defaultLayout })}
-              className="text-slate-500 hover:text-indigo-600"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" /> Reset to Default
-            </Button>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3
+            className="font-semibold"
+            style={{ fontSize: 13, color: "var(--fg)", margin: 0 }}
+          >
+            Form Layout
+          </h3>
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--fg-muted)",
+              margin: 0,
+              marginTop: 2,
+            }}
+          >
+            HTML + Go templates
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-48">
+            <Select value={starterStyle} onValueChange={handleStarterChange}>
+              <SelectTrigger className="h-7 text-[12px]">
+                <SelectValue placeholder="Starter template…" />
+              </SelectTrigger>
+              <SelectContent>
+                {STARTER_TEMPLATES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="text-slate-500 hover:text-indigo-600"
+          >
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset
+          </Button>
+        </div>
+      </div>
+      <CodeWindow
+        title="layout.html"
+        value={form.layout || ""}
+        onChange={(v: string) => setForm((p: any) => ({ ...p, layout: v }))}
+        height="500px"
+      />
 
-          <div className="bg-slate-900 rounded-lg overflow-hidden border border-slate-800">
-            <div className="px-4 py-2 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
-              <span className="text-xs font-mono text-slate-400">
-                template.html
-              </span>
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] text-slate-500 font-mono">
-                  Available: .fields_list, .fields, .id, .name
-                </span>
-              </div>
-            </div>
-            <Textarea
-              value={form.layout}
-              onChange={(e: any) =>
-                setForm({ ...form, layout: e.target.value })
-              }
-              className="min-h-[400px] bg-transparent text-slate-300 font-mono text-sm border-none focus-visible:ring-0 p-4 resize-y"
-              placeholder="Write your HTML here..."
-            />
-          </div>
-
-          <div className="flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
-            <Info className="h-5 w-5 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-semibold mb-1">Templating Guide</p>
-              <p className="opacity-90">
-                Use <code>{"{{range .fields_list}}...{{end}}"}</code> to loop
-                through fields in order. Each field has <code>.id</code>,{" "}
-                <code>.type</code>, <code>.label</code>,{" "}
-                <code>.placeholder</code>, <code>.required</code>, and{" "}
-                <code>.value</code>. For direct field access, use the{" "}
-                <code>.fields</code> map:{" "}
-                <code>{"{{.fields.email.label}}"}</code>, or the top-level
-                shorthand: <code>{"{{.email.label}}"}</code>. Select options
-                have <code>.label</code> and <code>.value</code>.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-3 bg-blue-50 text-blue-800 rounded-lg text-xs border border-blue-100">
+        <p className="font-semibold mb-2">Template Variables</p>
+        <div className="grid gap-1 sm:grid-cols-3 font-mono text-[11px]">
+          <p>
+            <span className="bg-blue-100 px-1 rounded">{"{{range .fields_list}}"}</span>{" "}
+            Loop all fields
+          </p>
+          <p>
+            <span className="bg-blue-100 px-1 rounded">{"{{.email.label}}"}</span>{" "}
+            Shorthand field access
+          </p>
+          <p>
+            <span className="bg-blue-100 px-1 rounded">{"{{.fields.email.label}}"}</span>{" "}
+            Via fields map
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

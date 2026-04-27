@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="icon" type="image/svg+xml" href="/theme/assets/favicon.svg"/>
 <title>{{- with .node.seo -}}{{or (index . "meta_title") $.node.title "Hello Vietnam Adventures"}}{{- else -}}{{or .node.title "Hello Vietnam Adventures"}}{{- end -}}</title>
 {{- with .node.seo -}}{{- with index . "meta_description" -}}<meta name="description" content="{{.}}">{{- end -}}{{- end -}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,31 +144,18 @@
 <div style="font-size: 0.88rem; color: var(--ink-soft);">per adult</div>
 <div style="font-size: 0.78rem; color: var(--ink-soft);">Kids under 12 &middot; 50% off</div>
 </div>
-<form style="display: flex; flex-direction: column; gap: 12px;">
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">First name</label><input class="input" name="firstName" required /></div>
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">Surname</label><input class="input" name="surname" /></div>
+{{- $form_slug := or $fd.order_form "trip-order" -}}
+<div class="vibe-form-wrapper" data-form-slug="{{$form_slug}}" id="form-{{$form_slug}}">
+{{ safeHTML (event "forms:render" (dict
+	"form_id" $form_slug
+	"hidden" (dict
+		"trip_slug"  $t.slug
+		"trip_title" $t.title
+		"trip_price" (or $fd.price 0)
+	))) }}
 </div>
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">Email</label><input class="input" name="email" type="email" required /></div>
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">WhatsApp / Phone</label><input class="input" name="phone" placeholder="+84 &hellip;" /></div>
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">Trip date</label><input class="input" name="date" type="date" /></div>
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">Adults</label>
-<div style="display: flex; align-items: center; gap: 6px;"><button type="button" data-step="adults" data-delta="-1" class="btn btn-ghost" style="padding: 6px 12px;">&minus;</button><input class="input" data-adults name="adults" value="2" min="1" style="text-align: center;" /><button type="button" data-step="adults" data-delta="1" class="btn btn-ghost" style="padding: 6px 12px;">+</button></div>
-</div>
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">Kids (under 12)</label>
-<div style="display: flex; align-items: center; gap: 6px;"><button type="button" data-step="kids" data-delta="-1" class="btn btn-ghost" style="padding: 6px 12px;">&minus;</button><input class="input" data-kids name="kids" value="0" min="0" style="text-align: center;" /><button type="button" data-step="kids" data-delta="1" class="btn btn-ghost" style="padding: 6px 12px;">+</button></div>
-</div>
-</div>
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">Dietary needs</label><select class="select" name="dietary"><option>None</option><option>Vegetarian</option><option>Vegan</option><option>Gluten-free</option><option>Allergies (specify)</option></select></div>
-<div><label style="font-size: 0.78rem; color: var(--ink-soft);">The Vibe Check</label><textarea class="input" name="vibe" rows="3" placeholder="Any specific foods you're dying to try? Or absolutely hate?"></textarea></div>
-<div style="background: var(--cream-warm); border-radius: var(--r-md); padding: 14px 16px; font-size: 0.88rem;">
-<div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><strong>Total</strong><strong data-total>${{or $fd.price 0}}</strong></div>
-<div style="color: var(--ink-soft); font-size: 0.78rem;">50% now &middot; 50% on trip day</div>
-</div>
-<button type="submit" class="btn btn-primary" style="justify-content: center; padding: 14px;">Reserve my spot</button>
-<p style="font-size: 0.78rem; color: var(--ink-soft); text-align: center;">Free cancellation up to 7 days before trip day.</p>
-</form>
+<link rel="stylesheet" href="/extensions/forms/blocks/vibe-form/style.css">
+<script src="/extensions/forms/blocks/vibe-form/script.js" defer></script>
 </div>
 <div data-booking-success style="display: none; text-align: center; padding: 24px 8px;">
 <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--green); color: var(--white); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 28px;">&#10003;</div>

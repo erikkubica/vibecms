@@ -13,6 +13,7 @@ import {
   getMe,
   type User,
 } from "@/api/client";
+import { sseBus } from "@/sdui/sse-bus";
 
 interface AuthContextType {
   user: User | null;
@@ -32,18 +33,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    getMe()
-      .then((u) => {
-        if (!cancelled) setUser(u);
-      })
-      .catch(() => {
-        if (!cancelled) setUser(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    const refresh = () => {
+      getMe()
+        .then((u) => {
+          if (!cancelled) setUser(u);
+        })
+        .catch(() => {
+          if (!cancelled) setUser(null);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+    refresh();
+    // Refetch when the current user (or any user we might be) changes.
+    const unsubscribe = sseBus.subscribe((event) => {
+      if (event.type === "ENTITY_CHANGED" && event.entity === "user") {
+        refresh();
+      }
+    });
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 

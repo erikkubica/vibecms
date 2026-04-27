@@ -5,19 +5,13 @@ import {
   Save,
   Trash2,
   Loader2,
-  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog,
   DialogContent,
@@ -204,9 +198,7 @@ export default function TaxonomyEditorPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* General Info */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>General Information</CardTitle>
-            </CardHeader>
+            <SectionHeader title="General Information" />
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -258,11 +250,9 @@ export default function TaxonomyEditorPage() {
 
           {/* Assigned Node Types */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>Assigned Content Types</CardTitle>
-              <CardDescription>Select which content types can use this taxonomy.</CardDescription>
-            </CardHeader>
+            <SectionHeader title="Assigned Content Types" />
             <CardContent>
+              <p className="text-xs text-slate-500 mb-4">Select which content types can use this taxonomy.</p>
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                 {availableNodeTypes.map((type) => (
                   <div key={type.slug} className="flex items-center space-x-2 p-2 rounded-lg border border-slate-100 bg-slate-50/50">
@@ -288,10 +278,7 @@ export default function TaxonomyEditorPage() {
 
           {/* Custom Fields */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>Term Custom Fields</CardTitle>
-              <CardDescription>Fields that appear when editing terms in this taxonomy.</CardDescription>
-            </CardHeader>
+            <SectionHeader title="Term Custom Fields" />
             <CardContent className="space-y-4">
               <FieldSchemaEditor fields={fields} onChange={setFields} title="Term Custom Fields" description="Fields that appear when editing terms in this taxonomy." />
             </CardContent>
@@ -300,12 +287,7 @@ export default function TaxonomyEditorPage() {
 
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
-              </CardTitle>
-            </CardHeader>
+            <SectionHeader title="Settings" />
             <CardContent className="space-y-4">
               <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 leading-relaxed">
                 Assigning a taxonomy to a content type adds a term picker to that type's editor.

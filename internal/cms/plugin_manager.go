@@ -179,6 +179,35 @@ func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json
 					log.Printf("[plugins] %s/%s reported error for %s: %s", slug, pe.Binary, action, resp.Error)
 				}
 			})
+
+			// Also register a result handler so templates calling
+			// {{event "..."}} can receive the plugin's rendered output
+			// (e.g. forms:render returns form HTML).
+			pm.eventBus.SubscribeResult(eventName, func(action string, payload events.Payload) string {
+				select {
+				case <-rp.stopped:
+					return ""
+				default:
+				}
+				payloadBytes, err := json.Marshal(payload)
+				if err != nil {
+					log.Printf("[plugins] failed to marshal payload for %s: %v", action, err)
+					return ""
+				}
+				resp, err := pluginImpl.HandleEvent(action, payloadBytes)
+				if err != nil {
+					log.Printf("[plugins] error from %s/%s handling %s: %v", slug, pe.Binary, action, err)
+					return ""
+				}
+				if resp.Error != "" {
+					log.Printf("[plugins] %s/%s reported error for %s: %s", slug, pe.Binary, action, resp.Error)
+					return ""
+				}
+				if !resp.Handled {
+					return ""
+				}
+				return string(resp.Result)
+			})
 		}
 
 		started = append(started, rp)

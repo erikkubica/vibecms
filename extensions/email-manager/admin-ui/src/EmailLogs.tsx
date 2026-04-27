@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Mail, Eye, RefreshCw, Loader2 } from "@vibecms/icons";
+import { Eye, RefreshCw, Loader2 } from "@vibecms/icons";
 import {
+  ListHeader,
   Button,
   Input,
   Label,
@@ -17,8 +18,6 @@ import {
   DialogTitle,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   Select,
   SelectContent,
   SelectItem,
@@ -151,12 +150,12 @@ export default function EmailLogs() {
   const totalPages = Math.ceil(total / PER_PAGE);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Mail className="h-7 w-7 text-indigo-600" />
-        <h1 className="text-2xl font-bold text-slate-900">Email Logs</h1>
-      </div>
+    <div className="w-full pb-8 space-y-4">
+      <ListHeader
+        title="Email Logs"
+        tabs={[{ value: "all", label: "All", count: total }]}
+        activeTab="all"
+      />
 
       {/* Filters */}
       <Card className="rounded-xl border border-slate-200 shadow-sm">
@@ -234,11 +233,6 @@ export default function EmailLogs() {
 
       {/* Table */}
       <Card className="rounded-xl border border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-slate-900">
-            Logs ({total})
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="flex h-48 items-center justify-center">

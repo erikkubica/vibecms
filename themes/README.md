@@ -26,11 +26,12 @@ themes/
 
 ## How Themes Work
 
-- **Layouts**: Go `html/template` files that wrap page content. Rendered by the core template engine.
+- **Autoregistration**: At startup the core scans `themes/` (mirroring the extension scan) and upserts every theme it finds — drop a directory in, restart, it's available in the admin theme picker. No DB seeding required.
+- **Layouts**: Go `html/template` files that wrap page content. Rendered by the core template engine. The default core layout is now seeded with `source='seed'` (migration `0036` retroactively demotes legacy rows) so an activated theme can install its own `base.html`/`blank.html` without colliding with the bootstrap row.
 - **Partials**: Included in layouts via `{{ partial "site-header" . }}`.
 - **Blocks**: Each content block type maps to a template file. Rendered in sequence to build the page.
-- **Assets**: Served statically at `/theme/assets/*`. Referenced via `theme-asset:<key>` in seeds/templates.
-- **Scripts**: Tengo scripts that register event hooks, filters, and custom routes.
+- **Assets**: Served statically at `/theme/assets/*`. Referenced via `theme-asset:<key>` in seeds/templates. The asset resolver uses an atomic pointer that swaps on `theme.activated` — switching themes at runtime serves the new theme's assets instantly with no restart and no stale cache. The resolver also rejects path-traversal attempts (`../`).
+- **Scripts**: Tengo scripts that register event hooks, filters, custom routes, menus, and `/.well-known/*` handlers.
 
 ## Template Functions
 
@@ -172,9 +173,34 @@ Every asset and block must be registered in the manifest:
 ```
 Reference assets as `theme-asset:<key>` in your code. This allows the platform to resolve the correct URL even if the file is moved or served via a custom media handler.
 
-## 5. Taxonomies & Demo Data (Seeding)
+## 5. Taxonomies, Menus & Demo Data (Seeding)
 
-The theme should be self-bootstrapping. Use `theme.tengo` to register custom types and seed demo content.
+The theme should be self-bootstrapping. Use `theme.tengo` to register custom types, seed navigation menus, and seed demo content.
+
+### 5.0 Menu Seeding (`core/menus`)
+
+The `core/menus` Tengo module exposes `menus.upsert(...)`. Items support either an absolute `url` or a `page: "<slug>"` form — the latter resolves to a `NodeID` at upsert time so that **renaming the page's slug doesn't break the menu**.
+
+```tengo
+menus := import("core/menus")
+
+menus.upsert({
+    slug: "main-nav",
+    name: "Primary Navigation",
+    items: [
+        { label: "Home",    page: "home" },
+        { label: "Trips",   page: "trips" },
+        { label: "About",   page: "about" },
+        { label: "Contact", url: "/contact", target: "_self" }
+    ]
+})
+```
+
+`hello-vietnam`'s `site-header.html` and `site-footer.html` render directly from the menu tree; `default`'s `theme.tengo` seeds `main-nav` and `footer-nav` on activation. Always seed via slug-based `page:` references — it's the same portability rule as `theme-asset:<key>`.
+
+### 5.0.1 `/.well-known/*` (`core/wellknown`)
+
+`/.well-known/*` is now handled by a pluggable `WellKnownRegistry` mounted **before** the public catch-all, so unregistered paths return an instant 404 instead of triggering six language-prefixed node lookups. Tengo themes (and extensions) register handlers via the new `core/wellknown` module — useful for `apple-app-site-association`, `assetlinks.json`, ACME challenges seeded by themes, etc.
 
 ### 5.1 Registration Pattern
 Always register taxonomies before the node types that use them:

@@ -82,6 +82,80 @@ func (c *coreImpl) UpdateMenu(_ context.Context, slug string, input MenuInput) (
 	return &result, nil
 }
 
+func (c *coreImpl) UpsertMenu(_ context.Context, input MenuInput) (*Menu, error) {
+	slug := input.Slug
+	if slug == "" {
+		slug = strings.ToLower(strings.ReplaceAll(input.Name, " ", "-"))
+	}
+
+	var m models.Menu
+	err := c.db.Where("slug = ?", slug).First(&m).Error
+	switch {
+	case err == nil:
+		if input.Name != "" && input.Name != m.Name {
+			if _, uerr := c.menuSvc.Update(m.ID, map[string]interface{}{"name": input.Name}); uerr != nil {
+				return nil, NewInternal(uerr.Error())
+			}
+		}
+	default:
+		m = models.Menu{Name: input.Name, Slug: slug}
+		if cerr := c.menuSvc.Create(&m); cerr != nil {
+			return nil, NewInternal(cerr.Error())
+		}
+	}
+
+	// Re-read to get the current version for optimistic locking.
+	if rerr := c.db.First(&m, m.ID).Error; rerr != nil {
+		return nil, NewInternal(rerr.Error())
+	}
+	tree := menuInputItemsToTree(input.Items)
+	if rerr := c.menuSvc.ReplaceItems(m.ID, m.Version, tree); rerr != nil {
+		return nil, NewInternal(rerr.Error())
+	}
+
+	resolved, rerr := c.menuSvc.GetByID(m.ID)
+	if rerr != nil {
+		return nil, NewInternal(rerr.Error())
+	}
+	result := menuFromModel(resolved)
+	return &result, nil
+}
+
+// menuInputItemsToTree converts CoreAPI MenuItems into the model's
+// MenuItemTree shape expected by ReplaceItems. When ItemType="node" and
+// NodeID is set, the URL is computed at render time from the node's current
+// full_url — so editors can rename a page without breaking menus.
+func menuInputItemsToTree(items []MenuItem) []models.MenuItemTree {
+	out := make([]models.MenuItemTree, 0, len(items))
+	for _, it := range items {
+		itemType := it.ItemType
+		if itemType == "" {
+			if it.NodeID != nil {
+				itemType = "node"
+			} else {
+				itemType = "custom"
+			}
+		}
+		target := it.Target
+		if target == "" {
+			target = "_self"
+		}
+		node := models.MenuItemTree{
+			Title:    it.Label,
+			ItemType: itemType,
+			URL:      it.URL,
+			Target:   target,
+		}
+		if it.NodeID != nil {
+			id := int(*it.NodeID)
+			node.NodeID = &id
+		}
+		node.Children = menuInputItemsToTree(it.Children)
+		out = append(out, node)
+	}
+	return out
+}
+
 func (c *coreImpl) DeleteMenu(_ context.Context, slug string) error {
 	var existing models.Menu
 	if err := c.db.Where("slug = ?", slug).First(&existing).Error; err != nil {

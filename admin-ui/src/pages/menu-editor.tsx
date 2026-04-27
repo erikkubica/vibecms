@@ -6,11 +6,10 @@ import {
   ArrowLeft,
   Globe,
   Link as LinkIcon,
-  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { usePageMeta } from "@/components/layout/page-meta";
@@ -196,156 +195,147 @@ export default function MenuEditorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild className="h-9 w-9">
-            <Link to="/admin/menus">
-              <ArrowLeft className="h-4 w-4" />
+    <div className="grid gap-6 lg:grid-cols-3">
+      {/* Main content */}
+      <div className="space-y-4 lg:col-span-2">
+        {/* Compact pill header */}
+        <div
+          className="flex items-center gap-1.5"
+          style={{
+            padding: 6,
+            background: "var(--card-bg)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-lg)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
+            <Link to="/admin/menus" title="Back to Menus">
+              <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
             </Link>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {isNew ? "New Menu" : "Edit Menu"}
-            </h1>
-            {!isNew && (
-              <div className="flex items-center gap-2 mt-0.5">
-                <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-0 text-xs">
-                  v{version}
-                </Badge>
-              </div>
-            )}
-          </div>
-        </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium"
-        >
-          {saving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {saving ? "Saving..." : "Save Menu"}
-        </Button>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main content */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Add item buttons */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-600">Add:</span>
+          {/* Name field */}
+          <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
+            <span
+              className="shrink-0 uppercase"
+              style={{ fontSize: 10.5, fontWeight: 600, color: "var(--fg-muted)", letterSpacing: "0.06em" }}
+            >
+              Name
+            </span>
+            <input
+              placeholder="Menu name"
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              required
+              className="flex-1 min-w-0 bg-transparent outline-none"
+              style={{ border: "none", padding: "6px 4px", fontSize: 14, fontWeight: 500, color: "var(--fg)" }}
+            />
+          </div>
+
+          <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
+
+          {/* Slug field */}
+          <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
+            <span
+              className="shrink-0"
+              style={{ fontSize: 11, color: "var(--fg-subtle)", fontFamily: "var(--font-mono)" }}
+            >
+              /
+            </span>
+            <input
+              placeholder="menu-slug"
+              value={slug}
+              onChange={(e) => { setSlugTouched(true); setSlug(e.target.value); }}
+              disabled={!slugTouched}
+              required
+              className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+              style={{ border: "none", padding: "6px 0", fontSize: 12.5, color: "var(--fg)", fontFamily: "var(--font-mono)" }}
+            />
+            <button
+              type="button"
+              className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
+              style={{
+                color: !slugTouched ? "var(--accent)" : "var(--fg-muted)",
+                background: !slugTouched ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
+                border: "1px solid var(--border)",
+                letterSpacing: "0.04em",
+              }}
+              onClick={() => {
+                if (slugTouched) setSlug(slugify(name));
+                setSlugTouched(!slugTouched);
+              }}
+              title={!slugTouched ? "Click to edit slug manually" : "Click to auto-generate from name"}
+            >
+              {!slugTouched ? "Auto" : "Edit"}
+            </button>
+          </div>
+
+          {/* Version badge */}
+          {!isNew && (
+            <Badge
+              variant="secondary"
+              className="shrink-0 font-mono"
+              style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+            >
+              v{version}
+            </Badge>
+          )}
+        </div>
+
+        <MenuTree items={menuItems} onChange={setMenuItems} autoEditId={lastAddedId} />
+
+          {/* Add buttons — always visible */}
+          <div className="flex gap-2">
             <Button
               variant="outline"
-              size="sm"
-              className="gap-1.5"
+              className="flex-1 rounded-lg border-dashed border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-600"
               onClick={() => addItem("node")}
             >
-              <LinkIcon className="h-3.5 w-3.5" />
-              Page Link
+              <LinkIcon className="mr-2 h-4 w-4" />
+              Add Page Link
             </Button>
             <Button
               variant="outline"
-              size="sm"
-              className="gap-1.5"
+              className="flex-1 rounded-lg border-dashed border-slate-300 text-slate-500 hover:border-indigo-400 hover:text-indigo-600"
               onClick={() => addItem("custom")}
             >
-              <Globe className="h-3.5 w-3.5" />
-              Custom URL
+              <Globe className="mr-2 h-4 w-4" />
+              Add Custom URL
             </Button>
           </div>
+        </div>
 
-          {/* Menu tree */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Menu Items
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MenuTree items={menuItems} onChange={setMenuItems} autoEditId={lastAddedId} />
-            </CardContent>
-          </Card>
-
-          {/* Bottom add buttons */}
-          {menuItems.length > 0 && (
-            <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 p-4">
-              <Plus className="h-4 w-4 text-slate-400" />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() => addItem("node")}
+      {/* Sidebar */}
+      <div className="space-y-6">
+        <Card className="rounded-xl border border-slate-200 shadow-sm">
+          <SectionHeader title="Menu Details" />
+          <CardContent className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Language</label>
+              <select
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                value={languageId === null ? "" : String(languageId)}
+                onChange={(e) => setLanguageId(e.target.value === "" ? null : Number(e.target.value))}
               >
-                Add Page
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() => addItem("custom")}
-              >
-                Add Custom URL
-              </Button>
+                <option value="">All Languages</option>
+                {languages.map((lang) => (
+                  <option key={lang.id} value={String(lang.id)}>
+                    {lang.flag} {lang.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Menu Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Name
-                </label>
-                <Input
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="Main Navigation"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Slug
-                </label>
-                <Input
-                  value={slug}
-                  onChange={(e) => {
-                    setSlug(e.target.value);
-                    setSlugTouched(true);
-                  }}
-                  placeholder="main-navigation"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Language
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  value={languageId === null ? "" : String(languageId)}
-                  onChange={(e) => setLanguageId(e.target.value === "" ? null : Number(e.target.value))}
-                >
-                  <option value="">All Languages</option>
-                  {languages.map((lang) => (
-                    <option key={lang.id} value={String(lang.id)}>
-                      {lang.flag} {lang.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+            >
+              {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+              {saving ? "Saving..." : "Save Menu"}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

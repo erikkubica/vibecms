@@ -667,8 +667,23 @@ function CustomFieldInput({
   value: unknown;
   onChange: (val: unknown) => void;
 }) {
-  const { getFieldComponent } = useExtensions();
+  const { getFieldComponent, loading: extensionsLoading } = useExtensions();
   const extField = getFieldComponent(field.type);
+
+  // For field types that typically require an extension, wait until
+  // extensions finish loading before falling back to the "required"
+  // placeholder — otherwise the placeholder briefly flashes even when
+  // the extension is active.
+  const needsExtension =
+    field.type === "file" ||
+    field.type === "image" ||
+    field.type === "media" ||
+    field.type === "gallery";
+  if (needsExtension && !extField && extensionsLoading) {
+    return (
+      <p className="text-sm text-slate-400 italic py-2">Loading…</p>
+    );
+  }
 
   if (extField) {
     const ExtComponent = extField.Component as React.ComponentType<{ field: NodeTypeField; value: unknown; onChange: (val: unknown) => void }>;

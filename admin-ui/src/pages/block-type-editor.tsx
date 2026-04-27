@@ -13,18 +13,14 @@ import {
   Code,
   Eye,
   FileCode,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +42,7 @@ import { toast } from "sonner";
 import { usePageMeta } from "@/components/layout/page-meta";
 import FieldTypePicker from "@/components/ui/field-type-picker";
 import SubFieldsEditor from "@/components/ui/sub-fields-editor";
-import CodeEditor from "@/components/ui/code-editor";
+import { CodeWindow } from "@/components/ui/code-window";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function keyify(text: string) {
@@ -367,9 +363,7 @@ export default function BlockTypeEditorPage() {
         {/* Left Column: Config */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>General Configuration</CardTitle>
-            </CardHeader>
+            <SectionHeader title="General Configuration" />
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="label">Display Label</Label>
@@ -431,11 +425,9 @@ export default function BlockTypeEditorPage() {
           </Card>
 
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle>Fields Definition</CardTitle>
-              <CardDescription>Configure the data structure for this block.</CardDescription>
-            </CardHeader>
+            <SectionHeader title="Fields Definition" />
             <CardContent className="space-y-6">
+              <p className="text-xs text-slate-500">Configure the data structure for this block.</p>
               {/* Field list */}
               <div className="space-y-3">
                 {fields.length === 0 ? (
@@ -557,49 +549,36 @@ export default function BlockTypeEditorPage() {
             </TabsList>
 
             <TabsContent value="template" className="mt-4 ring-offset-white focus-visible:outline-none">
-              <Card className="rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="bg-slate-800 px-4 py-2 flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-400">HTML / Go Template</span>
-                  <div className="flex gap-2">
-                    <div className="h-2 w-2 rounded-full bg-red-500" />
-                    <div className="h-2 w-2 rounded-full bg-amber-500" />
-                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                  </div>
-                </div>
-                <CodeEditor
-                  value={htmlTemplate}
-                  onChange={setHtmlTemplate}
-                  height="500px"
-                />
-              </Card>
+              <CodeWindow
+                title="HTML / Go Template"
+                value={htmlTemplate}
+                onChange={setHtmlTemplate}
+                height="500px"
+              />
             </TabsContent>
 
             <TabsContent value="test-data" className="mt-4 ring-offset-white focus-visible:outline-none">
-              <Card className="rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="bg-slate-800 px-4 py-2 flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-400">Mock Content (JSON)</span>
-                </div>
-                <CodeEditor
-                  value={JSON.stringify(testData, null, 2)}
-                  onChange={(v) => {
-                    try { setTestData(JSON.parse(v)); } catch {}
-                  }}
-                  height="500px"
-                />
-              </Card>
+              <CodeWindow
+                title="Mock Content (JSON)"
+                value={JSON.stringify(testData, null, 2)}
+                onChange={(v) => {
+                  try { setTestData(JSON.parse(v)); } catch {}
+                }}
+                height="500px"
+              />
             </TabsContent>
 
             <TabsContent value="preview" className="mt-4 ring-offset-white focus-visible:outline-none">
               <Card className="rounded-xl border border-slate-200 shadow-sm h-[500px] flex flex-col">
-                <CardHeader className="py-3 bg-slate-50 border-b border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm">Rendered Preview</CardTitle>
+                <SectionHeader
+                  title="Rendered Preview"
+                  actions={
                     <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handlePreview} disabled={previewLoading}>
                       {previewLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
                       Refresh
                     </Button>
-                  </div>
-                </CardHeader>
+                  }
+                />
                 <div className="flex-1 overflow-hidden bg-white">
                   {previewHtml ? (
                     <iframe
@@ -639,27 +618,5 @@ export default function BlockTypeEditorPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function RefreshCw(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
   );
 }

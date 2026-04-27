@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"vibecms/internal/api"
@@ -21,6 +22,7 @@ import (
 	"vibecms/internal/rbac"
 	"vibecms/internal/rendering"
 	"vibecms/internal/scripting"
+	"vibecms/internal/sdui"
 	pb "vibecms/pkg/plugin/coreapipb"
 
 	"github.com/gofiber/fiber/v2"
@@ -62,6 +64,10 @@ func main() {
 	// Event bus.
 	eventBus := events.New()
 
+	// SDUI — Server-Driven UI engine and SSE broadcaster.
+	sduiEngine := sdui.NewEngine(database, eventBus)
+	sduiBroadcaster := sdui.NewBroadcaster(eventBus)
+
 	// Fiber app.
 	app := fiber.New(fiber.Config{
 		AppName:               "VibeCMS",
@@ -82,7 +88,7 @@ func main() {
 	// Services.
 	sessionSvc := auth.NewSessionService(database, cfg.SessionExpiryHours)
 	contentSvc := cms.NewContentService(database, eventBus)
-	nodeTypeSvc := cms.NewNodeTypeService(database)
+	nodeTypeSvc := cms.NewNodeTypeService(database, eventBus)
 	langSvc := cms.NewLanguageService(database)
 	themeAssets := cms.NewThemeAssetRegistry()
 	if err := themeAssets.LoadBlockAssetsFromDB(database); err != nil {
@@ -115,12 +121,15 @@ func main() {
 	layoutHandler.SetDB(database)
 	layoutBlockHandler := cms.NewLayoutBlockHandler(layoutBlockSvc)
 	menuHandler := cms.NewMenuHandler(menuSvc)
-	taxonomyHandler := cms.NewTaxonomyHandler(database)
+	taxonomyHandler := cms.NewTaxonomyHandler(database, eventBus)
 	termHandler := cms.NewTermHandler(database)
 	healthHandler := api.NewHealthHandler(database)
 	roleHandler := rbac.NewRoleHandler(database)
 	settingsHandler := cms.NewSettingsHandler(database, eventBus)
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, eventBus)
+
+	// SDUI handlers — boot manifest, layout trees, and SSE events.
+	bootHandler := api.NewBootHandler(database, sduiEngine)
 
 	// Theme loader construction (NOT loading yet — must wait for extensions).
 	// Boot order is core → extensions → themes: we only construct the loader
@@ -141,6 +150,7 @@ func main() {
 
 	// Theme management.
 	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes")
+	themeMgmtSvc.ScanAndRegister()
 	themeHandler := cms.NewThemeHandler(database, themeMgmtSvc)
 
 	// CoreAPI — unified API facade for extensions.
@@ -210,6 +220,10 @@ func main() {
 	cacheHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)
 	cms.NewFieldTypeHandler().RegisterRoutes(adminAPI)
+
+	// SDUI endpoints — boot manifest, layout trees, and SSE event stream.
+	bootHandler.RegisterRoutes(adminAPI)
+	adminAPI.Get("/events", sduiBroadcaster.Handler())
 
 	// MCP — token admin CRUD (session-authed) + /mcp public endpoint (bearer-authed).
 	mcpTokenSvc := mcp.NewTokenService(database)
@@ -321,8 +335,51 @@ func main() {
 	// Fallback static handler for when extension is not active.
 	app.Static("/media", "./storage/media")
 
+	// --- Public block assets ---
+	// Serves /extensions/<slug>/blocks/<dir>/<file> from extensions/<slug>/blocks/<dir>/
+	// for public-facing block CSS/JS shipped alongside view.html. Only serves
+	// files inside the block directory (path-traversal rejected) and only for
+	// known static extensions (.css, .js, .map, .woff2, images).
+	app.Get("/extensions/:slug/blocks/:dir/*", func(c *fiber.Ctx) error {
+		slug := c.Params("slug")
+		dir := c.Params("dir")
+		rel := c.Params("*")
+		if slug == "" || dir == "" || rel == "" {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		// Whitelist file extensions to avoid leaking sources / configs.
+		allowed := map[string]bool{
+			".css": true, ".js": true, ".map": true, ".woff": true, ".woff2": true,
+			".ttf": true, ".otf": true, ".svg": true, ".png": true, ".jpg": true,
+			".jpeg": true, ".webp": true, ".gif": true, ".ico": true,
+		}
+		if !allowed[strings.ToLower(filepath.Ext(rel))] {
+			return c.SendStatus(fiber.StatusForbidden)
+		}
+		base := filepath.Clean(filepath.Join("extensions", slug, "blocks", dir))
+		full := filepath.Clean(filepath.Join(base, rel))
+		if !strings.HasPrefix(full, base+string(filepath.Separator)) && full != base {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		return c.SendFile(full, true)
+	})
+
 	// --- Theme static assets ---
-	app.Static("/theme/assets", filepath.Join(themePath, "assets"))
+	// Dynamic: the active theme can change at runtime via
+	// /admin/api/themes/:id/activate. We resolve the active theme's assets
+	// directory per request (with an atomic-pointer cache refreshed on
+	// theme.activated events) so asset URLs always point at the live theme.
+	themeAssetsDir := newThemeAssetsResolver(database, eventBus, themePath)
+	app.Get("/theme/assets/*", func(c *fiber.Ctx) error {
+		rel := c.Params("*")
+		// Reject any path that tries to escape via "..".
+		clean := filepath.Clean("/" + rel)
+		if clean == "/" || clean == "." {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		full := filepath.Join(themeAssetsDir.Get(), clean)
+		return c.SendFile(full, true)
+	})
 
 	// --- Admin SPA ---
 	// Hashed assets: cache forever
@@ -345,6 +402,11 @@ func main() {
 
 	// --- Theme script API routes ---
 	scriptEngine.MountHTTPRoutes(app)
+
+	// --- .well-known/* registry (short-circuit before public catch-all) ---
+	wellKnown := cms.NewWellKnownRegistry()
+	scriptEngine.MountWellKnown(wellKnown)
+	wellKnown.Mount(app)
 
 	// --- Public content routes (must be last) ---
 	publicHandler.RegisterRoutes(app)

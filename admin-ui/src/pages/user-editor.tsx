@@ -4,12 +4,8 @@ import { ArrowLeft, Loader2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Select,
   SelectContent,
@@ -215,11 +211,7 @@ export default function UserEditorPage() {
       {/* Form */}
       <form onSubmit={handleSave}>
         <Card className="rounded-xl border border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-slate-900">
-              {isEdit ? "Update user details" : "Fill in the details to create a new user"}
-            </CardTitle>
-          </CardHeader>
+          <SectionHeader title={isEdit ? "Update user details" : "Fill in the details to create a new user"} />
           <CardContent className="space-y-6">
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">

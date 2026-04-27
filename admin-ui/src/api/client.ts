@@ -463,7 +463,10 @@ export interface Template {
 }
 
 export async function getBlockTypes(): Promise<BlockType[]> {
-  const res = await api<ApiResponse<BlockType[]>>("/admin/api/block-types");
+  // Request a high per_page so all block types are returned in one page —
+  // node-editor and template-editor need the full set to resolve field
+  // schemas for any block type referenced in content.
+  const res = await api<ApiResponse<BlockType[]>>("/admin/api/block-types?per_page=1000");
   return res.data;
 }
 

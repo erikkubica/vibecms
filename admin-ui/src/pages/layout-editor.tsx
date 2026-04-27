@@ -12,12 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import CodeEditor from "@/components/ui/code-editor";
+import { CodeWindow } from "@/components/ui/code-window";
 import { toast } from "sonner";
 import { usePageMeta } from "@/components/layout/page-meta";
 import {
@@ -290,30 +286,20 @@ export default function LayoutEditorPage() {
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
           {/* Code Editor */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-800">Template Code</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CodeEditor
-                value={templateCode}
-                onChange={setTemplateCode}
-                disabled={isManaged}
-                height="500px"
-                placeholder="Enter your Go html/template code here..."
-                variables={TEMPLATE_VARIABLES}
-              />
-            </CardContent>
-          </Card>
+          <CodeWindow
+            title="Template Code — Go html/template"
+            value={templateCode}
+            onChange={setTemplateCode}
+            disabled={isManaged}
+            height="500px"
+            placeholder="Enter your Go html/template code here..."
+            variables={TEMPLATE_VARIABLES}
+          />
 
           {/* Reference Panel */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-800">
-                Template Reference
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="border-t border-slate-100 pt-4">
+            <SectionHeader title="Template Reference" />
+            <CardContent>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
                     <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
@@ -379,9 +365,7 @@ export default function LayoutEditorPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold text-slate-800">Layout Details</CardTitle>
-            </CardHeader>
+            <SectionHeader title="Layout Details" />
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>

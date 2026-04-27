@@ -1,65 +1,34 @@
-import React, { useEffect, useState } from "react";
-import {
-  Search,
-  Eye,
-  Download,
-  Calendar,
-  ArrowLeft,
-  Filter,
-} from "@vibecms/icons";
+import React, { useCallback, useEffect, useState } from "react";
+import { Download, ArrowLeft, Inbox } from "@vibecms/icons";
+import { Submission } from "./submissions/SubmissionRow";
+import SubmissionRow from "./submissions/SubmissionRow";
+import SubmissionsToolbar, { ToolbarFilters } from "./submissions/SubmissionsToolbar";
+import BulkActionsBar from "./submissions/BulkActionsBar";
 
 const {
   Button,
-  Card,
-  CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Input,
-  Badge,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  ListPageShell,
+  ListHeader,
+  ListCard,
+  ListTable,
+  ListFooter,
+  Th,
+  EmptyState,
+  LoadingRow,
+  Checkbox,
 } = (window as any).__VIBECMS_SHARED__.ui;
 const { useSearchParams, useNavigate } = (window as any).__VIBECMS_SHARED__
   .ReactRouterDOM;
 const { toast } = (window as any).__VIBECMS_SHARED__.Sonner;
 
-type SubmissionStatus = "unread" | "read" | "archived";
-
-interface Submission {
-  id: number;
-  form_id: number;
-  data: Record<string, any>;
-  metadata: Record<string, any>;
-  created_at: string;
-  form_name?: string;
-  status?: SubmissionStatus;
+interface PaginatedResult {
+  rows: Submission[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+  status_counts?: { all: number; unread: number; read: number; archived: number };
 }
-
-const STATUS_BADGE_VARIANTS: Record<
-  SubmissionStatus,
-  { className: string; label: string }
-> = {
-  unread: {
-    label: "Unread",
-    className: "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100",
-  },
-  read: {
-    label: "Read",
-    className:
-      "bg-green-100 text-green-700 border-green-200 hover:bg-green-100",
-  },
-  archived: {
-    label: "Archived",
-    className:
-      "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-100",
-  },
-};
 
 export default function SubmissionsList() {
   const [searchParams] = useSearchParams();
@@ -68,29 +37,75 @@ export default function SubmissionsList() {
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSubmission, setSelectedSubmission] =
-    useState<Submission | null>(null);
-  const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
 
-  const fetchSubmissions = async () => {
-    try {
-      const url = formId
-        ? `/admin/api/ext/forms/submissions?form_id=${formId}`
-        : "/admin/api/ext/forms/submissions";
-      const res = await fetch(url, { credentials: "include" });
-      const body = await res.json();
-      setSubmissions(body.rows || []);
-    } catch (err) {
-      toast.error("Failed to load submissions");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const perPage = 25;
+
+  const [filters, setFilters] = useState<ToolbarFilters>({
+    search: "",
+    status: "",
+    dateFrom: "",
+    dateTo: "",
+  });
+  const [searchInput, setSearchInput] = useState("");
+  const [statusCounts, setStatusCounts] = useState({ all: 0, unread: 0, read: 0, archived: 0 });
 
   useEffect(() => {
-    fetchSubmissions();
-  }, [formId]);
+    const timer = setTimeout(() => {
+      setFilters((prev) =>
+        prev.search === searchInput ? prev : { ...prev, search: searchInput },
+      );
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const fetchSubmissions = useCallback(
+    async (currentPage = page, currentFilters = filters) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("page", String(currentPage));
+        params.set("per_page", String(perPage));
+        if (formId) params.set("form_id", formId);
+        if (currentFilters.status) params.set("status", currentFilters.status);
+        if (currentFilters.search) params.set("search", currentFilters.search);
+        if (currentFilters.dateFrom) params.set("date_from", currentFilters.dateFrom);
+        if (currentFilters.dateTo) params.set("date_to", currentFilters.dateTo);
+
+        const res = await fetch(
+          `/admin/api/ext/forms/submissions?${params.toString()}`,
+          { credentials: "include" },
+        );
+        const body: PaginatedResult = await res.json();
+        setSubmissions(body.rows || []);
+        setTotal(body.total ?? 0);
+        setTotalPages(body.total_pages ?? 1);
+        if (body.status_counts) setStatusCounts(body.status_counts);
+        setSelectedIds(new Set());
+      } catch {
+        toast.error("Failed to load submissions");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [formId, page, filters],
+  );
+
+  useEffect(() => {
+    fetchSubmissions(page, filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formId, page, filters]);
+
+  const handleFilterChange = useCallback((next: Partial<ToolbarFilters>) => {
+    setFilters((prev) => ({ ...prev, ...next }));
+    setPage(1);
+  }, []);
 
   const exportCSV = async () => {
     if (!formId) {
@@ -125,312 +140,151 @@ export default function SubmissionsList() {
   };
 
   const handleViewDetails = (sub: Submission) => {
-    setSelectedSubmission(sub);
-
-    // TODO: mark as read when backend endpoint exists
-    // PUT /admin/api/ext/forms/submissions/{id}/status
-    // Body: { status: "read" }
-
-    if (sub.status === "unread") {
-      setSubmissions((prev) =>
-        prev.map((s) =>
-          s.id === sub.id ? { ...s, status: "read" as SubmissionStatus } : s,
-        ),
-      );
-      setSelectedSubmission({ ...sub, status: "read" });
-    }
+    navigate(`/admin/ext/forms/submissions/${sub.id}`);
   };
 
-  const filteredSubmissions = submissions.filter((s) => {
-    const dataStr = JSON.stringify(s.data).toLowerCase();
-    return dataStr.includes(search.toLowerCase());
-  });
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedIds.size === submissions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(submissions.map((s) => s.id)));
+    }
+  }, [selectedIds.size, submissions]);
 
   const unreadCount = submissions.filter((s) => s.status === "unread").length;
+  const allSelected = submissions.length > 0 && selectedIds.size === submissions.length;
+  const someSelected = selectedIds.size > 0;
+  const colCount = formId ? 5 : 6;
 
-  const headerSubtitle = () => {
-    if (!formId) {
-      return "All form submissions across the site.";
-    }
-    const formName = submissions[0]?.form_name || "Form #" + formId;
-    const unreadPart = unreadCount > 0 ? ` (${unreadCount} unread)` : "";
-    return `Viewing entries for ${formName}${unreadPart}`;
-  };
+  const headerTitle = formId
+    ? `${submissions[0]?.form_name || "Form #" + formId} Submissions`
+    : "Submissions";
 
-  const colSpan = formId ? 5 : 6;
+  const extraButton = (
+    <button
+      type="button"
+      onClick={exportCSV}
+      disabled={!formId || exporting}
+      title={
+        formId
+          ? "Export submissions as CSV"
+          : "Select a specific form to enable CSV export"
+      }
+      className="h-[26px] px-2.5 inline-flex items-center gap-1.5 text-[12px] font-medium text-white bg-indigo-600 border border-indigo-600 rounded hover:bg-indigo-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <Download className="w-3 h-3" />
+      {exporting ? "Exporting…" : "Export CSV"}
+    </button>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {formId && (
-            <Button
-              variant="ghost"
-              size="icon"
+    <ListPageShell>
+      <ListHeader
+        title={headerTitle}
+        leading={
+          formId ? (
+            <button
+              type="button"
               onClick={() => navigate("/admin/ext/forms")}
-              className="rounded-full"
+              className="w-[26px] h-[26px] grid place-items-center text-slate-500 hover:bg-slate-100 rounded border-0 bg-transparent cursor-pointer"
+              aria-label="Back to forms"
             >
               <ArrowLeft className="h-4 w-4" />
-            </Button>
-          )}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Submissions
-            </h1>
-            <p className="text-sm text-slate-500">{headerSubtitle()}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportCSV}
-            disabled={!formId || exporting}
-            title={
-              formId
-                ? "Export submissions as CSV"
-                : "Select a specific form to enable CSV export"
+            </button>
+          ) : undefined
+        }
+        tabs={[
+          { value: "", label: "All", count: statusCounts.all },
+          { value: "unread", label: "Unread", count: statusCounts.unread },
+          { value: "read", label: "Read", count: statusCounts.read },
+          { value: "archived", label: "Archived", count: statusCounts.archived },
+        ]}
+        activeTab={filters.status}
+        onTabChange={(v: string) => handleFilterChange({ status: v })}
+        extra={extraButton}
+      />
+
+      {someSelected ? (
+        <BulkActionsBar
+          selectedIds={selectedIds}
+          onClearSelection={() => setSelectedIds(new Set())}
+          onBulkComplete={() => fetchSubmissions(page, filters)}
+        />
+      ) : (
+        <SubmissionsToolbar
+          filters={filters}
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          onChange={handleFilterChange}
+        />
+      )}
+
+      <ListCard>
+        {loading ? (
+          <LoadingRow />
+        ) : submissions.length === 0 ? (
+          <EmptyState
+            icon={Inbox}
+            title="No submissions found"
+            description={
+              filters.search || filters.status || filters.dateFrom || filters.dateTo
+                ? "Try adjusting your filters"
+                : "No submissions have been received yet"
             }
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {exporting ? "Exporting..." : "Export CSV"}
-          </Button>
-        </div>
-      </div>
+          />
+        ) : (
+          <ListTable minWidth={760}>
+            <thead>
+              <tr>
+                <Th width={40}>
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </Th>
+                <Th width={180}>Date</Th>
+                {!formId && <Th width={160}>Form</Th>}
+                <Th>Summary</Th>
+                <Th width={100} align="right">Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {submissions.map((sub, index) => (
+                <SubmissionRow
+                  key={sub.id}
+                  sub={sub}
+                  index={index}
+                  formId={formId}
+                  selected={selectedIds.has(sub.id)}
+                  onToggle={toggleSelect}
+                  onViewDetails={handleViewDetails}
+                />
+              ))}
+            </tbody>
+          </ListTable>
+        )}
 
-      <Card className="rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <CardContent className="p-0">
-          <div className="flex items-center gap-4 p-4 border-b border-slate-100 bg-slate-50/50">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search in submissions..."
-                className="pl-9 bg-white border-slate-200 focus:border-indigo-500"
-                value={search}
-                onChange={(e: any) => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent border-slate-100">
-                <TableHead className="text-slate-500 font-medium w-8 px-3" />
-                <TableHead className="text-slate-500 font-medium text-xs">
-                  Date
-                </TableHead>
-                {!formId && (
-                  <TableHead className="text-slate-500 font-medium text-xs">
-                    Form
-                  </TableHead>
-                )}
-                <TableHead className="text-slate-500 font-medium text-xs">
-                  Status
-                </TableHead>
-                <TableHead className="text-slate-500 font-medium text-xs">
-                  Summary
-                </TableHead>
-                <TableHead className="text-right text-slate-500 font-medium text-xs">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={colSpan}
-                    className="h-32 text-center text-slate-400 text-sm"
-                  >
-                    Loading entries...
-                  </TableCell>
-                </TableRow>
-              ) : filteredSubmissions.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={colSpan}
-                    className="h-32 text-center text-slate-400 text-sm"
-                  >
-                    No submissions found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredSubmissions.map((sub, index) => {
-                  const isArchived = sub.status === "archived";
-                  const isUnread = sub.status === "unread";
-                  const isEven = index % 2 === 1;
-
-                  return (
-                    <TableRow
-                      key={sub.id}
-                      className={`border-slate-100 transition-colors ${
-                        isArchived ? "opacity-50" : "hover:bg-slate-50/50"
-                      } ${isEven ? "bg-slate-50/30" : ""}`}
-                    >
-                      <TableCell className="w-8 px-3 py-2.5">
-                        {isUnread && (
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500"
-                            title="Unread"
-                          />
-                        )}
-                        {isArchived && (
-                          <span
-                            className="inline-block h-2.5 w-2.5 rounded-full bg-slate-300"
-                            title="Archived"
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-xs whitespace-nowrap py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-3 w-3 opacity-40 flex-shrink-0" />
-                          {new Date(sub.created_at).toLocaleString()}
-                        </div>
-                      </TableCell>
-                      {!formId && (
-                        <TableCell className="py-2.5">
-                          <Badge
-                            variant="outline"
-                            className="bg-slate-100 text-slate-600 border-slate-200 text-xs"
-                          >
-                            {sub.form_name || "Unknown"}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      <TableCell className="py-2.5">
-                        {sub.status && sub.status !== "read" && (
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${
-                              STATUS_BADGE_VARIANTS[sub.status].className
-                            }`}
-                          >
-                            {STATUS_BADGE_VARIANTS[sub.status].label}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-[400px] py-2.5">
-                        <div className="text-xs text-slate-500 truncate">
-                          {Object.entries(sub.data)
-                            .slice(0, 3)
-                            .map(([k, v]) => (
-                              <span key={k} className="mr-3">
-                                <strong className="text-slate-700">{k}:</strong>{" "}
-                                {typeof v === "object"
-                                  ? JSON.stringify(v)
-                                  : String(v)}
-                              </span>
-                            ))}
-                          {Object.keys(sub.data).length > 3 && (
-                            <span className="text-slate-400">...</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right py-2.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(sub)}
-                          className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 text-xs"
-                        >
-                          <Eye className="mr-1.5 h-3.5 w-3.5" /> View Details
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Dialog
-        open={!!selectedSubmission}
-        onOpenChange={(open) => !open && setSelectedSubmission(null)}
-      >
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-3">
-                Submission Details
-                {selectedSubmission?.status && (
-                  <Badge
-                    variant="outline"
-                    className={`font-normal text-xs ${
-                      STATUS_BADGE_VARIANTS[selectedSubmission.status].className
-                    }`}
-                  >
-                    {STATUS_BADGE_VARIANTS[selectedSubmission.status].label}
-                  </Badge>
-                )}
-              </span>
-              <Badge
-                variant="outline"
-                className="ml-4 font-normal text-xs text-slate-400"
-              >
-                ID: #{selectedSubmission?.id}
-              </Badge>
-            </DialogTitle>
-          </DialogHeader>
-          {selectedSubmission && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100 text-sm">
-                <div>
-                  <p className="text-slate-400 uppercase text-[10px] tracking-wider mb-1">
-                    Date Submitted
-                  </p>
-                  <p className="font-medium text-slate-900">
-                    {new Date(selectedSubmission.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-400 uppercase text-[10px] tracking-wider mb-1">
-                    Form Name
-                  </p>
-                  <p className="font-medium text-slate-900">
-                    {selectedSubmission.form_name || "N/A"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
-                  <Filter className="h-4 w-4 text-indigo-500" />
-                  Submitted Data
-                </h4>
-                <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
-                  {Object.entries(selectedSubmission.data).map(
-                    ([key, value]) => (
-                      <div key={key} className="grid grid-cols-3 p-3 text-sm">
-                        <div className="font-medium text-slate-600 capitalize">
-                          {key.replace(/_/g, " ")}
-                        </div>
-                        <div className="col-span-2 text-slate-900 bg-white p-1 rounded min-h-[1.5rem] break-words">
-                          {typeof value === "object"
-                            ? JSON.stringify(value)
-                            : String(value)}
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
-              </div>
-
-              {Object.keys(selectedSubmission.metadata || {}).length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-slate-900 text-sm">
-                    Technical Metadata
-                  </h4>
-                  <pre className="p-3 bg-slate-900 text-indigo-300 rounded-lg text-[11px] font-mono overflow-x-auto">
-                    {JSON.stringify(selectedSubmission.metadata, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+        {!loading && totalPages > 1 && (
+          <ListFooter
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            perPage={perPage}
+            onPage={setPage}
+            label="submissions"
+          />
+        )}
+      </ListCard>
+    </ListPageShell>
   );
 }

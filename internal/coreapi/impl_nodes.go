@@ -313,6 +313,11 @@ func (c *coreImpl) CreateNode(_ context.Context, input NodeInput) (*Node, error)
 		m.ParentID = &pid
 	}
 
+	if input.LayoutSlug != "" {
+		s := input.LayoutSlug
+		m.LayoutSlug = &s
+	}
+
 	if input.FeaturedImage != nil {
 		b, err := json.Marshal(input.FeaturedImage)
 		if err != nil {
@@ -371,6 +376,9 @@ func (c *coreImpl) UpdateNode(_ context.Context, id uint, input NodeInput) (*Nod
 	}
 	if input.ParentID != nil {
 		updates["parent_id"] = int(*input.ParentID)
+	}
+	if input.LayoutSlug != "" {
+		updates["layout_slug"] = input.LayoutSlug
 	}
 	if input.FeaturedImage != nil {
 		if b, err := json.Marshal(input.FeaturedImage); err == nil {

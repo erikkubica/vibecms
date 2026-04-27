@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEvent as ReactMouseEvent } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Pencil, Trash2, Eye, ExternalLink } from "lucide-react";
 
@@ -16,11 +16,13 @@ interface ListHeaderProps {
   newHref?: string;
   onNew?: () => void;
   extra?: ReactNode;
+  leading?: ReactNode;
 }
 
-export function ListHeader({ count, tabs, activeTab, onTabChange, newLabel, newHref, onNew, extra }: ListHeaderProps) {
+export function ListHeader({ count, tabs, activeTab, onTabChange, newLabel, newHref, onNew, extra, leading }: ListHeaderProps) {
   return (
     <div className="flex items-center gap-0 border-b border-slate-200 mb-3">
+      {leading && <div className="flex items-center pb-1.5 pr-1.5">{leading}</div>}
       {tabs && tabs.length > 0 ? (
         <nav className="flex-1 flex items-center gap-0.5 -mb-px">
           {tabs.map((t) => {
@@ -168,9 +170,22 @@ export function Th({
   );
 }
 
-export function Tr({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Tr({
+  children,
+  className = "",
+  onClick,
+}: {
+  children: ReactNode;
+  className?: string;
+  onClick?: (e: ReactMouseEvent<HTMLTableRowElement>) => void;
+}) {
   return (
-    <tr className={`group bg-white hover:bg-slate-50 ${className}`}>{children}</tr>
+    <tr
+      className={`group bg-white hover:bg-slate-50 ${className}`}
+      onClick={onClick}
+    >
+      {children}
+    </tr>
   );
 }
 
@@ -178,14 +193,19 @@ export function Td({
   children,
   className = "",
   align = "left",
+  onClick,
 }: {
   children?: ReactNode;
   className?: string;
   align?: "left" | "right" | "center";
+  onClick?: (e: ReactMouseEvent<HTMLTableCellElement>) => void;
 }) {
   const alignCls = align === "right" ? "text-right" : align === "center" ? "text-center" : "";
   return (
-    <td className={`px-3 py-2.5 border-b border-slate-100 text-[13px] text-slate-800 group-last:border-0 ${alignCls} ${className}`}>
+    <td
+      onClick={onClick}
+      className={`px-3 py-2.5 border-b border-slate-100 text-[13px] text-slate-800 group-last:border-0 ${alignCls} ${className}`}
+    >
       {children}
     </td>
   );

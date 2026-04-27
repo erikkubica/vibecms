@@ -1370,6 +1370,77 @@ log.info(fmt.sprintf("Found %d nodes of type %s", count, node_type))
 
 ---
 
+## 13.5 core/assets — Read theme/extension files
+
+Read-only access to files inside the calling theme or extension's own root
+directory. Use it to ship templates, fixtures, default content, or per-form
+HTML layouts as plain `.html` / `.json` / `.txt` files instead of inlining
+multi-line strings in `theme.tengo`.
+
+```tengo
+assets := import("core/assets")
+
+// Read a file relative to the theme/extension root.
+html := assets.read("forms/trip-order.html")
+if is_error(html) {
+    log.warn("layout missing: " + string(html))
+    html = ""
+}
+
+// Existence check (true/false; never returns an error).
+if assets.exists("forms/contact.html") {
+    // ...
+}
+```
+
+### API
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `assets.read(path)` | `string` or `error` | Reads UTF-8. Returns an error value if the file is missing or the path escapes the theme root — wrap with `is_error()`. |
+| `assets.exists(path)` | `bool` | `true` if the path resolves to a real file inside the root, `false` otherwise. Never returns an error. |
+
+### Path Rules
+
+- Paths are **relative to the theme/extension root** (the parent of the
+  `scripts/` directory). For a theme that means `themes/<theme>/<path>`; for
+  an extension it means `extensions/<slug>/<path>`.
+- Absolute paths (`/etc/passwd`) are rejected.
+- Path traversal that escapes the root (`../../...`) is rejected.
+- Empty path → error.
+
+### Common Patterns
+
+**Ship a form layout from the theme** (e.g. `themes/<theme>/forms/<slug>.html`)
+and seed it via `forms:upsert`:
+
+```tengo
+events  := import("core/events")
+assets  := import("core/assets")
+
+layout := assets.read("forms/trip-order.html")
+if is_error(layout) { layout = "" }
+
+events.emit("forms:upsert", {
+    slug:   "trip-order",
+    name:   "Trip Booking",
+    force:  true,
+    layout: layout,
+    fields: [ /* … */ ]
+})
+```
+
+**Bundle a JSON fixture** for default content:
+
+```tengo
+helpers := import("core/helpers")
+raw     := assets.read("data/regions.json")
+regions := helpers.json_decode(raw)
+for r in regions { /* … */ }
+```
+
+---
+
 ## 14. Standard Library
 
 VibeCMS exposes a safe subset of the [Tengo standard library](https://github.com/d5/tengo/blob/master/docs/stdlib.md). The following modules are available:

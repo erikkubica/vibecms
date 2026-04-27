@@ -1,0 +1,36 @@
+{{/*
+  Hello Vietnam — Trip booking form layout.
+  Owned by the theme, registered in DB via theme.tengo seed_form. Uses theme
+  CSS primitives (.input, .select, .btn, --cream-warm) and the theme.js
+  booking-card hooks (data-step / data-adults / data-kids / data-total /
+  data-booking-body / data-booking-success / data-booking-again).
+
+  Variables:
+    .fields_list, .fields, .fields_by_id, .id, .name (forms-ext defaults)
+    Each field: .id .label .type .placeholder .required .options
+*/}}
+<form style="display: flex; flex-direction: column; gap: 12px;">
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.first_name.label}}</label><input class="input" name="{{.first_name.id}}" {{if .first_name.required}}required{{end}} /></div>
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.surname.label}}</label><input class="input" name="{{.surname.id}}" /></div>
+</div>
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.email.label}}</label><input class="input" name="{{.email.id}}" type="email" {{if .email.required}}required{{end}} /></div>
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.phone.label}}</label><input class="input" name="{{.phone.id}}" placeholder="{{.phone.placeholder}}" /></div>
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.date.label}}</label><input class="input" name="{{.date.id}}" type="date" /></div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.adults.label}}</label>
+<div style="display: flex; align-items: center; gap: 6px;"><button type="button" data-step="adults" data-delta="-1" class="btn btn-ghost" style="padding: 6px 12px;">&minus;</button><input class="input" data-adults name="{{.adults.id}}" value="2" min="1" style="text-align: center;" /><button type="button" data-step="adults" data-delta="1" class="btn btn-ghost" style="padding: 6px 12px;">+</button></div>
+</div>
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.kids.label}}</label>
+<div style="display: flex; align-items: center; gap: 6px;"><button type="button" data-step="kids" data-delta="-1" class="btn btn-ghost" style="padding: 6px 12px;">&minus;</button><input class="input" data-kids name="{{.kids.id}}" value="0" min="0" style="text-align: center;" /><button type="button" data-step="kids" data-delta="1" class="btn btn-ghost" style="padding: 6px 12px;">+</button></div>
+</div>
+</div>
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.dietary.label}}</label><select class="select" name="{{.dietary.id}}">{{range .dietary.options}}<option value="{{.value}}">{{.label}}</option>{{end}}</select></div>
+<div><label style="font-size: 0.78rem; color: var(--ink-soft);">{{.vibe.label}}</label><textarea class="input" name="{{.vibe.id}}" rows="3" placeholder="{{.vibe.placeholder}}"></textarea></div>
+<div style="background: var(--cream-warm); border-radius: var(--r-md); padding: 14px 16px; font-size: 0.88rem;">
+<div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><strong>Total</strong><strong data-total>$0</strong></div>
+<div style="color: var(--ink-soft); font-size: 0.78rem;">50% now &middot; 50% on trip day</div>
+</div>
+<button type="submit" class="btn btn-primary" style="justify-content: center; padding: 14px;">Reserve my spot</button>
+<p style="font-size: 0.78rem; color: var(--ink-soft); text-align: center;">Free cancellation up to 7 days before trip day.</p>
+</form>

@@ -51,6 +51,7 @@ func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, r
 	modules.AddBuiltinModule("core/events", eventsModule(api, ctx, cb))
 	modules.AddBuiltinModule("core/settings", settingsModule(api, ctx))
 	modules.AddBuiltinModule("core/wellknown", wellKnownModule(cb))
+	modules.AddBuiltinModule("core/assets", assetsModule(scriptsDir))
 
 	if renderCtx != nil {
 		modules.AddBuiltinModule("core/routing", routingModule(api, ctx, renderCtx))
@@ -881,6 +882,79 @@ func logModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 }
 
 // ---------------------------------------------------------------------------
+// core/assets
+// ---------------------------------------------------------------------------
+
+// assetsModule exposes read-only access to files inside the theme/extension
+// root (the parent of the scripts directory). Used by themes to ship per-form
+// HTML layouts, email templates, JSON fixtures, etc. as plain files instead of
+// inlining them in theme.tengo.
+//
+// Path traversal outside the root is rejected. Empty or absolute paths are
+// rejected.
+func assetsModule(scriptsDir string) map[string]tengo.Object {
+	root := ""
+	if scriptsDir != "" {
+		root = filepath.Dir(scriptsDir)
+	}
+	resolve := func(rel string) (string, error) {
+		if root == "" {
+			return "", fmt.Errorf("assets: no theme/extension root available")
+		}
+		if rel == "" {
+			return "", fmt.Errorf("assets: path required")
+		}
+		if filepath.IsAbs(rel) {
+			return "", fmt.Errorf("assets: absolute paths not allowed")
+		}
+		clean := filepath.Clean(filepath.Join(root, rel))
+		rootAbs, err := filepath.Abs(root)
+		if err != nil {
+			return "", err
+		}
+		cleanAbs, err := filepath.Abs(clean)
+		if err != nil {
+			return "", err
+		}
+		if !strings.HasPrefix(cleanAbs, rootAbs+string(filepath.Separator)) && cleanAbs != rootAbs {
+			return "", fmt.Errorf("assets: path escapes theme root")
+		}
+		return clean, nil
+	}
+	return map[string]tengo.Object{
+		"read": &tengo.UserFunction{Name: "read", Value: func(args ...tengo.Object) (tengo.Object, error) {
+			if len(args) < 1 {
+				return wrapError(fmt.Errorf("assets.read: path required")), nil
+			}
+			rel := tengoToString(args[0])
+			path, err := resolve(rel)
+			if err != nil {
+				return wrapError(err), nil
+			}
+			b, err := os.ReadFile(path)
+			if err != nil {
+				return wrapError(err), nil
+			}
+			return &tengo.String{Value: string(b)}, nil
+		}},
+		"exists": &tengo.UserFunction{Name: "exists", Value: func(args ...tengo.Object) (tengo.Object, error) {
+			if len(args) < 1 {
+				return tengo.FalseValue, nil
+			}
+			rel := tengoToString(args[0])
+			path, err := resolve(rel)
+			if err != nil {
+				return tengo.FalseValue, nil
+			}
+			if _, err := os.Stat(path); err != nil {
+				return tengo.FalseValue, nil
+			}
+			return tengo.TrueValue, nil
+		}},
+	}
+}
+
+// ---------------------------------------------------------------------------
 // core/helpers
 // ---------------------------------------------------------------------------
 
@@ -1280,6 +1354,14 @@ func nodeInputFromMap(m map[string]tengo.Object) NodeInput {
 			u := uint(pid)
 			input.ParentID = &u
 		}
+	}
+	// Accept either `layout_slug` (canonical) or `layout` (shorthand) so theme
+	// seeds can pin a node to a specific layout. Resolved via slug so it
+	// survives theme deactivate/reactivate cycles.
+	if v, ok := m["layout_slug"]; ok {
+		input.LayoutSlug = tengoToString(v)
+	} else if v, ok := m["layout"]; ok {
+		input.LayoutSlug = tengoToString(v)
 	}
 	if v, ok := m["blocks_data"]; ok {
 		input.BlocksData = tengoObjToGo(v)

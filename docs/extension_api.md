@@ -133,6 +133,33 @@ func main() {
 }
 ```
 
+### Returning Content to Templates (Sync Event with Reply)
+
+Most events are fire-and-forget — handlers run asynchronously and return values are discarded. For events that need to *return rendered content into a Go template* (e.g. `{{event "forms:render" ...}}` from a layout), the event bus provides a synchronous result-collecting path.
+
+**Plugin side (no extra code needed):** any plugin subscribed via `GetSubscriptions()` automatically receives both fire-and-forget events (`Publish`) and result-collecting events (`PublishCollect`). Set `EventResponse.Handled = true` and put your output in `EventResponse.Result` (`[]byte`). Returning `Handled: false` or an empty `Result` means "I had nothing to contribute"; another plugin can still answer.
+
+**Theme/template side:** call `{{event "<name>" (dict ...) }}` and wrap with `safeHTML` if the plugin returns markup:
+
+```go-template
+{{ safeHTML (event "forms:render" (dict
+    "form_id" "trip-order"
+    "hidden"  (dict "trip_slug" .node.slug "trip_price" 45)
+)) }}
+```
+
+Whatever map you pass becomes the plugin's payload (JSON-marshalled). Multiple plugins subscribing to the same event have their non-empty `Result` strings concatenated in registration order.
+
+**Reference: forms extension events**
+
+| Event | Direction | Payload | Returns |
+|-------|-----------|---------|---------|
+| `forms:upsert` | template → plugin | `{slug, name, fields, layout?, settings?, force?}` | n/a (fire-and-forget; idempotent on slug) |
+| `forms:render` | template → plugin | `{form_id, hidden?}` | rendered form HTML |
+| `forms:submitted` | plugin → world | `{form_id, form_slug, submission_id, data, metadata}` | n/a |
+
+The `forms:upsert` pattern is the canonical way for a theme to ship its own forms — see `themes/hello-vietnam/scripts/theme.tengo` for a working example using `core/assets.read` to pull the layout HTML from a theme file.
+
 ---
 
 ## 4. Scripting (Tengo)

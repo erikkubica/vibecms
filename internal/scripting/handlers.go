@@ -163,48 +163,75 @@ func (e *ScriptEngine) subscribeEventHandlers() {
 	}
 }
 
-// RunEvent executes all script handlers registered for the named event,
-// sorted by priority, and returns concatenated HTML output.
+// RunEvent executes all script handlers registered for the named event
+// (sorted by priority) plus any extension/plugin result handlers registered
+// on the event bus, and returns concatenated HTML output.
+//
+// Tengo handlers run first, followed by plugin handlers via
+// EventBus.PublishCollect. Plugins receive the ctx as their event payload
+// when ctx is a map (e.g. dict from a template call); otherwise plugins
+// receive an empty payload.
 func (e *ScriptEngine) RunEvent(name string, ctx interface{}, args []interface{}) template.HTML {
 	e.mu.RLock()
-	handlers, ok := e.eventHandlers[name]
-	if !ok || len(handlers) == 0 {
-		e.mu.RUnlock()
-		return ""
-	}
+	handlers := e.eventHandlers[name]
 	sorted := make([]scriptHandler, len(handlers))
 	copy(sorted, handlers)
 	e.mu.RUnlock()
 
-	renderCtx := normalizeForTengo(ctx)
+	var sb strings.Builder
 
-	var vars map[string]interface{}
-	if len(args) > 0 {
-		vars = map[string]interface{}{
-			"args": args,
+	// 1) Tengo script handlers (existing behavior).
+	if len(sorted) > 0 {
+		renderCtx := normalizeForTengo(ctx)
+		var vars map[string]interface{}
+		if len(args) > 0 {
+			vars = map[string]interface{}{"args": args}
+		}
+		for _, h := range sorted {
+			result, err := e.runScript(h.scriptPath, vars, renderCtx, h.baseDir)
+			if err != nil {
+				log.Printf("[script] event error: %s (%s): %v", name, h.scriptPath, err)
+				continue
+			}
+			if result == nil {
+				continue
+			}
+			if resp, ok := result.(map[string]interface{}); ok {
+				if html, ok := resp["html"].(string); ok {
+					sb.WriteString(html)
+				}
+			} else if s, ok := result.(string); ok {
+				sb.WriteString(s)
+			}
 		}
 	}
 
-	var sb strings.Builder
-	for _, h := range sorted {
-		result, err := e.runScript(h.scriptPath, vars, renderCtx, h.baseDir)
-		if err != nil {
-			log.Printf("[script] event error: %s (%s): %v", name, h.scriptPath, err)
-			continue
-		}
-		if result == nil {
-			continue
-		}
-		if resp, ok := result.(map[string]interface{}); ok {
-			if html, ok := resp["html"].(string); ok {
-				sb.WriteString(html)
-			}
-		} else if s, ok := result.(string); ok {
-			sb.WriteString(s)
+	// 2) Plugin result handlers via the event bus. Lets extensions return
+	// rendered HTML to {{event "..."}} callers without per-block plumbing.
+	if e.eventBus != nil {
+		payload := eventPayloadFromCtx(ctx)
+		for _, r := range e.eventBus.PublishCollect(name, payload) {
+			sb.WriteString(r)
 		}
 	}
 
 	return template.HTML(sb.String())
+}
+
+// eventPayloadFromCtx coerces a template event ctx into an events.Payload.
+// Returns the underlying map when ctx is a map[string]interface{} (e.g. from
+// {{dict "key" "value"}}); otherwise returns an empty payload.
+func eventPayloadFromCtx(ctx interface{}) events.Payload {
+	if ctx == nil {
+		return events.Payload{}
+	}
+	if m, ok := ctx.(map[string]interface{}); ok {
+		return events.Payload(m)
+	}
+	if m, ok := ctx.(events.Payload); ok {
+		return m
+	}
+	return events.Payload{}
 }
 
 // ---------------------------------------------------------------------------

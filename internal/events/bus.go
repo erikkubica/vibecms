@@ -11,17 +11,25 @@ type Payload map[string]interface{}
 // Handler is a callback that processes an event.
 type Handler func(action string, payload Payload)
 
+// ResultHandler is a callback that processes an event and returns a string
+// (typically rendered HTML) to be collected by PublishCollect callers.
+// Used for sync request/reply patterns (e.g. extensions rendering form HTML
+// for templates via {{event "forms:render" ...}}).
+type ResultHandler func(action string, payload Payload) string
+
 // EventBus is a thread-safe publish/subscribe event dispatcher.
 type EventBus struct {
-	mu          sync.RWMutex
-	handlers    map[string][]Handler
-	allHandlers []Handler
+	mu             sync.RWMutex
+	handlers       map[string][]Handler
+	resultHandlers map[string][]ResultHandler
+	allHandlers    []Handler
 }
 
 // New creates and returns a new EventBus.
 func New() *EventBus {
 	return &EventBus{
-		handlers: make(map[string][]Handler),
+		handlers:       make(map[string][]Handler),
+		resultHandlers: make(map[string][]ResultHandler),
 	}
 }
 
@@ -100,4 +108,46 @@ func safeCall(h Handler, action string, payload Payload) {
 		}
 	}()
 	h(action, payload)
+}
+
+// SubscribeResult registers a handler that returns a string result. Used by
+// extensions that render content for templates via PublishCollect (e.g. the
+// forms extension returning rendered form HTML for {{event "forms:render"}}).
+// Result handlers run synchronously, separately from regular Subscribe handlers.
+func (b *EventBus) SubscribeResult(action string, handler ResultHandler) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.resultHandlers[action] = append(b.resultHandlers[action], handler)
+}
+
+// PublishCollect runs all result handlers for an action synchronously and
+// returns their non-empty results in registration order. Regular fire-and-forget
+// handlers (Subscribe) are NOT invoked — callers that need both should call
+// Publish in addition.
+func (b *EventBus) PublishCollect(action string, payload Payload) []string {
+	b.mu.RLock()
+	handlers := make([]ResultHandler, len(b.resultHandlers[action]))
+	copy(handlers, b.resultHandlers[action])
+	b.mu.RUnlock()
+
+	if len(handlers) == 0 {
+		return nil
+	}
+	results := make([]string, 0, len(handlers))
+	for _, h := range handlers {
+		if r := safeCallResult(h, action, payload); r != "" {
+			results = append(results, r)
+		}
+	}
+	return results
+}
+
+func safeCallResult(h ResultHandler, action string, payload Payload) (result string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[events] panic in result handler for %q: %v", action, r)
+			result = ""
+		}
+	}()
+	return h(action, payload)
 }

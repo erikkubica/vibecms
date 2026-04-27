@@ -1,9 +1,9 @@
 {
   "name": "Forms",
   "slug": "forms",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "VibeCMS",
-  "description": "Powerful form builder with submission tracking and email notifications.",
+  "description": "Production-grade form builder with file uploads, CAPTCHA, conditional logic, webhooks, GDPR compliance, and email notifications.",
   "provides": ["forms"],
   "capabilities": [
     "data:read",
@@ -13,7 +13,12 @@
     "settings:read",
     "log:write",
     "routes:register",
-    "blocks"
+    "blocks",
+    "files:write",
+    "files:delete",
+    "http:fetch",
+    "events:emit",
+    "users:read"
   ],
   "blocks": [{ "slug": "vibe-form", "dir": "vibe-form" }],
   "plugins": [
@@ -30,7 +35,7 @@
       { "path": "/new", "component": "FormEditor" },
       { "path": "/edit/:id", "component": "FormEditor" },
       { "path": "/submissions", "component": "SubmissionsList" },
-      { "path": "/submissions/:id", "component": "SubmissionsList" }
+      { "path": "/submissions/:id", "component": "SubmissionDetail" }
     ],
     "menu": {
       "label": "Forms",

@@ -149,6 +149,7 @@ type NodeInput struct {
 	LanguageCode string            `json:"language_code,omitempty"`
 	Slug         string            `json:"slug,omitempty"`
 	Title        string            `json:"title,omitempty"`
+	LayoutSlug    string             `json:"layout_slug,omitempty"`
 	FeaturedImage any               `json:"featured_image,omitempty"`
 	Excerpt       string            `json:"excerpt,omitempty"`
 	Taxonomies    map[string][]string `json:"taxonomies,omitempty"`

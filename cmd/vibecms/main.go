@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"vibecms/internal/api"
@@ -333,6 +334,35 @@ func main() {
 	// Media files served by media-manager extension via public_routes proxy.
 	// Fallback static handler for when extension is not active.
 	app.Static("/media", "./storage/media")
+
+	// --- Public block assets ---
+	// Serves /extensions/<slug>/blocks/<dir>/<file> from extensions/<slug>/blocks/<dir>/
+	// for public-facing block CSS/JS shipped alongside view.html. Only serves
+	// files inside the block directory (path-traversal rejected) and only for
+	// known static extensions (.css, .js, .map, .woff2, images).
+	app.Get("/extensions/:slug/blocks/:dir/*", func(c *fiber.Ctx) error {
+		slug := c.Params("slug")
+		dir := c.Params("dir")
+		rel := c.Params("*")
+		if slug == "" || dir == "" || rel == "" {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		// Whitelist file extensions to avoid leaking sources / configs.
+		allowed := map[string]bool{
+			".css": true, ".js": true, ".map": true, ".woff": true, ".woff2": true,
+			".ttf": true, ".otf": true, ".svg": true, ".png": true, ".jpg": true,
+			".jpeg": true, ".webp": true, ".gif": true, ".ico": true,
+		}
+		if !allowed[strings.ToLower(filepath.Ext(rel))] {
+			return c.SendStatus(fiber.StatusForbidden)
+		}
+		base := filepath.Clean(filepath.Join("extensions", slug, "blocks", dir))
+		full := filepath.Clean(filepath.Join(base, rel))
+		if !strings.HasPrefix(full, base+string(filepath.Separator)) && full != base {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		return c.SendFile(full, true)
+	})
 
 	// --- Theme static assets ---
 	// Dynamic: the active theme can change at runtime via

@@ -11,6 +11,9 @@ storage/cache/*
 .DS_Store
 tmp/
 .superpowers/
+.planning/
+.claude/
+start-claude.sh
 node_modules/
 extensions/*/admin-ui/node_modules/
 extensions/*/bin/

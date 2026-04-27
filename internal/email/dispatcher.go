@@ -220,6 +220,15 @@ func (d *Dispatcher) resolveTemplateForLang(slug string, langID *int) *models.Em
 	return nil
 }
 
+// sensitiveActions are events whose rendered body must NOT be persisted —
+// e.g. password reset emails contain single-use tokens that an attacker
+// with DB read access could otherwise replay. The log row still gets
+// recipient/subject/status for auditing; only the body is redacted.
+var sensitiveActions = map[string]bool{
+	"user.password_reset_requested": true,
+	"user.password_reset_completed": true,
+}
+
 // sendAndLog sends an email via the configured SendFunc and logs the result.
 func (d *Dispatcher) sendAndLog(
 	action string,
@@ -231,13 +240,17 @@ func (d *Dispatcher) sendAndLog(
 	providerSettings map[string]string,
 ) {
 	providerName := providerSettings["provider"]
+	storedBody := body
+	if sensitiveActions[action] {
+		storedBody = "[redacted — contains time-sensitive token]"
+	}
 	logEntry := &models.EmailLog{
 		RuleID:         &rule.ID,
 		TemplateSlug:   templateSlug,
 		Action:         action,
 		RecipientEmail: recipient,
 		Subject:        subject,
-		RenderedBody:   body,
+		RenderedBody:   storedBody,
 		Provider:       &providerName,
 	}
 

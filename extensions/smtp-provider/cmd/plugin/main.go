@@ -9,6 +9,7 @@ import (
 	"net/mail"
 	"net/smtp"
 	"strings"
+	"time"
 
 	goplugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
@@ -18,6 +19,40 @@ import (
 	coreapipb "vibecms/pkg/plugin/coreapipb"
 	pb "vibecms/pkg/plugin/proto"
 )
+
+// dialTimeout caps how long we wait for a TCP / TLS handshake. A
+// hung server would otherwise tie up an event-bus goroutine in the
+// kernel; 15s is generous for real-world SMTP relays and short
+// enough to fail loud during outages.
+const dialTimeout = 15 * time.Second
+
+// tlsMinConfig returns a *tls.Config pinned to TLS 1.2+. We don't
+// touch ciphers (Go's defaults are sane) and we keep certificate
+// verification on (default). ServerName MUST be the SNI hostname so
+// hostname verification works against the cert's SAN list.
+func tlsMinConfig(host string) *tls.Config {
+	return &tls.Config{
+		ServerName: host,
+		MinVersion: tls.VersionTLS12,
+	}
+}
+
+// validateHost rejects SMTP hostnames containing CRLF, whitespace,
+// or characters that could escape the addr formatting downstream.
+// This is defense in depth — the kernel-side settings handler already
+// strips control characters, but the plugin must not trust its
+// inputs blindly either.
+func validateHost(host string) error {
+	if host == "" {
+		return fmt.Errorf("SMTP host is required")
+	}
+	for _, r := range host {
+		if r == '\r' || r == '\n' || r == ' ' || r == '\t' || r == 0 {
+			return fmt.Errorf("SMTP host contains invalid character %q", r)
+		}
+	}
+	return nil
+}
 
 // SMTPPlugin implements the ExtensionPlugin interface.
 type SMTPPlugin struct {
@@ -53,8 +88,11 @@ func (p *SMTPPlugin) HandleEvent(action string, payload []byte) (*pb.EventRespon
 	fromName := req.Settings["from_name"]
 	encryption := req.Settings["encryption"]
 
-	if host == "" || fromEmail == "" {
-		return &pb.EventResponse{Handled: true, Error: "SMTP host and from_email are required"}, nil
+	if err := validateHost(host); err != nil {
+		return &pb.EventResponse{Handled: true, Error: err.Error()}, nil
+	}
+	if fromEmail == "" {
+		return &pb.EventResponse{Handled: true, Error: "from_email is required"}, nil
 	}
 
 	// Validate fields to prevent email header injection.
@@ -76,6 +114,16 @@ func (p *SMTPPlugin) HandleEvent(action string, payload []byte) (*pb.EventRespon
 		default:
 			port = "587"
 		}
+	}
+
+	// When encryption is unset we default to STARTTLS rather than
+	// plaintext. Port 587 (the typical default port) is the canonical
+	// STARTTLS port; defaulting "" → "plain" silently exposed creds
+	// on the wire. Operators who genuinely need plaintext (Mailpit,
+	// MailHog, local SMTP catchers) must set encryption="none"
+	// explicitly.
+	if encryption == "" {
+		encryption = "starttls"
 	}
 
 	// Build the email message using RFC-safe encoding.
@@ -134,8 +182,8 @@ func buildMessage(from, to, subject, html string) string {
 // ---------- Implicit TLS (port 465) ----------
 
 func sendImplicitTLS(addr, host, username, password, from, to, msg string) error {
-	tlsConfig := &tls.Config{ServerName: host}
-	conn, err := tls.Dial("tcp", addr, tlsConfig)
+	dialer := &net.Dialer{Timeout: dialTimeout}
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsMinConfig(host))
 	if err != nil {
 		return fmt.Errorf("TLS dial: %w", err)
 	}
@@ -160,15 +208,21 @@ func sendImplicitTLS(addr, host, username, password, from, to, msg string) error
 // ---------- STARTTLS (port 587 typical) ----------
 
 func sendSTARTTLS(addr, host, username, password, from, to, msg string) error {
-	client, err := smtp.Dial(addr)
+	conn, err := net.DialTimeout("tcp", addr, dialTimeout)
 	if err != nil {
 		return fmt.Errorf("dial: %w", err)
 	}
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		conn.Close()
+		return fmt.Errorf("SMTP client: %w", err)
+	}
 	defer client.Quit()
 
-	// Upgrade to TLS.
-	tlsConfig := &tls.Config{ServerName: host}
-	if err := client.StartTLS(tlsConfig); err != nil {
+	// Upgrade to TLS. If the server doesn't support STARTTLS, this
+	// errors out — which is what we want: never silently fall back to
+	// plaintext for a connection the operator asked to encrypt.
+	if err := client.StartTLS(tlsMinConfig(host)); err != nil {
 		return fmt.Errorf("STARTTLS: %w", err)
 	}
 
@@ -184,16 +238,24 @@ func sendSTARTTLS(addr, host, username, password, from, to, msg string) error {
 
 // ---------- Plain / no encryption ----------
 
+// sendPlain delivers without any transport encryption. The custom
+// plainAuth bypasses Go's smtp.PlainAuth TLS-or-localhost check —
+// that's deliberate to keep dev catchers (Mailpit, MailHog) usable,
+// but it's a foot-gun on a public network. Operators reach this path
+// only by setting `encryption=none` explicitly.
 func sendPlain(addr, host, username, password, from, to, msg string) error {
-	client, err := smtp.Dial(addr)
+	conn, err := net.DialTimeout("tcp", addr, dialTimeout)
 	if err != nil {
 		return fmt.Errorf("dial: %w", err)
+	}
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		conn.Close()
+		return fmt.Errorf("SMTP client: %w", err)
 	}
 	defer client.Quit()
 
 	if username != "" {
-		// Use unrestricted auth — Go's smtp.PlainAuth refuses non-TLS to non-localhost.
-		// This is needed for dev servers (Mailpit, MailHog, etc.).
 		auth := &plainAuth{username: username, password: password}
 		if err := client.Auth(auth); err != nil {
 			return fmt.Errorf("auth: %w", err)

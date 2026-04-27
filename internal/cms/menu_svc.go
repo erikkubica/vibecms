@@ -3,24 +3,31 @@ package cms
 import (
 	"fmt"
 	"strings"
-	"sync"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"gorm.io/gorm"
 
 	"vibecms/internal/events"
 	"vibecms/internal/models"
 )
 
+// menuCacheSize bounds the menu service cache. 256 is plenty — most
+// sites have a handful of menus and a handful of language buckets.
+const menuCacheSize = 256
+
 // MenuService provides business logic for managing menus and menu items.
+// The cache holds resolved menus per (language, slug) but is bounded so
+// pathological queries can't grow it indefinitely.
 type MenuService struct {
 	db       *gorm.DB
-	cache    sync.Map
+	cache    *lru.Cache[string, any]
 	eventBus *events.EventBus
 }
 
 // NewMenuService creates a new MenuService with the given database connection.
 func NewMenuService(db *gorm.DB, eventBus *events.EventBus) *MenuService {
-	return &MenuService{db: db, eventBus: eventBus}
+	c, _ := lru.New[string, any](menuCacheSize)
+	return &MenuService{db: db, cache: c, eventBus: eventBus}
 }
 
 // List retrieves menus with an optional language_id filter.
@@ -30,7 +37,7 @@ func (s *MenuService) List(languageID *int) ([]models.Menu, error) {
 		cacheKey = fmt.Sprintf("list:%d", *languageID)
 	}
 	
-	if cached, ok := s.cache.Load(cacheKey); ok {
+	if cached, ok := s.cache.Get(cacheKey); ok {
 		if cached != nil {
 			return cached.([]models.Menu), nil
 		}
@@ -45,7 +52,7 @@ func (s *MenuService) List(languageID *int) ([]models.Menu, error) {
 		return nil, fmt.Errorf("failed to list menus: %w", err)
 	}
 	
-	s.cache.Store(cacheKey, menus)
+	s.cache.Add(cacheKey, menus)
 	return menus, nil
 }
 
@@ -57,7 +64,7 @@ func (s *MenuService) ListWithItems(languageID *int) ([]models.Menu, error) {
 		cacheKey = fmt.Sprintf("list-items:%d", *languageID)
 	}
 
-	if cached, ok := s.cache.Load(cacheKey); ok {
+	if cached, ok := s.cache.Get(cacheKey); ok {
 		if cached != nil {
 			return cached.([]models.Menu), nil
 		}
@@ -97,7 +104,7 @@ func (s *MenuService) ListWithItems(languageID *int) ([]models.Menu, error) {
 		menus[i].Items = buildTree(itemsByMenu[menus[i].ID])
 	}
 
-	s.cache.Store(cacheKey, menus)
+	s.cache.Add(cacheKey, menus)
 	return menus, nil
 }
 
@@ -290,7 +297,7 @@ func (s *MenuService) Resolve(slug string, languageID *int) (*models.Menu, error
 	queries = append(queries, langQuery{id: nil, cacheKey: fmt.Sprintf("resolve:%s:null", slug)})
 
 	for _, q := range queries {
-		if cached, ok := s.cache.Load(q.cacheKey); ok {
+		if cached, ok := s.cache.Get(q.cacheKey); ok {
 			if cached == nil {
 				continue
 			}
@@ -305,7 +312,7 @@ func (s *MenuService) Resolve(slug string, languageID *int) (*models.Menu, error
 			err = s.db.Where("slug = ? AND language_id IS NULL", slug).First(&menu).Error
 		}
 		if err != nil {
-			s.cache.Store(q.cacheKey, nil)
+			s.cache.Add(q.cacheKey, nil)
 			continue
 		}
 
@@ -316,7 +323,7 @@ func (s *MenuService) Resolve(slug string, languageID *int) (*models.Menu, error
 		}
 		menu.Items = buildTree(items)
 
-		s.cache.Store(q.cacheKey, &menu)
+		s.cache.Add(q.cacheKey, &menu)
 		return &menu, nil
 	}
 
@@ -325,10 +332,7 @@ func (s *MenuService) Resolve(slug string, languageID *int) (*models.Menu, error
 
 // InvalidateCache resets the entire menu cache.
 func (s *MenuService) InvalidateCache() {
-	s.cache.Range(func(key, value interface{}) bool {
-		s.cache.Delete(key)
-		return true
-	})
+	s.cache.Purge()
 }
 
 // buildTree converts a flat list of MenuItem records into a nested tree structure.

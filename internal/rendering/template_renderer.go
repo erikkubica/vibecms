@@ -7,32 +7,81 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+
+	lru "github.com/hashicorp/golang-lru/v2"
 )
+
+// defaultCacheSize bounds each LRU cache. 1024 templates is generous —
+// most sites don't have more than a few hundred distinct ones. Operators
+// with massive content can override via VIBECMS_TEMPLATE_CACHE_SIZE.
+const defaultCacheSize = 1024
+
+func cacheSize() int {
+	if v := os.Getenv("VIBECMS_TEMPLATE_CACHE_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return defaultCacheSize
+}
 
 // TemplateRenderer handles parsing and rendering of Go html/template files.
 // It supports caching in production and always re-parses in dev mode.
+//
+// Caches are bounded LRU — historically these were unbounded maps that
+// grew indefinitely on sites with many distinct templates (block content
+// hashes especially). LRU evicts the least recently used so memory stays
+// bounded under hostile or just busy conditions.
 type TemplateRenderer struct {
 	templateDir  string
-	cache        map[string]*template.Template
-	layoutCache  map[string]*template.Template
-	blockCache   map[string]*template.Template
-	mu           sync.RWMutex
+	cache        *lru.Cache[string, *template.Template]
+	layoutCache  *lru.Cache[string, *template.Template]
+	blockCache   *lru.Cache[string, *template.Template]
+	mu           sync.RWMutex // synchronizes parse-on-cache-miss with concurrent reads
 	isDev        bool
 	funcMap      template.FuncMap
 	eventRunner  func(string, interface{}, []interface{}) template.HTML
 	filterRunner func(string, interface{}, interface{}) interface{}
+	// imageURLPrefix configures the media-manager URL convention
+	// consumed by the image_url / image_srcset funcMap entries.
+	// Empty disables size transforms (helpers passthrough). See
+	// media_funcs.go for the rationale and migration plan.
+	imageURLPrefix string
+}
+
+// SetImageURLPrefix overrides the prefix used by the image_url /
+// image_srcset template helpers. main.go reads the
+// `image_cache_url_prefix` site setting at boot (and on theme reload)
+// to wire this — letting the media-manager extension own the URL
+// convention without core hardcoding it.
+func (r *TemplateRenderer) SetImageURLPrefix(prefix string) {
+	r.mu.Lock()
+	r.imageURLPrefix = prefix
+	r.mu.Unlock()
+}
+
+// imagePrefixSnapshot returns the current prefix under read-lock. The
+// helper closures use it on every call so a runtime SetImageURLPrefix
+// is picked up without rebuilding the funcMap (which would require
+// re-parsing every cached template).
+func (r *TemplateRenderer) imagePrefixSnapshot() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.imageURLPrefix
 }
 
 // ClearCache completely resets the template caches.
 func (r *TemplateRenderer) ClearCache() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.cache = make(map[string]*template.Template)
-	r.layoutCache = make(map[string]*template.Template)
-	r.blockCache = make(map[string]*template.Template)
+	r.cache.Purge()
+	r.layoutCache.Purge()
+	r.blockCache.Purge()
 }
 
 // SetEventRunner sets the function called by {{event "name" .}} in templates.
@@ -52,12 +101,17 @@ func (r *TemplateRenderer) SetFilterRunner(fn func(string, interface{}, interfac
 // templateDir is the root directory containing template files.
 // isDev controls whether templates are cached (false) or re-parsed on every request (true).
 func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
+	size := cacheSize()
+	mainCache, _ := lru.New[string, *template.Template](size)
+	layoutCache, _ := lru.New[string, *template.Template](size)
+	blockCache, _ := lru.New[string, *template.Template](size)
 	r := &TemplateRenderer{
-		templateDir: templateDir,
-		cache:       make(map[string]*template.Template),
-		layoutCache: make(map[string]*template.Template),
-		blockCache:  make(map[string]*template.Template),
-		isDev:       isDev,
+		templateDir:    templateDir,
+		cache:          mainCache,
+		layoutCache:    layoutCache,
+		blockCache:     blockCache,
+		isDev:          isDev,
+		imageURLPrefix: defaultImageURLPrefix,
 	}
 	// Default no-op runners (replaced when scripting engine is loaded)
 	r.eventRunner = func(name string, ctx interface{}, args []interface{}) template.HTML { return "" }
@@ -181,24 +235,10 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 			return out
 		},
 		"image_url": func(originalURL string, sizeName string) string {
-			// Transform /media/2026/03/photo.jpg -> /media/cache/{size}/2026/03/photo.jpg
-			if !strings.HasPrefix(originalURL, "/media/") {
-				return originalURL
-			}
-			path := strings.TrimPrefix(originalURL, "/media/")
-			return "/media/cache/" + sizeName + "/" + path
+			return imageURL(r.imagePrefixSnapshot(), originalURL, sizeName)
 		},
 		"image_srcset": func(originalURL string, sizeNames ...string) string {
-			if !strings.HasPrefix(originalURL, "/media/") {
-				return ""
-			}
-			path := strings.TrimPrefix(originalURL, "/media/")
-			parts := make([]string, 0, len(sizeNames))
-			for _, name := range sizeNames {
-				url := "/media/cache/" + name + "/" + path
-				parts = append(parts, url)
-			}
-			return strings.Join(parts, ", ")
+			return imageSrcset(r.imagePrefixSnapshot(), originalURL, sizeNames)
 		},
 	}
 	return r
@@ -212,10 +252,7 @@ func (r *TemplateRenderer) Render(w io.Writer, layoutName, pageName string, data
 	cacheKey := layoutName + ":" + pageName
 
 	if !r.isDev {
-		r.mu.RLock()
-		tmpl, ok := r.cache[cacheKey]
-		r.mu.RUnlock()
-		if ok {
+		if tmpl, ok := r.cache.Get(cacheKey); ok {
 			return tmpl.Execute(w, data)
 		}
 	}
@@ -229,9 +266,7 @@ func (r *TemplateRenderer) Render(w io.Writer, layoutName, pageName string, data
 	}
 
 	if !r.isDev {
-		r.mu.Lock()
-		r.cache[cacheKey] = tmpl
-		r.mu.Unlock()
+		r.cache.Add(cacheKey, tmpl)
 	}
 
 	return tmpl.Execute(w, data)
@@ -267,10 +302,7 @@ func (r *TemplateRenderer) RenderParsed(w io.Writer, cacheKey string, code strin
 	var tmpl *template.Template
 
 	if !r.isDev {
-		r.mu.RLock()
-		cachedTmpl, ok := r.blockCache[cacheKey]
-		r.mu.RUnlock()
-		if ok {
+		if cachedTmpl, ok := r.blockCache.Get(cacheKey); ok {
 			tmpl, _ = cachedTmpl.Clone()
 		}
 	}
@@ -296,10 +328,8 @@ func (r *TemplateRenderer) RenderParsed(w io.Writer, cacheKey string, code strin
 		}
 
 		if !r.isDev {
-			r.mu.Lock()
 			clone, _ := tmpl.Clone()
-			r.blockCache[cacheKey] = clone
-			r.mu.Unlock()
+			r.blockCache.Add(cacheKey, clone)
 		}
 	}
 

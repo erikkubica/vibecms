@@ -1,13 +1,20 @@
 package email
 
 import (
-	"errors"
+	"context"
 	"fmt"
+	"log"
+	"strconv"
+	"time"
 
 	"gorm.io/gorm"
 
 	"vibecms/internal/models"
 )
+
+// defaultLogRetentionDays is the fallback retention if the setting is unset
+// or unparseable. 30 days balances debugging needs against unbounded growth.
+const defaultLogRetentionDays = 30
 
 // LogFilters defines filtering options for listing email logs.
 type LogFilters struct {
@@ -91,52 +98,11 @@ func (s *LogService) Create(logEntry *models.EmailLog) error {
 	return nil
 }
 
-// Resend loads an existing log entry, re-sends its rendered body via the active provider,
-// and creates a new log entry recording the result.
-func (s *LogService) Resend(id int) error {
-	original, err := s.GetByID(id)
-	if err != nil {
-		return fmt.Errorf("failed to load original email log: %w", err)
-	}
-
-	// Load site settings to determine the active provider.
-	settings := loadSiteSettings(s.db)
-	providerName := settings["email_provider"]
-
-	newLog := &models.EmailLog{
-		RuleID:         original.RuleID,
-		TemplateSlug:   original.TemplateSlug,
-		Action:         original.Action,
-		RecipientEmail: original.RecipientEmail,
-		Subject:        original.Subject,
-		RenderedBody:   original.RenderedBody,
-	}
-
-	provider := NewProvider(providerName, settings)
-	if provider == nil {
-		errMsg := "no email provider configured"
-		newLog.Status = "failed"
-		newLog.ErrorMessage = &errMsg
-		s.Create(newLog)
-		return errors.New(errMsg)
-	}
-
-	pName := provider.Name()
-	newLog.Provider = &pName
-
-	if err := provider.Send([]string{original.RecipientEmail}, original.Subject, original.RenderedBody); err != nil {
-		errMsg := err.Error()
-		newLog.Status = "failed"
-		newLog.ErrorMessage = &errMsg
-		s.Create(newLog)
-		return err
-	}
-
-	newLog.Status = "sent"
-	return s.Create(newLog)
-}
-
-// loadSiteSettings reads all site_settings into a map.
+// loadSiteSettings reads all site_settings into a map. Used by the
+// dispatcher to assemble per-event provider settings; resend/retry
+// logic lives in the email-manager extension and goes through
+// coreapi.SendEmail rather than constructing providers here — see
+// CLAUDE.md ("feature code in core" rule).
 func loadSiteSettings(db *gorm.DB) map[string]string {
 	var settings []models.SiteSetting
 	db.Find(&settings)
@@ -147,4 +113,44 @@ func loadSiteSettings(db *gorm.DB) map[string]string {
 		}
 	}
 	return m
+}
+
+// CleanOldLogs deletes email logs older than the configured retention.
+// Reads `email_log_retention_days` from site_settings; falls back to
+// defaultLogRetentionDays when unset/invalid.
+func (s *LogService) CleanOldLogs() error {
+	days := defaultLogRetentionDays
+	var setting models.SiteSetting
+	if err := s.db.Where("key = ?", "email_log_retention_days").First(&setting).Error; err == nil && setting.Value != nil {
+		if n, err := strconv.Atoi(*setting.Value); err == nil && n > 0 {
+			days = n
+		}
+	}
+	cutoff := time.Now().AddDate(0, 0, -days)
+	return s.db.Where("created_at < ?", cutoff).Delete(&models.EmailLog{}).Error
+}
+
+// StartCleanupLoop runs CleanOldLogs daily until ctx is cancelled.
+// Mirrors SessionService.StartCleanupLoop and PasswordResetService.StartCleanupLoop.
+func (s *LogService) StartCleanupLoop(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = 24 * time.Hour
+	}
+	go func() {
+		if err := s.CleanOldLogs(); err != nil {
+			log.Printf("email log cleanup: initial sweep failed: %v", err)
+		}
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := s.CleanOldLogs(); err != nil {
+					log.Printf("email log cleanup: %v", err)
+				}
+			}
+		}
+	}()
 }

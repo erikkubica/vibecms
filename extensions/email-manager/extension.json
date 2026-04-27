@@ -13,6 +13,12 @@
         "events:subscribe",
         "log:write"
     ],
+    "data_owned_tables": [
+        "email_templates",
+        "email_rules",
+        "email_logs",
+        "email_layouts"
+    ],
     "plugins": [
         {
             "binary": "bin/email-manager",

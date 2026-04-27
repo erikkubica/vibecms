@@ -18,6 +18,11 @@
     "events:emit",
     "users:read"
   ],
+  "data_owned_tables": [
+    "forms",
+    "form_submissions",
+    "form_webhook_logs"
+  ],
   "blocks": [{ "slug": "vibe-form", "dir": "vibe-form" }],
   "plugins": [
     {

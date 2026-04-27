@@ -15,24 +15,30 @@ import (
 
 // scriptHandler is a registered event/filter handler with priority.
 type scriptHandler struct {
-	scriptPath string
-	priority   int
-	baseDir    string // scripts directory for this handler (extension or theme)
+	scriptPath   string
+	priority     int
+	baseDir      string // scripts directory for this handler (extension or theme)
+	slug         string // owning extension/theme slug — passed to CoreAPI as caller
+	capabilities map[string]bool
 }
 
 // httpRoute represents a registered script HTTP endpoint.
 type httpRoute struct {
-	method     string
-	path       string
-	scriptPath string
-	baseDir    string // scripts directory for this route (extension or theme)
+	method       string
+	path         string
+	scriptPath   string
+	baseDir      string // scripts directory for this route (extension or theme)
+	slug         string
+	capabilities map[string]bool
 }
 
 // wellKnownRoute represents a script-backed /.well-known/* endpoint.
 type wellKnownRoute struct {
-	path       string // suffix after "/.well-known/", may end with "*"
-	scriptPath string
-	baseDir    string
+	path         string // suffix after "/.well-known/", may end with "*"
+	scriptPath   string
+	baseDir      string
+	slug         string
+	capabilities map[string]bool
 }
 
 // ---------------------------------------------------------------------------
@@ -52,9 +58,11 @@ func (e *ScriptEngine) EventsOn(name, scriptPath string, priority int) {
 	}
 
 	handler := scriptHandler{
-		scriptPath: scriptPath,
-		priority:   priority,
-		baseDir:    e.activeScriptsDir,
+		scriptPath:   scriptPath,
+		priority:     priority,
+		baseDir:      e.activeScriptsDir,
+		slug:         e.activeSlug,
+		capabilities: e.activeCapabilities,
 	}
 
 	e.mu.Lock()
@@ -81,9 +89,11 @@ func (e *ScriptEngine) FiltersAdd(name, scriptPath string, priority int) {
 	}
 
 	handler := scriptHandler{
-		scriptPath: scriptPath,
-		priority:   priority,
-		baseDir:    e.activeScriptsDir,
+		scriptPath:   scriptPath,
+		priority:     priority,
+		baseDir:      e.activeScriptsDir,
+		slug:         e.activeSlug,
+		capabilities: e.activeCapabilities,
 	}
 
 	e.mu.Lock()
@@ -114,7 +124,7 @@ func (e *ScriptEngine) ApplyFilter(name string, value interface{}, renderCtx int
 		vars := map[string]interface{}{
 			"value": currentValue,
 		}
-		result, err := e.runScript(h.scriptPath, vars, renderCtx, h.baseDir)
+		result, err := e.runScript(h.scriptPath, h.slug, h.capabilities, h.baseDir, vars, renderCtx)
 		if err != nil {
 			log.Printf("[script] filter error: %s (%s): %v", name, h.scriptPath, err)
 			continue
@@ -131,20 +141,26 @@ func (e *ScriptEngine) ApplyFilter(name string, value interface{}, renderCtx int
 // ---------------------------------------------------------------------------
 
 // subscribeEventHandlers wires registered event handlers to the Go EventBus.
+// Drops any previous bus subscriptions first — without this, calling
+// LoadThemeScripts twice in a row would double every handler invocation.
 func (e *ScriptEngine) subscribeEventHandlers() {
 	if e.eventBus == nil {
 		return
 	}
 
-	e.mu.RLock()
-	defer e.mu.RUnlock()
+	e.dropBusSubs()
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
 
 	for name, handlers := range e.eventHandlers {
 		for _, h := range handlers {
 			n := name
 			sp := h.scriptPath
 			bd := h.baseDir
-			e.eventBus.Subscribe(n, func(act string, payload events.Payload) {
+			slug := h.slug
+			caps := h.capabilities
+			unsub := e.eventBus.Subscribe(n, func(act string, payload events.Payload) {
 				payloadMap := make(map[string]interface{}, len(payload))
 				for k, v := range payload {
 					payloadMap[k] = v
@@ -155,10 +171,26 @@ func (e *ScriptEngine) subscribeEventHandlers() {
 						"payload": payloadMap,
 					},
 				}
-				if _, err := e.runScript(sp, vars, nil, bd); err != nil {
+				if _, err := e.runScript(sp, slug, caps, bd, vars, nil); err != nil {
 					log.Printf("[script] event handler error: %s (%s): %v", n, sp, err)
 				}
 			})
+			e.busUnsubs = append(e.busUnsubs, unsub)
+		}
+	}
+}
+
+// dropBusSubs releases every event-bus subscription previously installed
+// by subscribeEventHandlers. Called automatically on each re-subscribe;
+// public so theme/extension unload paths can call it explicitly too.
+func (e *ScriptEngine) dropBusSubs() {
+	e.mu.Lock()
+	subs := e.busUnsubs
+	e.busUnsubs = nil
+	e.mu.Unlock()
+	for _, u := range subs {
+		if u != nil {
+			u()
 		}
 	}
 }
@@ -188,7 +220,7 @@ func (e *ScriptEngine) RunEvent(name string, ctx interface{}, args []interface{}
 			vars = map[string]interface{}{"args": args}
 		}
 		for _, h := range sorted {
-			result, err := e.runScript(h.scriptPath, vars, renderCtx, h.baseDir)
+			result, err := e.runScript(h.scriptPath, h.slug, h.capabilities, h.baseDir, vars, renderCtx)
 			if err != nil {
 				log.Printf("[script] event error: %s (%s): %v", name, h.scriptPath, err)
 				continue
@@ -252,10 +284,12 @@ func (e *ScriptEngine) HTTPRegister(method, path, scriptPath string) {
 
 	e.mu.Lock()
 	e.httpRoutes = append(e.httpRoutes, httpRoute{
-		method:     method,
-		path:       path,
-		scriptPath: scriptPath,
-		baseDir:    e.activeScriptsDir,
+		method:       method,
+		path:         path,
+		scriptPath:   scriptPath,
+		baseDir:      e.activeScriptsDir,
+		slug:         e.activeSlug,
+		capabilities: e.activeCapabilities,
 	})
 	e.mu.Unlock()
 
@@ -279,7 +313,7 @@ func (e *ScriptEngine) MountRoutes(app *fiber.App) {
 	var topLevel, apiLevel int
 
 	for _, route := range routes {
-		handler := e.makeHTTPHandler(route.scriptPath, route.baseDir)
+		handler := e.makeHTTPHandler(route.scriptPath, route.slug, route.capabilities, route.baseDir)
 
 		// Routes with paths like /sitemap.xml mount at the app root.
 		// Routes with paths like /search mount under /api/theme.
@@ -325,9 +359,11 @@ func (e *ScriptEngine) WellKnownRegister(path, scriptPath string) {
 	}
 	e.mu.Lock()
 	e.wellKnown = append(e.wellKnown, wellKnownRoute{
-		path:       path,
-		scriptPath: scriptPath,
-		baseDir:    e.activeScriptsDir,
+		path:         path,
+		scriptPath:   scriptPath,
+		baseDir:      e.activeScriptsDir,
+		slug:         e.activeSlug,
+		capabilities: e.activeCapabilities,
 	})
 	e.mu.Unlock()
 	log.Printf("[script] registered well-known: /.well-known/%s -> %s", path, scriptPath)
@@ -345,7 +381,7 @@ func (e *ScriptEngine) MountWellKnown(reg WellKnownRegistrar) {
 	e.mu.RUnlock()
 
 	for _, r := range routes {
-		reg.Register(r.path, e.makeHTTPHandler(r.scriptPath, r.baseDir))
+		reg.Register(r.path, e.makeHTTPHandler(r.scriptPath, r.slug, r.capabilities, r.baseDir))
 	}
 	if len(routes) > 0 {
 		log.Printf("[script] mounted %d .well-known handlers", len(routes))
@@ -353,7 +389,10 @@ func (e *ScriptEngine) MountWellKnown(reg WellKnownRegistrar) {
 }
 
 // makeHTTPHandler creates a Fiber handler that runs a Tengo script.
-func (e *ScriptEngine) makeHTTPHandler(scriptPath string, baseDir string) fiber.Handler {
+// slug + capabilities are the caller info recorded when the route was
+// registered — they tell the CoreAPI capability guard who is making
+// requests during this script's execution.
+func (e *ScriptEngine) makeHTTPHandler(scriptPath, slug string, capabilities map[string]bool, baseDir string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		query := make(map[string]interface{})
 		c.Request().URI().QueryArgs().VisitAll(func(key, value []byte) {
@@ -397,7 +436,7 @@ func (e *ScriptEngine) makeHTTPHandler(scriptPath string, baseDir string) fiber.
 			"request": reqMap,
 		}
 
-		result, err := e.runScript(scriptPath, vars, nil, baseDir)
+		result, err := e.runScript(scriptPath, slug, capabilities, baseDir, vars, nil)
 		if err != nil {
 			log.Printf("[script] HTTP handler error: %s: %v", scriptPath, err)
 			return c.Status(500).JSON(fiber.Map{"error": "script execution error"})

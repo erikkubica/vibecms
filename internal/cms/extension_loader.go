@@ -104,6 +104,12 @@ type ExtensionManifest struct {
 	Priority       int                      `json:"priority"`
 	Provides       []string                 `json:"provides"`
 	Capabilities   []string                 `json:"capabilities"`
+	// DataOwnedTables enumerates the database tables this extension
+	// is allowed to read/write through the Data* CoreAPI methods. The
+	// kernel default-denies any table not on this list (see
+	// coreapi.checkTableAccess) so an extension granted "data:read"
+	// can't pivot from its own data into users / sessions / etc.
+	DataOwnedTables []string                 `json:"data_owned_tables"`
 	Plugins        []PluginManifestEntry    `json:"plugins"`
 	AdminUI        *AdminUIManifest         `json:"admin_ui"`
 	SettingsSchema map[string]SettingsField `json:"settings_schema"`
@@ -122,6 +128,17 @@ func (m *ExtensionManifest) CapabilityMap() map[string]bool {
 		caps[c] = true
 	}
 	return caps
+}
+
+// OwnedTablesMap returns DataOwnedTables as a lookup map. Returns an
+// empty (non-nil) map for extensions that didn't declare any tables —
+// which is the safe default: no entries means no Data* access.
+func (m *ExtensionManifest) OwnedTablesMap() map[string]bool {
+	owned := make(map[string]bool, len(m.DataOwnedTables))
+	for _, t := range m.DataOwnedTables {
+		owned[t] = true
+	}
+	return owned
 }
 
 // ExtensionLoader handles scanning, registering, and managing extensions.

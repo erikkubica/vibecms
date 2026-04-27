@@ -332,9 +332,23 @@ func (g *capabilityGuard) Log(ctx context.Context, level, message string, fields
 }
 
 // --- Data Store ---
+//
+// Two-layer gate:
+//
+//  1. checkCapability — does the extension hold the data:read /
+//     data:write / data:delete cap at all?
+//  2. checkTableAccess — is this specific table in the extension's
+//     OwnedTables (and not in the kernel-private list)?
+//
+// Both must pass. Internal callers bypass both. DataExec stays
+// internal-only — the impl already enforces that, and there's no
+// per-table check to run on a free-form SQL string.
 
 func (g *capabilityGuard) DataGet(ctx context.Context, table string, id uint) (map[string]any, error) {
 	if err := checkCapability(ctx, "data:read"); err != nil {
+		return nil, err
+	}
+	if err := checkTableAccess(ctx, table); err != nil {
 		return nil, err
 	}
 	return g.inner.DataGet(ctx, table, id)
@@ -344,6 +358,9 @@ func (g *capabilityGuard) DataQuery(ctx context.Context, table string, query Dat
 	if err := checkCapability(ctx, "data:read"); err != nil {
 		return nil, err
 	}
+	if err := checkTableAccess(ctx, table); err != nil {
+		return nil, err
+	}
 	return g.inner.DataQuery(ctx, table, query)
 }
 
@@ -351,11 +368,17 @@ func (g *capabilityGuard) DataCreate(ctx context.Context, table string, data map
 	if err := checkCapability(ctx, "data:write"); err != nil {
 		return nil, err
 	}
+	if err := checkTableAccess(ctx, table); err != nil {
+		return nil, err
+	}
 	return g.inner.DataCreate(ctx, table, data)
 }
 
 func (g *capabilityGuard) DataUpdate(ctx context.Context, table string, id uint, data map[string]any) error {
 	if err := checkCapability(ctx, "data:write"); err != nil {
+		return err
+	}
+	if err := checkTableAccess(ctx, table); err != nil {
 		return err
 	}
 	return g.inner.DataUpdate(ctx, table, id, data)
@@ -367,6 +390,9 @@ func (g *capabilityGuard) DataDelete(ctx context.Context, table string, id uint)
 		if err2 := checkCapability(ctx, "data:write"); err2 != nil {
 			return err
 		}
+	}
+	if err := checkTableAccess(ctx, table); err != nil {
+		return err
 	}
 	return g.inner.DataDelete(ctx, table, id)
 }

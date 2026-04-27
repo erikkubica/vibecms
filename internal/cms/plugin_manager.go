@@ -16,12 +16,20 @@ import (
 	"vibecms/internal/events"
 
 	"google.golang.org/grpc"
+	"gorm.io/gorm"
 )
 
-// HostServerRegistrar is a function that registers the VibeCMSHost gRPC service
-// on a grpc.Server for a given extension slug with its capabilities.
-// This avoids an import cycle between cms and coreapi.
-type HostServerRegistrar func(slug string, capabilities map[string]bool) func(s *grpc.Server)
+// HostServerRegistrar is a function that registers the VibeCMSHost
+// gRPC service on a grpc.Server for a given extension slug with its
+// capabilities and owned-tables list. owned-tables is consumed by the
+// coreapi capability guard's data:* gate; capabilities feeds the
+// generic checkCapability path. This signature is the trust boundary
+// — anything passed here ends up in CallerInfo for every CoreAPI
+// call from the plugin.
+//
+// The struct-shaped factory avoids the import cycle between cms and
+// coreapi while keeping the wiring readable.
+type HostServerRegistrar func(slug string, capabilities map[string]bool, ownedTables map[string]bool) func(s *grpc.Server)
 
 // PluginManifestEntry represents a single plugin binary in an extension manifest.
 type PluginManifestEntry struct {
@@ -45,21 +53,33 @@ type PluginManager struct {
 	plugins       map[string][]*runningPlugin // extension slug -> running plugins
 	eventBus      *events.EventBus
 	hostRegistrar HostServerRegistrar
+	// db is used by verifyPluginBinary to check operator-pinned
+	// SHA-256 digests. May be nil — pin checks are then skipped, which
+	// preserves test/bootstrap behaviour without changing semantics.
+	db *gorm.DB
 }
 
 // NewPluginManager creates a new PluginManager.
 // hostRegistrar may be nil if no CoreAPI is available (plugins won't get host callbacks).
-func NewPluginManager(eventBus *events.EventBus, hostRegistrar HostServerRegistrar) *PluginManager {
+// db may be nil when running without persistence (tests); when set, the
+// manager refuses to spawn binaries whose SHA-256 doesn't match the
+// site_settings-pinned value.
+func NewPluginManager(eventBus *events.EventBus, hostRegistrar HostServerRegistrar, db *gorm.DB) *PluginManager {
 	return &PluginManager{
 		plugins:       make(map[string][]*runningPlugin),
 		eventBus:      eventBus,
 		hostRegistrar: hostRegistrar,
+		db:            db,
 	}
 }
 
 // StartPlugins starts all plugin binaries declared in an extension's manifest.
-// capabilities is the set of permissions declared in the extension manifest.
-func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json.RawMessage, capabilities map[string]bool) error {
+// capabilities is the set of permissions declared in the extension
+// manifest; ownedTables is the set of database tables this extension
+// is allowed to touch through the Data* CoreAPI methods (default
+// deny). Both flow into the per-extension CallerInfo when the host
+// gRPC service is registered.
+func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json.RawMessage, capabilities map[string]bool, ownedTables map[string]bool) error {
 	// Parse plugins from manifest
 	var m struct {
 		Plugins []PluginManifestEntry `json:"plugins"`
@@ -86,6 +106,18 @@ func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json
 		// Verify binary exists
 		if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
 			log.Printf("[plugins] binary not found for %s: %s", slug, binaryPath)
+			continue
+		}
+
+		// Verify SHA-256 against operator-pinned digest in
+		// site_settings. Refusing to spawn on mismatch is the line
+		// of defense against an attacker who replaced bin/<plugin>
+		// — the binary executes arbitrary code with kernel-grade
+		// trust (gRPC into CoreAPI), so a swapped binary is full
+		// host compromise. When no pin is configured we log the
+		// actual digest and continue (preserves first-boot UX).
+		if err := verifyPluginBinary(pm.db, slug, pe.Binary, binaryPath); err != nil {
+			log.Printf("[plugins] REFUSING to start %s/%s: %v", slug, pe.Binary, err)
 			continue
 		}
 
@@ -123,7 +155,7 @@ func (pm *PluginManager) StartPlugins(extPath string, slug string, manifest json
 		// Initialize: start gRPC host service so plugin can call back into VibeCMS.
 		if pm.hostRegistrar != nil {
 			if grpcClient, ok := impl.(*vibeplugin.GRPCClient); ok {
-				registerFn := pm.hostRegistrar(slug, capabilities)
+				registerFn := pm.hostRegistrar(slug, capabilities, ownedTables)
 				if initErr := grpcClient.InitializeHost(registerFn); initErr != nil {
 					log.Printf("[plugins] failed to initialize host service for %s/%s: %v", slug, pe.Binary, initErr)
 					client.Kill()

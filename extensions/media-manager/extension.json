@@ -18,6 +18,10 @@
         "events:emit",
         "log:write"
     ],
+    "data_owned_tables": [
+        "media_files",
+        "media_image_sizes"
+    ],
     "plugins": [
         {
             "binary": "bin/media-manager",

@@ -42,7 +42,7 @@ a { color: inherit; }
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
-.nav-brand { color: var(--ink); }
+.nav-brand { color: var(--ink); text-decoration: none; }
 .nav ul { list-style: none; display: flex; gap: 1.6rem; padding: 0; margin: 0 auto 0 1rem; }
 .nav ul a { text-decoration: none; font-size: 0.92rem; color: var(--ink-2); transition: color .15s; }
 .nav ul a:hover { color: var(--ink); }

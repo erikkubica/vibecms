@@ -5,7 +5,7 @@
 {{- $accent := or (index $s "cv.accent") "#DA251D" -}}
 {{- $menu := index .app.menus "main-nav" -}}
 <nav class="nav">
-  <span class="mono nav-brand">{{ $brand }}</span>
+  <a class="mono nav-brand" href="/">{{ $brand }}</a>
   <ul>
   {{- if $menu -}}
     {{- range $menu.items -}}

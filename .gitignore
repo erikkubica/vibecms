@@ -14,7 +14,10 @@ tmp/
 node_modules/
 extensions/*/admin-ui/node_modules/
 extensions/*/bin/
+extensions/*/plugin
 /vibecms
+/plugin
+extensions/*/admin-ui/dist/
 *.jpeg
 *.jpg
 *.png

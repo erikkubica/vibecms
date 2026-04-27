@@ -21,13 +21,18 @@ type loginRequest struct {
 type AuthHandler struct {
 	db         *gorm.DB
 	sessionSvc *SessionService
+
+	loginLimiter *PerIPLimiter
+	lockout      *LockoutTracker
 }
 
 // NewAuthHandler creates a new AuthHandler.
 func NewAuthHandler(db *gorm.DB, sessionSvc *SessionService) *AuthHandler {
 	return &AuthHandler{
-		db:         db,
-		sessionSvc: sessionSvc,
+		db:           db,
+		sessionSvc:   sessionSvc,
+		loginLimiter: NewPerIPLimiter(10, time.Minute, 10),
+		lockout:      NewLockoutTracker(5, 15*time.Minute, 15*time.Minute),
 	}
 }
 
@@ -41,6 +46,10 @@ func (h *AuthHandler) RegisterRoutes(app *fiber.App) {
 // Login authenticates a user with email and password, creates a session,
 // and sets an HTTP-only session cookie.
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	if !h.loginLimiter.Allow(c.IP()) {
+		return api.Error(c, fiber.StatusTooManyRequests, "RATE_LIMITED", "Too many sign-in attempts")
+	}
+
 	var req loginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return api.Error(c, fiber.StatusBadRequest, "BAD_REQUEST", "Invalid request body")
@@ -53,17 +62,29 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
+	if h.lockout.IsLocked(req.Email) {
+		return api.Error(c, fiber.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
+	}
+
 	var user models.User
 	if err := h.db.Preload("Role").Where("email = ?", req.Email).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
+			// Burn an equivalent bcrypt comparison so the response
+			// time matches the user-found path. Without this, an
+			// attacker can enumerate registered emails by timing.
+			AbsorbBcryptTime()
+			h.lockout.RecordFailure(req.Email)
 			return api.Error(c, fiber.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 		}
 		return api.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "An unexpected error occurred")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		h.lockout.RecordFailure(req.Email)
 		return api.Error(c, fiber.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 	}
+
+	h.lockout.RecordSuccess(req.Email)
 
 	token, err := h.sessionSvc.CreateSession(user.ID, c.IP(), c.Get("User-Agent"))
 	if err != nil {
@@ -79,8 +100,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		Value:    token,
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   c.Protocol() == "https",
-		SameSite: "Lax",
+		Secure:   IsSecureRequest(c),
+		SameSite: "Strict",
 		Expires:  time.Now().Add(h.sessionSvc.sessionExpiry),
 	})
 
@@ -103,8 +124,8 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		Value:    "",
 		Path:     "/",
 		HTTPOnly: true,
-		Secure:   c.Protocol() == "https",
-		SameSite: "Lax",
+		Secure:   IsSecureRequest(c),
+		SameSite: "Strict",
 		Expires:  time.Now().Add(-1 * time.Hour),
 	})
 

@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"vibecms/internal/models"
@@ -114,6 +116,34 @@ func (s *SessionService) CleanExpired() error {
 		return fmt.Errorf("failed to clean expired sessions: %w", result.Error)
 	}
 	return nil
+}
+
+// StartCleanupLoop runs CleanExpired on a fixed interval until ctx is
+// cancelled. Spawn this once at startup; it logs failures but never
+// returns an error so the goroutine doesn't leak silently. Call
+// CleanExpired once before the loop body so first cleanup runs at
+// boot rather than after the first interval.
+func (s *SessionService) StartCleanupLoop(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	go func() {
+		if err := s.CleanExpired(); err != nil {
+			log.Printf("session cleanup: initial sweep failed: %v", err)
+		}
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := s.CleanExpired(); err != nil {
+					log.Printf("session cleanup: %v", err)
+				}
+			}
+		}
+	}()
 }
 
 // hashToken returns the hex-encoded SHA-256 hash of the given token string.

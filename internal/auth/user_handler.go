@@ -8,7 +8,6 @@ import (
 	"vibecms/internal/models"
 
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -151,7 +150,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return api.ValidationError(c, fields)
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "Failed to hash password")
 	}
@@ -228,10 +227,17 @@ func (h *UserHandler) UpdateUser(c *fiber.Ctx) error {
 		if !HasCapability(currentUser, "manage_users") {
 			return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "Only admins can change user roles")
 		}
+		// Self-promotion guard: a user with manage_users could otherwise
+		// PATCH /users/<their_id> {"role_id": <admin_id>} to grant
+		// themselves admin. Always require an outside actor for role
+		// elevation (or demotion — same path).
+		if currentUser.ID == id {
+			return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "You cannot change your own role")
+		}
 		updates["role_id"] = *req.RoleID
 	}
 	if req.Password != nil {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		hashedPassword, err := HashPassword(*req.Password)
 		if err != nil {
 			return api.Error(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "Failed to hash password")
 		}
@@ -268,6 +274,12 @@ func (h *UserHandler) DeleteUser(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return api.Error(c, fiber.StatusBadRequest, "BAD_REQUEST", "Invalid user ID")
+	}
+
+	// Operators must not delete their own account — that locks them out
+	// of the very session this request is running under.
+	if currentUser != nil && currentUser.ID == id {
+		return api.Error(c, fiber.StatusForbidden, "FORBIDDEN", "You cannot delete your own account")
 	}
 
 	result := h.db.Delete(&models.User{}, id)

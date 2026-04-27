@@ -8,6 +8,12 @@
 (function () {
   "use strict";
 
+  // Idempotent guard: this script is included by every form-bearing block,
+  // so it can be loaded multiple times on a single page. Without this guard,
+  // each load attaches another submit listener and the form submits N times.
+  if (window.__vibeFormBooted) return;
+  window.__vibeFormBooted = true;
+
   // ---------------------------------------------------------------------------
   // Condition evaluator — mirrors backend conditions.go exactly
   // ---------------------------------------------------------------------------
@@ -259,6 +265,8 @@
   }
 
   function initForm(wrapper) {
+    if (wrapper.dataset.vibeFormInit === "1") return;
+    wrapper.dataset.vibeFormInit = "1";
     var form = wrapper.querySelector("form");
     if (!form) return;
 

@@ -49,8 +49,7 @@
       "fields": {
         "eyebrow": "Our most-booked",
         "heading": "Trips travelers can't stop talking about.",
-        "cta_text": "See all trips →",
-        "cta_url": "/trips",
+        "cta": { "text": "See all trips →", "url": "/trips" },
         "limit": 3
       }
     },

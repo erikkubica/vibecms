@@ -227,6 +227,60 @@ seed_form({
 })
 log.info("Hello Vietnam: trip-order form upsert emitted")
 
+contact_layout := core_assets.read("forms/contact.html")
+if is_error(contact_layout) {
+	log.warn("Hello Vietnam: failed to read contact layout: " + string(contact_layout))
+	contact_layout = ""
+}
+
+seed_form({
+	slug: "contact",
+	name: "Contact",
+	force: true,
+	layout: contact_layout,
+	settings: {
+		success_message: "Message sent! We'll reply within a day or two — usually from Huong or Linh.",
+		store_ip: true,
+		honeypot_enabled: true
+	},
+	fields: [
+		{ id: "name",    type: "text",     label: "Your name",  placeholder: "What should we call you?", required: true },
+		{ id: "email",   type: "email",    label: "Email",      placeholder: "you@somewhere.com",        required: true },
+		{ id: "subject", type: "select",   label: "Subject",    placeholder: "Pick one...",
+			options: [
+				{ label: "General question",     value: "general" },
+				{ label: "Custom trip inquiry",  value: "custom_trip" },
+				{ label: "Partnership / press",  value: "partnership" },
+				{ label: "Something else",       value: "other" }
+			]
+		},
+		{ id: "message", type: "textarea", label: "Message",    placeholder: "Tell us what's on your mind...", required: true }
+	]
+})
+log.info("Hello Vietnam: contact form upsert emitted")
+
+newsletter_layout := core_assets.read("forms/newsletter.html")
+if is_error(newsletter_layout) {
+	log.warn("Hello Vietnam: failed to read newsletter layout: " + string(newsletter_layout))
+	newsletter_layout = ""
+}
+
+seed_form({
+	slug: "newsletter",
+	name: "Newsletter",
+	force: true,
+	layout: newsletter_layout,
+	settings: {
+		success_message: "You're on the list! Check your inbox for the map.",
+		store_ip: true,
+		honeypot_enabled: true
+	},
+	fields: [
+		{ id: "email", type: "email", label: "Email", placeholder: "your@email.com", required: true }
+	]
+})
+log.info("Hello Vietnam: newsletter form upsert emitted")
+
 // ─── Demo Node Seeding ───────────────────────────────────────
 // `default_layout` pins seeded nodes to a specific layout via layout_slug, so
 // pages render correctly without manual intervention after theme import.

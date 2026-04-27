@@ -140,9 +140,8 @@
 <div class="card" style="padding: 28px;">
 <div data-booking-body>
 <div style="margin-bottom: 20px;">
-<div style="font-family: var(--font-display); font-weight: 500; font-size: 2rem;" data-total>${{or $fd.price 0}}</div>
-<div style="font-size: 0.88rem; color: var(--ink-soft);">per adult</div>
-<div style="font-size: 0.78rem; color: var(--ink-soft);">Kids under 12 &middot; 50% off</div>
+<div style="font-family: var(--font-display); font-weight: 500; font-size: 2rem;">${{or $fd.price 0}}</div>
+<div style="font-size: 0.88rem; color: var(--ink-soft);">per person</div>
 </div>
 {{- $form_slug := or $fd.order_form "trip-order" -}}
 <div class="vibe-form-wrapper" data-form-slug="{{$form_slug}}" id="form-{{$form_slug}}">

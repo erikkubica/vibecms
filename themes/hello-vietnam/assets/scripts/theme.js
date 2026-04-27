@@ -135,7 +135,7 @@
     function recalc() {
       var a = parseInt(adultsInput ? adultsInput.value : "1", 10) || 0;
       var k = parseInt(kidsInput ? kidsInput.value : "0", 10) || 0;
-      var total = price * a + price * 0.5 * k;
+      var total = price * (a + k);
       var label = "$" + total.toFixed(0);
       totalEls.forEach(function (el) { el.textContent = label; });
     }

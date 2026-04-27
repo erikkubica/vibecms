@@ -1,0 +1,16 @@
+{{/*
+  Hello Vietnam — Contact form layout.
+  Owned by the theme, registered in DB via theme.tengo seed_form. Uses theme
+  CSS primitives (.input, .select, .textarea, .btn).
+
+  Variables exposed by the forms extension:
+    .fields_list, .fields, .fields_by_id, .id, .name (forms-ext defaults)
+    Each field: .id .label .type .placeholder .required .options
+*/}}
+<form style="display: grid; gap: 16px;">
+<div class="field"><label>{{.name.label}}</label><input class="input" name="{{.name.id}}" placeholder="{{.name.placeholder}}" {{if .name.required}}required{{end}} /></div>
+<div class="field"><label>{{.email.label}}</label><input class="input" name="{{.email.id}}" type="email" placeholder="{{.email.placeholder}}" {{if .email.required}}required{{end}} /></div>
+<div class="field"><label>{{.subject.label}}</label><select class="select" name="{{.subject.id}}"><option value="">{{.subject.placeholder}}</option>{{range .subject.options}}<option value="{{.value}}">{{.label}}</option>{{end}}</select></div>
+<div class="field"><label>{{.message.label}}</label><textarea class="textarea" name="{{.message.id}}" placeholder="{{.message.placeholder}}" {{if .message.required}}required{{end}}></textarea></div>
+<button class="btn btn-primary" type="submit" style="justify-content: center;">Send message <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg></button>
+</form>

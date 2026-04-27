@@ -96,7 +96,7 @@ test("2. validation: required field errors display inline", async ({
   request,
 }) => {
   // Submit to a form with required fields, omitting them — expect 422
-  const res = await request.post("/api/ext/forms/submit/e2e-validation-test", {
+  const res = await request.post("/forms/submit/e2e-validation-test", {
     data: {},
     headers: { "Content-Type": "application/json" },
     failOnStatusCode: false,
@@ -114,7 +114,7 @@ test("3. CAPTCHA: submission without token is rejected (if captcha enabled)", as
   request,
 }) => {
   // POST without cf_turnstile_response — server should reject or accept (depending on form config)
-  const res = await request.post("/api/ext/forms/submit/e2e-captcha-test", {
+  const res = await request.post("/forms/submit/e2e-captcha-test", {
     data: { name: "Bot", email: "bot@evil.example" },
     headers: { "Content-Type": "application/json" },
     failOnStatusCode: false,
@@ -198,12 +198,14 @@ test("6. CSV export: endpoint returns CSV content-type", async ({ request }) => 
 test("7. honeypot: submission with honeypot field silently discarded", async ({
   request,
 }) => {
-  // Fill the honeypot field (_hp) — the server should return 200 (silent discard)
-  const res = await request.post("/api/ext/forms/submit/e2e-honeypot-test", {
+  // Fill the honeypot field (website_url) — the server should return 200 (silent discard).
+  // The server-side honeypot field name is `website_url` (defined in render.go's
+  // honeypotHTML constant); a mismatch here would let a real bot through.
+  const res = await request.post("/forms/submit/e2e-honeypot-test", {
     data: {
       name: "Spammer",
       email: "spam@evil.example",
-      _hp: "I am a bot",
+      website_url: "https://evil.example",
     },
     headers: { "Content-Type": "application/json" },
     failOnStatusCode: false,
@@ -226,7 +228,7 @@ test("8. rate limit: repeated rapid submissions eventually get 429", async ({
   const responses: number[] = [];
 
   for (let i = 0; i < 12; i++) {
-    const res = await request.post("/api/ext/forms/submit/e2e-ratelimit-test", {
+    const res = await request.post("/forms/submit/e2e-ratelimit-test", {
       data: { email: `user${i}@test.local` },
       headers: { "Content-Type": "application/json" },
       failOnStatusCode: false,

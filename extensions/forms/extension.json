@@ -12,8 +12,6 @@
     "email:send",
     "settings:read",
     "log:write",
-    "routes:register",
-    "blocks",
     "files:write",
     "files:delete",
     "http:fetch",

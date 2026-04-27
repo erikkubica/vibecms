@@ -15,9 +15,13 @@ func jsonResponse(status int, data any) *pb.PluginHTTPResponse {
 	}
 }
 
+// jsonError returns a {"error": "<CODE>", "message": "..."} response. The
+// shape matches the inline error responses in handlers_submit.go (rate limit,
+// captcha, validation) so every admin/public client can read `data.error` for
+// the machine-readable code and `data.message` for the human-readable text.
 func jsonError(status int, code, message string) *pb.PluginHTTPResponse {
 	return jsonResponse(status, map[string]string{
-		"code":    code,
+		"error":   code,
 		"message": message,
 	})
 }

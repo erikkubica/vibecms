@@ -25,7 +25,10 @@ func (p *FormsPlugin) handleSubmit(ctx context.Context, slug string, req *pb.Plu
 		return jsonError(404, "FORM_NOT_FOUND", "Form not found"), nil
 	}
 	form := normalizeForm(res.Rows[0])
-	formID := uint(form["id"].(float64))
+	formID, _ := toUint(form["id"])
+	if formID == 0 {
+		return jsonError(500, "INVALID_FORM", "Form has no usable id"), nil
+	}
 
 	// --- Rate limiting ---
 	settings := getFormSettings(form)

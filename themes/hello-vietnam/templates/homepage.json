@@ -17,7 +17,10 @@
         "cta_secondary": { "text": "Meet the Crew",      "url": "/about",  "target": "_self" },
         "social_proof_strong": "2,400+ travelers",
         "social_proof_rest": "· Rated 4.9 on TripAdvisor",
-        "sticker_text": "100% local-guided"
+        "sticker_text": "100% local-guided",
+        "hero_image":      { "url": "theme-asset:hero-grandma",       "alt": "Vietnamese grandma preparing bún chả in her Hanoi kitchen" },
+        "secondary_image": { "url": "theme-asset:hero-rice-terraces", "alt": "Golden rice terraces at sunset in Sapa" },
+        "tertiary_image":  { "url": "theme-asset:hero-tea-farm",      "alt": "Smiling local picking tea leaves on a Vietnamese hillside" }
       }
     },
     {
@@ -67,8 +70,7 @@
         "badge_text": "Free · 12-page PDF",
         "heading": "The Hanoi Street Food Map.",
         "body": "Every bún chả, bánh mì, and egg coffee spot we actually eat at. Numbered, mapped, ranked, and updated every month.",
-        "input_placeholder": "your@email.com",
-        "submit_label": "Send me the map",
+        "image":       { "url": "theme-asset:lead-magnet-map", "alt": "Hand-drawn Vietnam travel journal and map" },
         "image_label": "PDF mockup"
       }
     }

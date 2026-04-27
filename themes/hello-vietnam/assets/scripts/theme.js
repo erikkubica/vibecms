@@ -162,56 +162,16 @@
     // forms-ext renders its own success state inside .vibe-form-wrapper.
   }
 
-  // Newsletter form (footer): prevent submit, swap to thank-you message.
-  function initNewsletter() {
-    document.querySelectorAll("[data-newsletter-form]").forEach(function (form) {
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var input = form.querySelector("input[type=email]");
-        if (!input || !input.value) return;
-        Array.prototype.forEach.call(form.children, function (c) { c.style.display = "none"; });
-        var msg = document.createElement("div");
-        msg.style.cssText = "padding: 10px 0; color: var(--green-deep); font-weight: 500;";
-        msg.textContent = "Thanks! Check your inbox.";
-        msg.setAttribute("data-newsletter-msg", "");
-        form.appendChild(msg);
-        setTimeout(function () {
-          msg.remove();
-          Array.prototype.forEach.call(form.children, function (c) { c.style.display = ""; });
-          input.value = "";
-        }, 4000);
-      });
-    });
-  }
-
-  // Contact form: submit → success.
-  function initContactForm() {
-    var form = document.querySelector("[data-contact-form]");
-    if (!form) return;
-    var success = document.querySelector("[data-contact-success]");
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var n = (form.querySelector("[name=name]") || {}).value;
-      var em = (form.querySelector("[name=email]") || {}).value;
-      if (!n || !em) return;
-      form.style.display = "none";
-      if (success) success.style.display = "";
-    });
-    var again = document.querySelector("[data-contact-again]");
-    if (again) {
-      again.addEventListener("click", function () {
-        form.style.display = "";
-        if (success) success.style.display = "none";
-        form.reset();
-      });
-    }
-  }
+  // Newsletter, contact, trip-booking submissions are owned by the forms
+  // extension's vibe-form runtime (AJAX POST + validation + success rendering)
+  // — the theme never intercepts those submits. We only touch presentational
+  // state: trips filter, accordions, gallery lightbox, booking-card live total.
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {
-      initTripsFilter(); initAccordions(); initGallery(); initBooking(); initContactForm(); initNewsletter();
+      initTripsFilter(); initAccordions(); initGallery(); initBooking();
     });
   } else {
-    initTripsFilter(); initAccordions(); initGallery(); initBooking(); initContactForm(); initNewsletter();
+    initTripsFilter(); initAccordions(); initGallery(); initBooking();
   }
 })();

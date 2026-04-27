@@ -10,6 +10,7 @@
         "heading": "We're not a tour company. We're your loud Vietnamese cousins.",
         "body_p1": "Hello Vietnam started over a beer in 2016, when Linh realized most tourists were seeing her country through a tinted bus window. Ten years later, we've hand-built 18 trips across Vietnam — all led by people who grew up here.",
         "body_p2": "We skip the tourist traps. We pay our guides fairly. We eat lunch on the same tiny plastic stools as our guests.",
+        "team_photo": { "url": "theme-asset:about-linh-portrait", "alt": "Warm portrait of Linh, founder of Hello Vietnam" },
         "team_photo_caption": "team photo · lunch on plastic stools"
       }
     },
@@ -53,7 +54,9 @@
         "eyebrow": "Community impact",
         "heading": "5% of every booking funds a village school.",
         "body": "Since 2019, we've helped build two classrooms and funded 47 scholarships in Ba Be Province. Our partner, the Ma Pi Leng Learning Initiative, is run by former guide Minh.",
-        "cta": { "text": "Read the impact report", "url": "/impact", "target": "_self" }
+        "cta": { "text": "Read the impact report", "url": "/impact", "target": "_self" },
+        "image": { "url": "theme-asset:impact-community", "alt": "Vietnamese kids waving hello in a mountain village" },
+        "image_caption": "village school · ba be province"
       }
     },
     {

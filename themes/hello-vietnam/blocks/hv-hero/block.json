@@ -1,7 +1,7 @@
 {
   "slug": "hv-hero",
   "name": "Home Hero",
-  "description": "The main entrance block for the homepage. Combines a punchy, multi-line heading with rich social proof, primary/secondary action buttons, and a collage of overlapping, 'floating' photos.",
+  "description": "The main entrance block for the homepage. Combines a punchy, multi-line heading with rich social proof, primary/secondary action buttons, and a collage of three overlapping, slightly rotated photos plus a floating yellow sticker.",
   "category": "hello-vietnam",
   "field_schema": [
     {
@@ -75,16 +75,34 @@
       "label": "Floating Sticker Text",
       "type": "text",
       "help": "Text for the floating circular yellow badge (e.g., '100% local-guided')."
+    },
+    {
+      "key": "hero_image",
+      "label": "Hero Image (main)",
+      "type": "image",
+      "help": "Largest hero photo, rotated +1.5° in the top-right slot. Portrait or square 4:5 works best — people, food, motion."
+    },
+    {
+      "key": "secondary_image",
+      "label": "Secondary Image (bottom-left)",
+      "type": "image",
+      "help": "Smaller photo overlapping the bottom-left, rotated -3°. Landscape/wide composition."
+    },
+    {
+      "key": "tertiary_image",
+      "label": "Tertiary Image (mid-right)",
+      "type": "image",
+      "help": "Smallest accent photo rotated +6° on the mid-right. Tight crop or square."
     }
   ],
   "test_data": {
-    "badge_text": "Xin ch\u00e0o! We're Hello Vietnam.",
+    "badge_text": "Xin chào! We're Hello Vietnam.",
     "heading_line1": "Eat, wander, &amp;",
     "heading_accent": "laugh ",
     "heading_line2_after": "your way",
     "heading_line3_before": "through ",
     "heading_underlined": "Vietnam",
-    "subheading": "Small-group food crawls, mountain loops, and cooking classes \u2014 all run by locals who actually live here. No buses. No bullhorns. Just your new favorite country.",
+    "subheading": "Small-group food crawls, mountain loops, and cooking classes — all run by locals who actually live here. No buses. No bullhorns. Just your new favorite country.",
     "cta_primary": {
       "text": "Find Your Adventure",
       "url": "/trips",
@@ -92,11 +110,23 @@
     },
     "cta_secondary": {
       "text": "Meet the Crew",
-      "url": "/crew",
+      "url": "/about",
       "target": ""
     },
     "social_proof_strong": "2,400+ travelers",
-    "social_proof_rest": "\u00b7 Rated 4.9 on TripAdvisor",
-    "sticker_text": "100% local-guided"
+    "social_proof_rest": "· Rated 4.9 on TripAdvisor",
+    "sticker_text": "100% local-guided",
+    "hero_image": {
+      "url": "theme-asset:hero-grandma",
+      "alt": "Vietnamese grandma preparing bún chả in her Hanoi kitchen"
+    },
+    "secondary_image": {
+      "url": "theme-asset:hero-rice-terraces",
+      "alt": "Golden rice terraces at sunset in Sapa"
+    },
+    "tertiary_image": {
+      "url": "theme-asset:hero-tea-farm",
+      "alt": "Smiling local picking tea leaves on a Vietnamese hillside"
+    }
   }
 }

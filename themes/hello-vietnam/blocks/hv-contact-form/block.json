@@ -1,13 +1,14 @@
 {
   "slug": "hv-contact-form",
   "name": "Contact Form Grid",
-  "description": "A comprehensive contact form grid. Features quick-contact cards (WhatsApp, Email, Location) beside a fully functional subject-based inquiry form.",
+  "description": "Two-column contact section: left column shows quick-contact cards (WhatsApp, email, address-with-map, phone) plus social icons; right column hosts the contact form rendered by the forms extension. The form itself (fields, labels, validation, success state) is owned by the forms extension and configured via the 'contact' form slug — only the framing copy lives in this block.",
   "category": "hello-vietnam",
   "field_schema": [
     {
       "key": "contact_cards",
       "label": "Contact cards",
       "type": "repeater",
+      "help": "Quick-contact tiles shown in the left column. The 'pin' card additionally renders a map placeholder and an hours line; other icons render as a single line of label + value.",
       "sub_fields": [
         {
           "key": "icon",
@@ -19,22 +20,25 @@
             "phone",
             "pin"
           ],
-          "help": "Select the icon that best represents this item."
+          "help": "Pick the icon. 'pin' triggers the address-with-map variant; everything else is a compact single-line card."
         },
         {
           "key": "label",
           "label": "Small label",
-          "type": "text"
+          "type": "text",
+          "help": "Uppercase label above the value (e.g. 'WhatsApp', 'Email')."
         },
         {
           "key": "value",
           "label": "Primary value",
-          "type": "text"
+          "type": "text",
+          "help": "The phone number, email, or street address shown in display font."
         },
         {
           "key": "hours",
-          "label": "Hours line (only for Meet us card, HTML allowed)",
-          "type": "textarea"
+          "label": "Hours line (HTML allowed, only used by the 'pin' card)",
+          "type": "textarea",
+          "help": "Optional opening-hours line rendered under the map on the address card. Leave empty for non-address cards."
         }
       ]
     },
@@ -42,98 +46,13 @@
       "key": "form_heading",
       "label": "Form heading",
       "type": "text",
-      "help": "The title displayed above the contact form."
+      "help": "The title displayed above the contact form (e.g. 'Drop us a line.')."
     },
     {
       "key": "form_subheading",
       "label": "Form subheading",
       "type": "text",
-      "help": "Small text shown below the form title."
-    },
-    {
-      "key": "label_name",
-      "label": "Label: Name",
-      "type": "text",
-      "help": "Label shown above the name input field."
-    },
-    {
-      "key": "placeholder_name",
-      "label": "Placeholder: Name",
-      "type": "text",
-      "help": "Hint text shown inside the name field (e.g., 'What should we call you?')."
-    },
-    {
-      "key": "label_email",
-      "label": "Label: Email",
-      "type": "text",
-      "help": "Label shown above the email input field."
-    },
-    {
-      "key": "placeholder_email",
-      "label": "Placeholder: Email",
-      "type": "text",
-      "help": "Hint text shown inside the email field (e.g., 'you@somewhere.com')."
-    },
-    {
-      "key": "label_subject",
-      "label": "Label: Subject",
-      "type": "text",
-      "help": "Label shown above the subject dropdown."
-    },
-    {
-      "key": "subject_placeholder",
-      "label": "Subject empty option text",
-      "type": "text",
-      "help": "The initial text shown in the dropdown (e.g., 'Pick one...')."
-    },
-    {
-      "key": "subject_options",
-      "label": "Subject options",
-      "type": "repeater",
-      "help": "A list of inquiry topics for the dropdown.",
-      "sub_fields": [
-        {
-          "key": "value",
-          "label": "Option",
-          "type": "text"
-        }
-      ]
-    },
-    {
-      "key": "label_message",
-      "label": "Label: Message",
-      "type": "text",
-      "help": "Label shown above the large message area."
-    },
-    {
-      "key": "placeholder_message",
-      "label": "Placeholder: Message",
-      "type": "text",
-      "help": "Hint text shown inside the message area."
-    },
-    {
-      "key": "submit_label",
-      "label": "Submit button label",
-      "type": "text",
-      "help": "The text on the send button."
-    },
-    {
-      "key": "success_heading",
-      "label": "Success Heading",
-      "type": "text",
-      "help": "Title shown after the message is sent successfully."
-    },
-    {
-      "key": "success_body",
-      "label": "Success Body",
-      "type": "text",
-      "help": "Confirmation message shown after a successful send."
-    },
-    {
-      "key": "success_again",
-      "label": "Success Button Label",
-      "type": "text",
-      "help": "Label for the button to send another inquiry."
+      "help": "Small text shown below the form title (e.g. 'We reply in the order we receive')."
     }
   ],
   "test_data": {
@@ -153,37 +72,11 @@
       {
         "icon": "pin",
         "label": "Meet us",
-        "value": "12 H\u00e0ng C\u00e1 St, Hanoi",
-        "hours": "<strong>Mon\u2013Sat:</strong> 9am \u2013 8pm \u00b7 <strong>Sun:</strong> Out eating"
+        "value": "12 Hàng Cá St, Hanoi",
+        "hours": "<strong>Mon–Sat:</strong> 9am – 8pm · <strong>Sun:</strong> Out eating"
       }
     ],
     "form_heading": "Drop us a line.",
-    "form_subheading": "We reply in the order we receive.",
-    "label_name": "Your name",
-    "placeholder_name": "What should we call you?",
-    "label_email": "Email",
-    "placeholder_email": "you@somewhere.com",
-    "label_subject": "Subject",
-    "subject_placeholder": "Pick one...",
-    "subject_options": [
-      {
-        "value": "General question"
-      },
-      {
-        "value": "Custom trip inquiry"
-      },
-      {
-        "value": "Partnership / press"
-      },
-      {
-        "value": "Something else"
-      }
-    ],
-    "label_message": "Message",
-    "placeholder_message": "Tell us what's on your mind...",
-    "submit_label": "Send message",
-    "success_heading": "Message sent!",
-    "success_body": "We'll reply within a day or two \u2014 usually from Huong or Linh.",
-    "success_again": "Send another"
+    "form_subheading": "We reply in the order we receive."
   }
 }

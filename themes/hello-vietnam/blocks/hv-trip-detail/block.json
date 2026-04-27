@@ -1,8 +1,0 @@
-{
-  "slug": "hv-trip-detail",
-  "name": "Trip Detail",
-  "description": "The master block for individual trip pages. It dynamically pulls in all trip data: hero gallery, itinerary accordion, price details, booking form, and related trips section.",
-  "category": "hello-vietnam",
-  "field_schema": [],
-  "test_data": {}
-}

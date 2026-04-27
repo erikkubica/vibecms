@@ -1,0 +1,17 @@
+{{/*
+  Hello Vietnam — Footer newsletter signup.
+  Owned by the theme, registered in DB via theme.tengo seed_form (slug
+  "footer-newsletter"). Submission is handled by the forms extension's
+  vibe-form runtime (AJAX, validation, success state).
+
+  Vertical stack on dark background; mirrors the look the original
+  inline <form> had before it was wired to forms-ext.
+
+  Variables exposed by the forms extension:
+    .fields_list, .fields, .fields_by_id, .id, .name (forms-ext defaults)
+    Each field: .id .label .type .placeholder .required .options
+*/}}
+<form style="display: flex; flex-direction: column; gap: 10px;">
+<input class="input" name="{{.email.id}}" type="email" placeholder="{{.email.placeholder}}" {{if .email.required}}required{{end}} style="background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); color: var(--cream);" />
+<button type="submit" class="btn btn-yellow" style="justify-content: center; padding: 12px 16px;">Subscribe</button>
+</form>

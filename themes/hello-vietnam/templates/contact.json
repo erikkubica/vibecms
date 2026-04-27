@@ -20,25 +20,7 @@
           { "icon": "pin",      "label": "Meet us",  "value": "12 Hàng Cá St, Hanoi",     "hours": "<strong>Mon–Sat:</strong> 9am – 8pm · <strong>Sun:</strong> Out eating" }
         ],
         "form_heading": "Drop us a line.",
-        "form_subheading": "We reply in the order we receive.",
-        "label_name": "Your name",
-        "placeholder_name": "What should we call you?",
-        "label_email": "Email",
-        "placeholder_email": "you@somewhere.com",
-        "label_subject": "Subject",
-        "subject_placeholder": "Pick one...",
-        "subject_options": [
-          { "value": "General question" },
-          { "value": "Custom trip inquiry" },
-          { "value": "Partnership / press" },
-          { "value": "Something else" }
-        ],
-        "label_message": "Message",
-        "placeholder_message": "Tell us what's on your mind...",
-        "submit_label": "Send message",
-        "success_heading": "Message sent!",
-        "success_body": "We'll reply within a day or two — usually from Huong or Linh.",
-        "success_again": "Send another"
+        "form_subheading": "We reply in the order we receive."
       }
     },
     {

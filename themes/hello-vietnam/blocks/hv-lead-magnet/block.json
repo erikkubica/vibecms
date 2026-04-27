@@ -1,50 +1,48 @@
 {
   "slug": "hv-lead-magnet",
   "name": "Lead Magnet Banner",
-  "description": "A high-conversion email capture block with a deep red gradient. Features a prominent headline, an image of the freebie (e.g., a PDF map), and an inline email signup form.",
+  "description": "A high-conversion email-capture banner with a deep red gradient background. Left column has a yellow badge + headline + body + an inline newsletter signup form (rendered by the forms extension via slug 'newsletter'). Right column is a rotated image of the freebie (a PDF map mockup, a printable, a checklist, etc.).",
   "category": "hello-vietnam",
   "field_schema": [
     {
       "key": "badge_text",
       "label": "Badge",
       "type": "text",
-      "help": "A small highlight label (e.g. 'New', 'Featured')."
+      "help": "A small highlight label (e.g. 'Free · 12-page PDF')."
     },
     {
       "key": "heading",
       "label": "Heading",
       "type": "text",
-      "help": "The primary title of the section."
+      "help": "The primary title of the section — name the freebie clearly."
     },
     {
       "key": "body",
       "label": "Body",
       "type": "textarea",
-      "help": "The main descriptive text for this section."
+      "help": "Short pitch — what the reader gets and why it's worth their email."
     },
     {
-      "key": "input_placeholder",
-      "label": "Email Placeholder",
-      "type": "text"
-    },
-    {
-      "key": "submit_label",
-      "label": "Submit Button Label",
-      "type": "text",
-      "help": "The text displayed on the form submission button."
+      "key": "image",
+      "label": "Freebie Image",
+      "type": "image",
+      "help": "Rotated photo or mockup of the deliverable (PDF cover, printable, etc.). Yellow background tints behind it on missing photo."
     },
     {
       "key": "image_label",
-      "label": "Image Placeholder Label",
-      "type": "text"
+      "label": "Image placeholder label",
+      "type": "text",
+      "help": "Monospace overlay caption, only visible when no photo is set."
     }
   ],
   "test_data": {
-    "badge_text": "Free \u00b7 12-page PDF",
+    "badge_text": "Free · 12-page PDF",
     "heading": "The Hanoi Street Food Map.",
-    "body": "Every b\u00fan ch\u1ea3, b\u00e1nh m\u00ec, and egg coffee spot we actually eat at. Numbered, mapped, ranked, and updated every month.",
-    "input_placeholder": "your@email.com",
-    "submit_label": "Send me the map",
+    "body": "Every bún chả, bánh mì, and egg coffee spot we actually eat at. Numbered, mapped, ranked, and updated every month.",
+    "image": {
+      "url": "theme-asset:lead-magnet-map",
+      "alt": "Hand-drawn Vietnam travel journal and map"
+    },
     "image_label": "PDF mockup"
   }
 }

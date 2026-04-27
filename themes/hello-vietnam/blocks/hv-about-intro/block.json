@@ -1,7 +1,7 @@
 {
   "slug": "hv-about-intro",
   "name": "About Intro",
-  "description": "The lead section for the About page. Features a large, expressive heading and a multi-paragraph description text, usually highlighting the mission or team behind the project.",
+  "description": "The lead section for the About page. Two-column layout: left is an eyebrow + large heading + two body paragraphs; right is a tall warm-toned team photo with an optional captions overlay.",
   "category": "hello-vietnam",
   "field_schema": [
     {
@@ -19,24 +19,37 @@
     {
       "key": "body_p1",
       "label": "Body paragraph 1",
-      "type": "textarea"
+      "type": "textarea",
+      "help": "First paragraph — the founding story or mission statement (slightly larger text)."
     },
     {
       "key": "body_p2",
       "label": "Body paragraph 2",
-      "type": "textarea"
+      "type": "textarea",
+      "help": "Second paragraph — the values or working style (smaller, supporting text)."
+    },
+    {
+      "key": "team_photo",
+      "label": "Team Photo",
+      "type": "image",
+      "help": "Tall portrait-orientation photo (≈4:5). Warm, candid, human — not a posed corporate headshot."
     },
     {
       "key": "team_photo_caption",
       "label": "Team photo caption",
-      "type": "text"
+      "type": "text",
+      "help": "Monospace overlay caption, only visible when no photo is set."
     }
   ],
   "test_data": {
     "eyebrow": "About us",
     "heading": "We're not a tour company. We're your loud Vietnamese cousins.",
-    "body_p1": "Hello Vietnam started over a beer in 2016, when Linh realized most tourists were seeing her country through a tinted bus window. Ten years later, we've hand-built 18 trips across Vietnam \u2014 all led by people who grew up here.",
+    "body_p1": "Hello Vietnam started over a beer in 2016, when Linh realized most tourists were seeing her country through a tinted bus window. Ten years later, we've hand-built 18 trips across Vietnam — all led by people who grew up here.",
     "body_p2": "We skip the tourist traps. We pay our guides fairly. We eat lunch on the same tiny plastic stools as our guests.",
-    "team_photo_caption": "team photo \u00b7 lunch on plastic stools"
+    "team_photo": {
+      "url": "theme-asset:about-linh-portrait",
+      "alt": "Warm portrait of Linh, founder of Hello Vietnam"
+    },
+    "team_photo_caption": "team photo · lunch on plastic stools"
   }
 }

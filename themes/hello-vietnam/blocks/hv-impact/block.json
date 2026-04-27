@@ -1,14 +1,14 @@
 {
   "slug": "hv-impact",
   "name": "Community Impact",
-  "description": "A two-column highlight block showcasing community impact or social initiatives. Features a large photo with a caption and a descriptive text area with a call-to-action button.",
+  "description": "A two-column highlight block showcasing community impact. Left column is a large green-toned photo with a caption overlay; right column has eyebrow + heading + body + a green CTA button.",
   "category": "hello-vietnam",
   "field_schema": [
     {
       "key": "eyebrow",
       "label": "Eyebrow",
       "type": "text",
-      "help": "A small, uppercase label displayed above the main heading."
+      "help": "A small, uppercase label displayed above the main heading (e.g. 'Community impact')."
     },
     {
       "key": "heading",
@@ -20,13 +20,25 @@
       "key": "body",
       "label": "Body",
       "type": "textarea",
-      "help": "The main descriptive text for this section."
+      "help": "The main descriptive text — what the impact looks like in numbers and partners."
     },
     {
       "key": "cta",
       "label": "Call to action",
       "type": "link",
-      "help": "The primary action link for this block."
+      "help": "Green button linking to a deeper impact story or report."
+    },
+    {
+      "key": "image",
+      "label": "Image",
+      "type": "image",
+      "help": "Wide, candid photo of the community / partner activity. Landscape composition works best."
+    },
+    {
+      "key": "image_caption",
+      "label": "Image caption (placeholder only)",
+      "type": "text",
+      "help": "Monospace overlay caption, only visible when no photo is set."
     }
   ],
   "test_data": {
@@ -37,6 +49,11 @@
       "text": "Read the impact report",
       "url": "/impact",
       "target": ""
-    }
+    },
+    "image": {
+      "url": "theme-asset:impact-community",
+      "alt": "Vietnamese kids waving hello in a mountain village"
+    },
+    "image_caption": "village school · ba be province"
   }
 }

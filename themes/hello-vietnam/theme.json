@@ -149,10 +149,6 @@
     {
       "slug": "hv-legal-content",
       "dir": "hv-legal-content"
-    },
-    {
-      "slug": "hv-trip-detail",
-      "dir": "hv-trip-detail"
     }
   ],
   "assets": [

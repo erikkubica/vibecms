@@ -156,6 +156,18 @@ func guideRecipes(topic string) []map[string]any {
 			"steps": []string{"core.extension.standards"},
 			"notes": "Subscribe to node_type.{created,updated,deleted} and taxonomy.{created,updated,deleted}, plus extension.activated, theme.activated and their deactivated counterparts.",
 		},
+		{
+			"goal":  "Deploy a theme that lives outside the primary repo",
+			"topic": "themes",
+			"steps": []string{"core.theme.standards", "core.theme.deploy", "core.render.node_preview"},
+			"notes": "Build the theme directory locally, zip it (theme.json at root or one level deep), base64-encode the bytes, call core.theme.deploy({body_base64, activate:true}). The archive is unpacked into themes/<slug>/ via an atomic dir swap, the row is upserted, and — when activate=true — the theme is activated immediately. 50 MB cap. Slug must match [A-Za-z0-9_-]+. Re-deploying the same slug refreshes the existing row and overwrites files in place.",
+		},
+		{
+			"goal":  "Deploy an extension from a local build (no docker cp, no git push)",
+			"topic": "extensions",
+			"steps": []string{"core.extension.standards", "core.extension.deploy", "core.extension.get"},
+			"notes": "Zip the extension directory (extension.json + admin-ui/dist + scripts + bin/<plugin> if any), base64-encode, call core.extension.deploy({body_base64, activate:true}). Plugin binaries declared in manifest.plugins[].binary are chmod'd to 0755 automatically. Pre-build them for the host OS/arch — Squilla does not cross-compile. activate=true runs HotActivate (migrations, plugin spawn, script load, block load) without a server restart. 50 MB cap.",
+		},
 	}
 	if topic == "" {
 		return all

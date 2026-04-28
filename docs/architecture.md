@@ -237,6 +237,7 @@ Mounted at `/mcp` with permissive CORS (no cookies — bearer-token auth only). 
 | Render | `tools_render.go` | `core.render.block`, `.node_preview`, `.layout` |
 | Guide | `tools_guide.go` | `core.guide` (meta-tool: decision tree + state snapshot) |
 | System | `tools_system.go` | `core.theme.*`, `core.extension.*` |
+| Deploy | `tools_deploy.go` | `core.theme.deploy`, `core.extension.deploy` (base64 ZIP → atomic install + optional hot-activate) |
 | Email | `tools_email.go` | `core.email.send` |
 
 ### 5.1 Token Model
@@ -318,6 +319,27 @@ POST /admin/api/extensions/:slug/activate
 ```
 
 Deactivation reverses each step. Extensions are crash-isolated: a panic inside a plugin process never takes down the kernel.
+
+### 7.1 Out-of-repo deploy via MCP
+
+For themes and extensions that aren't part of the primary git tree, `core.theme.deploy` / `core.extension.deploy` accept a base64-encoded ZIP and execute the install pipeline shared with `/admin/api/{themes,extensions}/upload`:
+
+```
+base64 ZIP arrives
+  ↓ size check (≤ 50 MB)
+  ↓ parse zip, locate manifest at root or one wrapper dir deep
+  ↓ slug validation ([A-Za-z0-9_-]+, ≤128 chars)
+  ↓ extract every entry into <dest>.deploy.tmp/ with zip-slip enforcement
+  ↓ chmod 0755 on plugin binaries declared in manifest.plugins[].binary
+  ↓ atomic swap:
+      rename <dest>            → <dest>.deploy.old   (if existed)
+      rename <dest>.deploy.tmp → <dest>
+      rm -rf <dest>.deploy.old
+  ↓ ScanAndRegister upserts the row
+  ↓ optional HotActivate (extension) / Activate (theme)
+```
+
+The drop-in fs watcher (`internal/cms/fs_watcher.go`) and the deploy tools share the same destination and registration code path; the only difference is that deploy provides the bytes itself, whereas the watcher reacts to bytes that landed via docker cp / volume mount / git clone. See [`docs/extension_api.md`](./extension_api.md#8-deploying-via-mcp) for client-side examples.
 
 ---
 

@@ -196,12 +196,35 @@ func (s *ThemeMgmtService) GetActive() (*models.Theme, error) {
 	return &theme, nil
 }
 
+// MaxThemeUploadSize caps the size of a theme archive accepted by
+// InstallFromZip. 50 MB matches the extension limit; themes are
+// asset-heavier than extensions but still fit comfortably.
+const MaxThemeUploadSize = 50 * 1024 * 1024
+
 // InstallFromZip extracts a ZIP archive and installs the theme.
+//
+// Safety:
+//   - The archive is bounded to MaxThemeUploadSize. The Reader is wrapped in
+//     io.LimitReader so a streaming caller cannot exhaust memory.
+//   - The slug declared in theme.json must satisfy isValidSettingsKey before
+//     any path is constructed, blocking ../-style escapes via a hostile
+//     manifest.
+//   - Each entry is checked for zip-slip during extraction.
+//   - Extraction lands in themes/<slug>.deploy.tmp; the final swap into
+//     themes/<slug> is a single os.Rename so the watcher and theme loader
+//     never observe a partial directory.
 func (s *ThemeMgmtService) InstallFromZip(file io.Reader, filename string) (*models.Theme, error) {
-	// Read entire ZIP into memory so we can use zip.NewReader.
-	data, err := io.ReadAll(file)
+	// Read entire ZIP into memory, capping at MaxThemeUploadSize+1 so we can
+	// distinguish "exactly the cap" from "over the cap".
+	data, err := io.ReadAll(io.LimitReader(file, MaxThemeUploadSize+1))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read zip data: %w", err)
+	}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty archive")
+	}
+	if len(data) > MaxThemeUploadSize {
+		return nil, fmt.Errorf("archive exceeds maximum size of %d bytes", MaxThemeUploadSize)
 	}
 
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
@@ -250,30 +273,72 @@ func (s *ThemeMgmtService) InstallFromZip(file io.Reader, filename string) (*mod
 	if manifest.Slug == "" {
 		return nil, fmt.Errorf("theme.json missing required 'slug' field")
 	}
+	if !isValidSettingsKey(manifest.Slug) {
+		return nil, fmt.Errorf("theme slug %q contains invalid characters", manifest.Slug)
+	}
 
-	// Copy extracted theme to final destination.
+	// Atomic swap: copy into themes/<slug>.deploy.tmp, then rename. Both paths
+	// live under themesDir so the rename never crosses a filesystem boundary.
 	destDir := filepath.Join(s.themesDir, manifest.Slug)
-	if err := os.RemoveAll(destDir); err != nil {
-		return nil, fmt.Errorf("failed to clean destination dir: %w", err)
-	}
-	if err := copyDir(manifestDir, destDir); err != nil {
-		return nil, fmt.Errorf("failed to copy theme to %s: %w", destDir, err)
+	stagingDir := destDir + ".deploy.tmp"
+	backupDir := destDir + ".deploy.old"
+
+	_ = os.RemoveAll(stagingDir)
+	_ = os.RemoveAll(backupDir)
+
+	if err := copyDir(manifestDir, stagingDir); err != nil {
+		_ = os.RemoveAll(stagingDir)
+		return nil, fmt.Errorf("failed to copy theme to %s: %w", stagingDir, err)
 	}
 
-	// Create DB record.
-	theme := models.Theme{
-		Slug:        manifest.Slug,
-		Name:        manifest.Name,
-		Description: manifest.Description,
-		Version:     manifest.Version,
-		Author:      manifest.Author,
-		Source:      "upload",
-		Path:        destDir,
+	hadExisting := false
+	if _, statErr := os.Stat(destDir); statErr == nil {
+		hadExisting = true
+		if err := os.Rename(destDir, backupDir); err != nil {
+			_ = os.RemoveAll(stagingDir)
+			return nil, fmt.Errorf("backup existing theme dir: %w", err)
+		}
 	}
-	if err := s.db.Create(&theme).Error; err != nil {
-		// Clean up on DB failure.
-		os.RemoveAll(destDir)
-		return nil, fmt.Errorf("failed to create theme record: %w", err)
+	if err := os.Rename(stagingDir, destDir); err != nil {
+		if hadExisting {
+			_ = os.Rename(backupDir, destDir)
+		}
+		_ = os.RemoveAll(stagingDir)
+		return nil, fmt.Errorf("swap in deployed theme dir: %w", err)
+	}
+	if hadExisting {
+		_ = os.RemoveAll(backupDir)
+	}
+
+	// Upsert the DB record. Re-deploying an existing theme refreshes its
+	// metadata in place so the theme registry survives across deploys.
+	var theme models.Theme
+	switch err := s.db.Where("slug = ?", manifest.Slug).First(&theme).Error; err {
+	case nil:
+		theme.Name = manifest.Name
+		theme.Description = manifest.Description
+		theme.Version = manifest.Version
+		theme.Author = manifest.Author
+		theme.Path = destDir
+		if err := s.db.Save(&theme).Error; err != nil {
+			return nil, fmt.Errorf("failed to refresh theme record: %w", err)
+		}
+	case gorm.ErrRecordNotFound:
+		theme = models.Theme{
+			Slug:        manifest.Slug,
+			Name:        manifest.Name,
+			Description: manifest.Description,
+			Version:     manifest.Version,
+			Author:      manifest.Author,
+			Source:      "upload",
+			Path:        destDir,
+		}
+		if err := s.db.Create(&theme).Error; err != nil {
+			os.RemoveAll(destDir)
+			return nil, fmt.Errorf("failed to create theme record: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("failed to look up theme: %w", err)
 	}
 
 	return &theme, nil

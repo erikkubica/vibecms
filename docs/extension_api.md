@@ -355,3 +355,101 @@ p.host.Subscribe(ctx, "forms:submitted", func(payload map[string]any) {
 ```
 
 See `docs/forms.md` for the full public API reference.
+
+## 8. Deploying via MCP
+
+For extensions and themes that live **outside** the primary Squilla repository — e.g. a one-off design handoff, a customer-specific extension, or a private add-on you don't want in CI — the MCP server exposes two deploy tools:
+
+| Tool | Purpose |
+|------|---------|
+| `core.theme.deploy` | Upload + register + (optionally) activate a theme |
+| `core.extension.deploy` | Upload + register + (optionally) hot-activate an extension |
+
+Both tools accept a base64-encoded ZIP archive in `body_base64` and an optional `activate: true`. The HTTP `/admin/api/themes/upload` and `/admin/api/extensions/upload` multipart endpoints share the same install pipeline; pick whichever transport fits your client.
+
+### Workflow
+
+```
+build the directory locally
+  ↓
+zip it (manifest at root or one wrapper directory deep)
+  ↓
+base64-encode the bytes
+  ↓
+core.{theme,extension}.deploy({body_base64, activate: true})
+  ↓
+Squilla unpacks → atomic dir swap → registers row → (optional) hot-activate
+```
+
+### Theme deploy example
+
+```json
+{
+  "tool": "core.theme.deploy",
+  "arguments": {
+    "body_base64": "UEsDBBQAAAA...==",
+    "activate": true
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "theme":            { "id": 7, "slug": "mytheme", "name": "My Theme", "is_active": true, ... },
+  "activated":        true,
+  "restart_required": false
+}
+```
+
+### Extension deploy example
+
+```json
+{
+  "tool": "core.extension.deploy",
+  "arguments": {
+    "body_base64": "UEsDBBQAAAA...==",
+    "activate": true
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "extension":        { "slug": "myext", "name": "My Extension", "is_active": true, ... },
+  "activated":        true,
+  "restart_required": false
+}
+```
+
+### Safety guarantees
+
+The install pipeline enforces every check needed to accept untrusted archives:
+
+| Check | Behaviour |
+|-------|-----------|
+| **Slug validation** | The `slug` declared in the manifest must match `[A-Za-z0-9_-]+` and be ≤ 128 chars. A hostile manifest cannot escape `themes/` or `extensions/` via `../`. |
+| **Zip-slip** | Every entry's destination is checked against the staging directory. Archives containing `../escape.txt` are rejected with `zip slip detected`. |
+| **Size cap** | 50 MB per archive (theme and extension). Configurable via `MaxThemeUploadSize` / `MaxExtensionUploadSize` constants in `internal/cms/`. |
+| **Per-file zip-bomb cap** | Each file is bounded to 256 MB during extraction (shared limit across both installers). |
+| **Atomic directory swap** | Archives are extracted into `<dest>.deploy.tmp/`, the existing dir is renamed to `<dest>.deploy.old/`, the new dir is renamed into place, and the backup is removed. The fs watcher and theme/extension loader never observe a partial directory. |
+| **Plugin chmod** | For extensions, every `manifest.plugins[].binary` path inside the archive is `chmod 0755` so the host can spawn the gRPC subprocess without an out-of-band step. |
+| **Idempotent re-deploy** | Re-deploying the same slug refreshes the existing DB row in place (name/version/description/path) and overwrites files via the same atomic swap. |
+
+### Limitations
+
+- **gRPC plugin binaries must be pre-built for the host.** Squilla does not cross-compile. If your extension ships a `bin/<plugin>` declared in `manifest.plugins[]`, build it for the deployment target (typically `linux/amd64` for Docker) before zipping.
+- **Re-deploying an active extension overwrites running plugin binaries on disk.** The currently-running gRPC subprocess is unaffected (the binary is `mmap`'d), but the next `HotActivate` will pick up the new version. To force the new binary to take effect immediately: `core.extension.deactivate(slug) → core.extension.deploy(...) → core.extension.activate(slug)`.
+- **Themes carry no plugin binaries**, so deploys never need a deactivate/reactivate dance.
+- The deploy tools require the MCP token's scope to be `full` — `read` and `content` scopes will be rejected.
+
+### When NOT to use deploy
+
+| Situation | Better tool |
+|-----------|-------------|
+| The theme/extension already lives under `themes/` or `extensions/` and you just need to register it | `core.theme.rescan` / `core.extension.rescan` (no upload, no swap) |
+| You want to publish a new version through CI | Commit to git + redeploy the container; the on-disk drop-in watcher handles registration |
+| You're iterating on a theme during local dev | `npm run dev` with a host-mounted volume — the watcher picks up changes without an MCP round-trip |

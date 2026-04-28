@@ -98,6 +98,7 @@ func New(deps Deps) *Server {
 
 	s.registerCoreTools()
 	s.registerSystemTools()
+	s.registerDeployTools()
 	s.registerRenderTools()
 	s.registerGuideTools()
 	s.registerResources()
@@ -170,6 +171,14 @@ discovery calls and primes you with what exists before you mutate anything.
 3. SWITCH THE SITE'S LOOK
    core.theme.list        → find id
    core.theme.activate(id)  (NO restart required for themes)
+
+3b. DEPLOY A THEME OR EXTENSION FROM AN OUT-OF-REPO PACKAGE
+   (build the directory locally → zip → base64 → MCP)
+   core.theme.deploy { body_base64, activate?:true }
+   core.extension.deploy { body_base64, activate?:true }
+   Both unpack into themes/<slug>/ or extensions/<slug>/ via an atomic
+   directory swap, register the row, optionally hot-activate. 50 MB cap.
+   gRPC plugin binaries must already be compiled for the host's OS/arch.
 
 4. ADD/EDIT A CUSTOM NODE TYPE ("post type")
    core.nodetype.list / .get to inspect existing schemas first

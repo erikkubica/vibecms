@@ -166,6 +166,8 @@ Squilla exposes ~75 MCP tools across 17 domains, all under the `core.<domain>.<v
 |------|-------------|
 | `core.theme.list` / `.active` / `.get` | Inspect themes |
 | `core.theme.activate` / `.deactivate` | Hot-swap themes (no app restart) |
+| `core.theme.deploy` | Ship a packaged theme (base64 ZIP) into `themes/<slug>/` and optionally activate — atomic dir swap, no docker cp, no git push |
+| `core.theme.rescan` | Re-scan `themes/` and upsert rows for any directory dropped on disk |
 | `core.layout.list` / `.get` / `.create` / `.update` / `.delete` / `.detach` / `.reattach` | Manage page layouts |
 | `core.block_types.list` / `.get` / `.create` / `.update` / `.delete` / `.detach` / `.reattach` | Manage content block types |
 | `core.field_types.list` | List built-in field types and their `how_to` guides |
@@ -176,6 +178,8 @@ Squilla exposes ~75 MCP tools across 17 domains, all under the `core.<domain>.<v
 |------|-------------|
 | `core.extension.list` / `.get` | Inspect extensions (active/inactive) |
 | `core.extension.activate` / `.deactivate` | Hot activate/deactivate (no app restart; subprocess only) |
+| `core.extension.deploy` | Ship a packaged extension (base64 ZIP) into `extensions/<slug>/` and optionally hot-activate — atomic dir swap, plugin binaries chmod'd, no docker cp, no git push |
+| `core.extension.rescan` | Re-scan `extensions/` and upsert rows for any directory dropped on disk |
 
 ### Users, Data, Plumbing
 
@@ -211,6 +215,21 @@ Squilla exposes ~75 MCP tools across 17 domains, all under the `core.<domain>.<v
 1. core.nodetype.create(slug="recipe", label="Recipe", field_schema=[...])
 2. core.node.create(node_type="recipe", title="Pho Bo", fields_data={...})
 3. core.render.node_preview(id=<recipe_id>) → verify
+```
+
+**Deploy a theme built outside the primary repo:**
+```
+1. (locally) zip -r mytheme.zip mytheme/   # contains theme.json
+2. core.theme.deploy(body_base64=<base64(mytheme.zip)>, activate=true)
+3. core.render.node_preview(id=<home_node>) → verify the new look
+```
+
+**Deploy an extension built outside the primary repo:**
+```
+1. (locally) build the gRPC plugin for the host's OS/arch (e.g. linux/amd64)
+2. (locally) zip -r myext.zip myext/       # extension.json + bin/myext + admin-ui/dist
+3. core.extension.deploy(body_base64=<base64(myext.zip)>, activate=true)
+4. core.extension.get(slug="myext") → confirm is_active=true
 ```
 
 ## Folder Structure

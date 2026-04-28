@@ -923,6 +923,12 @@ Available in **every** theme template (layouts, partials, blocks, page templates
 
 ## 13. Build & live-reload loop
 
+> **Activation is hot.** Switching themes via the admin or `core.theme.activate` MCP call takes effect immediately — no app/container restart, no plugin bounce. The asset registry swaps atomically and the new theme's CSS/JS is served on the next request.
+>
+> **Drop-in is hot too.** A startup-time fs watcher observes `themes/` and re-runs the registration scan whenever a new directory or `theme.json` appears, so `docker cp`, volume-mount updates, and git pulls register the theme without a restart. It shows up in `core.theme.list` immediately; activate it to make it serve. Ops scripts can call `core.theme.rescan` for an explicit trigger.
+>
+> The table below covers a different scenario: **editing files of an already-active theme**. The loader hashes file contents at startup and only re-upserts blocks/layouts/partials when the hash changes — which means in-place edits to layouts/blocks need an app restart for the loader to re-hash. (This is a development concern; in production, themes ship as part of the image.)
+
 Themes are loaded fresh on every app boot. Most edits flow through automatically:
 
 | What you edited | What to do | Why |

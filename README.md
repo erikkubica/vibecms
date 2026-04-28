@@ -128,7 +128,7 @@ See `docs/extension_api.md` for the full reference.
 
 ## MCP Tools (AI Interface)
 
-Squilla exposes ~50 MCP tools organized by domain. This is how AI agents interact with the CMS.
+Squilla exposes ~75 MCP tools across 17 domains, all under the `core.<domain>.<verb>` namespace. This is how AI agents interact with the CMS. The tables below highlight the most-used tools per domain — call `core.guide` for a live decision tree, recipes, and a CMS state snapshot, or `core.extension.standards` / `core.theme.standards` for authoring rules.
 
 ### Content Management
 
@@ -136,32 +136,65 @@ Squilla exposes ~50 MCP tools organized by domain. This is how AI agents interac
 |------|-------------|
 | `core.node.create` | Create a content node |
 | `core.node.update` | Update a node by ID |
-| `core.node.get` | Get a node by ID/slug/URL |
-| `core.node.list` | List nodes with filters |
-| `core.node.delete` | Soft-delete a node |
+| `core.node.get` | Fetch a node by numeric ID |
+| `core.node.query` | Search/list nodes with filters; returns `{nodes, total}` |
+| `core.node.delete` | **Permanently** delete a node (use `update` with `status='draft'` to unpublish without deleting) |
 | `core.nodetype.create` | Register a custom post type |
-| `core.nodetype.list` | List all node types |
-| `core.render.node_preview` | Preview rendered page HTML |
+| `core.nodetype.list` / `.get` / `.update` / `.delete` | Manage node type definitions |
+| `core.render.node_preview` | Preview rendered page HTML (no events, no view counts) |
+| `core.render.block` / `.layout` | Smoke-test a block or layout in isolation |
+
+### Taxonomies & Terms
+
+| Tool | Description |
+|------|-------------|
+| `core.taxonomy.create` / `.list` / `.get` / `.update` / `.delete` | Manage taxonomy definitions |
+| `core.term.create` / `.list` / `.get` / `.update` / `.delete` | Manage taxonomy term rows |
+
+### Menus, Settings, Media, Files
+
+| Tool | Description |
+|------|-------------|
+| `core.menu.create` / `.list` / `.get` / `.update` / `.delete` / `.upsert` | Manage menus; `upsert` is idempotent and resolves `page:"<slug>"` items to NodeIDs |
+| `core.settings.get` / `.list` / `.set` | Site settings |
+| `core.media.upload` / `.import_url` / `.get` / `.query` / `.delete` | Media library |
+| `core.files.store` / `.delete` | Raw file storage (no DB record) |
 
 ### Theme & Layout
 
 | Tool | Description |
 |------|-------------|
-| `core.theme.list` | List installed themes |
-| `core.theme.active` | Get active theme |
-| `core.theme.activate` | Activate a theme (no restart) |
-| `core.theme.standards` | Get theme dev standards |
-| `core.layout.list` | List registered layouts |
-| `core.block_types.list` | List block types |
-| `core.guide` | Meta-tool: decision tree + CMS state snapshot |
+| `core.theme.list` / `.active` / `.get` | Inspect themes |
+| `core.theme.activate` / `.deactivate` | Hot-swap themes (no app restart) |
+| `core.layout.list` / `.get` / `.create` / `.update` / `.delete` / `.detach` / `.reattach` | Manage page layouts |
+| `core.block_types.list` / `.get` / `.create` / `.update` / `.delete` / `.detach` / `.reattach` | Manage content block types |
+| `core.field_types.list` | List built-in field types and their `how_to` guides |
 
 ### Extensions
 
 | Tool | Description |
 |------|-------------|
-| `core.extension.list` | List extensions (active/inactive) |
-| `core.extension.activate` | Activate extension (no restart) |
-| `core.extension.deactivate` | Deactivate extension |
+| `core.extension.list` / `.get` | Inspect extensions (active/inactive) |
+| `core.extension.activate` / `.deactivate` | Hot activate/deactivate (no app restart; subprocess only) |
+
+### Users, Data, Plumbing
+
+| Tool | Description |
+|------|-------------|
+| `core.user.get` / `.query` | Read-only user lookup |
+| `core.data.get` / `.query` / `.create` / `.update` / `.delete` | Low-level table access (prefer typed tools when available) |
+| `core.email.send` | Dispatch via active email provider extension |
+| `core.http.fetch` | Outbound HTTP (capability-gated) |
+| `core.event.emit` | Emit a custom event onto the bus |
+| `core.filter.apply` | Run a registered filter chain against a value |
+
+### Meta
+
+| Tool | Description |
+|------|-------------|
+| `core.guide` | Decision tree + recipes + live CMS state snapshot |
+| `core.theme.standards` | Theme authoring standards (Rules 1.5/1.6, etc.) |
+| `core.extension.standards` | Extension authoring standards (manifest, capabilities, hot deploy) |
 
 ### AI Workflow Examples
 
@@ -169,15 +202,15 @@ Squilla exposes ~50 MCP tools organized by domain. This is how AI agents interac
 ```
 1. core.theme.list → find theme ID
 2. core.theme.activate(id) → activates theme, seeds node types + content
-3. core.node.list(type="trip") → verify trips were created
-4. core.render.node_preview(url="/trips/hanoi-street-food") → check rendering
+3. core.node.query(node_type="trip") → verify trips were created
+4. core.render.node_preview(id=<trip_id>) → check rendering
 ```
 
 **Add a new content type:**
 ```
 1. core.nodetype.create(slug="recipe", label="Recipe", field_schema=[...])
 2. core.node.create(node_type="recipe", title="Pho Bo", fields_data={...})
-3. core.render.node_preview(url="/recipes/pho-bo") → verify
+3. core.render.node_preview(id=<recipe_id>) → verify
 ```
 
 ## Folder Structure
@@ -191,7 +224,7 @@ internal/              Core kernel
   models/              GORM models
   auth/                Session auth, RBAC
   events/              Event bus
-  mcp/                 MCP tool server (~50 tools)
+  mcp/                 MCP tool server (~75 tools across 17 domains)
 extensions/            Feature extensions (see extensions/README.md)
 themes/                Theme repository
 admin-ui/              React SPA shell

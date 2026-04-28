@@ -86,7 +86,11 @@ extensions/
 4. **Deactivation** — `extension.deactivated` fires (so other extensions can clean up); Tengo scripts unload; the plugin's `Shutdown()` is called and the process exits; block/template/layout/partial rows are removed; public and admin routes go cold (return `503` until reactivation).
 5. **Crash isolation** — if your plugin panics, only your extension is affected. The kernel and other extensions keep running. You'll see the crash in `docker compose logs app` with the plugin's slug prefix.
 
-**Hot-swap** of binaries works in development: rebuild your binary and restart the app (or `docker compose restart app`). The migrations system is idempotent, so re-activation is safe.
+**Activation is hot.** `core.extension.activate` (or the admin toggle) spawns the plugin gRPC subprocess via go-plugin, runs migrations, loads scripts, and registers blocks — all without bouncing the app. Deactivation kills only that subprocess. The migrations system is idempotent, so reactivation is safe.
+
+**Drop-in is hot too.** A startup-time fs watcher observes `extensions/` and re-runs the loader scan whenever a new directory or `extension.json` appears, so `docker cp`, volume-mount updates, and git pulls are picked up live. The new extension shows up in `core.extension.list` with `is_active=false`; activate it to start the plugin. Ops scripts that prefer an explicit trigger can call `core.extension.rescan`.
+
+**In development**, after rebuilding `bin/<slug>` you can either deactivate+reactivate the extension or `docker compose restart app` — both reattach the freshly-built binary. See §17's `hot_deploy` recipe.
 
 ---
 

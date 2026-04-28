@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { Plus, ListPlus } from "@vibecms/icons";
-import { typeLabelMap } from "./builder/types";
 import FieldList from "./builder/FieldList";
 import AddFieldForm from "./builder/AddFieldForm";
 
-const { Button, Card, CardContent, SectionHeader, Chip, EmptyState } =
+const { Button, EmptyState } =
   (window as any).__VIBECMS_SHARED__.ui;
 
 export default function BuilderTab({ form, setForm }: any) {
@@ -87,76 +86,48 @@ export default function BuilderTab({ form, setForm }: any) {
     setAddingField(false);
   };
 
-  const hasFields = fields.length > 0;
-
   return (
-    <div
-      className={
-        hasFields
-          ? "grid gap-5 md:grid-cols-[minmax(0,1fr)_240px]"
-          : "grid gap-5"
-      }
-    >
-      {/* Main field list — unwrapped, blocks-builder style */}
-      <div className="min-w-0 space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[12px] font-semibold uppercase tracking-wide" style={{ color: "var(--fg-muted)" }}>
-            Fields ({fields.length})
-          </h3>
-        </div>
-
-        {fields.length === 0 && !addingField && (
-          <EmptyState
-            icon={ListPlus}
-            title="No fields yet"
-            description="Add your first field below"
-          />
-        )}
-
-        <FieldList
-          fields={fields}
-          editingFieldIndex={editingFieldIndex}
-          onToggleEdit={handleToggleEdit}
-          onRemove={handleRemoveField}
-          onMoveUp={(index) => handleMoveField(index, "up")}
-          onMoveDown={(index) => handleMoveField(index, "down")}
-          onReorder={handleReorderField}
-          onDuplicate={handleDuplicateField}
-          updateField={updateField}
-        />
-
-        {addingField ? (
-          <AddFieldForm
-            existingKeys={fields.map((f: any) => f.id)}
-            onAdd={handleAddField}
-            onCancel={() => setAddingField(false)}
-          />
-        ) : (
-          <Button
-            variant="outline"
-            className="w-full border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer"
-            onClick={() => setAddingField(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add Field
-          </Button>
-        )}
+    <div className="space-y-2 min-w-0">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[12px] font-semibold uppercase tracking-wide" style={{ color: "var(--fg-muted)" }}>
+          Fields ({fields.length})
+        </h3>
       </div>
 
-      {/* Summary sidebar */}
-      {hasFields && (
-        <div className="min-w-0">
-          <Card className="rounded-xl border border-slate-200 shadow-sm sticky top-6">
-            <SectionHeader title="Fields Summary" />
-            <CardContent className="p-3 space-y-1.5">
-              {fields.map((f: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-[12px]">
-                  <span className="text-slate-700 truncate">{f.label || "Untitled"}</span>
-                  <Chip>{typeLabelMap[f.type] || f.type}</Chip>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+      {fields.length === 0 && !addingField && (
+        <EmptyState
+          icon={ListPlus}
+          title="No fields yet"
+          description="Add your first field below"
+        />
+      )}
+
+      <FieldList
+        fields={fields}
+        editingFieldIndex={editingFieldIndex}
+        onToggleEdit={handleToggleEdit}
+        onRemove={handleRemoveField}
+        onMoveUp={(index) => handleMoveField(index, "up")}
+        onMoveDown={(index) => handleMoveField(index, "down")}
+        onReorder={handleReorderField}
+        onDuplicate={handleDuplicateField}
+        updateField={updateField}
+      />
+
+      {addingField ? (
+        <AddFieldForm
+          existingKeys={fields.map((f: any) => f.id)}
+          onAdd={handleAddField}
+          onCancel={() => setAddingField(false)}
+        />
+      ) : (
+        <Button
+          variant="outline"
+          className="w-full border-dashed border-slate-300 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer"
+          onClick={() => setAddingField(true)}
+        >
+          <Plus className="mr-2 h-4 w-4" /> Add Field
+        </Button>
       )}
     </div>
   );

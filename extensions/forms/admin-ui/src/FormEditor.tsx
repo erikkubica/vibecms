@@ -9,19 +9,28 @@ import {
   Eye,
   Webhook,
   Download,
-  FileText,
+  Trash2,
 } from "@vibecms/icons";
+import { typeLabelMap } from "./tabs/builder/types";
 
 const {
   Button,
   Card,
   CardContent,
   SectionHeader,
+  Separator,
+  Chip,
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
   LoadingRow,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } = (window as any).__VIBECMS_SHARED__.ui;
 const { useParams, useNavigate } = (window as any).__VIBECMS_SHARED__
   .ReactRouterDOM;
@@ -48,6 +57,8 @@ export default function FormEditor() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(id ? true : false);
   const [saving, setSaving] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     name: "",
     slug: "",
@@ -68,6 +79,8 @@ export default function FormEditor() {
       error_message: "Oops! Something went wrong.",
       redirect_url: "",
     } as Record<string, any>,
+    created_at: "" as string,
+    updated_at: "" as string,
   });
 
   const initialFormRef = useRef<any>(null);
@@ -202,6 +215,28 @@ export default function FormEditor() {
     navigate("/admin/ext/forms");
   };
 
+  const handleDelete = async () => {
+    if (!id || id === "new") return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/admin/api/ext/forms/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        toast.success("Form deleted");
+        navigate("/admin/ext/forms");
+      } else {
+        toast.error("Failed to delete form");
+      }
+    } catch {
+      toast.error("Failed to delete form");
+    } finally {
+      setDeleting(false);
+      setShowDelete(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="w-full pb-8">
@@ -297,23 +332,23 @@ export default function FormEditor() {
       )}
 
           <Tabs defaultValue="builder" className="w-full mt-1">
-            <TabsList className="grid w-full grid-cols-6 rounded-xl bg-slate-100 p-1 mb-4">
-              <TabsTrigger value="builder" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <TabsList className="grid w-full grid-cols-6 mb-4">
+              <TabsTrigger value="builder">
                 <ListPlus className="mr-1.5 h-3.5 w-3.5" /> Builder
               </TabsTrigger>
-              <TabsTrigger value="layout" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="layout">
                 <Layout className="mr-1.5 h-3.5 w-3.5" /> Layout
               </TabsTrigger>
-              <TabsTrigger value="preview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="preview">
                 <Eye className="mr-1.5 h-3.5 w-3.5" /> Preview
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="notifications">
                 <Mail className="mr-1.5 h-3.5 w-3.5" /> Notifs
               </TabsTrigger>
-              <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="settings">
                 <Settings className="mr-1.5 h-3.5 w-3.5" /> Settings
               </TabsTrigger>
-              <TabsTrigger value="webhooks" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="webhooks">
                 <Webhook className="mr-1.5 h-3.5 w-3.5" /> Webhooks
               </TabsTrigger>
             </TabsList>
@@ -341,23 +376,10 @@ export default function FormEditor() {
 
         {/* Sidebar (col 2) */}
         <div className="space-y-4">
+          {/* Publish card — canonical pattern */}
           <Card>
             <SectionHeader title="Publish" />
             <CardContent className="space-y-4 p-4">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500 shrink-0">
-                  <FileText className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-medium truncate" style={{ color: "var(--fg)" }}>
-                    {form.name || "Untitled Form"}
-                  </p>
-                  <p className="text-[11px]" style={{ color: "var(--fg-subtle)" }}>
-                    {form.slug ? `/${form.slug}` : "no slug yet"}
-                  </p>
-                </div>
-              </div>
-
               <div className="relative">
                 {isDirty && (
                   <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-400 border border-white z-10" />
@@ -368,21 +390,73 @@ export default function FormEditor() {
                   disabled={saving}
                 >
                   <Save className="mr-1.5 h-3.5 w-3.5" />
-                  {saving ? "Saving…" : "Save Form"}
+                  {saving ? "Saving…" : "Save"}
                 </Button>
               </div>
 
-              <Button variant="outline" className="w-full rounded-lg font-medium h-8 text-xs" onClick={handleCancel}>
-                Cancel
-              </Button>
+              {isEdit && (
+                <>
+                  <Separator />
+                  <Button
+                    variant="outline"
+                    className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
+                    onClick={() => setShowDelete(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </>
+              )}
 
+              {isEdit && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <div className="flex justify-between">
+                      <span>Fields</span>
+                      <span className="text-slate-600">{form.fields?.length || 0}</span>
+                    </div>
+                    {form.created_at && (
+                      <div className="flex justify-between">
+                        <span>Created</span>
+                        <span className="text-slate-600">{new Date(form.created_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {form.updated_at && (
+                      <div className="flex justify-between">
+                        <span>Updated</span>
+                        <span className="text-slate-600">{new Date(form.updated_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
+          {/* Fields summary — visible on every tab */}
+          {form.fields && form.fields.length > 0 && (
+            <Card>
+              <SectionHeader title={`Fields (${form.fields.length})`} />
+              <CardContent className="p-3 space-y-1.5">
+                {form.fields.map((f: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2 text-[12px] min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate text-slate-700 font-medium">{f.label || "Untitled"}</div>
+                      <div className="truncate text-[10.5px] font-mono" style={{ color: "var(--fg-subtle)" }}>{f.id || f.key || "—"}</div>
+                    </div>
+                    <Chip>{typeLabelMap[f.type] || f.type}</Chip>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Actions card */}
           {isEdit && (
             <Card>
               <SectionHeader title="Actions" />
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -398,6 +472,31 @@ export default function FormEditor() {
           )}
         </div>
       </div>
+
+      {/* Delete dialog */}
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Form</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{form.name}&quot;?
+              This will also delete all submissions for this form. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

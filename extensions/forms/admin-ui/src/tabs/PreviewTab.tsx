@@ -132,9 +132,12 @@ export default function PreviewTab({ form }: any) {
   }, [fetchPreview]);
 
   const darkClass = darkMode ? "dark bg-gray-900 text-gray-100" : "";
+  // Always load Tailwind CDN — form layouts are authored in raw Tailwind utility
+  // classes. The theme's <head> (returned as previewHead) is appended after, so
+  // theme-specific styles still apply on top.
   const iframeSrcDoc =
     previewHtml || error
-      ? `<!doctype html><html><head><meta charset="utf-8">${previewHead || '<script src="https://cdn.tailwindcss.com"></script>'}<style>body{margin:0;padding:1.5rem;} form button[type="submit"],form input[type="submit"]{pointer-events:none;opacity:0.7;}</style></head><body class="${[previewBodyClass, darkClass].filter(Boolean).join(" ")}">${previewHtml || ""}</body></html>`
+      ? `<!doctype html><html><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script>${previewHead || ""}<style>body{margin:0;padding:1.5rem;} form button[type="submit"],form input[type="submit"]{pointer-events:none;opacity:0.7;}</style></head><body class="${[previewBodyClass, darkClass].filter(Boolean).join(" ")}">${previewHtml || ""}</body></html>`
       : "";
 
   const deviceToggle = (

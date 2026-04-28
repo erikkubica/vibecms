@@ -290,6 +290,14 @@
       // Re-evaluate on every input/change event
       form.addEventListener("input",  function () { applyVisibility(form, formFields); });
       form.addEventListener("change", function () { applyVisibility(form, formFields); });
+
+      // Stepper / custom buttons (e.g. number +/-) often set `input.value =`
+      // programmatically, which does NOT dispatch input/change events. Re-run
+      // visibility on the next tick after any click inside the form so those
+      // updates still trigger conditional fields.
+      form.addEventListener("click", function () {
+        setTimeout(function () { applyVisibility(form, formFields); }, 0);
+      });
     }
 
     form.addEventListener("submit", async function (e) {

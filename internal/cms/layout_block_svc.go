@@ -23,8 +23,19 @@ type LayoutBlockService struct {
 }
 
 // NewLayoutBlockService creates a new LayoutBlockService with the given database connection.
+//
+// Subscribes to theme.activated / theme.deactivated so the resolver cache is
+// flushed whenever a theme registers or unregisters partials. Mirrors
+// LayoutService — see that constructor for the full rationale (fresh-DB
+// activation otherwise leaves cached nil misses for partials and renders
+// silently fail until an admin detaches/re-saves).
 func NewLayoutBlockService(db *gorm.DB, eventBus *events.EventBus, themeAssets *ThemeAssetRegistry) *LayoutBlockService {
-	return &LayoutBlockService{db: db, eventBus: eventBus, themeAssets: themeAssets}
+	s := &LayoutBlockService{db: db, eventBus: eventBus, themeAssets: themeAssets}
+	if eventBus != nil {
+		eventBus.Subscribe("theme.activated", func(_ string, _ events.Payload) { s.InvalidateCache() })
+		eventBus.Subscribe("theme.deactivated", func(_ string, _ events.Payload) { s.InvalidateCache() })
+	}
+	return s
 }
 
 // List retrieves layout blocks with optional filters for language_id and source.

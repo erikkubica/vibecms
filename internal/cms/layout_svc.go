@@ -23,8 +23,20 @@ type LayoutService struct {
 }
 
 // NewLayoutService creates a new LayoutService with the given database connection.
+//
+// Subscribes to theme.activated / theme.deactivated so the resolver cache is
+// flushed whenever a theme registers or unregisters layouts. Without this,
+// any cache miss recorded BEFORE the theme registered (e.g. on a fresh DB
+// where the resolver was warmed by a request before the user activated the
+// theme in the admin) would persist as a permanent nil — leaving freshly-
+// imported layouts invisible until something else mutated them.
 func NewLayoutService(db *gorm.DB, eventBus *events.EventBus, themeAssets *ThemeAssetRegistry) *LayoutService {
-	return &LayoutService{db: db, eventBus: eventBus, themeAssets: themeAssets}
+	s := &LayoutService{db: db, eventBus: eventBus, themeAssets: themeAssets}
+	if eventBus != nil {
+		eventBus.Subscribe("theme.activated", func(_ string, _ events.Payload) { s.InvalidateCache() })
+		eventBus.Subscribe("theme.deactivated", func(_ string, _ events.Payload) { s.InvalidateCache() })
+	}
+	return s
 }
 
 // List retrieves layouts with optional filters for language_id and source.

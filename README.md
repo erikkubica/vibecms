@@ -260,7 +260,7 @@ See `extensions/README.md` for the complete guide and `docs/extension_api.md` fo
 | `docs/database-schema.md` | Database schema reference (27 GORM models, 38 migrations) |
 | `docs/security.md` | Security posture and PR-time checklist |
 | `extensions/README.md` | Extension development guide (alternative entry to `docs/extension_api.md`) |
-| `docs/archive/` | Historical planning docs (March 2026) — kept for reference, do not consult for current behavior |
+| `themes/README.md` | Theme development guide (layouts, blocks, partials, Tengo seeding, forms wiring) |
 
 ## License
 

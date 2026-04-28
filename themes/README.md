@@ -546,7 +546,7 @@ taxonomies.register({
 })
 ```
 
-> **Known limitation (2026-04-27)**: there is no `core/terms` Tengo module yet, so taxonomy *terms* (the actual `Foodie`, `Adventure` rows) must be created via the admin or MCP after first boot. Templates that derive pills from seeded node fields (`distinct_field` filter) bypass this gracefully — see hello-vietnam's `hv-trips-filter` block.
+> **Known limitation**: there is no `core/terms` Tengo module yet, so taxonomy *terms* (the actual `Foodie`, `Adventure` rows) must be created via the admin or MCP after first boot. Templates that derive pills from seeded node fields (`distinct_field` filter) bypass this gracefully — see hello-vietnam's `hv-trips-filter` block.
 
 #### Seed site settings (idempotent)
 
@@ -741,7 +741,7 @@ hero_image: { url: "theme-asset:hero-grandma", alt: "Vietnamese grandma cooking"
 
 **Why this matters**: the indirection survives theme switches (the resolver swaps atomically), and lets the media-manager reroute the URL through cache/optimisation pipelines without touching your templates.
 
-> **Anti-pattern** (caught in the audit that produced this guide): hardcoding `/theme/assets/images/hero.webp` inside a `view.html` instead of declaring an `image` field. It works… until an editor wants to swap the photo, until you switch themes, until the file moves.
+> **Anti-pattern**: hardcoding `/theme/assets/images/hero.webp` inside a `view.html` instead of declaring an `image` field. It works… until an editor wants to swap the photo, until you switch themes, until the file moves.
 
 ### 9.3 Image transformations
 
@@ -979,7 +979,7 @@ Twelve rules, the difference between "it works on my machine" and "ships clean f
 9. **Menu items use `page: "<slug>"`, not `url: "/<slug>"`.** Menus survive page renames.
 10. **`safeHTML` only on fields you trust.** Prefer Go's auto-escaping. Mark HTML-bearing fields explicitly in `block.json` `help`.
 11. **Block-scoped CSS goes in `blocks/<slug>/style.css`.** Site-wide CSS goes in `assets/styles/theme.css`. Don't dump `<style>` blocks inside `view.html`.
-12. **No dead schema fields.** If you remove a field from `view.html`, remove it from `block.json`, the `templates/*.json`, and the `theme.tengo` seed. The audit caught Hello Vietnam shipping ten dead fields on `hv-contact-form` because the rule was bent.
+12. **No dead schema fields.** If you remove a field from `view.html`, remove it from `block.json`, the `templates/*.json`, and the `theme.tengo` seed. Schema and template must agree.
 
 **This is the way.**
 

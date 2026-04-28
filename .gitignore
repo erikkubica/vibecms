@@ -12,7 +12,13 @@ storage/cache/*
 tmp/
 .superpowers/
 .planning/
-.claude/
+# .claude — track team-wide assets, ignore personal/runtime state
+.claude/*
+!.claude/skills/
+!.claude/commands/
+!.claude/agents/
+!.claude/hooks/
+!.claude/settings.json
 start-claude.sh
 node_modules/
 extensions/*/admin-ui/node_modules/
@@ -26,4 +32,5 @@ extensions/*/admin-ui/dist/
 *.png
 .playwright-mcp/
 .playwright-cli/
-.claude/scheduled_tasks.lock
+.idea
+preview-test

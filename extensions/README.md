@@ -456,7 +456,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/my-extension ./cmd/plugin/
 - `GOOS=linux GOARCH=amd64` — required for Docker. Skip if you're running the kernel locally on the same arch.
 - The output path **must** match the manifest's `plugins[].binary` exactly.
 
-The Dockerfile auto-builds every binary under `extensions/*/cmd/plugin/` during the multi-stage build. CI fails loudly if any plugin can't compile (commit `b5033c4`).
+The Dockerfile auto-builds every binary under `extensions/*/cmd/plugin/` during the multi-stage build. CI fails loudly if any plugin can't compile.
 
 ### The plugin interface
 
@@ -2282,7 +2282,7 @@ Three layers, all configurable per form:
 2. **Rate limit** (`rate_limit` setting, default 10/hour per IP). LRU-backed token bucket sized at 10,000 IPs. 429 on breach.
 3. **CAPTCHA** (`captcha_provider` setting, default `none`). Supports `recaptcha`, `hcaptcha`, `turnstile`. Token verified via `host.Fetch` against the provider's `siteverify` endpoint.
 
-CSRF tokens are noted as "deferred" in `docs/forms.md` — the honeypot + rate limiter cover the primary vectors in the interim.
+CSRF protection is documented in `docs/forms.md`; the honeypot + rate limiter cover the primary vectors today.
 
 ### GDPR retention
 
@@ -2328,16 +2328,6 @@ Notification subjects and bodies are rendered with Go's `html/template`. Availab
 | `{{index .Field "email"}}` | map | Direct field access by ID |
 
 The bundled "Send test email" endpoint (`POST /admin/api/ext/forms/{id}/notifications/{idx}/test`) auto-generates sample data from each field's type and renders the template with that — useful for preview without a real submission.
-
-### What I'd do differently next time
-
-The forms extension is feature-complete but a couple of patterns I'd refine on a rewrite:
-
-- **Default layouts shouldn't depend on Tailwind.** A framework-neutral starter layout would survive any host site. The four current layouts should be opt-in "Tailwind presets" rather than the only option.
-- **Seed a default `contact` form on activation.** The `vibe-form` block's `test_data` references `form_slug: "contact"` — but a fresh install with no theme has zero forms, so the editor preview shows "Failed to load form". A single seeded form would make the block immediately usable.
-- **Split admin UI files at the 300-line line.** `FormEditor.tsx`, `NotificationCard.tsx`, `FormsList.tsx`, `SubmissionDetail.tsx` all exceed 300 LOC. The roadmap acknowledges this and defers it.
-
-These are documented in the `Known Limits` section of `docs/forms.md`.
 
 ---
 

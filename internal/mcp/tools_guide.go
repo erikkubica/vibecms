@@ -154,7 +154,7 @@ func guideRecipes(topic string) []map[string]any {
 			"goal":  "React to schema changes in an extension",
 			"topic": "extensions",
 			"steps": []string{"core.extension.standards"},
-			"notes": "Subscribe to node_type.{created,updated,deleted} and taxonomy.{created,updated,deleted} (added 2026-04-25). Also extension.activated, theme.activated and their deactivated counterparts.",
+			"notes": "Subscribe to node_type.{created,updated,deleted} and taxonomy.{created,updated,deleted}, plus extension.activated, theme.activated and their deactivated counterparts.",
 		},
 	}
 	if topic == "" {
@@ -198,92 +198,148 @@ func (s *Server) toolIndex() []toolCatalogEntry {
 
 func themeStandards() map[string]any {
 	return map[string]any{
-		"philosophy": "The golden rule: A theme must render correctly from a cold boot with nothing but its own files — no manual DB edits, no magic.",
+		"philosophy": "A theme is a self-bootstrapping marketing site: drop a folder under themes/, restart the app, and a complete demo site appears — pages, layouts, blocks, taxonomies, settings, menus, forms, and seeded content. The theme must render correctly from a cold boot with nothing but its own files — no manual DB edits, no magic.",
 		"structure": map[string]any{
-			"theme.json": "Manifest registering blocks, assets, and page templates.",
-			"layouts/":   "Page layouts (base.html, blank.html) using Go html/template.",
-			"partials/":  "Reusable fragments included via {{ partial \"name\" . }}.",
-			"blocks/":    "Content blocks: each with a template (view.html) and schema (block.json).",
-			"assets/":    "Static images, CSS, and JS. Use theme-asset:<key> to reference them.",
-			"templates/": "Pre-populated page JSON files for demo content.",
-			"scripts/":   "Tengo scripts (theme.tengo) for seeding and custom filters.",
+			"theme.json": "Manifest registering layouts, partials, blocks, page templates, assets, styles, and scripts.",
+			"layouts/":   "Page layouts (default.html, trip.html, etc.) using Go html/template. Sees full .node, .app, .user.",
+			"partials/":  "Reusable fragments included from a layout via {{ renderLayoutBlock \"slug\" }}. Sees full .node, .app, .user, plus .partial.",
+			"blocks/":    "Content blocks: each with a template (view.html), schema (block.json), and optional scoped style.css / script.js. Sees ONLY the block's own field values at root — .app and .node are NOT in scope.",
+			"assets/":    "Static images, CSS, JS, fonts. Reference via theme-asset:<key> for declared media; /theme/assets/<src> for declared CSS/JS.",
+			"templates/": "Page templates: pre-built block sequences editors can apply with one click. Not seeds — use theme.tengo for seeding.",
+			"scripts/":   "scripts/theme.tengo (entry — runs once on activation) plus scripts/filters/<name>.tengo for template-callable filters.",
+			"forms/":     "Optional. Theme-owned form layouts as Go templates, registered via the forms-extension handshake (events.emit \"forms:upsert\").",
 		},
 		"template_functions": []string{
-			"{{ partial \"name\" . }} - Include a partial",
-			"{{ filter \"name\" value }} - Apply a Tengo filter",
-			"{{ image_url .url \"size\" }} - Optimized image URL",
-			"{{ image_srcset .url \"size1\" \"size2\" }} - Responsive srcset",
+			"{{ renderLayoutBlock \"slug\" }} — render a partial. LAYOUT/PARTIAL ONLY. There is NO `partial` template function.",
+			"{{ filter \"name\" value }} — run a registered Tengo filter (list_nodes, get_node, distinct_field, ...).",
+			"{{ event \"name\" ctx }} — fire an event; collect HTML responses (used for forms:render, etc.). Returns template.HTML.",
+			"{{ safeHTML s }} — bypass HTML escaping. Use only on fields you trust or on event results.",
+			"{{ image_url .url \"size\" }} — cached, optimized image URL (sizes from media-manager).",
+			"{{ image_srcset .url \"size1\" \"size2\" ... }} — responsive srcset attribute value.",
+			"{{ dict k1 v1 k2 v2 ... }} — build a map literal (used to pass args to filter/event).",
+			"{{ list a b c ... }} — build a slice literal.",
+			"{{ seq n }} — range over [0..n-1].",
+			"{{ add a b }} / {{ sub a b }} / {{ mod a b }} — integer math.",
+			"{{ split sep s }} / {{ lastWord s }} / {{ beforeLastWord s }} — string helpers.",
+		},
+		"context_scoping": map[string]string{
+			"layout":  "Sees full .node (id, title, slug, fields, blocks_html, taxonomies, ...), .app (head_styles, foot_scripts, settings, menus, current_lang, theme_url, ...), .user (logged_in, role, ...).",
+			"partial": "Same as layout, plus .partial map populated from any partial-level field_schema.",
+			"block":   "Sees ONLY the block's own field values at root, e.g. {{ .heading }}, {{ .items }}. Cannot reach .app or .node. To pull node data into a block, use {{ filter \"list_nodes\" ... }} or {{ filter \"get_node\" ... }}.",
 		},
 		"core_rules": []map[string]any{
-			{
-				"id":          "1.1",
-				"title":       "Complete Test Data",
-				"description": "Every field in field_schema must have a value in test_data. Content must be on-brand (no Lorem Ipsum).",
-			},
-			{
-				"id":          "1.2",
-				"title":       "Field Declaration",
-				"description": "No field may be read in view.html that is not declared in block.json's field_schema.",
-			},
-			{
-				"id":          "1.3",
-				"title":       "No Fallback Defaults",
-				"description": "Templates must not carry hardcoded fallback strings. Gate UI parts with {{ with .field }} instead of {{ or .field 'default' }}.",
-			},
-			{
-				"id":          "1.5",
-				"title":       "Human-friendly Block Descriptions",
-				"description": "The root 'description' in block.json must summarize visual layout and functional purpose. Mandatory for CMS discovery.",
-			},
-			{
-				"id":          "1.6",
-				"title":       "Mandatory Field Help Text",
-				"description": "Every field definition must include a 'help' property with instructions for the CMS editor.",
-			},
+			{"id": "1", "title": "Every block is a complete content type.", "description": "block.json declares every field its view.html reads. Every field has a value in test_data. Every field has a help line."},
+			{"id": "2", "title": "Every template field is gated by {{with}}.", "description": "No hardcoded fallback strings in view.html. An empty field renders nothing — never canned copy like 'Click here' or 'Welcome'."},
+			{"id": "3", "title": "Every image goes through an image field with theme-asset:<key>.", "description": "Never hardcode /theme/assets/images/... in a view.html. Asset references survive theme switches and media-manager URL rewrites; hardcoded paths don't."},
+			{"id": "4", "title": "Every image asset is declared in theme.json assets[] with real alt text.", "description": "The media-manager extension imports declared assets on theme.activated. Undeclared images can't be resolved by theme-asset:<key>."},
+			{"id": "5", "title": "Every demo page has a matching templates/<slug>.json.", "description": "Editors get a one-click way to re-create your seeded pages."},
+			{"id": "6", "title": "theme.tengo is idempotent.", "description": "Existence checks for content (nodes.query → if total == 0 then create); upserts for menus/settings; force:true on forms:upsert only while developing."},
+			{"id": "7", "title": "Cross-extension rendering goes through event.", "description": "Use event \"forms:render\" for forms; never hand-roll a <form> and JS-intercept submit (submissions get silently dropped)."},
+			{"id": "8", "title": "Settings are namespaced.", "description": "Use <theme-prefix>.<dot.path> (e.g. hv.whatsapp, hv.social.instagram) so editor overrides don't collide with another theme's keys."},
+			{"id": "9", "title": "Menu items use page:\"<slug>\", not url:\"/<slug>\".", "description": "menus.upsert resolves slug → NodeID at upsert time, so renames don't break menus."},
+			{"id": "10", "title": "safeHTML only on fields you trust.", "description": "Prefer Go's auto-escaping. Mark HTML-bearing fields explicitly in block.json's help. safeHTML on user-controlled strings is XSS."},
+			{"id": "11", "title": "Block-scoped CSS goes in blocks/<slug>/style.css.", "description": "Site-wide CSS goes in assets/styles/theme.css. Don't dump <style> blocks inside view.html."},
+			{"id": "12", "title": "No dead schema fields.", "description": "If you remove a field from view.html, remove it from block.json, the templates/*.json, and the theme.tengo seed. Schema and template must agree."},
 		},
 		"examples": map[string]string{
 			"theme.json": `{
-  "name": "My Theme",
-  "slug": "my-theme",
-  "blocks": ["my-hero", "my-features"],
-  "assets": {
-    "styles": ["assets/css/main.css"]
-  }
+  "name":        "My Theme",
+  "version":     "0.1.0",
+  "description": "Minimal scaffold",
+  "author":      "You",
+  "styles":   [ { "handle": "theme-css", "src": "styles/theme.css", "position": "head" } ],
+  "scripts":  [],
+  "layouts":  [ { "slug": "default", "name": "Default", "file": "default.html", "is_default": true } ],
+  "partials": [
+    { "slug": "site-header", "name": "Site Header", "file": "site-header.html" },
+    { "slug": "site-footer", "name": "Site Footer", "file": "site-footer.html" }
+  ],
+  "blocks":    [ { "slug": "intro", "dir": "intro" } ],
+  "templates": [ { "slug": "homepage", "file": "homepage.json" } ],
+  "assets":    [ { "key": "hero", "src": "images/hero.webp", "alt": "Hero photo" } ]
 }`,
 			"block.json": `{
-  "slug": "my-hero",
-  "description": "Hero section with title, image and CTA button.",
+  "slug": "intro",
+  "name": "Intro",
+  "description": "Centered headline + body + optional image.",
+  "category": "my-theme",
   "field_schema": [
-    { "name": "title", "type": "text", "help": "Catchy headline" },
-    { "name": "cta", "type": "link", "help": "Primary call to action" }
+    { "key": "heading", "label": "Heading", "type": "text",     "help": "The H1." },
+    { "key": "body",    "label": "Body",    "type": "textarea", "help": "1-3 sentences of intro copy." },
+    { "key": "image",   "label": "Image",   "type": "image",    "help": "Hero photo." }
   ],
   "test_data": {
-    "title": "Welcome to VibeCMS",
-    "cta": { "url": "/", "text": "Get Started" }
+    "heading": "Welcome.",
+    "body":    "This is your new theme.",
+    "image":   { "url": "theme-asset:hero", "alt": "Hero photo" }
   }
 }`,
-			"view.html": `{{ with .title }}<h1>{{ . }}</h1>{{ end }}
-{{ with .cta }}<a href="{{ .url }}">{{ .text }}</a>{{ end }}`,
-			"theme.tengo": `// Seed a page
-if page_missing("home") {
-    create_page("home", "Home", "base.html", [
-        { "slug": "my-hero", "data": { "title": "Auto Seeded" } }
-    ])
-}`,
+			"view.html": `{{- $img := "" -}}{{- $alt := "" -}}{{- with .image -}}
+  {{- with .url -}}{{- $img = . -}}{{- end -}}
+  {{- with .alt -}}{{- $alt = . -}}{{- end -}}
+{{- end -}}
+<section class="intro">
+  {{ with .heading }}<h1>{{ . }}</h1>{{ end }}
+  {{ with .body }}<p>{{ . }}</p>{{ end }}
+  {{ if $img }}<img src="{{ $img }}" alt="{{ $alt }}">{{ end }}
+</section>`,
+			"theme.tengo": `nodes    := import("core/nodes")
+menus    := import("core/menus")
+settings := import("core/settings")
+
+// Idempotent setting seed
+seed_setting := func(key, value) {
+    existing := settings.get(key)
+    if existing == "" || is_error(existing) {
+        settings.set(key, value)
+    }
+}
+seed_setting("site.copyright_year", "2026")
+
+// Idempotent page seed (existence check)
+res := nodes.query({ node_type: "page", slug: "home", limit: 1 })
+if res.total == 0 {
+    home := nodes.create({
+        title: "Home", slug: "home", node_type: "page", status: "published",
+        blocks_data: [
+            { type: "intro", fields: {
+                heading: "Welcome.",
+                body:    "This is your new theme.",
+                image:   { url: "theme-asset:hero", alt: "Hero photo" }
+            } }
+        ]
+    })
+    settings.set("homepage_node_id", string(home.id))
+}
+
+// Slug-based menu (survives renames)
+menus.upsert({
+    slug: "main-nav",
+    name: "Primary Navigation",
+    items: [ { label: "Home", page: "home" } ]
+})`,
 		},
 		"field_types": []map[string]any{
-			{"type": "term", "intent": "Taxonomies", "shape": `{"name": "...", "slug": "..."}`},
-			{"type": "link", "intent": "CTAs/Buttons", "shape": `{"url": "/...", "text": "...", "target": "_self"}`},
-			{"type": "image", "intent": "Media", "shape": `{"url": "theme-asset:...", "alt": "..."}`},
-			{"type": "node", "intent": "Content Ref", "shape": `{"id": 123, "slug": "...", "title": "..."}`},
-			{"type": "gallery", "intent": "Image List", "shape": `[{"url": "...", "alt": "..."}, ...]`},
-			{"type": "repeater", "intent": "Nested Lists", "shape": "Array of objects matching sub_fields schema."},
-			{"type": "richtext", "intent": "Prose/HTML", "shape": "\"HTML string\""},
-			{"type": "toggle", "intent": "Booleans", "shape": "true | false"},
+			{"type": "text", "intent": "Single-line input", "shape": `"..."`},
+			{"type": "textarea", "intent": "Multi-line input", "shape": `"..."`},
+			{"type": "richtext", "intent": "WYSIWYG / HTML", "shape": `"<p>...</p>"`},
+			{"type": "number", "intent": "Numeric", "shape": `42`},
+			{"type": "toggle", "intent": "Boolean (switch)", "shape": `true | false`},
+			{"type": "checkbox", "intent": "Boolean (checkbox)", "shape": `true | false`},
+			{"type": "select", "intent": "Dropdown — flat string options", "shape": `"red"  // schema: "options": ["red","yellow","green"]`},
+			{"type": "radio", "intent": "Radio group", "shape": `"left"`},
+			{"type": "color", "intent": "Color picker", "shape": `"#FF0000"`},
+			{"type": "link", "intent": "CTAs/Buttons", "shape": `{"text": "Explore", "url": "/trips", "target": "_self"}`},
+			{"type": "image", "intent": "Single image (media-picker)", "shape": `{"url": "theme-asset:<key>", "alt": "..."}`},
+			{"type": "gallery", "intent": "Multi-image picker", "shape": `[{"url": "theme-asset:<key>", "alt": "..."}, ...]`},
+			{"type": "term", "intent": "Taxonomy term picker (set taxonomy + term_node_type in schema)", "shape": `{"slug": "foodie", "name": "Foodie"}`},
+			{"type": "node", "intent": "Node picker (set node_types in schema to restrict)", "shape": `{"slug": "hanoi-trip", "title": "Hanoi Street Food"}  // engine resolves id at render time`},
+			{"type": "form_selector", "intent": "Pick a form from forms-extension", "shape": `"<form-slug>"`},
+			{"type": "repeater", "intent": "Nested array of sub_fields", "shape": `[{...}, {...}]  // schema: "sub_fields": [...]`},
 		},
 		"seeding_patterns": map[string]string{
 			"registration":      "Always register taxonomies BEFORE node types that use them.",
-			"idempotency":       "Use page_missing() or node_query checks to avoid duplicate data on script re-runs.",
+			"idempotency":       "Use existence checks (e.g. nodes.query({node_type, slug, limit:1}) and branch on .total == 0) to avoid duplicate data on script re-runs. theme.tengo runs again on every restart while the theme is active.",
 			"menus":             "Use core/menus → menus.upsert({slug, name, items:[{label, page:'<slug>'}]}). The page:<slug> form resolves to NodeID at upsert so slug renames don't break menus.",
 			"wellknown":         "Use core/wellknown to register /.well-known/* handlers (e.g. apple-app-site-association). Unregistered paths return instant 404 via WellKnownRegistry, mounted before the public catch-all.",
 			"assets_module":     "Use core/assets to read files from the calling theme/extension's own root: assets.read('forms/trip-order.html') / assets.exists('data/regions.json'). Returns a string, or an error value (wrap with is_error) if missing or path escapes root. Ideal for shipping form layouts, JSON fixtures, or default content as plain files instead of inlining multi-line strings in theme.tengo. Path is relative to the theme/extension dir; absolute paths and ../ traversal are rejected.",
@@ -381,12 +437,61 @@ func extensionStandards() map[string]any {
 			"extension.deactivated": "Before cleanup. Payload: slug.",
 			"theme.activated":       "Replayed for the current theme when an extension activates at runtime. Payload: name, path, version, assets.",
 			"theme.deactivated":     "Payload: name.",
-			"node_type.created":     "Custom post type registered (added 2026-04-25). Payload: slug.",
-			"node_type.updated":     "Custom post type updated. Payload: slug.",
-			"node_type.deleted":     "Custom post type removed. Payload: slug.",
-			"taxonomy.created":      "Taxonomy registered (added 2026-04-25). Payload: slug.",
+			"node.created":          "A node is created. Payload: node_id, node_title, node_type, slug, language_code.",
+			"node.updated":          "A node's metadata or fields change. Payload: same as node.created.",
+			"node.published":        "A node transitions to status=published. Payload: same as node.created.",
+			"node.deleted":          "A node is deleted. Payload: node_id, node_title, node_type.",
+			"node_type.created":     "Custom node type registered. Payload: slug.",
+			"node_type.updated":     "Custom node type updated. Payload: slug.",
+			"node_type.deleted":     "Custom node type removed. Payload: slug.",
+			"taxonomy.created":      "Taxonomy registered. Payload: slug.",
 			"taxonomy.updated":      "Taxonomy updated. Payload: slug.",
 			"taxonomy.deleted":      "Taxonomy removed. Payload: slug.",
+			"user.registered":       "A new user signs up. Payload: user_id, email, name.",
+			"user.deleted":          "A user is removed. Payload: user_id, email.",
+		},
+		"event_modes": map[string]string{
+			"fire_and_forget":     "Subscribe via GetSubscriptions(); HandleEvent processes the payload and returns {Handled: true}. No one waits for the response. Use for analytics, notifications, side effects.",
+			"event_with_result":   "Templates can call {{ event \"my-ext:render\" (dict ...) }} and use whatever your plugin returns. Plugin returns {Handled: true, Result: bytes} where Result is HTML; the kernel concatenates Result from every subscriber in priority order and injects the combined string into the template. Reference: forms-extension's forms:render event.",
+			"priority":            "Lower number = earlier dispatch. For event-with-result, all Result bytes are concatenated in priority order. For fire-and-forget, priority controls dispatch order but kernel doesn't aggregate.",
+			"opt_out":             "Return {Handled: false} to let the next plugin in the priority chain handle the event. Return {Handled: true, Result: nil} to claim the event but contribute nothing.",
+		},
+		"http_routing": map[string]string{
+			"admin_proxy":           "Auto-mounted at /admin/api/ext/<slug>/* for every active extension. Auth required (kernel session middleware). Anonymous = 401. Plugin sees req.Path with the wildcard tail (leading /) and req.UserId of the logged-in user (or 0 if anonymous).",
+			"public_proxy":          "Mounted at the EXACT path declared in public_routes[]. NO auth. NO session. NOT under /api/... — the path you declare is the path users hit. /forms/submit/contact, /media/cache/medium/...jpg, etc. req.UserId is always 0.",
+			"common_mistake":        "Assuming public routes live under /api/ext/<slug>/...They don't. The admin proxy uses /admin/api/ext/<slug>/*; the public proxy uses whatever path you declare verbatim. Test against the real URL.",
+			"response_envelope":     "Every error response (admin or public) uses {\"error\": \"<MACHINE_CODE>\", \"message\": \"<human text>\"}. For validation errors with per-field details, add \"fields\": {\"<field-id>\": \"<error>\"}. The admin UI and public scripts both read data.error and data.message — match the shape.",
+		},
+		"asset_references": map[string]string{
+			"scheme":          "Extensions and themes both declare media in their manifest's assets[] entries. media-manager imports them on activation and tags them with the owner. Reference imported assets via the URI scheme `extension-asset:<slug>:<key>` (or `theme-asset:<key>` for themes).",
+			"key_validation":  "asset key must match ^[a-z0-9_-]+$. Path traversal in keys is rejected.",
+			"resolution":      "The render pipeline walks the JSON tree and replaces extension-asset:<slug>:<key> strings with the resolved /media/extension/<slug>/<key>.<ext> URL before data hits view.html. Templates always see real URLs.",
+			"why_use_it":      "Survives file moves (media-manager controls the path), survives WebP conversion, survives deactivation/reactivation (content-hash idempotent). Hardcoded /media/... paths in templates do NOT survive these transitions.",
+			"deactivation":    "On extension.deactivated, media-manager removes every row tagged with this extension's slug along with the underlying file. Demo content goes with the extension — by design.",
+		},
+		"core_rules": []map[string]any{
+			{"id": "1", "title": "The manifest is the contract.", "description": "Every binary, route, capability, block, custom field type, and admin UI route the extension wires up is declared in extension.json. If it's not there, the kernel can't see it."},
+			{"id": "2", "title": "Capabilities are minimal.", "description": "Declare only what your code calls. Adding a capability is cheap; explaining data:write on a read-only extension is not."},
+			{"id": "3", "title": "{\"error\": code, \"message\": text} is the public error envelope.", "description": "Every error response — admin or public — uses this shape. Clients read data.error and data.message; match the contract."},
+			{"id": "4", "title": "Public routes are mounted at the path you declare.", "description": "Not under /api/... Not under /admin/... The path in public_routes[].path is the path users hit. Test the real URL."},
+			{"id": "5", "title": "Tables are prefixed by the extension's domain.", "description": "forms, form_submissions, media_files, form_webhook_logs. Never collide with core tables (content_nodes, users, settings, menus)."},
+			{"id": "6", "title": "JSONB columns come back as strings through the data store.", "description": "Always normalize before iterating. Use a normalizeJSONBFields helper that walks declared keys and json.Unmarshal()s strings to objects. The single biggest source of '[object Object]' bugs."},
+			{"id": "7", "title": "Asset references survive theme/extension switches; hardcoded URLs don't.", "description": "Use extension-asset:<slug>:<key> and theme-asset:<key> everywhere. Never hardcode /media/extension/... paths in templates or seed data."},
+			{"id": "8", "title": "Per-extension Tailwind builds are mandatory for Docker.", "description": "The admin shell's fallback @source works in dev but disappears in the Docker frontend stage. Every admin UI ships its own dist/index.css via @tailwindcss/vite + cssFileName: \"index\"."},
+			{"id": "9", "title": "Use the design system primitives.", "description": "ListPageShell, ListHeader, ListSearch, ListFooter, EmptyState, Chip, StatusPill, RowActions, etc. Reach for them before rolling your own — visual consistency depends on it."},
+			{"id": "10", "title": "All filter / sort / view / pagination state lives in URL params.", "description": "Refresh preserves it. Default values omit the param. Use replace:true for keystrokes; use resetPage:true when changing filters."},
+			{"id": "11", "title": "Production code under 300 lines per file (500 hard limit).", "description": "Test files are exempt. Split early — forms/cmd/plugin/ is the model: handlers_<resource>.go, render.go, validation.go, etc."},
+			{"id": "12", "title": "Don't reach for a slot pattern when an event-with-result will do.", "description": "Slots couple admin UIs at build time; events couple at runtime. Pick the looser coupling."},
+		},
+		"testing": map[string]string{
+			"pattern":     "Use a FakeHost test double that implements coreapi.CoreAPI with in-memory maps. Inject it instead of a real gRPC client. Reference: extensions/forms/cmd/plugin/fakehost_test.go.",
+			"why":         "Don't spin up a real Postgres for unit tests — that's e2e territory. Mock the CoreAPI interface, not the gRPC layer; tests stay fast, deterministic, and runnable on every save.",
+			"example":     "p := &MyPlugin{host: &FakeHost{...}}; resp, _ := p.handleSubmit(ctx, &pb.PluginHTTPRequest{...}); assert on resp.",
+			"build_flags": "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/<slug> ./cmd/plugin/ — required for the Alpine runtime image.",
+		},
+		"hot_deploy": map[string]string{
+			"admin_ui":      "After `npm run build`, copy dist into the running container: `docker cp dist/. vibecms-app-1:/app/extensions/<slug>/admin-ui/dist/`. The Go binary serves these as static files — no container restart needed. Hard-refresh (Cmd+Shift+R) to bypass cached index.html.",
+			"plugin_binary": "After `go build`, `docker cp bin/<slug> vibecms-app-1:/app/extensions/<slug>/bin/<slug>` then `docker compose restart app` (required to bounce the plugin process).",
 		},
 		"sdui_reactivity": []string{
 			"Typed SSE events route to specific TanStack query keys via a central qk factory (qk.boot, qk.layout, qk.list, qk.entity, qk.settings).",
@@ -435,7 +540,7 @@ succeed without human intervention, follow the path that matches your task.
 
 ### 3. Seeding ('theme.tengo')
 - Register taxonomies BEFORE node types that use them.
-- Use 'page_missing(slug)' checks for idempotency.
+- Use existence checks for idempotency: 'r := nodes.query({node_type, slug, limit:1})' then branch on 'r.total == 0'.
 - Seed navigation via 'core/menus' — 'menus.upsert({slug, name, items:
   [{label, page:"<slug>"}]})'. The 'page:<slug>' form resolves to a NodeID
   so renaming the target page does NOT break the menu.
@@ -443,7 +548,7 @@ succeed without human intervention, follow the path that matches your task.
 
 ### 4. Verification
 - Cross-reference with 'core.theme.standards'.
-- Ensure 'layouts/base.html' wraps all pages.
+- Ensure exactly one layout in 'theme.json' has 'is_default: true' (typically 'layouts/default.html'); content nodes without an explicit layout use that one.
 - Themes are autoregistered from 'themes/' on startup — no DB seeding.
 
 ## B. Building an Extension

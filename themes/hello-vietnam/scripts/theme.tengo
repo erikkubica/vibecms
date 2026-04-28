@@ -172,7 +172,6 @@ if is_error(trip_order_layout) {
 seed_form({
 	slug: "trip-order",
 	name: "Trip Booking",
-	force: true,
 	layout: trip_order_layout,
 	settings: {
 		success_message: "You're in! Confirmation sent to your inbox.",
@@ -211,7 +210,6 @@ if is_error(contact_layout) {
 seed_form({
 	slug: "contact",
 	name: "Contact",
-	force: true,
 	layout: contact_layout,
 	settings: {
 		success_message: "Message sent! We'll reply within a day or two — usually from Huong or Linh.",
@@ -243,7 +241,6 @@ if is_error(newsletter_layout) {
 seed_form({
 	slug: "newsletter",
 	name: "Newsletter (lead magnet)",
-	force: true,
 	layout: newsletter_layout,
 	settings: {
 		success_message: "You're on the list! Check your inbox for the map.",
@@ -268,7 +265,6 @@ if is_error(footer_newsletter_layout) {
 seed_form({
 	slug: "footer-newsletter",
 	name: "Newsletter (footer)",
-	force: true,
 	layout: footer_newsletter_layout,
 	settings: {
 		success_message: "You're on the list!",
@@ -721,32 +717,44 @@ if page_missing("legal") {
 }
 
 // ─── Navigation Menus ────────────────────────────────────────
-// Seed / refresh primary and footer navigation on every activation.
+// Seed primary and footer navigation on first activation only. Editor
+// changes to menu items are preserved on re-activation.
 // Items use { page: "<slug>" } so they follow the node if an editor
 // renames the page's URL — no manual menu edits required.
-menus.upsert({
-	slug: "main-nav",
-	name: "Primary Navigation",
-	items: [
-		{ label: "Home",    page: "home" },
-		{ label: "About",   page: "about" },
-		{ label: "Trips",   page: "trips" },
-		{ label: "Gallery", page: "gallery" },
-		{ label: "Contact", page: "contact" }
-	]
-})
+existing_main_nav := menus.get("main-nav")
+if is_error(existing_main_nav) {
+	menus.upsert({
+		slug: "main-nav",
+		name: "Primary Navigation",
+		items: [
+			{ label: "Home",    page: "home" },
+			{ label: "About",   page: "about" },
+			{ label: "Trips",   page: "trips" },
+			{ label: "Gallery", page: "gallery" },
+			{ label: "Contact", page: "contact" }
+		]
+	})
+	log.info("Hello Vietnam: main-nav menu created")
+} else {
+	log.info("Hello Vietnam: main-nav menu already exists, preserving editor changes")
+}
 
-menus.upsert({
-	slug: "footer-nav",
-	name: "Footer Navigation",
-	items: [
-		{ label: "All Trips", page: "trips" },
-		{ label: "Gallery",   page: "gallery" },
-		{ label: "Our Story", page: "about" },
-		{ label: "Contact",   page: "contact" },
-		{ label: "Privacy",   page: "legal" }
-	]
-})
-log.info("Hello Vietnam: navigation menus seeded (main-nav, footer-nav)")
+existing_footer_nav := menus.get("footer-nav")
+if is_error(existing_footer_nav) {
+	menus.upsert({
+		slug: "footer-nav",
+		name: "Footer Navigation",
+		items: [
+			{ label: "All Trips", page: "trips" },
+			{ label: "Gallery",   page: "gallery" },
+			{ label: "Our Story", page: "about" },
+			{ label: "Contact",   page: "contact" },
+			{ label: "Privacy",   page: "legal" }
+		]
+	})
+	log.info("Hello Vietnam: footer-nav menu created")
+} else {
+	log.info("Hello Vietnam: footer-nav menu already exists, preserving editor changes")
+}
 
 log.info("Hello Vietnam theme initialization complete")

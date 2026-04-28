@@ -135,7 +135,11 @@ async function deleteMedia(id: number): Promise<void> {
 }
 
 async function restoreOriginal(id: number): Promise<MediaFile> {
-  const res = await fetch(`/admin/api/ext/media-manager/${id}/restore`, { method: "POST", credentials: "include" });
+  const res = await fetch(`/admin/api/ext/media-manager/${id}/restore`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => null);
     throw new Error(err?.error?.message || "Failed to restore");
@@ -144,7 +148,11 @@ async function restoreOriginal(id: number): Promise<MediaFile> {
 }
 
 async function reoptimizeImage(id: number): Promise<MediaFile> {
-  const res = await fetch(`/admin/api/ext/media-manager/${id}/reoptimize`, { method: "POST", credentials: "include" });
+  const res = await fetch(`/admin/api/ext/media-manager/${id}/reoptimize`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => null);
     throw new Error(err?.error?.message || "Failed to re-optimize");

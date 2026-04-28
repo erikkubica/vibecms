@@ -306,14 +306,16 @@ export default function NotificationCard({
           <Label className="text-xs font-medium text-slate-500">Reply-To Address</Label>
           {emailFields.length > 0 ? (
             <Select
-              value={notif.reply_to || ""}
-              onValueChange={(val: string) => onUpdate(index, "reply_to", val)}
+              value={notif.reply_to ? notif.reply_to : "__none__"}
+              onValueChange={(val: string) =>
+                onUpdate(index, "reply_to", val === "__none__" ? "" : val)
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="None" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {emailFields.map((field: any) => (
                   <SelectItem key={field.id} value={field.id}>
                     {field.label || field.id}

@@ -127,6 +127,7 @@ async function clearCacheAll(): Promise<CacheStats> {
   const res = await fetch(`${BASE}/cache/clear`, {
     method: "POST",
     credentials: "include",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error("Failed to clear cache");
   const body = await res.json();
@@ -137,6 +138,7 @@ async function clearCacheForSize(name: string): Promise<void> {
   const res = await fetch(`${BASE}/cache/clear/${encodeURIComponent(name)}`, {
     method: "POST",
     credentials: "include",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error("Failed to clear cache for size");
 }
@@ -152,6 +154,7 @@ async function startReoptimizeAll(): Promise<void> {
   const res = await fetch(`${BASE}/reoptimize-all`, {
     method: "POST",
     credentials: "include",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok && res.status !== 409) throw new Error("Failed to start re-optimization");
 }
@@ -160,6 +163,7 @@ async function startOptimizePending(): Promise<void> {
   const res = await fetch(`${BASE}/optimize-pending`, {
     method: "POST",
     credentials: "include",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok && res.status !== 409) throw new Error("Failed to start optimization");
 }
@@ -168,6 +172,7 @@ async function startRestoreAll(): Promise<void> {
   const res = await fetch(`${BASE}/restore-all`, {
     method: "POST",
     credentials: "include",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok && res.status !== 409) throw new Error("Failed to start restore");
 }

@@ -32,7 +32,7 @@ export function ExtensionPageLoader() {
   // Build nested React Router routes from the extension manifest so that
   // useParams() inside extension components can access :id and other params.
   return (
-    <ExtensionErrorBoundary extensionName={ext.entry.name}>
+    <ExtensionErrorBoundary key={slug} extensionName={ext.entry.name}>
       <Routes>
         {adminUI.routes.map((route) => {
           const Component = ext.module[route.component];

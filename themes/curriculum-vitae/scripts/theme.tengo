@@ -27,9 +27,11 @@ seed_setting("cv.footer_line",     "built with too much coffee · zero shortcuts
 log.info("Curriculum Vitae: cv.* settings seeded")
 
 // ─── Page Seeding ─────────────────────────────────────────────
-// Single-page CV theme: home page is the entire site. On every activation,
-// we (re)assert its blocks_data so switching to this theme always shows the
-// CV layout — even if a previous theme had claimed the "home" slug.
+// Single-page CV theme: home page is the entire site. We seed it on first
+// activation only — if the page already exists, editor changes are preserved
+// (re-activating the theme must not blow away user content). For a fresh
+// reset, delete the home page and re-activate, or use the future
+// "Reload content from theme" action.
 
 cv_blocks := [
             { type: "cv-hero", fields: {
@@ -162,17 +164,7 @@ if existing.total == 0 {
     }
 } else {
     home_id = existing.nodes[0].id
-    updated := nodes.update(home_id, {
-        title: "Erik Kubica · CV 2026",
-        status: "published",
-        layout: "default",
-        blocks_data: cv_blocks
-    })
-    if is_error(updated) {
-        log.warn("Curriculum Vitae seed: failed to update home page: " + string(updated))
-    } else {
-        log.info("Curriculum Vitae seed: home page updated with CV blocks")
-    }
+    log.info("Curriculum Vitae seed: home page already exists, preserving editor changes")
 }
 
 if home_id > 0 {
@@ -181,19 +173,25 @@ if home_id > 0 {
 }
 
 // ─── Navigation Menu ─────────────────────────────────────────
-// Anchor-only menu — single-page CV. Each item links to a section id on the home page.
-menus.upsert({
-    slug: "main-nav",
-    name: "Primary Navigation",
-    items: [
-        { label: "about",      url: "#about",    target: "_self" },
-        { label: "now",        url: "#now",      target: "_self" },
-        { label: "stack",      url: "#stack",    target: "_self" },
-        { label: "experience", url: "#xp",       target: "_self" },
-        { label: "projects",   url: "#projects", target: "_self" },
-        { label: "contact",    url: "#contact",  target: "_self" }
-    ]
-})
-log.info("Curriculum Vitae: main-nav menu seeded")
+// Anchor-only menu — single-page CV. Seeded once; re-activation preserves
+// any editor changes to the menu items.
+existing_menu := menus.get("main-nav")
+if is_error(existing_menu) {
+    menus.upsert({
+        slug: "main-nav",
+        name: "Primary Navigation",
+        items: [
+            { label: "about",      url: "#about",    target: "_self" },
+            { label: "now",        url: "#now",      target: "_self" },
+            { label: "stack",      url: "#stack",    target: "_self" },
+            { label: "experience", url: "#xp",       target: "_self" },
+            { label: "projects",   url: "#projects", target: "_self" },
+            { label: "contact",    url: "#contact",  target: "_self" }
+        ]
+    })
+    log.info("Curriculum Vitae: main-nav menu created")
+} else {
+    log.info("Curriculum Vitae: main-nav menu already exists, preserving editor changes")
+}
 
 log.info("Curriculum Vitae theme initialization complete")

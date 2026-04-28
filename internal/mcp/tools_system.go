@@ -68,6 +68,16 @@ func (s *Server) registerThemeTools() {
 		err := mgmt.Deactivate(intArg(args, "id"))
 		return map[string]any{"ok": err == nil, "restart_required": false}, err
 	})
+
+	s.addTool(mcp.NewTool("core.theme.rescan",
+		mcp.WithDescription("Re-scan the themes/ directory and upsert a Theme row for every subdirectory containing a valid theme.json. Idempotent. Use after dropping a theme onto the filesystem out-of-band (docker cp, volume mount); the runtime fs watcher already does this automatically, this tool is the explicit trigger for ops scripts and CI. Does not activate anything."),
+	), "full", func(ctx context.Context, args map[string]any) (any, error) {
+		if mgmt == nil {
+			return nil, fmt.Errorf("theme management service not wired")
+		}
+		mgmt.ScanAndRegister()
+		return map[string]any{"ok": true}, nil
+	})
 }
 
 func (s *Server) registerExtensionTools() {
@@ -116,6 +126,16 @@ func (s *Server) registerExtensionTools() {
 			return nil, err
 		}
 		return map[string]any{"ok": true, "restart_required": false}, nil
+	})
+
+	s.addTool(mcp.NewTool("core.extension.rescan",
+		mcp.WithDescription("Re-scan the extensions/ directory and upsert an Extension row for every subdirectory containing a valid extension.json. New extensions default to is_active=false; call core.extension.activate to start them. Idempotent. The runtime fs watcher already triggers this automatically when a directory or manifest appears — use this tool as an explicit trigger for ops scripts/CI."),
+	), "full", func(ctx context.Context, args map[string]any) (any, error) {
+		if loader == nil {
+			return nil, fmt.Errorf("extension loader not wired")
+		}
+		loader.ScanAndRegister()
+		return map[string]any{"ok": true}, nil
 	})
 }
 

@@ -261,6 +261,18 @@ func main() {
 	extLoader := cms.NewExtensionLoader(database, "extensions")
 	extLoader.ScanAndRegister()
 	extLoader.LoadBlocksForActiveExtensions(themeAssets)
+
+	// Drop-in watchers — eliminate the "drop a folder + restart" step. When a
+	// new theme/extension directory or manifest appears under themes/ or
+	// extensions/, rescan automatically. Activation still requires an explicit
+	// admin action (themes) or activate call (extensions); this only makes the
+	// new package visible.
+	if err := cms.NewDropInWatcher("themes", "theme.json", themeMgmtSvc.ScanAndRegister).Start(bgCtx); err != nil {
+		log.Printf("WARN: themes drop-in watcher: %v", err)
+	}
+	if err := cms.NewDropInWatcher("extensions", "extension.json", extLoader.ScanAndRegister).Start(bgCtx); err != nil {
+		log.Printf("WARN: extensions drop-in watcher: %v", err)
+	}
 	activeExts, _ := extLoader.GetActive()
 	for _, ext := range activeExts {
 		// Run pending SQL migrations for this extension.

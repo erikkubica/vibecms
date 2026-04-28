@@ -4,6 +4,7 @@ go 1.24.4
 
 require (
 	github.com/d5/tengo/v2 v2.17.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gen2brain/webp v0.5.5
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/google/uuid v1.6.0

@@ -5,15 +5,13 @@ import {
   Save,
   Trash2,
   Loader2,
-  Plus,
-  ChevronUp,
-  ChevronDown,
-  X,
-  Pencil,
   Code,
   Eye,
   FileCode,
+  Boxes,
   RefreshCw,
+  Unplug,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +19,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -34,14 +35,14 @@ import {
   createBlockType,
   updateBlockType,
   deleteBlockType,
+  detachBlockType,
   previewBlockTemplate,
   type BlockType,
   type NodeTypeField,
 } from "@/api/client";
 import { toast } from "sonner";
 import { usePageMeta } from "@/components/layout/page-meta";
-import FieldTypePicker from "@/components/ui/field-type-picker";
-import SubFieldsEditor from "@/components/ui/sub-fields-editor";
+import FieldSchemaEditor from "@/components/ui/field-schema-editor";
 import { CodeWindow } from "@/components/ui/code-window";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -61,6 +62,7 @@ export default function BlockTypeEditorPage() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [detaching, setDetaching] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [label, setLabel] = useState("");
@@ -72,35 +74,17 @@ export default function BlockTypeEditorPage() {
   const [testData, setTestData] = useState<Record<string, unknown>>({});
   const [cacheOutput, setCacheOutput] = useState(false);
   const [autoSlug, setAutoSlug] = useState(!isEdit);
+  const [source, setSource] = useState("custom");
+  const [themeName, setThemeName] = useState<string | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+
+  const isManaged = source !== "custom";
 
   usePageMeta([
     "Block Types",
     isEdit ? (label ? `Edit "${label}"` : "Edit") : "New Block Type",
   ]);
-
-  // New field form state
-  const [addingField, setAddingField] = useState(false);
-  const [newFieldLabel, setNewFieldLabel] = useState("");
-  const [newFieldKey, setNewFieldKey] = useState("");
-  const [newFieldType, setNewFieldType] = useState<NodeTypeField["type"]>("text");
-  const [newFieldRequired, setNewFieldRequired] = useState(false);
-  const [newFieldOptions, setNewFieldOptions] = useState("");
-  const [newFieldPlaceholder, setNewFieldPlaceholder] = useState("");
-  const [newFieldDefaultValue, setNewFieldDefaultValue] = useState("");
-  const [newFieldHelpText, setNewFieldHelpText] = useState("");
-  const [newFieldSubFields, setNewFieldSubFields] = useState<NodeTypeField[]>([]);
-  const [newFieldNodeTypeFilter, setNewFieldNodeTypeFilter] = useState("");
-  const [newFieldMultiple, setNewFieldMultiple] = useState(false);
-  const [newFieldMin, setNewFieldMin] = useState("");
-  const [newFieldMax, setNewFieldMax] = useState("");
-  const [newFieldStep, setNewFieldStep] = useState("");
-  const [newFieldMinLength, setNewFieldMinLength] = useState("");
-  const [newFieldMaxLength, setNewFieldMaxLength] = useState("");
-  const [newFieldRows, setNewFieldRows] = useState("");
-  const [newFieldPrepend, setNewFieldPrepend] = useState("");
-  const [newFieldAppend, setNewFieldAppend] = useState("");
-  const [newFieldAllowedTypes, setNewFieldAllowedTypes] = useState("");
-  const [autoFieldKey, setAutoFieldKey] = useState(true);
 
   // Preview state
   const [previewHtml, setPreviewHtml] = useState("");
@@ -120,6 +104,10 @@ export default function BlockTypeEditorPage() {
           setHtmlTemplate(bt.html_template || "");
           setTestData(bt.test_data || {});
           setCacheOutput(bt.cache_output);
+          setSource(bt.source || "custom");
+          setThemeName(bt.theme_name || null);
+          setCreatedAt(bt.created_at || null);
+          setUpdatedAt(bt.updated_at || null);
           setAutoSlug(false);
         })
         .catch(() => {
@@ -137,118 +125,8 @@ export default function BlockTypeEditorPage() {
     }
   };
 
-  const handleNewFieldLabelChange = (val: string) => {
-    setNewFieldLabel(val);
-    if (autoFieldKey) {
-      setNewFieldKey(keyify(val).replace(/-/g, "_"));
-    }
-  };
-
-  function resetAddFieldForm() {
-    setNewFieldLabel("");
-    setNewFieldKey("");
-    setNewFieldType("text");
-    setNewFieldRequired(false);
-    setNewFieldOptions("");
-    setNewFieldPlaceholder("");
-    setNewFieldDefaultValue("");
-    setNewFieldHelpText("");
-    setNewFieldSubFields([]);
-    setNewFieldNodeTypeFilter("");
-    setNewFieldMultiple(false);
-    setNewFieldMin("");
-    setNewFieldMax("");
-    setNewFieldStep("");
-    setNewFieldMinLength("");
-    setNewFieldMaxLength("");
-    setNewFieldRows("");
-    setNewFieldPrepend("");
-    setNewFieldAppend("");
-    setNewFieldAllowedTypes("");
-    setAutoFieldKey(true);
-    setAddingField(false);
-  }
-
-  function handleAddField() {
-    if (!newFieldLabel.trim() || !newFieldKey.trim()) {
-      toast.error("Label and key are required");
-      return;
-    }
-    if (fields.some((f) => f.key === newFieldKey)) {
-      toast.error("A field with this key already exists");
-      return;
-    }
-
-    const sf: NodeTypeField = {
-      name: newFieldKey,
-      key: newFieldKey,
-      label: newFieldLabel,
-      type: newFieldType,
-      required: newFieldRequired || undefined,
-    };
-
-    if (newFieldPlaceholder.trim()) sf.placeholder = newFieldPlaceholder.trim();
-    if (newFieldDefaultValue.trim()) sf.default_value = newFieldDefaultValue.trim();
-    if (newFieldHelpText.trim()) sf.help = newFieldHelpText.trim();
-
-    if ((newFieldType === "select" || newFieldType === "radio" || newFieldType === "checkbox") && newFieldOptions.trim()) {
-      sf.options = newFieldOptions.split(",").map((o) => o.trim()).filter(Boolean);
-    }
-    if ((newFieldType === "group" || newFieldType === "repeater") && newFieldSubFields.length > 0) {
-      sf.sub_fields = newFieldSubFields;
-    }
-    if (newFieldType === "node") {
-      if (newFieldNodeTypeFilter.trim()) sf.node_type_filter = newFieldNodeTypeFilter.trim();
-      if (newFieldMultiple) sf.multiple = true;
-    }
-    if (newFieldType === "number" || newFieldType === "range") {
-      if (newFieldMin.trim()) sf.min = Number(newFieldMin);
-      if (newFieldMax.trim()) sf.max = Number(newFieldMax);
-      if (newFieldStep.trim()) sf.step = Number(newFieldStep);
-    }
-    if (newFieldType === "text" || newFieldType === "textarea") {
-      if (newFieldMinLength.trim()) sf.min_length = Number(newFieldMinLength);
-      if (newFieldMaxLength.trim()) sf.max_length = Number(newFieldMaxLength);
-    }
-    if (newFieldType === "textarea" && newFieldRows.trim()) {
-      sf.rows = Number(newFieldRows);
-    }
-    if (["text", "number", "email", "url"].includes(newFieldType)) {
-      if (newFieldPrepend.trim()) sf.prepend = newFieldPrepend.trim();
-      if (newFieldAppend.trim()) sf.append = newFieldAppend.trim();
-    }
-    if (newFieldType === "file") {
-      if (newFieldAllowedTypes.trim()) sf.allowed_types = newFieldAllowedTypes.trim();
-      if (newFieldMultiple) sf.multiple = true;
-    }
-
-    setFields([...fields, sf]);
-    resetAddFieldForm();
-  }
-
-  const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(null);
-
-  function handleRemoveField(index: number) {
-    setFields(fields.filter((_, i) => i !== index));
-    if (editingFieldIndex === index) setEditingFieldIndex(null);
-  }
-
-  function handleMoveField(index: number, direction: "up" | "down") {
-    const newFields = [...fields];
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newFields.length) return;
-    [newFields[index], newFields[targetIndex]] = [newFields[targetIndex], newFields[index]];
-    setFields(newFields);
-    if (editingFieldIndex === index) setEditingFieldIndex(targetIndex);
-    else if (editingFieldIndex === targetIndex) setEditingFieldIndex(index);
-  }
-
-  function updateField(index: number, updates: Partial<NodeTypeField>) {
-    setFields(fields.map((f, i) => i === index ? { ...f, ...updates } : f));
-  }
-
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: FormEvent) => {
+    e?.preventDefault();
     if (!label || !slug) {
       toast.error("Label and slug are required");
       return;
@@ -296,6 +174,21 @@ export default function BlockTypeEditorPage() {
     }
   };
 
+  const handleDetach = async () => {
+    if (!id) return;
+    setDetaching(true);
+    try {
+      const detached = await detachBlockType(id);
+      setSource(detached.source);
+      setThemeName(detached.theme_name || null);
+      toast.success(`Block type detached from ${source} — now editable`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to detach block type");
+    } finally {
+      setDetaching(false);
+    }
+  };
+
   const handlePreview = async () => {
     setPreviewLoading(true);
     try {
@@ -319,231 +212,148 @@ export default function BlockTypeEditorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="rounded-lg">
-            <Link to="/admin/block-types">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {isEdit ? `Edit Block: ${label}` : "Create Block Type"}
-            </h1>
-            <p className="text-sm text-slate-500">
-              Build custom content components using liquid-like templates.
-            </p>
-          </div>
+    <div className="space-y-4">
+      {isManaged && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 flex items-start gap-2">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            This block type is managed by the active {source} and is read-only. Click
+            &quot;Detach&quot; in the sidebar to create an editable copy.
+          </p>
         </div>
-        <div className="flex gap-2">
-          {isEdit && (
-            <Button
-              variant="outline"
-              className="text-red-600 hover:bg-red-50 hover:text-red-700"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+      )}
+
+      <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* Main content */}
+        <div className="space-y-4 min-w-0">
+          {/* Title + Slug pill */}
+          <div
+            className="flex items-center gap-1.5"
+            style={{
+              padding: 6,
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
+              <Link to="/admin/block-types" title="Back to Block Types">
+                <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
+              </Link>
             </Button>
-          )}
-          <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700">
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Save Block Type
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column: Config */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="General Configuration" />
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="label">Display Label</Label>
-                <Input
-                  id="label"
-                  value={label}
-                  onChange={(e) => handleLabelChange(e.target.value)}
-                  placeholder="e.g. Hero Section"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slug">Slug (Unique Key)</Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => {
-                    setSlug(keyify(e.target.value));
-                    setAutoSlug(false);
+            <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
+              <span
+                className="shrink-0 uppercase"
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: "var(--fg-muted)",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Label
+              </span>
+              <input
+                placeholder="e.g. Hero Section"
+                value={label}
+                onChange={(e) => handleLabelChange(e.target.value)}
+                disabled={isManaged}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 4px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "var(--fg)",
+                }}
+              />
+            </div>
+            <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
+              <span
+                className="shrink-0"
+                style={{
+                  fontSize: 11,
+                  color: "var(--fg-subtle)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                slug:
+              </span>
+              <input
+                placeholder="hero-section"
+                value={slug}
+                onChange={(e) => {
+                  setAutoSlug(false);
+                  setSlug(keyify(e.target.value));
+                }}
+                disabled={isEdit || autoSlug || isManaged}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 0",
+                  fontSize: 12.5,
+                  color: "var(--fg)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              />
+              {!isEdit && !isManaged && (
+                <button
+                  type="button"
+                  className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
+                  style={{
+                    color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
+                    background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
+                    border: "1px solid var(--border)",
+                    letterSpacing: "0.04em",
                   }}
-                  disabled={isEdit}
-                  placeholder="hero-section"
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Brief summary of what this block does"
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="icon">Icon Slug</Label>
-                <Input
-                  id="icon"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  placeholder="boxes, image, text..."
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <div className="space-y-0.5">
-                  <Label htmlFor="cache">Cache Output</Label>
-                  <p className="text-[11px] text-slate-400">Improve performance by caching rendered HTML</p>
-                </div>
-                <input
-                  type="checkbox"
-                  id="cache"
-                  checked={cacheOutput}
-                  onChange={(e) => setCacheOutput(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Fields Definition" />
-            <CardContent className="space-y-6">
-              <p className="text-xs text-slate-500">Configure the data structure for this block.</p>
-              {/* Field list */}
-              <div className="space-y-3">
-                {fields.length === 0 ? (
-                  <div className="text-center py-8 rounded-lg border border-dashed border-slate-200 text-slate-400 text-sm italic">
-                    No fields defined yet.
-                  </div>
-                ) : (
-                  fields.map((field, index) => (
-                    <div key={index} className={`rounded-lg border ${editingFieldIndex === index ? "border-indigo-300 bg-indigo-50/30" : "border-slate-200 bg-white"}`}>
-                      <div className="flex items-center gap-2 p-2 px-3">
-                        <div className="flex flex-col gap-0.5">
-                          <button type="button" onClick={() => handleMoveField(index, "up")} disabled={index === 0} className="text-slate-400 hover:text-slate-600 disabled:opacity-30">
-                            <ChevronUp className="h-3.5 w-3.5" />
-                          </button>
-                          <button type="button" onClick={() => handleMoveField(index, "down")} disabled={index === fields.length - 1} className="text-slate-400 hover:text-slate-600 disabled:opacity-30">
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex-1 min-w-0" onClick={() => setEditingFieldIndex(editingFieldIndex === index ? null : index)}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-800">{field.label}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{field.key}</span>
-                          </div>
-                          <div className="text-[10px] text-slate-500 font-medium uppercase">{field.type}</div>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600" onClick={() => setEditingFieldIndex(editingFieldIndex === index ? null : index)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600" onClick={() => handleRemoveField(index)}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      {/* Field Editor (inline) */}
-                      {editingFieldIndex === index && (
-                        <div className="border-t border-indigo-100 p-3 space-y-3 bg-white rounded-b-lg">
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-slate-500 uppercase">Label</Label>
-                              <Input value={field.label} onChange={e => updateField(index, { label: e.target.value })} className="h-8 text-sm" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-slate-500 uppercase">Key</Label>
-                              <Input value={field.key} onChange={e => updateField(index, { key: e.target.value })} className="h-8 text-sm font-mono" />
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-[10px] text-slate-500 uppercase">Help Text</Label>
-                            <Input value={field.help || ""} onChange={e => updateField(index, { help: e.target.value })} className="h-8 text-sm" />
-                          </div>
-                          {(field.type === "group" || field.type === "repeater") && (
-                            <SubFieldsEditor
-                              value={field.sub_fields || []}
-                              onChange={(sub) => updateField(index, { sub_fields: sub })}
-                              label={field.type === "group" ? "Group Fields" : "Row Fields"}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Add field form */}
-              {addingField ? (
-                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">Field Label</Label>
-                    <Input
-                      placeholder="e.g. Header Text"
-                      value={newFieldLabel}
-                      onChange={(e) => handleNewFieldLabelChange(e.target.value)}
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">Field Key</Label>
-                    <Input
-                      placeholder="e.g. header_text"
-                      value={newFieldKey}
-                      onChange={(e) => {
-                        setNewFieldKey(e.target.value.replace(/[^a-z0-9_]/g, ""));
-                        setAutoFieldKey(false);
-                      }}
-                      className="h-9 font-mono"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">Field Type</Label>
-                    <FieldTypePicker value={newFieldType} onValueChange={(v) => setNewFieldType(v as NodeTypeField["type"])} />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 bg-indigo-600" onClick={handleAddField}>Add</Button>
-                    <Button size="sm" variant="ghost" className="flex-1" onClick={resetAddFieldForm}>Cancel</Button>
-                  </div>
-                </div>
-              ) : (
-                <Button variant="outline" className="w-full rounded-lg border-dashed border-slate-300 text-slate-500" onClick={() => setAddingField(true)}>
-                  <Plus className="mr-2 h-4 w-4" /> Add Field
-                </Button>
+                  onClick={() => setAutoSlug(!autoSlug)}
+                  title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate slug from label"}
+                >
+                  {autoSlug ? "Auto" : "Edit"}
+                </button>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            {isManaged && (
+              <Badge
+                className="shrink-0"
+                style={{
+                  fontSize: 10.5,
+                  background: "color-mix(in oklab, #f59e0b 14%, transparent)",
+                  color: "#a16207",
+                  border: "1px solid color-mix(in oklab, #f59e0b 30%, transparent)",
+                }}
+              >
+                {source === "theme" ? (themeName || "Theme") : source.charAt(0).toUpperCase() + source.slice(1)}
+              </Badge>
+            )}
+            {isEdit && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 font-mono"
+                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+              >
+                ID {id}
+              </Badge>
+            )}
+          </div>
 
-        {/* Right Column: Code & Preview */}
-        <div className="lg:col-span-2 space-y-6">
-          <Tabs defaultValue="template" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 rounded-xl bg-slate-100 p-1">
-              <TabsTrigger value="template" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          {/* Tabs */}
+          <Tabs defaultValue="fields" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="fields" className="">
+                <Boxes className="mr-2 h-4 w-4" /> Fields
+              </TabsTrigger>
+              <TabsTrigger value="template" className="">
                 <FileCode className="mr-2 h-4 w-4" /> Template
               </TabsTrigger>
-              <TabsTrigger value="test-data" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <TabsTrigger value="test-data" className="">
                 <Code className="mr-2 h-4 w-4" /> Test Data
               </TabsTrigger>
-              <TabsTrigger value="preview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm" onClick={handlePreview}>
+              <TabsTrigger value="preview" className="" onClick={handlePreview}>
                 <Eye className="mr-2 h-4 w-4" /> Preview
               </TabsTrigger>
             </TabsList>
@@ -554,7 +364,22 @@ export default function BlockTypeEditorPage() {
                 value={htmlTemplate}
                 onChange={setHtmlTemplate}
                 height="500px"
+                disabled={isManaged}
               />
+            </TabsContent>
+
+            <TabsContent value="fields" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <Card className="rounded-xl border border-slate-200 shadow-sm">
+                <SectionHeader title="Fields Definition" />
+                <CardContent>
+                  <p className="text-xs text-slate-500 mb-4">Configure the data structure for this block.</p>
+                  <FieldSchemaEditor
+                    fields={fields}
+                    onChange={setFields}
+                    disabled={isManaged}
+                  />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="test-data" className="mt-4 ring-offset-white focus-visible:outline-none">
@@ -565,6 +390,7 @@ export default function BlockTypeEditorPage() {
                   try { setTestData(JSON.parse(v)); } catch {}
                 }}
                 height="500px"
+                disabled={isManaged}
               />
             </TabsContent>
 
@@ -573,7 +399,7 @@ export default function BlockTypeEditorPage() {
                 <SectionHeader
                   title="Rendered Preview"
                   actions={
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handlePreview} disabled={previewLoading}>
+                    <Button variant="ghost" type="button" size="sm" className="h-7 text-xs" onClick={handlePreview} disabled={previewLoading}>
                       {previewLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
                       Refresh
                     </Button>
@@ -598,7 +424,117 @@ export default function BlockTypeEditorPage() {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
+
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Publish card */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <SectionHeader title="Publish" />
+            <CardContent className="space-y-4">
+              {isManaged ? (
+                <Button
+                  type="button"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  onClick={handleDetach}
+                  disabled={detaching}
+                >
+                  <Unplug className="mr-1.5 h-3.5 w-3.5" />
+                  {detaching ? "Detaching..." : "Detach"}
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  disabled={saving}
+                >
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+              )}
+
+              {isEdit && !isManaged && (
+                <>
+                  <Separator />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </>
+              )}
+
+              {isEdit && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <div className="flex justify-between">
+                      <span>Source</span>
+                      <span className="text-slate-600 capitalize">{source}</span>
+                    </div>
+                    {createdAt && (
+                      <div className="flex justify-between">
+                        <span>Created</span>
+                        <span className="text-slate-600">{new Date(createdAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {updatedAt && (
+                      <div className="flex justify-between">
+                        <span>Updated</span>
+                        <span className="text-slate-600">{new Date(updatedAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Settings card */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <SectionHeader title="Settings" />
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-medium text-slate-500">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief summary of what this block does"
+                  rows={2}
+                  disabled={isManaged}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="icon" className="text-xs font-medium text-slate-500">Icon Slug</Label>
+                <Input
+                  id="icon"
+                  value={icon}
+                  onChange={(e) => setIcon(e.target.value)}
+                  placeholder="boxes, image, text..."
+                  className="font-mono text-sm"
+                  disabled={isManaged}
+                />
+              </div>
+              <label htmlFor="cache" className={`flex items-center justify-between gap-3 pt-1 ${isManaged ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                <div className="space-y-0.5 min-w-0">
+                  <span className="block text-xs font-medium text-slate-700">Cache Output</span>
+                  <span className="block text-[11px] text-slate-400">Cache rendered HTML</span>
+                </div>
+                <Switch
+                  id="cache"
+                  checked={cacheOutput}
+                  onCheckedChange={setCacheOutput}
+                  disabled={isManaged}
+                />
+              </label>
+            </CardContent>
+          </Card>
+        </div>
+      </form>
 
       {/* Delete dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

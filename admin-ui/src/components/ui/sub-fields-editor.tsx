@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import FieldTypePicker from "@/components/ui/field-type-picker";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { NodeTypeField } from "@/api/client";
 
 function fieldTypeBadgeClass(type: string): string {
@@ -188,10 +190,10 @@ function TypeSpecificOptions({ field, updateField, size = "normal" }: { field: N
           </div>
           <div className="space-y-1.5">
             <Label className={labelClass}>&nbsp;</Label>
-            <div className="flex items-center gap-2 h-9">
-              <input type="checkbox" checked={!!field.multiple} onChange={(e) => updateField({ multiple: e.target.checked })} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <label className="flex items-center gap-2 h-9 cursor-pointer">
+              <Switch checked={!!field.multiple} onCheckedChange={(c) => updateField({ multiple: c })} />
               <span className="text-sm text-slate-700">Multiple files</span>
-            </div>
+            </label>
           </div>
         </div>
       )}
@@ -208,10 +210,10 @@ function TypeSpecificOptions({ field, updateField, size = "normal" }: { field: N
             <Input value={field.term_node_type || ""} onChange={(e) => updateField({ term_node_type: e.target.value || undefined })} placeholder="e.g. trip" className={inputClass} />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <div className="flex items-center gap-2 h-9">
-              <input type="checkbox" checked={!!field.multiple} onChange={(e) => updateField({ multiple: e.target.checked })} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <label className="flex items-center gap-2 h-9 cursor-pointer">
+              <Switch checked={!!field.multiple} onCheckedChange={(c) => updateField({ multiple: c })} />
               <span className="text-sm text-slate-700">Allow multiple</span>
-            </div>
+            </label>
           </div>
         </div>
       )}
@@ -225,10 +227,10 @@ function TypeSpecificOptions({ field, updateField, size = "normal" }: { field: N
           </div>
           <div className="space-y-1.5">
             <Label className={labelClass}>&nbsp;</Label>
-            <div className="flex items-center gap-2 h-9">
-              <input type="checkbox" checked={!!field.multiple} onChange={(e) => updateField({ multiple: e.target.checked })} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <label className="flex items-center gap-2 h-9 cursor-pointer">
+              <Switch checked={!!field.multiple} onCheckedChange={(c) => updateField({ multiple: c })} />
               <span className="text-sm text-slate-700">Allow multiple</span>
-            </div>
+            </label>
           </div>
         </div>
       )}
@@ -365,28 +367,32 @@ export default function SubFieldsEditor({ value, onChange, label }: SubFieldsEdi
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-slate-600">Width</Label>
-                      <select
-                        value={sf.width ?? 100}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          updateField(i, { width: v === 100 ? undefined : v });
+                      <Select
+                        value={String(sf.width ?? 100)}
+                        onValueChange={(v) => {
+                          const n = Number(v);
+                          updateField(i, { width: n === 100 ? undefined : n });
                         }}
-                        className="h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none"
                       >
-                        <option value={100}>100%</option>
-                        <option value={75}>75%</option>
-                        <option value={66}>66%</option>
-                        <option value={50}>50%</option>
-                        <option value={33}>33%</option>
-                        <option value={25}>25%</option>
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="100">100%</SelectItem>
+                          <SelectItem value="75">75%</SelectItem>
+                          <SelectItem value="66">66%</SelectItem>
+                          <SelectItem value="50">50%</SelectItem>
+                          <SelectItem value="33">33%</SelectItem>
+                          <SelectItem value="25">25%</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-slate-600">&nbsp;</Label>
-                      <div className="flex items-center gap-2 h-9">
-                        <input type="checkbox" checked={!!sf.required} onChange={(e) => updateField(i, { required: e.target.checked || undefined })} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                      <label className="flex items-center gap-2 h-9 cursor-pointer">
+                        <Switch checked={!!sf.required} onCheckedChange={(c) => updateField(i, { required: c || undefined })} />
                         <span className="text-sm text-slate-700">Required</span>
-                      </div>
+                      </label>
                     </div>
                   </div>
                   <TypeSpecificOptions field={sf} updateField={(updates) => updateField(i, updates)} size="compact" />
@@ -444,15 +450,10 @@ export default function SubFieldsEditor({ value, onChange, label }: SubFieldsEdi
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-700">&nbsp;</Label>
-                <div className="flex items-center gap-2 h-9">
-                  <input
-                    type="checkbox"
-                    checked={newFieldRequired}
-                    onChange={(e) => setNewFieldRequired(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
+                <label className="flex items-center gap-2 h-9 cursor-pointer">
+                  <Switch checked={newFieldRequired} onCheckedChange={setNewFieldRequired} />
                   <span className="text-sm font-medium text-slate-700">Required</span>
-                </div>
+                </label>
               </div>
             </div>
 

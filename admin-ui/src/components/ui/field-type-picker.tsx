@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Check, ChevronsUpDown, Type, AlignLeft, Hash, Calendar, ListOrdered, Image, ToggleLeft, Link2, Layers, Repeat, FileSearch, Tags, Palette, Mail, Globe, FileText as RichTextIcon, SlidersHorizontal, File, Images, CircleDot, CheckSquare, Puzzle } from "lucide-react";
+import { Check, ChevronsUpDown, Type, AlignLeft, Hash, Calendar, ListOrdered, Image, ToggleLeft, Link2, Layers, Repeat, FileSearch, Tags, Palette, Mail, Globe, FileText as RichTextIcon, SlidersHorizontal, File, Images, CircleDot, CheckSquare, Puzzle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -155,9 +155,9 @@ export default function FieldTypePicker({ value, onValueChange, className, compa
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between font-normal",
-            compact ? "h-9 text-sm" : "h-10",
-            "rounded-lg border-slate-300 hover:bg-slate-50",
+            "w-full justify-between font-normal bg-[var(--card-bg)]",
+            compact ? "h-[30px] text-[13px] px-2.5" : "h-9 text-sm",
+            "rounded-[var(--radius)] border-[var(--border-strong)] hover:bg-[var(--sub-bg)]",
             className
           )}
         >
@@ -165,6 +165,12 @@ export default function FieldTypePicker({ value, onValueChange, className, compa
             <span className="flex items-center gap-2 truncate">
               <selected.icon className={cn("shrink-0 text-slate-500", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
               <span className="truncate">{selected.label}</span>
+            </span>
+          ) : value ? (
+            <span className="flex items-center gap-2 truncate text-amber-700">
+              <AlertCircle className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
+              <span className="truncate font-mono">{value}</span>
+              <span className="text-[10px] uppercase tracking-wide opacity-60">unknown</span>
             </span>
           ) : (
             <span className="text-slate-400">Select field type...</span>

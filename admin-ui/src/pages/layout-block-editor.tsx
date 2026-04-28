@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback, type FormEvent } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   Save,
   Trash2,
@@ -7,13 +7,16 @@ import {
   ArrowLeft,
   Unlink,
   Info,
+  FileCode,
+  Boxes,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CodeWindow } from "@/components/ui/code-window";
 import FieldSchemaEditor from "@/components/ui/field-schema-editor";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -31,9 +34,9 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
 import { usePageMeta } from "@/components/layout/page-meta";
 import {
   getLayoutBlock,
@@ -90,7 +93,7 @@ export default function LayoutBlockEditorPage() {
   const [showDetach, setShowDetach] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [detaching, setDetaching] = useState(false);
-  const [slugManual, setSlugManual] = useState(false);
+  const [autoSlug, setAutoSlug] = useState(isNew);
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -100,6 +103,8 @@ export default function LayoutBlockEditorPage() {
   const [fieldSchema, setFieldSchema] = useState<NodeTypeField[]>([]);
   const [source, setSource] = useState("custom");
   const [themeName, setThemeName] = useState<string | null>(null);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   const isManaged = source !== "custom";
 
@@ -121,7 +126,9 @@ export default function LayoutBlockEditorPage() {
       setFieldSchema(data.field_schema || []);
       setSource(data.source || "custom");
       setThemeName(data.theme_name || null);
-      setSlugManual(true);
+      setCreatedAt(data.created_at || null);
+      setUpdatedAt(data.updated_at || null);
+      setAutoSlug(false);
     } catch {
       toast.error("Failed to load layout block");
       navigate("/admin/layout-blocks");
@@ -147,14 +154,15 @@ export default function LayoutBlockEditorPage() {
     fetchLayoutBlock();
   }, [fetchLayoutBlock]);
 
-  function handleNameChange(value: string) {
-    setName(value);
-    if (!slugManual) {
-      setSlug(slugify(value));
+  useEffect(() => {
+    if (autoSlug) {
+      setSlug(slugify(name));
     }
-  }
+  }, [name, autoSlug]);
 
-  async function handleSave() {
+  async function handleSave(e?: FormEvent) {
+    e?.preventDefault();
+
     if (!name.trim()) {
       toast.error("Name is required");
       return;
@@ -228,170 +236,296 @@ export default function LayoutBlockEditorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild className="h-8 w-8">
-            <Link to="/admin/layout-blocks">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {isNew ? "New Layout Block" : name || "Edit Layout Block"}
-          </h1>
-          {isManaged && (
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">{source === "theme" ? (themeName || "Theme") : "Extension"}</Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {!isNew && isManaged && (
-            <Button
-              variant="outline"
-              onClick={() => setShowDetach(true)}
-              className="text-amber-600 border-amber-300 hover:bg-amber-50"
-            >
-              <Unlink className="mr-2 h-4 w-4" />
-              Detach
-            </Button>
-          )}
-          {!isNew && !isManaged && (
-            <Button
-              variant="outline"
-              className="text-red-500 border-red-300 hover:bg-red-50"
-              onClick={() => setShowDelete(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={saving || isManaged}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium"
-          >
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {saving ? "Saving..." : "Save"}
-          </Button>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {isManaged && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-start gap-2">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 flex items-start gap-2">
           <Info className="h-4 w-4 mt-0.5 shrink-0" />
           <p>
             This layout block is managed by the active {source} and is read-only. To customize it, click
-            &quot;Detach&quot; to create an editable copy.
+            &quot;Detach&quot; in the sidebar to create an editable copy.
           </p>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Main content */}
-        <div className="space-y-6 lg:col-span-2">
-          <CodeWindow
-            title="Template Code — Go html/template"
-            value={templateCode}
-            onChange={setTemplateCode}
-            disabled={isManaged}
-            height="400px"
-            placeholder="Enter your Go html/template code here..."
-            variables={TEMPLATE_VARIABLES}
-          />
-
-          {/* Field Schema */}
-          <Card className="rounded-xl border border-purple-200 shadow-sm">
-            <SectionHeader title="Partial Fields" />
-            <CardContent>
-              <p className="text-xs text-slate-500 mb-4">
-                Define editable fields for this partial. When a layout uses this partial, pages will show these fields in the node editor.
-                Use <code className="bg-slate-100 px-1 rounded text-[10px]">{"{{.partial.field_key}}"}</code> in the template.
-              </p>
-              <FieldSchemaEditor
-                fields={fieldSchema}
-                onChange={setFieldSchema}
+        <div className="space-y-4 min-w-0">
+          {/* Title + Slug pill */}
+          <div
+            className="flex items-center gap-1.5"
+            style={{
+              padding: 6,
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
+              <Link to="/admin/layout-blocks" title="Back to Layout Partials">
+                <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
+              </Link>
+            </Button>
+            <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
+              <span
+                className="shrink-0 uppercase"
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: "var(--fg-muted)",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Name
+              </span>
+              <input
+                placeholder="e.g. Site Header"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isManaged}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 4px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "var(--fg)",
+                }}
               />
-            </CardContent>
-          </Card>
+            </div>
+            <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
+              <span
+                className="shrink-0"
+                style={{
+                  fontSize: 11,
+                  color: "var(--fg-subtle)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                slug:
+              </span>
+              <input
+                placeholder="site-header"
+                value={slug}
+                onChange={(e) => {
+                  setAutoSlug(false);
+                  setSlug(e.target.value);
+                }}
+                disabled={isManaged || autoSlug}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 0",
+                  fontSize: 12.5,
+                  color: "var(--fg)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              />
+              {!isManaged && (
+                <button
+                  type="button"
+                  className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
+                  style={{
+                    color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
+                    background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
+                    border: "1px solid var(--border)",
+                    letterSpacing: "0.04em",
+                  }}
+                  onClick={() => setAutoSlug(!autoSlug)}
+                  title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate slug from name"}
+                >
+                  {autoSlug ? "Auto" : "Edit"}
+                </button>
+              )}
+            </div>
+            {isManaged && (
+              <Badge
+                className="shrink-0"
+                style={{
+                  fontSize: 10.5,
+                  background: "color-mix(in oklab, #f59e0b 14%, transparent)",
+                  color: "#a16207",
+                  border: "1px solid color-mix(in oklab, #f59e0b 30%, transparent)",
+                }}
+              >
+                {source === "theme" ? (themeName || "Theme") : "Extension"}
+              </Badge>
+            )}
+            {!isNew && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 font-mono"
+                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+              >
+                ID {id}
+              </Badge>
+            )}
+          </div>
 
-          {/* Template Reference */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Template Reference" />
-            <CardContent>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.code}}"}</code> <span className="text-slate-500">current language code</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+          {/* Tabs */}
+          <Tabs defaultValue="template" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="template" className="">
+                <FileCode className="mr-2 h-4 w-4" /> Template
+              </TabsTrigger>
+              <TabsTrigger value="fields" className="">
+                <Boxes className="mr-2 h-4 w-4" /> Fields
+              </TabsTrigger>
+              <TabsTrigger value="reference" className="">
+                <BookOpen className="mr-2 h-4 w-4" /> Reference
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="template" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <CodeWindow
+                title="Template Code — Go html/template"
+                value={templateCode}
+                onChange={setTemplateCode}
+                disabled={isManaged}
+                height="500px"
+                placeholder="Enter your Go html/template code here..."
+                variables={TEMPLATE_VARIABLES}
+              />
+            </TabsContent>
+
+            <TabsContent value="fields" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <Card className="rounded-xl border border-slate-200 shadow-sm">
+                <SectionHeader title="Partial Fields" />
+                <CardContent>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Define editable fields for this partial. When a layout uses this partial, pages will show these fields in the node editor.
+                    Use <code className="bg-slate-100 px-1 rounded text-[10px]">{"{{.partial.field_key}}"}</code> in the template.
+                  </p>
+                  <FieldSchemaEditor
+                    fields={fieldSchema}
+                    onChange={setFieldSchema}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reference" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <Card className="rounded-xl border border-slate-200 shadow-sm">
+                <SectionHeader title="Template Reference" />
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.code}}"}</code> <span className="text-slate-500">current language code</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+                      </div>
+                      <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.code}}{{end}}'}</code></div>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
+                      </div>
+                      <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.code}}{{end}}'}</code></div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
-                  </div>
-                  <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
-                    <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4">
+          {/* Publish card */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Details" />
+            <SectionHeader title="Publish" />
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="e.g. Site Header"
-                  disabled={isManaged}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => {
-                    setSlug(e.target.value);
-                    setSlugManual(true);
-                  }}
-                  placeholder="e.g. site-header"
-                  disabled={isManaged}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+              {isManaged ? (
+                <Button
+                  type="button"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  onClick={() => setShowDetach(true)}
+                >
+                  <Unlink className="mr-1.5 h-3.5 w-3.5" />
+                  Detach
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  disabled={saving}
+                >
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+              )}
+
+              {!isNew && !isManaged && (
+                <>
+                  <Separator />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
+                    onClick={() => setShowDelete(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </>
+              )}
+
+              {!isNew && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <div className="flex justify-between">
+                      <span>Source</span>
+                      <span className="text-slate-600 capitalize">{source}</span>
+                    </div>
+                    {createdAt && (
+                      <div className="flex justify-between">
+                        <span>Created</span>
+                        <span className="text-slate-600">{new Date(createdAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {updatedAt && (
+                      <div className="flex justify-between">
+                        <span>Updated</span>
+                        <span className="text-slate-600">{new Date(updatedAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Settings card */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <SectionHeader title="Settings" />
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-medium text-slate-500">Description</Label>
                 <Textarea
                   id="description"
                   value={description}
@@ -401,14 +535,14 @@ export default function LayoutBlockEditorPage() {
                   disabled={isManaged}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="language" className="text-xs font-medium text-slate-500">Language</Label>
                 <Select
                   value={languageId === null ? "all" : String(languageId)}
                   onValueChange={(v) => setLanguageId(v === "all" ? null : Number(v))}
                   disabled={isManaged}
                 >
-                  <SelectTrigger id="language">
+                  <SelectTrigger id="language" className="h-9 rounded-lg border-slate-300 text-sm">
                     <SelectValue placeholder="All Languages" />
                   </SelectTrigger>
                   <SelectContent>
@@ -424,7 +558,7 @@ export default function LayoutBlockEditorPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </form>
 
       {/* Delete dialog */}
       <Dialog open={showDelete} onOpenChange={setShowDelete}>

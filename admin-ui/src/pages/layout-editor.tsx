@@ -7,13 +7,16 @@ import {
   Loader2,
   Unplug,
   Info,
+  FileCode,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +26,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CodeWindow } from "@/components/ui/code-window";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { usePageMeta } from "@/components/layout/page-meta";
 import {
@@ -96,7 +107,6 @@ export default function LayoutEditorPage() {
     isEdit ? (name ? `Edit "${name}"` : "Edit") : "New Layout",
   ]);
 
-  // Languages
   const [languages, setLanguages] = useState<Language[]>([]);
 
   const isManaged = source !== "custom";
@@ -138,15 +148,14 @@ export default function LayoutEditorPage() {
     };
   }, [id, isEdit, navigate]);
 
-  // Auto-generate slug from name
   useEffect(() => {
     if (autoSlug) {
       setSlug(slugify(name));
     }
   }, [name, autoSlug]);
 
-  async function handleSave(e: FormEvent) {
-    e.preventDefault();
+  async function handleSave(e?: FormEvent) {
+    e?.preventDefault();
 
     if (!name.trim() || !slug.trim()) {
       toast.error("Name and slug are required");
@@ -221,177 +230,298 @@ export default function LayoutEditorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild className="h-8 w-8">
-            <Link to="/admin/layouts">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {isEdit ? "Edit Layout" : "New Layout"}
-          </h1>
-          {isManaged && (
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">
-              {source === "theme" ? (themeName || "Theme") : "Extension"}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {isEdit && isManaged && (
-            <Button
-              variant="outline"
-              onClick={handleDetach}
-              disabled={detaching}
-              className="text-amber-600 border-amber-300 hover:bg-amber-50"
-            >
-              <Unplug className="mr-2 h-4 w-4" />
-              {detaching ? "Detaching..." : "Detach"}
-            </Button>
-          )}
-          {isEdit && !isManaged && (
-            <Button
-              variant="outline"
-              className="text-red-600 border-red-300 hover:bg-red-50"
-              onClick={() => setShowDelete(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={saving || isManaged}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save"}
-          </Button>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {isManaged && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-start gap-2">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 flex items-start gap-2">
           <Info className="h-4 w-4 mt-0.5 shrink-0" />
           <p>
             This layout is managed by the active {source} and is read-only. To customize it, click
-            &quot;Detach&quot; to create an editable copy.
+            &quot;Detach&quot; in the sidebar to create an editable copy.
           </p>
         </div>
       )}
 
-      <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
+      <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Main content */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Code Editor */}
-          <CodeWindow
-            title="Template Code — Go html/template"
-            value={templateCode}
-            onChange={setTemplateCode}
-            disabled={isManaged}
-            height="500px"
-            placeholder="Enter your Go html/template code here..."
-            variables={TEMPLATE_VARIABLES}
-          />
+        <div className="space-y-4 min-w-0">
+          {/* Title + Slug pill */}
+          <div
+            className="flex items-center gap-1.5"
+            style={{
+              padding: 6,
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
+              <Link to="/admin/layouts" title="Back to Layouts">
+                <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
+              </Link>
+            </Button>
+            <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
+              <span
+                className="shrink-0 uppercase"
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: "var(--fg-muted)",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Name
+              </span>
+              <input
+                placeholder="Main Layout"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isManaged}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 4px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "var(--fg)",
+                }}
+              />
+            </div>
+            <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
+              <span
+                className="shrink-0"
+                style={{
+                  fontSize: 11,
+                  color: "var(--fg-subtle)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                slug:
+              </span>
+              <input
+                placeholder="main-layout"
+                value={slug}
+                onChange={(e) => {
+                  setAutoSlug(false);
+                  setSlug(e.target.value);
+                }}
+                disabled={isManaged || autoSlug}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 0",
+                  fontSize: 12.5,
+                  color: "var(--fg)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              />
+              {!isManaged && (
+                <button
+                  type="button"
+                  className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
+                  style={{
+                    color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
+                    background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
+                    border: "1px solid var(--border)",
+                    letterSpacing: "0.04em",
+                  }}
+                  onClick={() => setAutoSlug(!autoSlug)}
+                  title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate slug from name"}
+                >
+                  {autoSlug ? "Auto" : "Edit"}
+                </button>
+              )}
+            </div>
+            {isManaged && (
+              <Badge
+                className="shrink-0"
+                style={{
+                  fontSize: 10.5,
+                  background: "color-mix(in oklab, #f59e0b 14%, transparent)",
+                  color: "#a16207",
+                  border: "1px solid color-mix(in oklab, #f59e0b 30%, transparent)",
+                }}
+              >
+                {source === "theme" ? (themeName || "Theme") : "Extension"}
+              </Badge>
+            )}
+            {isEdit && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 font-mono"
+                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+              >
+                ID {id}
+              </Badge>
+            )}
+          </div>
 
-          {/* Reference Panel */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Template Reference" />
-            <CardContent>
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.code}}"}</code> <span className="text-slate-500">current language code</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+          {/* Tabs */}
+          <Tabs defaultValue="template" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="template" className="">
+                <FileCode className="mr-2 h-4 w-4" /> Template
+              </TabsTrigger>
+              <TabsTrigger value="reference" className="">
+                <BookOpen className="mr-2 h-4 w-4" /> Reference
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="template" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <CodeWindow
+                title="Template Code — Go html/template"
+                value={templateCode}
+                onChange={setTemplateCode}
+                disabled={isManaged}
+                height="600px"
+                placeholder="Enter your Go html/template code here..."
+                variables={TEMPLATE_VARIABLES}
+              />
+            </TabsContent>
+
+            <TabsContent value="reference" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <Card className="rounded-xl border border-slate-200 shadow-sm">
+                <SectionHeader title="Template Reference" />
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold text-slate-700">App Variables</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.settings.site_name}}"}</code> <span className="text-slate-500">site setting by key</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.code}}"}</code> <span className="text-slate-500">current language code</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_styles}}"}</code> <span className="text-slate-500">inline block CSS (HTML)</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.block_scripts}}"}</code> <span className="text-slate-500">inline block JS (HTML)</span></div>
+                      </div>
+                      <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.code}}{{end}}'}</code></div>
+                      </div>
                     </div>
-                    <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Loops (use range)</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_styles}}<link rel="stylesheet" href="{{.}}">{{end}}'}</code></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.head_scripts}}<script src="{{.}}"></script>{{end}}'}</code></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.foot_scripts}}<script src="{{.}}" defer></script>{{end}}'}</code></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{range .app.languages}}{{.code}}{{end}}'}</code></div>
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
+                      </div>
+                      <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
+                      </div>
+                      <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Menus</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{range $menu.items}}"}</code> <span className="text-slate-500">loop menu items</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.title}} {{.url}} {{.target}}"}</code> <span className="text-slate-500">item fields</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.css_class}} {{.item_type}}"}</code> <span className="text-slate-500">more item fields</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{range .children}}...{{end}}"}</code> <span className="text-slate-500">nested submenu items</span></div>
+                      </div>
+                      <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Language</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.code}}"}</code> <span className="text-slate-500">e.g. "en"</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.name}}"}</code> <span className="text-slate-500">e.g. "English"</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.flag}}"}</code> <span className="text-slate-500">e.g. emoji flag</span></div>
+                      </div>
+                      <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">User / Auth</h3>
+                      <div className="space-y-2 text-sm">
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{if .user.logged_in}}...{{end}}"}</code> <span className="text-slate-500">check if logged in</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.user.email}}"}</code> <span className="text-slate-500">user email</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.user.role}}"}</code> <span className="text-slate-500">user role</span></div>
+                        <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.user.full_name}}"}</code> <span className="text-slate-500">display name</span></div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold text-slate-700">Node Variables</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.title}}"}</code> <span className="text-slate-500">page title</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.slug}}"}</code> <span className="text-slate-500">page slug</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.full_url}}"}</code> <span className="text-slate-500">full URL path</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.blocks_html}}"}</code> <span className="text-slate-500">rendered content blocks</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.node_type}}"}</code> <span className="text-slate-500">page, post, etc.</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.language_code}}"}</code> <span className="text-slate-500">language code</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.seo.title}}"}</code> <span className="text-slate-500">SEO title</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.node.fields}}"}</code> <span className="text-slate-500">custom fields map</span></div>
-                    </div>
-                    <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Functions</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{renderLayoutBlock \"slug\"}}"}</code> <span className="text-slate-500">render a partial/layout block</span></div>
-                    </div>
-                    <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Menus</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{'{{$menu := index .app.menus "main-nav"}}'}</code> <span className="text-slate-500">get menu by slug</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{range $menu.items}}"}</code> <span className="text-slate-500">loop menu items</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.title}} {{.url}} {{.target}}"}</code> <span className="text-slate-500">item fields</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.css_class}} {{.item_type}}"}</code> <span className="text-slate-500">more item fields</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{range .children}}...{{end}}"}</code> <span className="text-slate-500">nested submenu items</span></div>
-                    </div>
-                    <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">Language</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.code}}"}</code> <span className="text-slate-500">e.g. "en"</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.name}}"}</code> <span className="text-slate-500">e.g. "English"</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.app.current_lang.flag}}"}</code> <span className="text-slate-500">e.g. emoji flag</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{range .app.languages}}{{.code}}{{end}}"}</code> <span className="text-slate-500">all languages</span></div>
-                    </div>
-                    <h3 className="mb-3 mt-4 text-sm font-semibold text-slate-700">User / Auth</h3>
-                    <div className="space-y-2 text-sm">
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{if .user.logged_in}}...{{end}}"}</code> <span className="text-slate-500">check if logged in</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.user.email}}"}</code> <span className="text-slate-500">user email</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.user.role}}"}</code> <span className="text-slate-500">user role (admin, editor...)</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.user.full_name}}"}</code> <span className="text-slate-500">display name</span></div>
-                      <div><code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-indigo-700">{"{{.user.id}}"}</code> <span className="text-slate-500">user ID</span></div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4">
+          {/* Publish card */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Layout Details" />
+            <SectionHeader title="Publish" />
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Main Layout"
-                  disabled={isManaged}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  onChange={(e) => {
-                    setAutoSlug(false);
-                    setSlug(e.target.value);
-                  }}
-                  placeholder="main-layout"
-                  disabled={isManaged}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+              {isManaged ? (
+                <Button
+                  type="button"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  onClick={handleDetach}
+                  disabled={detaching}
+                >
+                  <Unplug className="mr-1.5 h-3.5 w-3.5" />
+                  {detaching ? "Detaching..." : "Detach"}
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  disabled={saving}
+                >
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+              )}
+
+              {isEdit && !isManaged && (
+                <>
+                  <Separator />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
+                    onClick={() => setShowDelete(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </>
+              )}
+
+              {isEdit && originalLayout && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <div className="flex justify-between">
+                      <span>Source</span>
+                      <span className="text-slate-600 capitalize">{source}</span>
+                    </div>
+                    {originalLayout.created_at && (
+                      <div className="flex justify-between">
+                        <span>Created</span>
+                        <span className="text-slate-600">{new Date(originalLayout.created_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {originalLayout.updated_at && (
+                      <div className="flex justify-between">
+                        <span>Updated</span>
+                        <span className="text-slate-600">{new Date(originalLayout.updated_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Settings card */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <SectionHeader title="Settings" />
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-medium text-slate-500">Description</Label>
                 <Textarea
                   id="description"
                   value={description}
@@ -401,50 +531,46 @@ export default function LayoutEditorPage() {
                   disabled={isManaged}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <select
-                  id="language"
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
-                  value={languageId === null ? "" : String(languageId)}
-                  onChange={(e) => setLanguageId(e.target.value === "" ? null : Number(e.target.value))}
+              <div className="space-y-1.5">
+                <Label htmlFor="language" className="text-xs font-medium text-slate-500">Language</Label>
+                <Select
+                  value={languageId === null ? "all" : String(languageId)}
+                  onValueChange={(v) => setLanguageId(v === "all" ? null : Number(v))}
                   disabled={isManaged}
                 >
-                  <option value="">All Languages</option>
-                  {languages.map((lang) => (
-                    <option key={lang.id} value={String(lang.id)}>
-                      {lang.flag} {lang.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="language" className="h-9 rounded-lg border-slate-300 text-sm">
+                    <SelectValue placeholder="All Languages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Languages</SelectItem>
+                    {languages.map((lang) => (
+                      <SelectItem key={lang.id} value={String(lang.id)}>
+                        {lang.flag} {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex items-center space-x-3 pt-1">
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
+              <div className="space-y-3 pt-1">
+                <label className={`flex items-center justify-between gap-3 ${isManaged ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                  <span className="text-sm text-slate-700">Set as default layout</span>
+                  <Switch
                     checked={isDefault}
-                    onChange={(e) => setIsDefault(e.target.checked)}
+                    onCheckedChange={setIsDefault}
                     disabled={isManaged}
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  Set as default layout
                 </label>
-              </div>
-              <div className="space-y-1 pt-1">
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
+                <label className={`flex items-center justify-between gap-3 ${isManaged ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                  <div className="space-y-0.5 min-w-0">
+                    <span className="block text-sm text-slate-700">Supports blocks</span>
+                    <span className="block text-[11px] text-slate-400">Enable block-based composition.</span>
+                  </div>
+                  <Switch
                     checked={supportsBlocks}
-                    onChange={(e) => setSupportsBlocks(e.target.checked)}
+                    onCheckedChange={setSupportsBlocks}
                     disabled={isManaged}
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  Supports blocks
                 </label>
-                <p className="text-xs text-slate-500 pl-6">
-                  Allow block-based composition on nodes using this layout. Disable for
-                  layouts that render content entirely from node fields.
-                </p>
               </div>
             </CardContent>
           </Card>

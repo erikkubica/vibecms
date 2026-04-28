@@ -5,6 +5,8 @@ import {
   Save,
   Trash2,
   Loader2,
+  Boxes,
+  ListTree,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import FieldSchemaEditor from "@/components/ui/field-schema-editor";
 import {
   getTaxonomy,
@@ -92,15 +97,14 @@ export default function TaxonomyEditorPage() {
     }
   }, [isEdit, urlSlug, navigate]);
 
-  const handleLabelChange = (val: string) => {
-    setLabel(val);
+  useEffect(() => {
     if (autoSlug) {
-      setSlug(slugify(val));
+      setSlug(slugify(label));
     }
-  };
+  }, [label, autoSlug]);
 
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: FormEvent) => {
+    e?.preventDefault();
     if (!label || !slug) {
       toast.error("Label and slug are required");
       return;
@@ -155,150 +159,235 @@ export default function TaxonomyEditorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="rounded-lg">
-            <Link to="/admin/taxonomies">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {isEdit ? `Edit Taxonomy: ${label}` : "Create Taxonomy"}
-            </h1>
-            <p className="text-sm text-slate-500">
-              Define how your content is classified.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {isEdit && (
-            <Button
-              variant="outline"
-              className="text-red-600 hover:bg-red-50 hover:text-red-700"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+    <div className="space-y-4">
+      <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* Main content */}
+        <div className="space-y-4 min-w-0">
+          {/* Title + Slug pill */}
+          <div
+            className="flex items-center gap-1.5"
+            style={{
+              padding: 6,
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
+              <Link to="/admin/taxonomies" title="Back to Taxonomies">
+                <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
+              </Link>
             </Button>
-          )}
-          <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700">
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
+            <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
+              <span
+                className="shrink-0 uppercase"
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: "var(--fg-muted)",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Label
+              </span>
+              <input
+                placeholder="e.g. Category, Tag"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none"
+                style={{
+                  border: "none",
+                  padding: "6px 4px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "var(--fg)",
+                }}
+              />
+            </div>
+            <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
+              <span
+                className="shrink-0"
+                style={{
+                  fontSize: 11,
+                  color: "var(--fg-subtle)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                slug:
+              </span>
+              <input
+                placeholder="category"
+                value={slug}
+                onChange={(e) => {
+                  setAutoSlug(false);
+                  setSlug(e.target.value);
+                }}
+                disabled={isEdit || autoSlug}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 0",
+                  fontSize: 12.5,
+                  color: "var(--fg)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              />
+              {!isEdit && (
+                <button
+                  type="button"
+                  className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
+                  style={{
+                    color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
+                    background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
+                    border: "1px solid var(--border)",
+                    letterSpacing: "0.04em",
+                  }}
+                  onClick={() => setAutoSlug(!autoSlug)}
+                  title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate slug from label"}
+                >
+                  {autoSlug ? "Auto" : "Edit"}
+                </button>
+              )}
+            </div>
+            {isEdit && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 font-mono"
+                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+              >
+                {urlSlug}
+              </Badge>
             )}
-            Save Taxonomy
-          </Button>
-        </div>
-      </div>
+          </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          {/* General Info */}
+          {/* Tabs */}
+          <Tabs defaultValue="fields" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="fields" className="">
+                <Boxes className="mr-2 h-4 w-4" /> Term Fields
+              </TabsTrigger>
+              <TabsTrigger value="content-types" className="">
+                <ListTree className="mr-2 h-4 w-4" /> Content Types
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="fields" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <Card className="rounded-xl border border-slate-200 shadow-sm">
+                <SectionHeader title="Term Custom Fields" />
+                <CardContent>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Fields that appear when editing terms in this taxonomy.
+                  </p>
+                  <FieldSchemaEditor fields={fields} onChange={setFields} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="content-types" className="mt-4 ring-offset-white focus-visible:outline-none">
+              <Card className="rounded-xl border border-slate-200 shadow-sm">
+                <SectionHeader title="Assigned Content Types" />
+                <CardContent>
+                  <p className="text-xs text-slate-500 mb-4">Select which content types can use this taxonomy.</p>
+                  {availableNodeTypes.length === 0 ? (
+                    <p className="text-sm text-slate-400 italic text-center py-4">No content types available.</p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {availableNodeTypes.map((type) => (
+                        <label
+                          key={type.slug}
+                          className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="text-sm font-medium text-slate-800 truncate">{type.label}</span>
+                            <span className="text-[10px] font-mono text-slate-400 shrink-0">{type.slug}</span>
+                          </div>
+                          <Switch
+                            id={`type-${type.slug}`}
+                            checked={nodeTypes.includes(type.slug)}
+                            onCheckedChange={(checked: boolean) => {
+                              if (checked) {
+                                setNodeTypes([...nodeTypes, type.slug]);
+                              } else {
+                                setNodeTypes(nodeTypes.filter(s => s !== type.slug));
+                              }
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Publish card */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="General Information" />
+            <SectionHeader title="Publish" />
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="label">Display Label (singular)</Label>
-                  <Input
-                    id="label"
-                    value={label}
-                    onChange={(e) => handleLabelChange(e.target.value)}
-                    placeholder="e.g. Category, Tag, Genre"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="label_plural">Display Label (plural)</Label>
-                  <Input
-                    id="label_plural"
-                    value={labelPlural}
-                    onChange={(e) => setLabelPlural(e.target.value)}
-                    placeholder="e.g. Categories, Tags, Genres"
-                  />
-                  <p className="text-xs text-slate-500">Used in list headings. Falls back to singular if blank.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slug">Slug (Unique Key)</Label>
-                  <Input
-                    id="slug"
-                    value={slug}
-                    onChange={(e) => {
-                      setSlug(slugify(e.target.value));
-                      setAutoSlug(false);
-                    }}
-                    disabled={isEdit}
-                    placeholder="category"
-                    className="font-mono text-sm"
-                  />
-                </div>
+              <Button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                disabled={saving}
+              >
+                <Save className="mr-1.5 h-3.5 w-3.5" />
+                {saving ? "Saving..." : "Save"}
+              </Button>
+
+              {isEdit && (
+                <>
+                  <Separator />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Settings card */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <SectionHeader title="Settings" />
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="label_plural" className="text-xs font-medium text-slate-500">Label (plural)</Label>
+                <Input
+                  id="label_plural"
+                  placeholder="e.g. Categories, Tags"
+                  value={labelPlural}
+                  onChange={(e) => setLabelPlural(e.target.value)}
+                />
+                <p className="text-[11px] text-slate-400">Used in list headings.</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-medium text-slate-500">Description</Label>
                 <Textarea
                   id="description"
+                  placeholder="What is this taxonomy used for?"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this taxonomy used for?"
                   rows={2}
                 />
               </div>
             </CardContent>
           </Card>
-
-          {/* Assigned Node Types */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Assigned Content Types" />
-            <CardContent>
-              <p className="text-xs text-slate-500 mb-4">Select which content types can use this taxonomy.</p>
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                {availableNodeTypes.map((type) => (
-                  <div key={type.slug} className="flex items-center space-x-2 p-2 rounded-lg border border-slate-100 bg-slate-50/50">
-                    <Checkbox
-                      id={`type-${type.slug}`}
-                      checked={nodeTypes.includes(type.slug)}
-                      onCheckedChange={(checked: boolean) => {
-                        if (checked) {
-                          setNodeTypes([...nodeTypes, type.slug]);
-                        } else {
-                          setNodeTypes(nodeTypes.filter(s => s !== type.slug));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={`type-${type.slug}`} className="text-sm font-medium cursor-pointer flex-1">
-                      {type.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Custom Fields */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Term Custom Fields" />
-            <CardContent className="space-y-4">
-              <FieldSchemaEditor fields={fields} onChange={setFields} title="Term Custom Fields" description="Fields that appear when editing terms in this taxonomy." />
-            </CardContent>
-          </Card>
         </div>
+      </form>
 
-        <div className="space-y-6">
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Settings" />
-            <CardContent className="space-y-4">
-              <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 leading-relaxed">
-                Assigning a taxonomy to a content type adds a term picker to that type's editor.
-                Custom fields added here will appear when you edit individual terms in this taxonomy.
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Delete Confirmation */}
+      {/* Delete dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>

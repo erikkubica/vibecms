@@ -9,7 +9,7 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, icon, actions }: SectionHeaderProps) {
   return (
     <div
-      className="flex items-center justify-between px-4 py-3"
+      className="flex items-center justify-between px-4 py-3 rounded-t-xl"
       style={{ background: "var(--sub-bg)", borderBottom: "1px solid var(--border)" }}
     >
       <div className="flex items-center gap-2">

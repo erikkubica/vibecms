@@ -15,14 +15,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -31,8 +29,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import BlockPicker, { BLOCK_ICON_MAP } from "@/components/ui/block-picker";
 import { usePageMeta } from "@/components/layout/page-meta";
@@ -72,7 +68,6 @@ export default function TemplateEditorPage() {
   const [autoSlug, setAutoSlug] = useState(!isEdit);
   const [showAddBlock, setShowAddBlock] = useState(false);
 
-  // Form state
   const [label, setLabel] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
@@ -80,7 +75,7 @@ export default function TemplateEditorPage() {
   const [originalTemplate, setOriginalTemplate] = useState<Template | null>(null);
   const [source, setSource] = useState("custom");
   const [themeName, setThemeName] = useState<string | null>(null);
-  
+
   const isManaged = source !== "custom";
 
   usePageMeta([
@@ -88,7 +83,6 @@ export default function TemplateEditorPage() {
     isEdit ? (label ? `Edit "${label}"` : "Edit") : "New Template",
   ]);
 
-  // Block types
   const [blockTypes, setBlockTypes] = useState<BlockType[]>([]);
 
   useEffect(() => {
@@ -123,7 +117,6 @@ export default function TemplateEditorPage() {
     };
   }, [id, isEdit, navigate]);
 
-  // Auto-generate slug from label
   useEffect(() => {
     if (autoSlug) {
       setSlug(slugify(label));
@@ -236,201 +229,236 @@ export default function TemplateEditorPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="rounded-lg hover:bg-slate-200">
-            <Link to="/admin/templates">
-              <ArrowLeft className="h-5 w-5 text-slate-600" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {isEdit ? "Edit Template" : "New Template"}
-          </h1>
-          {isEdit && isManaged && (
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0 text-xs">
-              {source === "theme" ? (themeName || "Theme") : "Extension"}
-            </Badge>
-          )}
-        </div>
-        {isEdit && isManaged && (
-          <Button
-            variant="outline"
-            onClick={() => setShowDetach(true)}
-            className="text-amber-600 border-amber-300 hover:bg-amber-50"
-          >
-            <Unlink className="mr-2 h-4 w-4" />
-            Detach
-          </Button>
-        )}
-      </div>
-
-      {isEdit && isManaged && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-start gap-2">
+    <div className="space-y-4">
+      {isManaged && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 flex items-start gap-2">
           <Info className="h-4 w-4 mt-0.5 shrink-0" />
           <p>
-            This template is managed by the active {source} and is read-only. To customize it, click
-            &quot;Detach&quot; to create an editable copy.
+            This template is managed by the active {source} and is read-only. Click
+            &quot;Detach&quot; in the sidebar to create an editable copy.
           </p>
         </div>
       )}
 
-      <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
+      <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Main content */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Basic info */}
-          <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <SectionHeader title="Basic Info" />
-            <CardContent className="space-y-4 p-6">
-              <div className="space-y-2">
-                <Label htmlFor="label" className="text-sm font-medium text-slate-700">Label</Label>
-                <Input
-                  id="label"
-                  placeholder="e.g. Landing Page, Blog Post"
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  required
-                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="slug" className="text-sm font-medium text-slate-700">Slug</Label>
-                  <button
-                    type="button"
-                    className="text-xs text-indigo-600 hover:underline"
-                    onClick={() => setAutoSlug(!autoSlug)}
-                  >
-                    {autoSlug ? "Edit manually" : "Auto-generate"}
-                  </button>
-                </div>
-                <Input
-                  id="slug"
-                  placeholder="template-slug"
-                  value={slug}
-                  onChange={(e) => {
-                    setAutoSlug(false);
-                    setSlug(e.target.value);
+        <div className="space-y-4 min-w-0">
+          {/* Title + Slug pill */}
+          <div
+            className="flex items-center gap-1.5"
+            style={{
+              padding: 6,
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
+              <Link to="/admin/templates" title="Back to Templates">
+                <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
+              </Link>
+            </Button>
+            <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
+              <span
+                className="shrink-0 uppercase"
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: "var(--fg-muted)",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                Label
+              </span>
+              <input
+                placeholder="e.g. Landing Page, Blog Post"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                disabled={isManaged}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 4px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "var(--fg)",
+                }}
+              />
+            </div>
+            <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
+              <span
+                className="shrink-0"
+                style={{
+                  fontSize: 11,
+                  color: "var(--fg-subtle)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                slug:
+              </span>
+              <input
+                placeholder="template-slug"
+                value={slug}
+                onChange={(e) => {
+                  setAutoSlug(false);
+                  setSlug(e.target.value);
+                }}
+                disabled={isManaged || autoSlug}
+                required
+                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
+                style={{
+                  border: "none",
+                  padding: "6px 0",
+                  fontSize: 12.5,
+                  color: "var(--fg)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              />
+              {!isManaged && (
+                <button
+                  type="button"
+                  className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
+                  style={{
+                    color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
+                    background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
+                    border: "1px solid var(--border)",
+                    letterSpacing: "0.04em",
                   }}
-                  disabled={autoSlug}
-                  required
-                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
+                  onClick={() => setAutoSlug(!autoSlug)}
+                  title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate slug from label"}
+                >
+                  {autoSlug ? "Auto" : "Edit"}
+                </button>
+              )}
+            </div>
+            {isManaged && (
+              <Badge
+                className="shrink-0"
+                style={{
+                  fontSize: 10.5,
+                  background: "color-mix(in oklab, #f59e0b 14%, transparent)",
+                  color: "#a16207",
+                  border: "1px solid color-mix(in oklab, #f59e0b 30%, transparent)",
+                }}
+              >
+                {source === "theme" ? (themeName || "Theme") : "Extension"}
+              </Badge>
+            )}
+            {isEdit && (
+              <Badge
+                variant="secondary"
+                className="shrink-0 font-mono"
+                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+              >
+                ID {id}
+              </Badge>
+            )}
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium text-slate-700">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="A brief description of this template"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Blocks list */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-semibold" style={{ fontSize: 14, color: "var(--fg)" }}>Blocks</h2>
+              <Badge
+                variant="secondary"
+                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
+              >
+                {blockConfig.length}
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              {blockConfig.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 py-12 text-slate-400">
+                  <Square className="h-10 w-10" />
+                  <p className="text-sm font-medium">No blocks yet</p>
+                  <p className="text-xs">Add blocks to compose this template.</p>
+                </div>
+              )}
 
-            {/* Blocks */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="font-semibold" style={{ fontSize: 14, color: "var(--fg)" }}>Blocks</h2>
-              </div>
-              <div className="space-y-2">
-                {blockConfig.length === 0 && (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 py-12 text-slate-400">
-                    <span className="text-sm font-medium">No blocks yet</span>
-                    <span className="text-xs">Add blocks or insert a template to get started</span>
-                  </div>
-                )}
+              {blockConfig.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {blockConfig.map((block, index) => {
+                    const IconComp = getBlockIcon(block.block_type_slug);
+                    const typeCategory = block.block_type_slug.split("-")[0];
 
-                {blockConfig.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    {blockConfig.map((block, index) => {
-                      const IconComp = getBlockIcon(block.block_type_slug);
-                      const typeCategory = block.block_type_slug.split("-")[0];
-
-                      return (
+                    return (
+                      <div
+                        key={index}
+                        className="overflow-hidden"
+                        style={{
+                          border: "1px solid var(--border)",
+                          borderRadius: "var(--radius-lg)",
+                          background: "var(--card-bg)",
+                        }}
+                      >
                         <div
-                          key={index}
-                          className="overflow-hidden"
-                          style={{
-                            border: "1px solid var(--border)",
-                            borderRadius: "var(--radius-lg)",
-                          }}
+                          className="flex items-center gap-2 select-none"
+                          style={{ padding: "8px 10px", background: "var(--sub-bg)" }}
                         >
-                          <div
-                            className="flex items-center gap-2 select-none"
-                            style={{ padding: "8px 10px", background: "var(--sub-bg)" }}
-                          >
-                            <IconComp size={14} className="shrink-0" style={{ color: "var(--fg-muted)" }} />
-                            <span
-                              className="font-semibold"
-                              style={{ fontSize: 12.5, color: "var(--fg)" }}
+                          <IconComp size={14} className="shrink-0" style={{ color: "var(--fg-muted)" }} />
+                          <span className="font-semibold" style={{ fontSize: 12.5, color: "var(--fg)" }}>
+                            {getBlockLabel(block.block_type_slug)}
+                          </span>
+                          <span className="font-mono" style={{ fontSize: 11, color: "var(--fg-muted)" }}>
+                            {block.block_type_slug}
+                          </span>
+                          {typeCategory && typeCategory !== block.block_type_slug && (
+                            <Badge
+                              variant="secondary"
+                              style={{
+                                fontSize: 10,
+                                background: "color-mix(in oklab, var(--accent) 10%, transparent)",
+                                color: "var(--accent-strong)",
+                                border: "1px solid color-mix(in oklab, var(--accent) 20%, transparent)",
+                              }}
                             >
-                              {getBlockLabel(block.block_type_slug)}
-                            </span>
-                            <span
-                              className="font-mono"
-                              style={{ fontSize: 11, color: "var(--fg-muted)" }}
+                              {typeCategory}
+                            </Badge>
+                          )}
+                          <div className="flex-1" />
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveBlock(index, "up")}
+                              disabled={isManaged || index === 0}
+                              className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                              style={{ color: "var(--fg-muted)" }}
+                              title="Move up"
                             >
-                              {block.block_type_slug}
-                            </span>
-                            {typeCategory && typeCategory !== block.block_type_slug && (
-                              <Badge
-                                variant="secondary"
-                                style={{
-                                  fontSize: 10,
-                                  background: "color-mix(in oklab, var(--accent) 10%, transparent)",
-                                  color: "var(--accent-strong)",
-                                  border: "1px solid color-mix(in oklab, var(--accent) 20%, transparent)",
-                                }}
-                              >
-                                {typeCategory}
-                              </Badge>
-                            )}
-                            <div className="flex-1" />
-                            <div className="flex items-center gap-0.5">
-                              <button
-                                type="button"
-                                onClick={() => handleMoveBlock(index, "up")}
-                                disabled={index === 0}
-                                className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
-                                style={{ color: "var(--fg-muted)" }}
-                                title="Move up"
-                              >
-                                <ChevronUp className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveBlock(index, "down")}
-                                disabled={index === blockConfig.length - 1}
-                                className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
-                                style={{ color: "var(--fg-muted)" }}
-                                title="Move down"
-                              >
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveBlock(index)}
-                                className="p-1 rounded hover:bg-red-50"
-                                style={{ color: "var(--danger)" }}
-                                title="Delete block"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveBlock(index, "down")}
+                              disabled={isManaged || index === blockConfig.length - 1}
+                              className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
+                              style={{ color: "var(--fg-muted)" }}
+                              title="Move down"
+                            >
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBlock(index)}
+                              disabled={isManaged}
+                              className="p-1 rounded hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                              style={{ color: "var(--danger)" }}
+                              title="Delete block"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {!isManaged && (
               <div className="mt-2">
                 <Button
                   type="button"
@@ -442,51 +470,43 @@ export default function TemplateEditorPage() {
                   Add Block
                 </Button>
               </div>
-            </div>
+            )}
+          </div>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4">
+          {/* Publish card */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
-            <CardContent className="space-y-4 p-5">
-              {/* Blocks count */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-slate-500">Blocks</Label>
-                <p className="text-sm text-slate-700">{blockConfig.length} block{blockConfig.length !== 1 ? "s" : ""}</p>
-              </div>
-
-              {/* Dates (edit mode) */}
-              {isEdit && originalTemplate && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-500">Created</Label>
-                    <p className="text-sm text-slate-700">{new Date(originalTemplate.created_at).toLocaleDateString()}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-500">Updated</Label>
-                    <p className="text-sm text-slate-700">{new Date(originalTemplate.updated_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
+            <SectionHeader title="Publish" />
+            <CardContent className="space-y-4">
+              {isManaged ? (
+                <Button
+                  type="button"
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  onClick={() => setShowDetach(true)}
+                >
+                  <Unlink className="mr-1.5 h-3.5 w-3.5" />
+                  Detach
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  disabled={saving}
+                >
+                  <Save className="mr-1.5 h-3.5 w-3.5" />
+                  {saving ? "Saving..." : "Save"}
+                </Button>
               )}
 
-              {/* Save button */}
-              <Button
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
-                disabled={saving || isManaged}
-              >
-                <Save className="mr-1.5 h-3.5 w-3.5" />
-                {saving ? "Saving..." : "Save"}
-              </Button>
-
-              {/* Actions (edit mode) */}
               {isEdit && !isManaged && (
                 <>
                   <Separator />
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50 rounded-lg h-9 text-sm"
+                    className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
                     onClick={() => setShowDelete(true)}
                   >
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" />
@@ -494,6 +514,52 @@ export default function TemplateEditorPage() {
                   </Button>
                 </>
               )}
+
+              {isEdit && originalTemplate && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <div className="flex justify-between">
+                      <span>Source</span>
+                      <span className="text-slate-600 capitalize">{source}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Blocks</span>
+                      <span className="text-slate-600">{blockConfig.length}</span>
+                    </div>
+                    {originalTemplate.created_at && (
+                      <div className="flex justify-between">
+                        <span>Created</span>
+                        <span className="text-slate-600">{new Date(originalTemplate.created_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {originalTemplate.updated_at && (
+                      <div className="flex justify-between">
+                        <span>Updated</span>
+                        <span className="text-slate-600">{new Date(originalTemplate.updated_at).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Settings card */}
+          <Card className="rounded-xl border border-slate-200 shadow-sm">
+            <SectionHeader title="Settings" />
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs font-medium text-slate-500">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="A brief description of this template"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  disabled={isManaged}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

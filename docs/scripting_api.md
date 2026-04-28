@@ -1,6 +1,6 @@
-# VibeCMS Theme Scripting API
+# VibeCMS Scripting API
 
-Complete developer reference for building themes with VibeCMS's embedded scripting system.
+Complete developer reference for VibeCMS's embedded Tengo scripting system. Tengo scripts power **theme behavior** (`themes/<slug>/scripts/theme.tengo`) and **lightweight extensions** (`extensions/<slug>/scripts/extension.tengo`). Both contexts share the same `core/*` module set; the differences are which capabilities are granted on load.
 
 ---
 
@@ -9,20 +9,25 @@ Complete developer reference for building themes with VibeCMS's embedded scripti
 1. [Overview](#1-overview)
 2. [Getting Started](#2-getting-started)
 3. [Module Import System](#3-module-import-system)
-4. [cms/events](#4-cmsevents)
-5. [cms/filters](#5-cmsfilters)
-6. [cms/routing](#6-cmsrouting)
-7. [cms/nodes](#7-cmsnodes)
-8. [cms/settings](#8-cmssettings)
-9. [cms/http](#9-cmshttp)
-10. [cms/email](#10-cmsemail)
-11. [cms/menus](#11-cmsmenus)
-12. [cms/helpers](#12-cmshelpers)
-13. [cms/log](#13-cmslog)
-14. [Standard Library](#14-standard-library)
-15. [Script Execution Model](#15-script-execution-model)
-16. [Writing Theme Modules](#16-writing-theme-modules)
-17. [Complete Examples](#17-complete-examples)
+4. [core/events](#4-coreevents)
+5. [core/filters](#5-corefilters)
+6. [core/routing](#6-corerouting)
+7. [core/nodes](#7-corenodes)
+8. [core/settings](#8-coresettings)
+9. [core/routes — register HTTP endpoints](#9-coreroutes--register-http-endpoints)
+10. [core/http — outbound HTTP fetch](#10-corehttp--outbound-http-fetch)
+11. [Triggering emails from scripts](#11-triggering-emails-from-scripts)
+12. [core/menus](#12-coremenus)
+13. [core/nodetypes](#13-corenodetypes)
+14. [core/taxonomies](#14-coretaxonomies)
+15. [core/wellknown](#15-corewellknown)
+16. [core/assets](#16-coreassets)
+17. [core/helpers](#17-corehelpers)
+18. [core/log](#18-corelog)
+19. [Standard Library](#19-standard-library)
+20. [Script Execution Model](#20-script-execution-model)
+21. [Writing Theme Modules](#21-writing-theme-modules)
+22. [Complete Examples](#22-complete-examples)
 
 ---
 
@@ -97,8 +102,8 @@ The directory names (`hooks/`, `handlers/`, `filters/`, `api/`, `lib/`) are conv
 ### Minimal theme.tengo
 
 ```tengo
-log := import("cms/log")
-events := import("cms/events")
+log := import("core/log")
+events := import("core/events")
 
 log.info("My theme is loading!")
 
@@ -114,22 +119,34 @@ log.info("My theme is ready!")
 
 Tengo uses `import()` to load modules. VibeCMS provides three categories of importable modules:
 
-### CMS API Modules (`cms/*`)
+### CMS API Modules (`core/*`)
 
-Built-in modules providing access to CMS functionality:
+The kernel registers fourteen `core/*` modules at boot time (`internal/coreapi/tengo_adapter.go`):
 
 ```tengo
-events  := import("cms/events")    // Event registration and emission
-filters := import("cms/filters")   // Filter registration
-routing := import("cms/routing")   // Current page context (render-time only)
-nodes   := import("cms/nodes")     // Content CRUD operations
-settings := import("cms/settings") // Site settings read/write
-http    := import("cms/http")      // REST endpoint registration
-email   := import("cms/email")     // Email triggering
-menus   := import("cms/menus")     // Menu retrieval
-helpers := import("cms/helpers")   // String/text utility functions
-log     := import("cms/log")       // Logging
+events     := import("core/events")     // Event subscription + emission
+filters    := import("core/filters")    // Filter registration
+routes     := import("core/routes")     // Register HTTP route handlers
+http       := import("core/http")       // Outbound HTTP fetch (subject to SSRF defenses)
+routing    := import("core/routing")    // Current page context (render-time only)
+nodes      := import("core/nodes")      // Content node CRUD
+nodetypes  := import("core/nodetypes")  // Custom node type registration
+taxonomies := import("core/taxonomies") // Taxonomy + term CRUD
+menus      := import("core/menus")      // Menu retrieval + upsert
+settings   := import("core/settings")   // Site settings read/write
+wellknown  := import("core/wellknown")  // Register /.well-known/* endpoints
+assets     := import("core/assets")     // Read theme/extension files
+helpers    := import("core/helpers")    // String/text utility functions
+log        := import("core/log")        // Structured logging
 ```
+
+**There is no `core/email` module.** Emails are sent by emitting events that match configured email rules — see §11.
+
+Capabilities determine which modules return useful data:
+
+- Themes are granted a default capability set (read/write nodes, menus, settings; routes, events, filters, helpers, log, http, files — but not `data:*` or `media:*`).
+- Extensions are granted exactly what `extension.json` declares.
+- A capability-denied call returns an error value rather than panicking — wrap with `is_error()`.
 
 ### Theme Source Modules (`./*`)
 
@@ -168,7 +185,7 @@ enum   := import("enum")    // Enumeration helpers (map, filter, etc.)
 
 ---
 
-## 4. cms/events
+## 4. core/events
 
 The event system is the primary way scripts interact with VibeCMS's rendering pipeline and lifecycle. Events are used for two distinct purposes: **template hooks** (injecting HTML during page renders) and **lifecycle events** (reacting to CMS actions like publishing a node).
 
@@ -185,7 +202,7 @@ Registers a handler script for the given event name.
 | `priority` | int | no | Execution order. Lower = runs first. Default: `50` |
 
 ```tengo
-events := import("cms/events")
+events := import("core/events")
 
 // Register with default priority (50)
 events.on("node.published", "handlers/on_node_published")
@@ -206,7 +223,7 @@ Fires a custom event, triggering any registered handlers (both script-based and 
 | `args` | array | no | Extra arguments (stored in `payload._args`) |
 
 ```tengo
-events := import("cms/events")
+events := import("core/events")
 
 // Fire a simple event
 events.emit("my_theme.initialized")
@@ -247,11 +264,11 @@ Template events are triggered from Go templates using the `{{event}}` function. 
 </main>
 ```
 
-**In the handler script**, the full render context is available via `cms/routing`, and the script sets `response` to return HTML:
+**In the handler script**, the full render context is available via `core/routing`, and the script sets `response` to return HTML:
 
 ```tengo
 // hooks/banner.tengo
-routing := import("cms/routing")
+routing := import("core/routing")
 
 if routing.is_homepage() {
     response = {
@@ -290,7 +307,7 @@ Lifecycle events are fired by the CMS core when actions occur. Handler scripts r
 ```tengo
 // handlers/on_node_published.tengo
 // The `event` variable is automatically injected
-log := import("cms/log")
+log := import("core/log")
 
 log.info("Node published: " + string(event.payload.node_id) + " -- " + event.payload.node_title)
 ```
@@ -317,7 +334,7 @@ You can also listen for **custom events** emitted by other scripts via `events.e
 
 ---
 
-## 5. cms/filters
+## 5. core/filters
 
 Filters transform values through a priority-ordered chain of scripts. They are the scripting equivalent of WordPress filters -- each script in the chain receives a value, optionally modifies it, and passes it along.
 
@@ -334,7 +351,7 @@ Registers a filter script for the given filter name.
 | `priority` | int | no | Execution order. Lower = runs first. Default: `50` |
 
 ```tengo
-filters := import("cms/filters")
+filters := import("core/filters")
 
 // Append site name to all page titles
 filters.add("node.title", "filters/site_title_suffix", 90)
@@ -361,7 +378,7 @@ Filter scripts receive a `value` variable and must set `response`:
 // filters/site_title_suffix.tengo
 // Appends the site name to page titles for SEO
 
-settings := import("cms/settings")
+settings := import("core/settings")
 
 site_name := settings.get("site_name")
 if site_name != undefined && value != undefined {
@@ -392,7 +409,7 @@ You can register filters for any name. These are conventional names used by the 
 
 ---
 
-## 6. cms/routing
+## 6. core/routing
 
 Provides information about the current page being rendered. This module is **context-aware** -- its functions return meaningful data only during template rendering (inside event hooks and filter scripts triggered by page renders). Outside of render context, functions return `undefined` or `false`.
 
@@ -405,7 +422,7 @@ Provides information about the current page being rendered. This module is **con
 Returns `true` if the current page is the homepage. **Language-aware**: all translations of the homepage also return `true` (resolved via translation groups).
 
 ```tengo
-routing := import("cms/routing")
+routing := import("core/routing")
 if routing.is_homepage() {
     response = {html: "<div>Welcome home!</div>"}
 }
@@ -545,7 +562,7 @@ site_name := routing.site_setting("site_name")
 
 ---
 
-## 7. cms/nodes
+## 7. core/nodes
 
 Full CRUD access to content nodes (pages, posts, and any custom node types). Available in all script contexts (not limited to render-time).
 
@@ -577,7 +594,7 @@ Lists content nodes with filtering and pagination.
 ```
 
 ```tengo
-nodes := import("cms/nodes")
+nodes := import("core/nodes")
 
 // List all published posts
 result := nodes.list({
@@ -735,7 +752,7 @@ All node-returning functions return maps with these fields:
 
 ---
 
-## 8. cms/settings
+## 8. core/settings
 
 Read and write site-level settings (key-value pairs stored in the database).
 
@@ -750,7 +767,7 @@ Retrieves a setting value by key. Returns `undefined` if the key does not exist 
 | `key` | string | yes | Setting key |
 
 ```tengo
-settings := import("cms/settings")
+settings := import("core/settings")
 
 site_name := settings.get("site_name")
 if site_name != undefined {
@@ -788,33 +805,30 @@ all_settings := settings.all()
 
 ---
 
-## 9. cms/http
+## 9. core/routes — register HTTP endpoints
 
-Register custom REST API endpoints that are handled by Tengo scripts. All routes are mounted under the `/api/theme/` prefix.
+Theme and extension scripts register HTTP route handlers via `core/routes`. Routes whose path contains a dot (e.g. `/sitemap.xml`, `/robots.txt`) mount at the app root; everything else mounts under `/api/theme/`.
 
 ### API
 
-#### `http.get(path, script_path)`
-#### `http.post(path, script_path)`
-#### `http.put(path, script_path)`
-#### `http.patch(path, script_path)`
-#### `http.delete(path, script_path)`
-
-Each function registers a route for the corresponding HTTP method.
+#### `routes.register(method, path, script_path)`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `path` | string | yes | URL path (appended to `/api/theme`). Supports `:param` placeholders. |
-| `script_path` | string | yes | Path to handler script, relative to `scripts/`, without `.tengo` |
+| `method` | string | yes | `"GET"`, `"POST"`, `"PUT"`, `"PATCH"`, `"DELETE"`. Case-insensitive. |
+| `path` | string | yes | URL path. Supports `:param` placeholders. Paths containing `.` mount at app root; others mount under `/api/theme/`. |
+| `script_path` | string | yes | Handler script path, relative to `scripts/`, without `.tengo` |
 
 ```tengo
-http := import("cms/http")
+routes := import("core/routes")
 
-http.get("/search", "api/search")              // GET /api/theme/search
-http.get("/nodes/:type", "api/nodes_by_type")   // GET /api/theme/nodes/post
-http.post("/contact", "api/contact_form")        // POST /api/theme/contact
-http.delete("/cache/:key", "api/clear_cache")    // DELETE /api/theme/cache/main
+routes.register("GET",    "/search",         "api/search")            // GET /api/theme/search
+routes.register("GET",    "/nodes/:type",    "api/nodes_by_type")     // GET /api/theme/nodes/post
+routes.register("POST",   "/contact",        "api/contact_form")      // POST /api/theme/contact
+routes.register("GET",    "/sitemap.xml",    "api/sitemap")           // GET /sitemap.xml (root-mounted)
 ```
+
+> **Note**: For `.well-known` endpoints (e.g. `security.txt`, `acme-challenge`), use `core/wellknown` instead — see §15.
 
 ### The `request` Object
 
@@ -887,7 +901,7 @@ If `response` is not set (or set to `nil`), a `204 No Content` response is retur
 // api/search.tengo -- Theme search API endpoint
 // GET /api/theme/search?q=keyword&type=page&limit=10
 
-nodes := import("cms/nodes")
+nodes := import("core/nodes")
 
 q := ""
 if request.query.q != undefined {
@@ -942,7 +956,7 @@ response = {
 // api/nodes_by_type.tengo
 // GET /api/theme/nodes/:type?page=1&per_page=20
 
-nodes := import("cms/nodes")
+nodes := import("core/nodes")
 
 node_type := ""
 if request.params.type != undefined {
@@ -994,72 +1008,96 @@ response = {
 
 ---
 
-## 10. cms/email
+## 10. core/http — outbound HTTP fetch
 
-Send emails by integrating with VibeCMS's email rule system. Emails are not sent directly from scripts; instead, scripts trigger events that match configured email rules in the admin panel.
+`core/http` is the only path through which a script may make outbound HTTP requests. The kernel applies SSRF defenses (scheme allowlist, internal-host blocklist, redirect bound, body cap, timeout) at this layer.
 
 ### API
 
-#### `email.trigger(action, payload?)`
-
-Publishes an event that may trigger matching email rules. This is the **preferred** way to send emails from scripts.
+#### `http.get(url, options?)`
+#### `http.post(url, options?)`
+#### `http.put(url, options?)`
+#### `http.patch(url, options?)`
+#### `http.delete(url, options?)`
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | string | yes | Action name that email rules match against |
-| `payload` | map | no | Data passed to the email template |
+| `url` | string | yes | Absolute URL. `http://` and `https://` only. |
+| `options` | map | no | `headers` (map), `body` (string or JSON-marshalled value), `timeout` (seconds) |
+
+Returns a response map: `{status, headers, body}`. On failure (network error, capability denied, blocked URL), an error value is returned — wrap with `is_error()`.
 
 ```tengo
-email := import("cms/email")
+http := import("core/http")
+log  := import("core/log")
 
-email.trigger("contact.submitted", {
-    to_email: "user@example.com",
-    name: "John Doe",
-    message: "Hello from the contact form!"
+resp := http.get("https://api.github.com/repos/example/repo", {
+    headers: { "Accept": "application/vnd.github+json" },
+    timeout: 10
+})
+
+if is_error(resp) {
+    log.error("github fetch failed: " + string(resp))
+} else if resp.status == 200 {
+    log.info("starred: " + string(resp.body))
+}
+
+// POST with JSON body
+http.post("https://hooks.example.com/notify", {
+    headers: { "Content-Type": "application/json" },
+    body: `{"event":"contact.submitted","email":"user@example.com"}`,
+    timeout: 5
 })
 ```
 
-To make this work, configure an email rule in the admin panel that matches the `"contact.submitted"` action.
+### Hardening
 
-#### `email.send(options)`
+- **Scheme allowlist:** `http`, `https`. Rejects `file://`, `gopher://`, etc.
+- **Internal-host blocklist:** rejects `localhost`, `127.0.0.0/8`, `169.254.0.0/16` (link-local + AWS metadata), RFC1918 ranges, IPv6 link-local.
+- **Redirect bound:** max 5 hops; each hop re-validated.
+- **Body cap:** 10 MB default, configurable per call.
+- **Timeout:** 30 s default, configurable per call.
+- **Capability:** requires `http:fetch`.
 
-Sends a direct email by triggering the special `"script.email.send"` event. You must configure an email rule matching `"script.email.send"` in the admin.
-
-**Options map:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `to` | string | yes | Recipient email address |
-| `subject` | string | no | Email subject line |
-| `template` | string | no | Email template slug (from admin templates) |
-| `data` | map | no | Template variables |
-
-```tengo
-email := import("cms/email")
-
-email.send({
-    to: "admin@site.com",
-    subject: "New Contact Form Submission",
-    template: "contact-notify",
-    data: {
-        name: "John Doe",
-        message: "Hello!"
-    }
-})
-```
-
-### How It Works
-
-1. Your script calls `email.trigger("action_name", payload)` or `email.send(options)`.
-2. The engine publishes an event to the internal event bus.
-3. The email rule engine checks if any configured rules match the action name.
-4. If a match is found, the rule's email template is rendered with the payload data and sent via the configured email provider (e.g., Resend).
-
-All script-triggered emails include `_source: "theme_script"` in the payload for traceability.
+Override the blocklist in development with `VIBECMS_ALLOW_PRIVATE_HTTP=true`.
 
 ---
 
-## 11. cms/menus
+## 11. Triggering emails from scripts
+
+VibeCMS does not expose a `core/email` module. Email delivery is wired through the event bus + email rule engine:
+
+1. The script publishes an event via `events.emit("<action>", payload)`.
+2. The kernel's email dispatcher matches the action against `email_rules` rows.
+3. A matched rule renders its template (`html/template`), wraps it in the configured `email_layout`, and dispatches via the active provider plugin (`smtp-provider` or `resend-provider`).
+4. Every send writes to `email_logs` for audit.
+
+```tengo
+events := import("core/events")
+
+// Trigger a configured email rule (e.g. action="contact.submitted")
+events.emit("contact.submitted", {
+    name:      "Jane Doe",
+    email:     "jane@example.com",
+    subject:   "Hello",
+    body:      "Quote request..."
+})
+```
+
+To wire this up:
+
+1. Create an email template in the admin (`/admin/email/templates`).
+2. Create an email rule (`/admin/email/rules`):
+   - **Action:** `contact.submitted`
+   - **Recipient type:** `fixed` and **value:** `admin@example.com`
+   - **Template:** the one you just created
+3. Templates use `html/template` syntax and have access to the full payload map: `{{.name}}`, `{{.email}}`, `{{.body}}`, etc.
+
+To send an ad-hoc email without a pre-configured rule, use the `email:send` capability via a Go plugin's `CoreAPI.SendEmail` — Tengo scripts intentionally cannot bypass the rule engine.
+
+---
+
+## 12. core/menus
 
 Retrieve navigation menus configured in the admin panel.
 
@@ -1075,7 +1113,7 @@ Retrieves a menu by its slug, with resolved items. Returns `undefined` if not fo
 | `language_id` | int | no | Language ID to filter menu items |
 
 ```tengo
-menus := import("cms/menus")
+menus := import("core/menus")
 
 main_menu := menus.get("main-menu")
 if main_menu != undefined {
@@ -1130,7 +1168,181 @@ Menu items support arbitrary nesting through the `children` field.
 
 ---
 
-## 12. cms/helpers
+## 13. core/nodetypes
+
+Register and inspect custom content types from a theme/extension script. The same surface backs the `core.nodetype.*` MCP tools.
+
+### API
+
+#### `nodetypes.register(slug, options)` — register or upsert a node type
+
+| Field | Type | Description |
+|---|---|---|
+| `label` | string | Singular display name |
+| `label_plural` | string | Plural display name |
+| `icon` | string | Lucide icon name (defaults to `file-text`) |
+| `description` | string | |
+| `taxonomies` | []string | Allowed taxonomy slugs |
+| `field_schema` | []map | Field definitions consumed by the editor |
+| `url_prefixes` | map[string]string | Per-language URL prefix override |
+| `supports_blocks` | bool | If false, node has only `fields_data`, no block tree |
+
+```tengo
+nodetypes := import("core/nodetypes")
+
+nodetypes.register("recipe", {
+    label:        "Recipe",
+    label_plural: "Recipes",
+    icon:         "chef-hat",
+    description:  "Cooking recipe with ingredients and steps",
+    taxonomies:   ["category", "cuisine"],
+    field_schema: [
+        { name: "prep_time", label: "Prep time (min)", type: "number" },
+        { name: "ingredients", label: "Ingredients", type: "repeater", fields: [
+            { name: "qty",  label: "Qty",  type: "text" },
+            { name: "name", label: "Item", type: "text" }
+        ]}
+    ],
+    url_prefixes: { en: "recipes", fr: "recettes" }
+})
+```
+
+#### `nodetypes.get(slug)`, `nodetypes.list()`, `nodetypes.update(slug, options)`, `nodetypes.delete(slug)`
+
+Same shape as MCP tools. `delete` refuses to remove built-in types (`page`, `post`).
+
+Capability: `nodetypes:read` for `get`/`list`, `nodetypes:write` for the rest.
+
+---
+
+## 14. core/taxonomies
+
+Register taxonomies and CRUD their terms.
+
+### API
+
+#### `taxonomies.register(slug, options)` — register a taxonomy
+
+| Field | Type | Description |
+|---|---|---|
+| `label`, `label_plural` | string | |
+| `description` | string | |
+| `hierarchical` | bool | True for nested categories, false for flat tags |
+| `show_ui` | bool | Whether the admin SPA exposes editing UI |
+| `node_types` | []string | Which node types this taxonomy applies to |
+| `field_schema` | []map | Per-term custom fields |
+
+```tengo
+tax := import("core/taxonomies")
+
+tax.register("cuisine", {
+    label:        "Cuisine",
+    label_plural: "Cuisines",
+    hierarchical: false,
+    show_ui:      true,
+    node_types:   ["recipe"],
+    field_schema: [
+        { name: "flag", label: "Flag emoji", type: "text" }
+    ]
+})
+```
+
+#### Term CRUD
+
+```tengo
+tax.create_term({ taxonomy: "cuisine", node_type: "recipe", slug: "italian", name: "Italian", fields_data: { flag: "🇮🇹" } })
+tax.list_terms("recipe", "cuisine")     // [TaxonomyTerm, ...]
+tax.get_term(42)
+tax.update_term(42, { name: "Italiano" })
+tax.delete_term(42)
+```
+
+Capability: `nodetypes:read`/`write` for definitions, `nodes:read`/`write`/`delete` for terms.
+
+---
+
+## 15. core/wellknown
+
+Register handlers for `/.well-known/<path>`.
+
+```tengo
+wellknown := import("core/wellknown")
+
+wellknown.register("security.txt", "wellknown/security_txt")
+wellknown.register("acme-challenge/*", "wellknown/acme")  // prefix match
+```
+
+The handler script receives the same `request` map as `core/routes` handlers and sets `response` the same way. Routes mounted via `wellknown.register` are dispatched **before** the public catch-all so unregistered well-known paths return 404 quickly.
+
+---
+
+## 16. core/assets
+
+Read-only access to files inside the calling theme or extension's own root directory. Use it to ship templates, fixtures, default content, or per-form HTML layouts as plain `.html` / `.json` / `.txt` files instead of inlining multi-line strings in `theme.tengo`.
+
+```tengo
+assets := import("core/assets")
+
+// Read a file relative to the theme/extension root.
+html := assets.read("forms/trip-order.html")
+if is_error(html) {
+    log.warn("layout missing: " + string(html))
+    html = ""
+}
+
+// Existence check (true/false; never returns an error).
+if assets.exists("forms/contact.html") {
+    // ...
+}
+```
+
+| Function | Returns | Notes |
+|----------|---------|-------|
+| `assets.read(path)` | `string` or `error` | Reads UTF-8. Returns an error value if the file is missing or the path escapes the theme root — wrap with `is_error()`. |
+| `assets.exists(path)` | `bool` | `true` if the path resolves to a real file inside the root, `false` otherwise. Never returns an error. |
+
+### Path Rules
+
+- Paths are **relative to the theme/extension root** (the parent of the
+  `scripts/` directory). For a theme that means `themes/<theme>/<path>`; for
+  an extension it means `extensions/<slug>/<path>`.
+- Absolute paths (`/etc/passwd`) are rejected.
+- Path traversal that escapes the root (`../../...`) is rejected.
+- Empty path → error.
+
+### Common Patterns
+
+**Ship a form layout from the theme** (e.g. `themes/<theme>/forms/<slug>.html`)
+and seed it via `forms:upsert`:
+
+```tengo
+events  := import("core/events")
+assets  := import("core/assets")
+
+layout := assets.read("forms/trip-order.html")
+if is_error(layout) { layout = "" }
+
+events.emit("forms:upsert", {
+    slug:   "trip-order",
+    name:   "Trip Booking",
+    force:  true,
+    layout: layout,
+    fields: [ /* … */ ]
+})
+```
+
+**Bundle a JSON fixture** for default content:
+
+```tengo
+helpers := import("core/helpers")
+raw     := assets.read("data/regions.json")
+regions := helpers.json_decode(raw)
+for r in regions { /* … */ }
+```
+
+---
+
+## 17. core/helpers
 
 A collection of string and text utility functions commonly needed in theme scripts. These are pure functions with no side effects.
 
@@ -1141,7 +1353,7 @@ A collection of string and text utility functions commonly needed in theme scrip
 Converts a string to a URL-safe slug. Normalizes unicode, lowercases, replaces non-alphanumeric sequences with hyphens.
 
 ```tengo
-helpers := import("cms/helpers")
+helpers := import("core/helpers")
 helpers.slugify("Hello World!")     // "hello-world"
 helpers.slugify("Cafe Creme")       // "cafe-creme"
 ```
@@ -1316,9 +1528,9 @@ helpers.default(undefined, "", "last")       // "last"
 
 ---
 
-## 13. cms/log
+## 18. core/log
 
-Write messages to the server log. All messages are prefixed with `[script]` and the log level.
+Write structured messages to the server log. Output is routed through the same `slog` pipeline as the rest of the kernel: development = human-readable, production = JSON. All script log entries carry `source=script` and the calling theme/extension slug.
 
 ### API
 
@@ -1327,7 +1539,7 @@ Write messages to the server log. All messages are prefixed with `[script]` and 
 Logs an informational message.
 
 ```tengo
-log := import("cms/log")
+log := import("core/log")
 log.info("Theme initialized successfully")
 // Output: [script] INFO: Theme initialized successfully
 ```
@@ -1363,85 +1575,14 @@ All functions accept a single string argument. To log complex data, use `fmt.spr
 
 ```tengo
 fmt := import("fmt")
-log := import("cms/log")
+log := import("core/log")
 
 log.info(fmt.sprintf("Found %d nodes of type %s", count, node_type))
 ```
 
 ---
 
-## 13.5 core/assets — Read theme/extension files
-
-Read-only access to files inside the calling theme or extension's own root
-directory. Use it to ship templates, fixtures, default content, or per-form
-HTML layouts as plain `.html` / `.json` / `.txt` files instead of inlining
-multi-line strings in `theme.tengo`.
-
-```tengo
-assets := import("core/assets")
-
-// Read a file relative to the theme/extension root.
-html := assets.read("forms/trip-order.html")
-if is_error(html) {
-    log.warn("layout missing: " + string(html))
-    html = ""
-}
-
-// Existence check (true/false; never returns an error).
-if assets.exists("forms/contact.html") {
-    // ...
-}
-```
-
-### API
-
-| Function | Returns | Notes |
-|----------|---------|-------|
-| `assets.read(path)` | `string` or `error` | Reads UTF-8. Returns an error value if the file is missing or the path escapes the theme root — wrap with `is_error()`. |
-| `assets.exists(path)` | `bool` | `true` if the path resolves to a real file inside the root, `false` otherwise. Never returns an error. |
-
-### Path Rules
-
-- Paths are **relative to the theme/extension root** (the parent of the
-  `scripts/` directory). For a theme that means `themes/<theme>/<path>`; for
-  an extension it means `extensions/<slug>/<path>`.
-- Absolute paths (`/etc/passwd`) are rejected.
-- Path traversal that escapes the root (`../../...`) is rejected.
-- Empty path → error.
-
-### Common Patterns
-
-**Ship a form layout from the theme** (e.g. `themes/<theme>/forms/<slug>.html`)
-and seed it via `forms:upsert`:
-
-```tengo
-events  := import("core/events")
-assets  := import("core/assets")
-
-layout := assets.read("forms/trip-order.html")
-if is_error(layout) { layout = "" }
-
-events.emit("forms:upsert", {
-    slug:   "trip-order",
-    name:   "Trip Booking",
-    force:  true,
-    layout: layout,
-    fields: [ /* … */ ]
-})
-```
-
-**Bundle a JSON fixture** for default content:
-
-```tengo
-helpers := import("core/helpers")
-raw     := assets.read("data/regions.json")
-regions := helpers.json_decode(raw)
-for r in regions { /* … */ }
-```
-
----
-
-## 14. Standard Library
+## 19. Standard Library
 
 VibeCMS exposes a safe subset of the [Tengo standard library](https://github.com/d5/tengo/blob/master/docs/stdlib.md). The following modules are available:
 
@@ -1525,7 +1666,7 @@ Scripts are fully sandboxed and cannot interact with the host system beyond the 
 
 ---
 
-## 15. Script Execution Model
+## 20. Script Execution Model
 
 ### Sandboxing
 
@@ -1548,11 +1689,11 @@ Each script execution creates a **brand new VM**. There is no shared state betwe
 - `theme.tengo` runs once at startup to register handlers.
 - Each event handler, filter, or HTTP handler runs in its own fresh VM.
 - Global variables set in one execution are not visible to the next.
-- This means scripts are inherently stateless. Use `cms/settings` for persistent state.
+- This means scripts are inherently stateless. Use `core/settings` for persistent state.
 
 ### Thread Safety
 
-Multiple scripts can execute concurrently (e.g., two page renders triggering the same event handler simultaneously). Because each gets its own VM, there are no race conditions or shared mutable state. The CMS API modules (`cms/nodes`, `cms/settings`, etc.) handle their own concurrency internally.
+Multiple scripts can execute concurrently (e.g., two page renders triggering the same event handler simultaneously). Because each gets its own VM, there are no race conditions or shared mutable state. The CMS API modules (`core/nodes`, `core/settings`, etc.) handle their own concurrency internally.
 
 ### Error Handling
 
@@ -1566,7 +1707,7 @@ No script error can crash the server.
 
 ---
 
-## 16. Writing Theme Modules
+## 21. Writing Theme Modules
 
 Create reusable Tengo modules that can be imported by other scripts in your theme.
 
@@ -1640,14 +1781,14 @@ The entry file `scripts/theme.tengo` is **not importable** -- it is excluded fro
 
 ### Module Tips
 
-- Modules can import other modules (both `cms/*` API modules and other `./` theme modules).
+- Modules can import other modules (both `core/*` API modules and other `./` theme modules).
 - Modules can import standard library modules (`fmt`, `json`, etc.).
 - The `export` statement must be at the top level of the module, not inside a function or conditional.
 - Module source is loaded once and cached. Changes require a server restart.
 
 ---
 
-## 17. Complete Examples
+## 22. Complete Examples
 
 ### Full theme.tengo Example
 
@@ -1655,10 +1796,10 @@ The entry file `scripts/theme.tengo` is **not importable** -- it is excluded fro
 // theme.tengo -- Complete theme scripting entry point.
 // Registers all event handlers, filters, and API routes.
 
-log := import("cms/log")
-events := import("cms/events")
-filters := import("cms/filters")
-http := import("cms/http")
+log := import("core/log")
+events := import("core/events")
+filters := import("core/filters")
+http := import("core/http")
 
 log.info("My Theme scripts initializing...")
 
@@ -1707,9 +1848,9 @@ log.info("My Theme scripts loaded!")
 // POST /api/theme/contact
 // Body: {name: "...", email: "...", message: "..."}
 
-email := import("cms/email")
-helpers := import("cms/helpers")
-log := import("cms/log")
+email := import("core/email")
+helpers := import("core/helpers")
+log := import("core/log")
 
 // Validate required fields
 if request.body == undefined {
@@ -1762,9 +1903,9 @@ response = {
 // hooks/banner.tengo
 // Displays different banners based on page context.
 
-routing := import("cms/routing")
-helpers := import("cms/helpers")
-settings := import("cms/settings")
+routing := import("core/routing")
+helpers := import("core/helpers")
+settings := import("core/settings")
 
 if routing.is_homepage() {
     hero_text := helpers.default(settings.get("hero_text"), "Welcome to our site!")
@@ -1797,9 +1938,9 @@ if routing.is_homepage() {
 // hooks/related_posts.tengo
 // Shows related posts after the main content on blog posts.
 
-routing := import("cms/routing")
-nodes := import("cms/nodes")
-helpers := import("cms/helpers")
+routing := import("core/routing")
+nodes := import("core/nodes")
+helpers := import("core/helpers")
 
 if !routing.is_node_type("post") {
     return
@@ -1856,8 +1997,8 @@ response = {html: html}
 // scripts/lib/content_utils.tengo
 // Shared content utility functions.
 
-nodes := import("cms/nodes")
-helpers := import("cms/helpers")
+nodes := import("core/nodes")
+helpers := import("core/helpers")
 
 // Get featured posts for a language
 get_featured := func(lang, count) {
@@ -1894,7 +2035,7 @@ Using it from a handler:
 
 ```tengo
 // hooks/featured_sidebar.tengo
-routing := import("cms/routing")
+routing := import("core/routing")
 content := import("./lib/content_utils")
 
 lang := routing.current_language()
@@ -1919,40 +2060,40 @@ response = {html: html}
 
 | Task | Module | Function |
 |------|--------|----------|
-| Register event handler | `cms/events` | `events.on(name, script, priority?)` |
-| Fire custom event | `cms/events` | `events.emit(name, payload?, args?)` |
-| Register filter | `cms/filters` | `filters.add(name, script, priority?)` |
-| Register API endpoint | `cms/http` | `http.get(path, script)`, `.post()`, `.put()`, `.patch()`, `.delete()` |
-| Check page type | `cms/routing` | `routing.is_homepage()`, `.is_404()`, `.is_node_type()`, `.is_slug()` |
-| Check language | `cms/routing` | `routing.is_language(code)` |
-| Check login status | `cms/routing` | `routing.is_logged_in()` |
-| Get current node | `cms/routing` | `routing.get_node()` |
-| Get current user | `cms/routing` | `routing.get_user()` |
-| List nodes | `cms/nodes` | `nodes.list(options)` |
-| Get node by ID | `cms/nodes` | `nodes.get(id)` |
-| Get node by URL | `cms/nodes` | `nodes.get_by_slug(url)` |
-| Create node | `cms/nodes` | `nodes.create(data)` |
-| Update node | `cms/nodes` | `nodes.update(id, data)` |
-| Delete node | `cms/nodes` | `nodes.delete(id)` |
-| Advanced query | `cms/nodes` | `nodes.query(options)` |
-| Read setting | `cms/settings` | `settings.get(key)` |
-| Write setting | `cms/settings` | `settings.set(key, value)` |
-| All settings | `cms/settings` | `settings.all()` |
-| Send email via rule | `cms/email` | `email.trigger(action, payload)` |
-| Send direct email | `cms/email` | `email.send(options)` |
-| Get menu | `cms/menus` | `menus.get(slug, language_id?)` |
-| List menus | `cms/menus` | `menus.list()` |
-| Log message | `cms/log` | `log.info()`, `.warn()`, `.error()`, `.debug()` |
-| Slugify text | `cms/helpers` | `helpers.slugify(text)` |
-| Truncate text | `cms/helpers` | `helpers.truncate(text, len, suffix?)` |
-| Word excerpt | `cms/helpers` | `helpers.excerpt(text, words)` |
-| Strip HTML | `cms/helpers` | `helpers.strip_html(text)` |
-| Escape HTML | `cms/helpers` | `helpers.escape_html(text)` |
-| String case | `cms/helpers` | `helpers.lower()`, `.upper()`, `.title_case()` |
-| String search | `cms/helpers` | `helpers.contains()`, `.starts_with()`, `.ends_with()` |
-| String ops | `cms/helpers` | `helpers.replace()`, `.split()`, `.join()`, `.trim()` |
-| MD5 hash | `cms/helpers` | `helpers.md5(text)` |
-| Repeat string | `cms/helpers` | `helpers.repeat(text, n)` |
-| Word count | `cms/helpers` | `helpers.word_count(text)` |
-| Pluralize | `cms/helpers` | `helpers.pluralize(n, singular, plural)` |
-| Default value | `cms/helpers` | `helpers.default(val, fallback, ...)` |
+| Register event handler | `core/events` | `events.on(name, script, priority?)` |
+| Fire custom event | `core/events` | `events.emit(name, payload?, args?)` |
+| Register filter | `core/filters` | `filters.add(name, script, priority?)` |
+| Register API endpoint | `core/http` | `http.get(path, script)`, `.post()`, `.put()`, `.patch()`, `.delete()` |
+| Check page type | `core/routing` | `routing.is_homepage()`, `.is_404()`, `.is_node_type()`, `.is_slug()` |
+| Check language | `core/routing` | `routing.is_language(code)` |
+| Check login status | `core/routing` | `routing.is_logged_in()` |
+| Get current node | `core/routing` | `routing.get_node()` |
+| Get current user | `core/routing` | `routing.get_user()` |
+| List nodes | `core/nodes` | `nodes.list(options)` |
+| Get node by ID | `core/nodes` | `nodes.get(id)` |
+| Get node by URL | `core/nodes` | `nodes.get_by_slug(url)` |
+| Create node | `core/nodes` | `nodes.create(data)` |
+| Update node | `core/nodes` | `nodes.update(id, data)` |
+| Delete node | `core/nodes` | `nodes.delete(id)` |
+| Advanced query | `core/nodes` | `nodes.query(options)` |
+| Read setting | `core/settings` | `settings.get(key)` |
+| Write setting | `core/settings` | `settings.set(key, value)` |
+| All settings | `core/settings` | `settings.all()` |
+| Send email via rule | `core/email` | `email.trigger(action, payload)` |
+| Send direct email | `core/email` | `email.send(options)` |
+| Get menu | `core/menus` | `menus.get(slug, language_id?)` |
+| List menus | `core/menus` | `menus.list()` |
+| Log message | `core/log` | `log.info()`, `.warn()`, `.error()`, `.debug()` |
+| Slugify text | `core/helpers` | `helpers.slugify(text)` |
+| Truncate text | `core/helpers` | `helpers.truncate(text, len, suffix?)` |
+| Word excerpt | `core/helpers` | `helpers.excerpt(text, words)` |
+| Strip HTML | `core/helpers` | `helpers.strip_html(text)` |
+| Escape HTML | `core/helpers` | `helpers.escape_html(text)` |
+| String case | `core/helpers` | `helpers.lower()`, `.upper()`, `.title_case()` |
+| String search | `core/helpers` | `helpers.contains()`, `.starts_with()`, `.ends_with()` |
+| String ops | `core/helpers` | `helpers.replace()`, `.split()`, `.join()`, `.trim()` |
+| MD5 hash | `core/helpers` | `helpers.md5(text)` |
+| Repeat string | `core/helpers` | `helpers.repeat(text, n)` |
+| Word count | `core/helpers` | `helpers.word_count(text)` |
+| Pluralize | `core/helpers` | `helpers.pluralize(n, singular, plural)` |
+| Default value | `core/helpers` | `helpers.default(val, fallback, ...)` |

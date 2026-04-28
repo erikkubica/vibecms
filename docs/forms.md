@@ -93,15 +93,15 @@ After every accepted submission the plugin emits `forms:submitted` on the CMS ev
 **Tengo example:**
 
 ```tengo
-events := import("cms/events")
-log    := import("cms/log")
+events := import("core/events")
+log    := import("core/log")
 
 events.on("forms:submitted", "handlers/on_form_submit")
 ```
 
 ```tengo
 // scripts/handlers/on_form_submit.tengo
-log := import("cms/log")
+log := import("core/log")
 
 log.info("Form submitted", {
     form:       event.payload.form_slug,

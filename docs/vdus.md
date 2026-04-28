@@ -626,34 +626,33 @@ admin-ui/src/components/
 
 ## Implementation Status
 
-### Done (shell + page ports)
+### Done
 
-- [x] Go SDUI types, layout engine (~2.3k lines), SSE broadcaster, boot + layout API endpoints
-- [x] TanStack Query integration, component registry, recursive renderer with `RemoteComponent`
-- [x] Action handler: `CORE_API`, `NAVIGATE`, `TOAST`, `INVALIDATE`, `CONFIRM`, `SEQUENCE`, `SET_STORE`
-- [x] SSE hook with auto-reconnect
-- [x] Built-in component library (~30 components: layout primitives, page composites, UI primitives, dashboard widgets, generic list table, extensions grid, themes grid)
-- [x] Admin shell with sidebar + top bar driven by `useBoot()`
-- [x] ~40 pages ported to SDUI (see `docs/VDUS_HANDOFF.md` for the inventory)
+- [x] Go SDUI types, layout engine, SSE broadcaster, boot + layout API endpoints.
+- [x] TanStack Query integration, component registry, recursive renderer with `RemoteComponent`.
+- [x] Action handler: `CORE_API`, `NAVIGATE`, `TOAST`, `INVALIDATE`, `CONFIRM`, `SEQUENCE`, `SET_STORE`.
+- [x] SSE hook with auto-reconnect.
+- [x] Built-in component library (~30 components: layout primitives, page composites, UI primitives, dashboard widgets, generic list table, extensions grid, themes grid).
+- [x] Admin shell with sidebar + top bar driven by `useBoot()`.
+- [x] ~40 pages ported to SDUI.
+- [x] **Hardening pass complete** (commits `9f9239c`, `e53c2b3`):
+  - Typed SSE taxonomy: `ENTITY_CHANGED(entity, id, op)`, `NAV_STALE`, `SETTING_CHANGED(key)`, `NOTIFY`, `UI_STALE`.
+  - Broadcaster uses `SubscribeAll` + routes every emitted event (user, setting, menu, layout, layout_block, block_type, node, theme, taxonomy, role).
+  - Query-key factory replaces ad-hoc keys.
+  - Fine-grained invalidation: each SSE event → specific TanStack Query keys.
+  - Bounded SSE per-client buffer (cap 32) with drop-on-full.
+  - Sidebar filtered by capability (commit `e53c2b3`).
 
-### Hardening pass (in progress — `docs/plans/2026-04-25-vdus-hardening.md`)
+### Open
 
-- [ ] Typed SSE taxonomy: `ENTITY_CHANGED(entity, id, op)`, `NAV_STALE`, `SETTING_CHANGED(key)`
-- [ ] Broadcaster subscribes to all emitted events (user, setting, menu, layout, layout_block, block_type, node, theme, taxonomy)
-- [ ] Query-key factory (`qk.boot`, `qk.layout`, `qk.list`, `qk.entity`, `qk.settings`) — replaces ad-hoc keys
-- [ ] Fine-grained invalidation: SSE event → specific query keys
-- [ ] shadcn `AlertDialog`-based `CONFIRM` action (replace `window.confirm`)
-- [ ] Optimistic updates + consistent save toasts in the `CORE_API` action path
-- [ ] E2E verification via playwright-cli
-
-### Later (post-hardening)
-
-- [ ] Port remaining non-SDUI pages and decompose complex components
-- [ ] `DataProvider` + `QueryListener` components (Phase 2 data binding)
-- [ ] `admin:layout:render` filter chain for extension-side layout injection (Phase 3)
-- [ ] Extension layout JSON served from gRPC plugins
-- [ ] Layout tree versioning + server-side validation
-- [ ] Component prop TypeScript generation from Go structs
+- [ ] shadcn `AlertDialog`-based `CONFIRM` action (replace `window.confirm`).
+- [ ] Optimistic updates + consistent save toasts in the `CORE_API` action path.
+- [ ] E2E coverage via `playwright-cli`.
+- [ ] `DataProvider` + `QueryListener` components (Phase 2 data binding).
+- [ ] `admin:layout:render` filter chain for extension-side layout injection (Phase 3).
+- [ ] Extension layout JSON served from gRPC plugins.
+- [ ] Layout tree versioning + server-side validation.
+- [ ] Component prop TypeScript generation from Go structs.
 
 ---
 

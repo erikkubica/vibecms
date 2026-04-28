@@ -1,6 +1,6 @@
 # VibeCMS Core — Development Guide
 
-A practical reference for engineers working **on the kernel** (not on extensions; for that see `extension_api.md`). Distilled from a complete code review of `internal/`. Read alongside [`core_features.md`](./core_features.md) and [`architecture.md`](./architecture.md).
+A practical reference for engineers working **on the kernel** (not on extensions; for that see `extension_api.md`). Originally distilled from a complete code review of `internal/`; updated 2026-04-28 to reflect the security/refactor pass that resolved most of the §12 roadmap. Read alongside [`core_features.md`](./core_features.md) and [`architecture.md`](./architecture.md).
 
 ---
 
@@ -13,10 +13,12 @@ From `CLAUDE.md`:
 
 When designing a feature, ask: *"Could this be turned off without breaking the kernel?"* If yes → extension. If no → core. **The default is extension.**
 
-Real violations to clean up:
-- `internal/email/smtp.go`, `resend.go`, `provider.go` — should be in `extensions/smtp-provider`, `extensions/resend-provider`.
-- `internal/rendering/template_renderer.go::image_url`, `image_srcset` — assume the media-manager extension's URL scheme; should move there.
-- `internal/cms/media_handler.go` — competes with media-manager extension. Currently dead code.
+Resolved violations (commit `eb0c1eb`):
+- ✅ `internal/email/smtp.go`, `resend.go`, `provider.go` removed; provider implementations now live exclusively in `extensions/smtp-provider`, `extensions/resend-provider`.
+- ✅ `internal/cms/media_handler.go` and other dead admin handler code purged (~800 LOC).
+
+Open violations:
+- `internal/rendering/template_renderer.go::image_url`, `image_srcset` — assume the media-manager extension's URL scheme. Should move into media-manager via a registered template func or an event-driven URL resolver. Tracked.
 
 ### 1.2 File size limits
 | Limit | Value |
@@ -25,7 +27,14 @@ Real violations to clean up:
 | Hard limit | 500 LOC (production code) |
 | Test files | exempt |
 
-11 files currently exceed the hard limit (engine.go 2571, tengo_adapter.go 1572, public_handler.go 1524, grpc_client.go 974, theme_loader.go 967, db/seed.go 886, grpc_server.go 851, node_handler.go 777, theme_mgmt_service.go 596, content_svc.go 552, extension_handler.go 551). New work must not add to the list.
+Commit `e6d8551` split the worst offenders. Check `git ls-files internal/ | xargs wc -l | sort -rn | head -20` for the current top of the list — the structural splits applied so far are:
+
+- `internal/sdui/engine.go` → split per page builder (`engine_*.go`).
+- `internal/coreapi/grpc_server.go` → per-domain (`grpc_server_meta.go`, `grpc_server_data.go`, `grpc_server_proto.go`).
+- `internal/coreapi/grpc_client.go` → mirror split.
+- `internal/coreapi/tengo_adapter.go` → per-module subgroups (`tengo_content_types.go`, `tengo_helpers.go`, `tengo_menus.go`, `tengo_modules_misc.go`, `tengo_nodes.go`).
+
+A few files (`engine.go`, `theme_loader.go`, `public_handler.go`) still exceed the hard limit and are tracked for further decomposition. New work must not regress.
 
 **When you must split**: organize by responsibility/domain, not arbitrarily. Examples:
 - `sdui/engine.go` → one file per page builder (`layouts/dashboard.go`, `layouts/content.go`, …).
@@ -35,7 +44,7 @@ Real violations to clean up:
 ### 1.3 Coding standards (Go)
 - **Errors**: never `result, _ := ...`. Always check. Wrap with context: `fmt.Errorf("creating node %s: %w", slug, err)`.
 - **Sentinel errors**: define at package level. The kernel uses `coreapi.ErrCapabilityDenied`, `ErrNotFound`, `ErrValidation`, `ErrInternal` + `APIError` wrapper.
-- **Context**: must be the first parameter, must be propagated to DB/HTTP/script calls. **Currently broken** in 13 of 15 `impl_*.go` files (they take `_ context.Context` and discard it). Fixing is part of #27 from the review.
+- **Context**: must be the first parameter, must be propagated to DB/HTTP/script calls. Most `impl_*.go` files now use `db.WithContext(ctx)` (commit `9f9239c`). When adding a new method, always thread the ctx through.
 - **`log.Fatalf`** only at the very top (`main.go`). Functions that return an error must not call `log.Fatalf` before returning — it makes the error return dead code (see `internal/db/postgres.go` for the anti-pattern).
 - **`panic(`** in production code: never. Use error returns. Recovery only at handler boundaries (event bus, gRPC, Tengo callbacks).
 - **No nil-deref**: GORM `First` returns `gorm.ErrRecordNotFound` — distinguish from other errors.
@@ -288,11 +297,11 @@ Then call `s.registerWidgetTools()` from `New(deps)`.
 | `GET /me` | Auth-required; returns user + capabilities. |
 | `POST /auth/login-page` | Form-based; redirects with flash cookies. |
 | `POST /auth/register` | Form-based; **creates editor-role users — needs fix** (default to member). |
-| `POST /auth/forgot-password` | **Stub — implement properly.** |
-| `POST /auth/reset-password` | **Stub — implement properly.** |
-| `GET /logout` | **CSRF-vulnerable — change to POST.** |
+| `POST /auth/forgot-password` | Real flow (commit `76f6124`); SHA-256 hashed token in `password_reset_tokens`. |
+| `POST /auth/reset-password` | Single-use token consumption; replays detected via `used_at`. |
+| `GET /logout` | Now POST-only (commit `76f6124`). |
 
-Sessions: 32-byte random hex, SHA-256 hashed at rest. Cookie `vibecms_session`, HttpOnly, SameSite=Lax, Secure when TLS. **Schedule `sessionSvc.CleanExpired` to run hourly** — currently never called.
+Sessions: 32-byte random hex, SHA-256 hashed at rest. Cookie `vibecms_session`, HttpOnly, SameSite=Lax, Secure when TLS. `SessionService.CleanExpired` runs hourly via the cleanup loop wired in `cmd/vibecms/main.go`.
 
 ### 5.2 Capability check flow
 
@@ -307,7 +316,7 @@ HTTP request → AuthRequired middleware → user in c.Locals
                     → else → ErrCapabilityDenied
 ```
 
-⚠️ The capability guard wraps the inner CoreAPI when constructed via `NewCapabilityGuard(inner)`. **Currently this wrapping is missing in `main.go:164` and the guard is bypassed for all extensions/themes/scripts.** Highest-priority fix.
+The capability guard wraps the inner CoreAPI when constructed via `NewCapabilityGuard(inner)`. As of commit `54f573a`, this wrapping is in place at `cmd/vibecms/main.go:252` (`guardedAPI := coreapi.NewCapabilityGuard(coreAPI)`). The unguarded `coreAPI` is passed only to internal kernel code (which sets `caller.Type = "internal"` for fail-open). Plugin and Tengo callers always go through `guardedAPI`.
 
 ### 5.3 Render pipeline
 
@@ -348,7 +357,7 @@ Deactivate:
   4. Publish extension.deactivated event.
 ```
 
-Plugin processes: spawned via `exec.Command(binaryPath)` with HashiCorp `go-plugin`. **Binaries are unsigned.**
+Plugin processes: spawned via `exec.Command(binaryPath)` with HashiCorp `go-plugin`. Binaries are signed (commit `654dae5`); the gRPC handshake validates the signature against the kernel's public key before allowing the plugin to register.
 
 ### 5.5 Plugin gRPC contract
 
@@ -393,30 +402,31 @@ Before opening a PR that touches kernel code, verify each:
 
 ## 7. Production safety checklist (config)
 
-Block the kernel from booting in `APP_ENV=production` when any of these are unsafe:
+Implemented in `internal/config/config.go::Validate()` (commit `7e29de1`). The kernel refuses to boot in `APP_ENV=production` when any of these are unsafe:
 
 ```go
-// In config.Load() — RECOMMENDED ADDITION (not currently present)
+// Implemented in config.Validate()
 if cfg.AppEnv == "production" {
     var problems []string
     if cfg.SessionSecret == "" { problems = append(problems, "SESSION_SECRET unset") }
+    if cfg.SecretKey == "" { problems = append(problems, "VIBECMS_SECRET_KEY unset; secret-bearing settings cannot be encrypted") }
     if cfg.MonitorBearerToken == "" { problems = append(problems, "MONITOR_BEARER_TOKEN unset") }
-    if cfg.DBPassword == "vibecms_secret" { problems = append(problems, "DB_PASSWORD is the default") }
-    if cfg.DBSSLMode == "disable" { problems = append(problems, "DB_SSLMODE=disable") }
-    if os.Getenv("CORS_ORIGINS") == "" { problems = append(problems, "CORS_ORIGINS unset") }
+    if cfg.DBPassword == "vibecms_secret" { problems = append(problems, "DB_PASSWORD is the project default") }
+    if cfg.DBSSLMode == "disable" && !isInternalHost(cfg.DBHost) { problems = append(problems, "DB_SSLMODE=disable on a public host") }
+    if cfg.CORSOrigins == "" { problems = append(problems, "CORS_ORIGINS unset; admin would be open to any origin") }
     if len(problems) > 0 {
-        log.Fatalf("refusing to start in production with unsafe defaults: %v", problems)
+        return fmt.Errorf("refusing to start in production with unsafe defaults: %v", problems)
     }
 }
 ```
 
-This is the single most impactful change for deployment safety.
+Coolify's `coolify-compose.yml` populates all of these via `SERVICE_*` magic variables on first deploy.
 
 ---
 
 ## 8. Testing strategy
 
-The kernel ships with **1 test file** (`internal/scripting/engine_test.go`). The testing void is the largest single risk in the codebase. Until coverage exists, every refactor risks silent regressions.
+The kernel ships with ~21 test files covering capability guard, scripting engine, auth (lockout/rate-limit/timing/password), MCP data tools, sanitization, secrets, RBAC, and config. The most security-critical surface (capability guard, auth flows) now has table-driven coverage. The tests still need expansion in:
 
 ### Minimum viable test pyramid (priority order)
 
@@ -473,52 +483,33 @@ Target: 80% coverage per backend standards.
 
 ---
 
-## 9. Common pitfalls (real, observed)
+## 9. Common pitfalls
 
-### 9.1 The unguarded CoreAPI
-`main.go:164` constructs `coreImpl` directly and passes it to `mcpServer`, gRPC host server factory, and script engine — **not** wrapped in `NewCapabilityGuard`. Every extension and theme bypasses capability checks.
+Most of the original pitfall list has been addressed (see §12). The remaining ones to watch:
 
-### 9.2 `_ context.Context` everywhere in `impl_*.go`
-13 of 15 files take `_ context.Context` and discard it. DB calls don't honor cancellation. When fixing, use `c.db.WithContext(ctx)`.
+### 9.1 Mass assignment via `c.BodyParser(&map[string]interface{})`
+Always use a typed DTO. If you must accept an arbitrary map (e.g. extension settings), explicitly strip protected fields (`id`, `created_at`, `updated_at`, `is_system`, `role_id` for non-self) before passing to `db.Updates`.
 
-### 9.3 `b, _ := json.Marshal(x)`
-Common pattern in `impl_taxonomies.go`, `impl_nodes.go`, `impl_nodetypes.go`, etc. Silent error. Replace with proper handling.
+### 9.2 SubscribeAll handler captures privileged data
+The email dispatcher uses `eventBus.SubscribeAll`. Any new SubscribeAll handler will see every payload, including `email.send` with `to`/`subject`/`html`. Prefer `Subscribe(action, ...)` for specific actions. If you need cross-cutting visibility, use an explicit allowlist of action prefixes.
 
-### 9.4 `log.Fatalf` inside a function that returns an error
-`internal/db/postgres.go::Connect` — calls `log.Fatalf` on every error path before returning, making the error return dead code. Fix by removing `log.Fatalf` and letting the caller decide.
+### 9.3 `tmpl.Funcs(fullFuncMap)` after Parse, before Execute
+`rendering/template_renderer.go::RenderParsed` mutates a parsed template's FuncMap on the cache-miss path. Concurrent calls race. The fix is to clone after Parse — open issue.
 
-### 9.5 Mass assignment via `c.BodyParser(&map[string]interface{})`
-Several Update handlers parse to a map, then pass to `db.Updates(body)`. Without explicit field stripping, clients can write any column. Use a typed DTO.
+### 9.4 Cache key = full template source
+`renderer.RenderParsed` uses the entire template source string as a map key. Memory grows linearly with template size. Use `sha256(content)[:16]` or `ContentHash` from the model.
 
-### 9.6 Filter `unsub` pointer compare on copies
-`impl_filters.go:31-42` — `&e.handler == &entry.handler` where `e` is a range-loop copy. Never matches. Filters never unregister. Fix: index-based compare, or opaque ID at register time.
+### 9.5 `os.Exit` paths skip defers
+`log.Fatalf` calls `os.Exit(1)`, which does NOT run deferred functions. Fatal exits in the boot path can leak plugin processes. The recommended pattern is to bubble errors up to `main.go`, perform explicit cleanup, then call `os.Exit(1)`.
 
-### 9.7 Event handler subscribe-on-every-load
-`scripting/engine.go::subscribeEventHandlers` re-subscribes ALL handlers on every load. Combined with bus having no Unsubscribe, dispatch multiplies on every reload.
+### 9.6 Unbounded LRU caches
+`MenuService.cache`, `block` template cache, etc. still use `sync.Map` without bounds. `hashicorp/golang-lru` is now a dependency (commit `78dfbde`); the migration to bounded LRUs is incremental. Don't add new unbounded caches.
 
-### 9.8 `tmpl.Funcs(fullFuncMap)` after Parse, before Execute
-`rendering/template_renderer.go::RenderParsed` mutates a parsed template's FuncMap on the cache-miss path. Concurrent calls race. Fix: clone after Parse.
+### 9.7 Tengo script bytecode not cached
+Each request re-compiles the handler script from disk. Acceptable for low-traffic theme hooks, painful for heavily-trafficked Tengo HTTP routes. A script-source SHA → bytecode cache is on the roadmap.
 
-### 9.9 Cache key = full template source
-`renderer.RenderParsed`, `public_handler.go::renderBlock`. Map keys grow linearly with template size. Use `sha256(content)[:16]` or `ContentHash` from the model.
-
-### 9.10 SubscribeAll handler captures privileged data
-Email dispatcher uses `eventBus.SubscribeAll`. Any code path that subscribes-all sees `email.send` payloads (with `to`, `subject`, `html`). Be extremely careful adding new SubscribeAll handlers; consider a private channel for sensitive events.
-
-### 9.11 `os.Exit` paths skip defers
-`log.Fatalf` calls `os.Exit(1)`, which does NOT run deferred functions. The `defer pluginManager.StopAll()` in `main.go:262` doesn't run on fatal startup or shutdown errors → plugin processes leaked. Use `os.Exit(1)` after explicit cleanup.
-
-### 9.12 `app.Shutdown()` has no timeout
-`app.Shutdown()` blocks until all in-flight requests finish. SSE streams or hung MCP calls block forever. Use `app.ShutdownWithTimeout(30 * time.Second)`.
-
-### 9.13 SMTP STARTTLS downgrade
-`internal/email/smtp.go:85` — only upgrades if server advertises STARTTLS. MITM stripping the advertisement gets plaintext. Add `email_smtp_require_tls` setting.
-
-### 9.14 No retention on log tables
-`mcp_audit_log`, `email_logs`, `content_node_revisions`, `sessions` (after expiry) — none have TTL. Linear growth. Add scheduled cleanup.
-
-### 9.15 `is_encrypted` flag is decorative
-Schema supports the flag, no encryption code. Either implement (AES-GCM with master key in env) or remove the flag.
+### 9.8 Public extension routes can shadow core paths
+`extension.json::public_routes` accepts arbitrary paths — an extension could declare `/admin/login` and intercept core auth. Namespace enforcement is on the roadmap; until then, rely on extension review during install.
 
 ---
 
@@ -583,40 +574,45 @@ Schema supports the flag, no encryption code. Either implement (AES-GCM with mas
 
 ## 12. Roadmap-shaped fixes (for kernel maintainers)
 
-In rough priority:
+### Done in the recent hardening pass
 
-**Phase 1 — Critical security**
-1. Wrap CoreAPI with `NewCapabilityGuard` for gRPC + Tengo.
-2. Default registration to `member`; add `allow_registration` setting.
-3. Implement password reset properly (or remove the form).
-4. Block self-promotion in UpdateUser + lock down RoleHandler.Update.
-5. `config.Load` production safety guards.
+| # | Fix | Commit |
+|---|---|---|
+| 1 | Wrap CoreAPI with `NewCapabilityGuard` for gRPC + Tengo | `54f573a` |
+| 2 | Default registration to `member`; gated by `allow_registration` setting | `76f6124` |
+| 3 | Real password reset flow (`password_reset_tokens` table) | `76f6124` |
+| 4 | Block self-promotion + lock down RoleHandler.Update | `76f6124` |
+| 5 | `config.Load` production safety guards | `7e29de1` |
+| 7 | Validate `status` and `node_type` in node Update | `9f9239c` |
+| 8 | Apply access filter to `Search` | `9f9239c` |
+| 9 | Filter unsubscribe (opaque ID) | `9f9239c` |
+| 10 | Event-bus `Unsubscribe` + plumb through scripting | `9f9239c` |
+| 11 | Bounded SSE buffer with drop-on-full | `9f9239c` |
+| 12 | JSON-only CSRF guard on admin API | `76f6124` |
+| 13 | Rate limiting + account lockout on auth | `76f6124` |
+| 14 | AES-256-GCM at-rest encryption for git tokens + secret settings | `7e29de1`, `f4ac40f` |
+| 15 | Move SMTP/Resend providers out of core | `eb0c1eb` |
+| 17 | Delete dead handler code | `eb0c1eb` |
+| 18 | Split files past 500 LOC (most) | `e6d8551` |
+| 19 | Plugin binary signing | `654dae5` |
+| 20 | Retention crons for log tables | `eb0c1eb` |
+| 21 | Structured slog with request-id correlation | `dcde556` |
+| 22 | `app.ShutdownWithTimeout(30s)` | `9f9239c` |
+| 24 | HMAC validation for theme webhook | `f4ac40f` |
+| 25 | Constant-time bearer compare for `/stats` and webhook | `f4ac40f` |
+| — | bluemonday XSS sanitization for richtext | `55653e5` |
+| — | Network/proxy hardening (SSRF defenses on `http.Fetch`) | `2344aa1` |
 
-**Phase 2 — Correctness**
-6. Set `node.AuthorID = currentUser.ID` on Create.
-7. Validate `status` and `node_type` in node Update.
-8. Apply access filter to `Search`.
-9. Fix filter unsubscribe (`impl_filters.go:31-42`).
-10. Add Unsubscribe to event bus + plumb through scripting + Subscribe sites.
-11. Bounded SSE buffer with drop-on-full.
-12. CSRF tokens on form POSTs + admin API.
-13. Rate limiting + account lockout on auth.
+### Still open
 
-**Phase 3 — Hygiene**
-14. Encrypt at rest: `Theme.GitToken`, `is_encrypted` settings, secret extension settings.
-15. Move SMTP/Resend providers out of core.
-16. Move `image_url`/`image_srcset` template helpers into media-manager extension.
-17. Delete dead handler code (`admin_handler.go`, `media_handler.go`, duplicate handlers in `node_handler.go`).
-18. Split files past 500 LOC.
-19. Plugin binary signing.
-20. Retention crons for `mcp_audit_log`, `email_logs`, `content_node_revisions`, expired `sessions`.
-
-**Phase 4 — Operational**
-21. Structured logger with levels, JSON output, correlation IDs.
-22. `app.ShutdownWithTimeout` and defer-safe error paths.
-23. Bounded LRU caches across renderer, public_handler, menu_svc, etc.
-24. HMAC validation for theme webhook (GitHub/GitLab signature).
-25. Constant-time bearer compare (`/stats`, theme webhook).
+| Priority | Fix | Notes |
+|---|---|---|
+| Medium | 6. Set `node.AuthorID = currentUser.ID` on `CoreAPI.CreateNode` | Verify Tengo `nodes.create` path; admin handler is fixed. |
+| Medium | 16. Move `image_url`/`image_srcset` template helpers into `media-manager` | Open hard-rule violation (the only remaining one). |
+| Medium | 23. Bounded LRU caches across renderer, public_handler, menu_svc, etc. | `hashicorp/golang-lru` was added (commit `78dfbde`); migration pending. |
+| Low | Public extension routes can shadow core paths | Add namespace enforcement to `public_proxy.go`. |
+| Low | Tengo bytecode cache | Recompile on every request currently. |
+| Low | Test pyramid for capability guard, auth flows, event bus, renderer | Highest-value test gap; see §8. |
 
 **Phase 5 — Test pyramid**
 Coverage of capability guard, auth flows, event bus, renderer, public site, MCP, plugin contract — see §8.

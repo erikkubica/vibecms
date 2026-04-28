@@ -172,8 +172,8 @@ Create `scripts/extension.tengo` in your extension directory.
 
 ```tengo
 // scripts/extension.tengo
-events := import("cms/events")
-log := import("cms/log")
+events := import("core/events")
+log := import("core/log")
 
 log.info("My scripting extension loaded")
 
@@ -182,8 +182,8 @@ events.on("node.created", "handlers/set_seo_defaults")
 
 ```tengo
 // scripts/handlers/set_seo_defaults.tengo
-nodes := import("cms/nodes")
-log := import("cms/log")
+nodes := import("core/nodes")
+log := import("core/log")
 
 // `event` is magically injected by the event dispatcher
 node_id := event.payload.node_id
@@ -205,7 +205,7 @@ if node != undefined {
 
 ## 5. Core API Reference
 
-The `CoreAPI` interface gives you full control over the CMS. In Go plugins, this is accessed via the `shared.CoreAPI` interface injected during `Init()`. In Tengo, these map directly to the `cms/*` imports.
+The `CoreAPI` interface gives you full control over the CMS. In Go plugins, this is accessed via the `shared.CoreAPI` interface injected during `Init()`. In Tengo, these map directly to the `core/*` imports.
 
 ### 5.1 Content Nodes
 Manage pages, posts, and any custom models.
@@ -331,15 +331,15 @@ The Forms extension (`extensions/forms/`) is the canonical example of a producti
 **Tengo script:**
 
 ```tengo
-events := import("cms/events")
-log    := import("cms/log")
+events := import("core/events")
+log    := import("core/log")
 
 events.on("forms:submitted", "handlers/on_form_submit")
 ```
 
 ```tengo
 // scripts/handlers/on_form_submit.tengo
-log := import("cms/log")
+log := import("core/log")
 
 // event.payload keys: form_id, form_slug, submission_id, data (map), metadata
 log.info("Form submitted", {form: event.payload.form_slug})

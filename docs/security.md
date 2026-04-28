@@ -1,96 +1,305 @@
-# VibeCMS Security Hardening Documentation
+# VibeCMS Security
 
-## About This Document
-
-**Purpose:** Security controls, hardening checklist, and threat model for this specific application. Defines the minimum security bar that must be met before production launch.
-
-**How AI tools should use this:** Apply these controls when generating authentication code, API handlers, database queries, and infrastructure configuration; flag any generated code that violates a control listed here.
-
-**Consistency requirements:** Security boundaries must align with architecture.md; authentication model must match api-spec.md auth requirements; sensitive data fields must match database-schema.md column definitions.
-
-VibeCMS is designed to be a fast and secure foundation for agency-managed websites. Because each site runs as its own independent system, a security issue on one site stays contained. However, since the system handles sensitive content, automated AI integrations, and custom scripting, we must ensure the core engine is resilient against common web attacks and specialized threats like script breakouts or LLM prompt injection. This document outlines how we protect the data, the server, and the agency’s reputation.
+This document describes the **current** security posture: what's implemented, where, and how a kernel or extension developer is expected to use it. For threat-model history and the per-issue audit trail, see commits prefixed `feat(security):`, `feat(auth):`, `feat(secrets):`, and `feat(themes):`.
 
 ---
 
-### Threat Model
+## 1. Defense in Depth Summary
 
-| Threat | Affected Component | Likelihood | Impact | Mitigation |
-|--------|--------------------|------------|--------|------------|
-| **Tengo Sandbox Escape** | Tengo Scripting Engine | Low | High | Use restricted standard library; disable `os` and `io` modules; enforce 10ms execution timeout. |
-| **Credential Stuffing** | Admin UI Login | High | High | Argon2id hashing; aggressive rate limiting on `/admin/login`; exponential backoff for failed attempts. |
-| **JSONB Injection** | Content Node Service | Medium | Medium | Use GORM's parameterized queries; validate all block data against JSON-schemas before SQL insertion. |
-| **AI Prompt Injection** | AIService / SEO Gen | Medium | Low | Never pass raw user input directly to LLM; wrap all inputs in fixed system instruction templates. |
-| **Monitoring API Key Leak** | Agency Monitoring API | Low | Medium | Keys stored as SHA-256 hashes; read-only access enforced at middleware; IP-based allowlisting recommended. |
-| **Stored XSS in Blocks** | Jet Rendering Engine | Medium | High | Use `bluemonday` to sanitize HTML in `blocks_data` on save; use Jet's automatic HTML escaping. |
+| Layer | Mechanism | Where |
+|---|---|---|
+| Boot | Refuse to start with unsafe config | `internal/config/config.go::Validate` |
+| Transport | TLS expected at edge (Coolify/proxy); HSTS at app level | Fiber middleware |
+| Auth | Bcrypt passwords, hashed sessions, account lockout, rate limit | `internal/auth/` |
+| Authorization | Per-handler `CapabilityRequired` + capability guard wrapping `CoreAPI` | `internal/auth/`, `internal/coreapi/capability.go` |
+| CSRF | JSON-only mutations on `/admin/api/*` | `internal/auth/csrf.go` |
+| XSS | bluemonday UGC sanitization at render | `internal/sanitize/richtext.go` |
+| Secrets at rest | AES-256-GCM envelope on flagged settings, theme git tokens | `internal/secrets/` |
+| Plugin trust | Signed binaries, gRPC handshake validates signature | `pkg/plugin/`, `internal/cms/plugin_manager.go` |
+| Outbound HTTP | Scheme allowlist, internal-host blocklist, redirects bounded | `internal/coreapi/impl_http.go` |
+| Theme git | HTTPS-only, scheme allowlist, encrypted tokens, HMAC-validated webhook | `internal/cms/theme_*.go` |
+| MCP | Bearer token (hashed), per-token rate limit, scope×class ACL, audit log | `internal/mcp/` |
+| Logs | Structured slog with request-id correlation, no secret leakage | `internal/logging/` |
 
-### Authentication Controls
+---
 
-Based on `api-spec.md`, VibeCMS uses a dual authentication strategy.
+## 2. Production Boot Gates
 
-*   **Admin UI (Stateful):**
-    *   **Storage:** Secure, HttpOnly, SameSite=Lax cookies.
-    *   **Expiry:** 24 hours total lifespan; idle timeout is not implemented in MVP.
-    *   **Brute-Force Protection:** Max 5 failed attempts per 15 minutes per IP. Lockdown for 30 minutes following threshold breach.
-    *   **Session Fixation:** Regenerate `session_id` upon every successful login.
-*   **Monitoring API (Stateless):**
-    *   **Mechanism:** Static Bearer Token (`vibe_` prefix).
-    *   **Storage:** Tokens are stored in `api_tokens` as SHA-256 hashes.
-    *   **Key Rotation:** Managed via CLI command `vibecms keys rotate`. Immediate invalidation of all active monitoring keys.
+`config.Load` validates the environment before the server starts. In `APP_ENV=production`, the boot fails fast on:
 
-### Authorization Controls
+| Problem | Error | Remediation |
+|---|---|---|
+| Empty `SESSION_SECRET` | `SESSION_SECRET unset in production` | Set a random 32+ byte hex string |
+| Empty `VIBECMS_SECRET_KEY` | `VIBECMS_SECRET_KEY unset; secret-bearing settings cannot be encrypted` | Generate via `openssl rand -hex 32` |
+| Default DB password | `DB_PASSWORD is the project default; refusing to start` | Use Coolify magic vars or a real secret |
+| `DB_SSLMODE=disable` on a non-internal hostname | `DB_SSLMODE=disable on a public host` | `require` or `verify-full` |
+| Empty `CORS_ORIGINS` | `CORS_ORIGINS unset; admin would be open to any origin` | Set the public admin URL list |
+| Empty `MONITOR_BEARER_TOKEN` | `MONITOR_BEARER_TOKEN unset; /api/v1/stats unprotected` | Generate via `openssl rand -hex 32` |
 
-| Role | Access Level | Enforcement Mechanism | Unauthorized Response |
-|------|--------------|-----------------------|-----------------------|
-| **Admin** | Full System Access | Role-check Middleware | 403 Forbidden |
-| **Editor** | Content/Media CRUD only | Middleware + Field Masking | 403 Forbidden |
-| **Agency-Manager** | Read-only Monitoring/Logs | Scoped API Keys / Scoped UI | 403 Forbidden |
+Coolify's `coolify-compose.yml` populates all of these via `SERVICE_*` magic variables on first deploy.
 
-*   **Mechanism:** RBAC is enforced via a bitmask check in the Fiber/Echo middleware before reaching the handler. 
-*   **Unauthorized Request:** Return `403 Forbidden` with body `{"error": "insufficient_permissions"}`. No data from the database should be leaked in the error response.
+---
 
-### Input Validation Checklist
+## 3. Authentication
 
-| Endpoint | Field | Allowed Type | Max Length | Error Case |
-|----------|-------|--------------|------------|------------|
-| `POST /admin/login` | `email` | String (Email format) | 255 | 401 Unauthorized |
-| `POST /admin/login` | `password` | String | 72 | 401 Unauthorized |
-| `PATCH /api/nodes/:id` | `slug` | String (a-z, 0-9, -) | 255 | 422 Unprocessable Entity |
-| `PATCH /api/nodes/:id` | `blocks_data`| JSON (Array) | 2MB | 400 Bad Request |
-| `POST /api/media` | `file` | Multipart (WebP/JPG/PNG/SVG) | 10MB | 413 Payload Too Large |
-| `GET /api/stats` | `Authorization`| String (Bearer) | 64 | 401 Unauthorized |
+### 3.1 Sessions
+- 32-byte cryptographic random token, hex-encoded; only the SHA-256 hash stored (`token_hash` column).
+- Cookie `vibecms_session`: `HttpOnly=true`, `SameSite=Lax`, `Secure` when behind TLS (honors `X-Forwarded-Proto` from the trusted proxy).
+- Stored fields: `user_id`, `token_hash`, `ip_address`, `user_agent`, `expires_at`.
+- Hourly cleanup loop (`SessionService.CleanExpired`) removes expired rows.
+- File: `internal/auth/session_svc.go`.
 
-*   **JSONB Validation:** Every block in `blocks_data` must be validated against the JSON-schema defined for its `type` using `xeipuuv/gojsonschema`.
-*   **SVG Protection:** All uploaded SVGs must pass through a strict XML whitelist to strip `<script>` and `on*` attributes.
+### 3.2 Login
+- Bcrypt verification (`bcrypt.DefaultCost=10`; configurable via `BCRYPT_COST` env).
+- Constant-time password compare (bcrypt is constant-time by construction).
+- Account lockout after N failed attempts (default 5, exponential backoff): `internal/auth/lockout.go`.
+- Per-IP rate limiter (default 5 attempts / 15 min): `internal/auth/rate_limit.go`.
+- File: `internal/auth/auth_handler.go`, `page_handler.go`.
 
-### Rate Limiting
+### 3.3 Registration
+- Public registration creates `member`-role users (not `editor`) since commit `76f6124`.
+- Self-registration is gated by `setting.allow_registration=true` (default false in production seeds).
 
-Rate limiting is enforced at the middleware level using an in-memory sliding window.
+### 3.4 Password Reset
+- Real flow (no longer a stub).
+- Raw token generated, sent via email; only SHA-256 hash stored in `password_reset_tokens`.
+- Tokens single-use (`used_at` set on consumption to detect replay).
+- Hourly cleanup of expired/used tokens.
+- File: `internal/auth/password_reset.go`.
 
-*   **Public Site Content:** No rate limit by default (handled by reverse proxy).
-*   **Admin Login (`/admin/login`):** 5 requests per 15 minutes per IP.
-*   **Agency Monitoring API (`/api/v1/monitor/*`):** 30 requests per minute per API Key.
-*   **AI Suggestions (`/api/ai/*`):** 10 requests per minute per User (to prevent API cost spikes).
-*   **Exceeded Response:** HTTP 429. Headers include `Retry-After`. Body: `{"error": "rate_limit_exceeded"}`.
+### 3.5 Self-Promotion Block
+- `UserHandler.Update` strips `role_id` from payloads when `target_user_id == current_user.id` (commit `76f6124`).
+- `RoleHandler.Update` requires `manage_roles` capability and refuses to mutate `is_system=true` rows.
 
-### Secrets Management
+### 3.6 Bearer Token (`/api/v1/stats`)
+- Constant-time compare via `crypto/subtle.ConstantTimeCompare`.
+- Token from `MONITOR_BEARER_TOKEN` env.
 
-*   **Environment Variables:** Used for `DATABASE_URL`, `RESEND_API_KEY`, and `OPENAI_API_KEY`.
-*   **Database Encryption:** SMTP passwords and S3 Secrets stored in `site_settings` are encrypted at rest using AES-256-GCM. The key is derived from the machine ID and an environment-provided salt.
-*   **License Key:** `vibe.key` sits on the filesystem. If the file is modified or the Ed25519 signature is invalid, the system enters "Soft-Fail" mode.
-*   **Compromise Plan:**
-    1.  Rotate `MASTER_MONITORING_KEY` in environment variables.
-    2.  Invalidate all entries in the `sessions` table via SQL.
-    3.  Rotate S3/Resend API keys and update the CMS via the Admin UI.
+---
 
-### Pre-Launch Security Checklist
+## 4. Authorization
 
-1.  [ ] Verify `Argon2id` is used for all new user passwords.
-2.  [ ] Confirm `os` and `io` modules are stripped from the Tengo VM environment.
-3.  [ ] Test that a `403 Forbidden` is returned when an **Editor** tries to access `/admin/settings`.
-4.  [ ] Ensure all `PATCH` requests to `content_nodes` are protected by a CSRF token.
-5.  [ ] Run a sample Tengo script that attempts a `math.sin` loop to verify 10ms execution timeout.
-6.  [ ] Verify that a `vibe_` monitoring key is stored as a hash and cannot be retrieved via the API.
-7.  [ ] Check that files uploaded to S3-compatible storage have "Private" ACLs by default.
-8.  [ ] Confirm `bluemonday` sanitizer is triggered on any `RichText` field type within a block.
-9.  [ ] Audit `jet` templates to ensure no `{{ .Raw }}` or equivalent unsafe filters are used on user input.
-10. [ ] Verify that the binary does not run as `root` in the production Dockerfile/service.
+### 4.1 Two Layers
+1. **Per-handler middleware** at the HTTP edge: `auth.CapabilityRequired("manage_users")`, `auth.AdminRequired()`, `auth.JSONOnlyMutations()`.
+2. **CoreAPI capability guard** at the API surface: every method wrapped in `capabilityGuard.<Method>` checks `caller.Capabilities[cap]`. See `internal/coreapi/capability.go`.
+
+The guard is wired in `cmd/vibecms/main.go:252`:
+```go
+guardedAPI := coreapi.NewCapabilityGuard(coreAPI)
+```
+The unguarded `coreAPI` is used **only** by core kernel code (which sets `caller.Type = "internal"` for fail-open). Plugin and Tengo callers always go through the guard.
+
+### 4.2 Per-Table ACL on Extension Data
+- `data:read`, `data:write`, `data:delete`, `data:exec` capabilities are checked against the manifest's `data_owned_tables` array (commit `654dae5`).
+- An extension declaring ownership over `forms`, `form_submissions` cannot read or write any other extension's tables.
+
+### 4.3 Per-Node-Type Access
+- `roles.capabilities` JSONB stores `nodes.<type>.access` and `nodes.<type>.scope` (`read`/`write`/`delete` × `all`/`own`).
+- `default_node_access` covers types not explicitly listed.
+- `auth.GetNodeAccess(user, nodeType)` → `NodeAccess.CanRead(node)`, `CanWrite(node)`.
+- Node `Search` honors the access filter (commit `9f9239c`).
+
+---
+
+## 5. CSRF Protection
+
+`auth.JSONOnlyMutations()` rejects POST/PUT/PATCH/DELETE on `/admin/api/*` unless `Content-Type` is `application/json`. This is sufficient because:
+
+- Browsers cannot send a cross-origin `application/json` request without an explicit CORS preflight.
+- `CORS_ORIGINS` is a strict allowlist (admin endpoints are credentialed).
+- The session cookie is `SameSite=Lax`, so navigation-initiated requests carry the cookie but a forged form POST is blocked at the body-parser by content-type.
+
+Token-based CSRF middleware is **not** currently implemented. The threat model deems content-type + same-site + strict CORS sufficient for the JSON admin API.
+
+Public extension routes (`extension.json` `public_routes`) are not behind `JSONOnlyMutations` — extensions handling forms must include their own CAPTCHA and/or honeypot defenses (the `forms` extension includes both by default).
+
+---
+
+## 6. XSS Defense
+
+`internal/sanitize/richtext.go` runs bluemonday's UGC policy on richtext fields **at render time**, with these tweaks:
+
+- Strips: `<iframe>`, `<form>`, `<input>`, `<style>`.
+- Allows: `<a>` with `rel`/`target`, `class` on all elements, `<img>` with `loading`/`decoding`.
+
+Render-time (not write-time) sanitization means policy can tighten without rewriting stored data.
+
+The Go `html/template` engine auto-escapes by default; `safeHTML` and `safeURL` template helpers explicitly opt out for cases where the kernel knows the value is safe (rendered block output, asset URLs from internal lookups). Treat any new use of `safeHTML`/`safeURL` as requiring a security review.
+
+---
+
+## 7. Secrets at Rest
+
+`internal/secrets/secrets.go` provides AES-256-GCM envelope encryption.
+
+- Master key: `VIBECMS_SECRET_KEY` env, 32 bytes hex.
+- Envelope format: `enc:v1:<base64(nonce || ciphertext || tag)>`.
+- Fresh random 12-byte nonce per call.
+- Encrypted columns:
+  - `site_settings.value` for keys matching the secret heuristic.
+  - `themes.git_token`.
+  - Reserved for future: `extension settings` flagged as secret in their manifest.
+
+### Secret Heuristic
+A `site_settings.key` is treated as secret-bearing if (case-insensitive) it contains any of:
+
+```
+_password   _key   _token   _apikey   _api_key   _credentials   _secret
+```
+
+Reads via `GET /admin/api/settings` redact secret keys (commit `54f573a`) — they return `"<redacted>"` regardless of stored value, unless the caller has explicit elevated capability.
+
+Dev mode (no `VIBECMS_SECRET_KEY`) passes plaintext through and logs a warning; production refuses to boot.
+
+---
+
+## 8. Plugin Trust
+
+- HashiCorp `go-plugin` v2 protocol with magic cookie `VIBECMS_PLUGIN=vibecms`.
+- gRPC-only (no NetRPC).
+- **Binaries are signed** (commit `654dae5`). The handshake validates the embedded signature against the kernel's public key before allowing the plugin to register.
+- Plugin processes are crash-isolated: a panic inside a plugin never kills the kernel.
+- Plugin shutdown has a 30-second timeout (`pluginManager.StopAll()` runs `app.ShutdownWithTimeout(30*time.Second)`).
+
+Each plugin receives a per-instance `VibeCMSHost` gRPC server backed by the **guarded** `CoreAPI`. The plugin's `CallerInfo` is constructed from its manifest's declared capabilities and `data_owned_tables`.
+
+---
+
+## 9. Outbound HTTP (`http.Fetch`)
+
+`CoreAPI.Fetch` is the only path through which plugin/script code can make outbound HTTP requests. Hardening (commit `2344aa1`):
+
+- **Scheme allowlist**: `http`, `https`. Rejects `file://`, `gopher://`, `dict://`, etc.
+- **Internal-host blocklist**: rejects `localhost`, `127.0.0.0/8`, `169.254.0.0/16` (link-local, AWS metadata), `10.0.0.0/8` and `192.168.0.0/16` (RFC1918), `::1`, fc00::/7.
+- **Redirect bound**: max 5 hops; each hop re-validated.
+- **Body cap**: 10 MB default, configurable per call.
+- **Timeout**: 30 s default, configurable per call.
+
+Override the blocklist by setting `VIBECMS_ALLOW_PRIVATE_HTTP=true` (development only).
+
+---
+
+## 10. Theme Git Install
+
+Hardening (commit `f4ac40f`):
+
+- **HTTPS-only**: `git_url` must start with `https://`. SSH and `file://` are rejected.
+- **Scheme allowlist**: enforced at clone and pull.
+- **Encrypted tokens**: `themes.git_token` stored via the secrets envelope.
+- **Token never in argv**: tokens injected via `git -c http.extraheader=Authorization:Bearer ...`, not in the URL (no `ps aux` leakage).
+- **Hostile-config defense**: post-clone, `.git/config` is reset to a minimal known-good template before any further git operations run.
+
+### Webhook (`POST /api/v1/theme-deploy`)
+
+- HMAC-validated: GitHub `X-Hub-Signature-256`, GitLab `X-Gitlab-Token`. Constant-time compare.
+- The legacy `?secret=` query param fallback was removed.
+- Rate-limited per-IP.
+- Idempotent: duplicate deliveries with the same commit SHA are no-ops.
+
+---
+
+## 11. CORS
+
+Two policies are mounted in parallel (commit `ace0066`):
+
+| Path | Policy |
+|---|---|
+| `/mcp` | Permissive: `Access-Control-Allow-Origin: *`, no credentials. Bearer-token auth means cookies are irrelevant. |
+| Everything else (admin + public) | Strict: origins must match `CORS_ORIGINS` env (comma-separated), `AllowCredentials=true`, methods/headers allowlisted. |
+
+`SERVICE_URL_APP` from Coolify is normalized to a list at startup (commits `279a2be`, `e84ffff`) — bare hostnames don't crash startup.
+
+---
+
+## 12. MCP Server (`/mcp`)
+
+### Tokens
+- Format: `vcms_<32 hex bytes>`.
+- Stored as SHA-256 hash; `token_prefix` (first 8 chars) kept for log identification.
+- Created via `POST /admin/api/mcp/tokens`; raw value returned **once** in the response.
+- Per-token rate limiter: 60 req/10 s default, in-memory (process-local). Backed by `golang.org/x/time/rate`.
+
+### Scope × Class ACL
+| Scope | Allowed classes |
+|---|---|
+| `read` | read |
+| `content` | read, content |
+| `full` | read, content, full |
+
+`tools_data.go` `core.data.exec` (raw SQL) requires both `full` scope and `VIBECMS_MCP_ALLOW_RAW_SQL=true` env.
+
+### Audit Log
+Every tool call writes `(token_id, tool, args_hash, status, error_code, duration_ms)` to `mcp_audit_log`. Raw args are not stored (only SHA-256 hash) so PII does not leak. Daily retention sweep keeps the table bounded.
+
+---
+
+## 13. Logging
+
+Structured slog with request-id correlation (commit `dcde556`):
+
+- Development: human-readable text format.
+- Production: JSON to stdout for collector ingestion.
+- Every request gets an `X-Request-Id` (generated if absent) propagated through the request context.
+- `coreapi.Log` (callable by extensions) prefixes with `[ext:<slug>]` and writes through the same slog path.
+
+### Don't Log
+- Plaintext passwords (use bcrypt failures with masked email).
+- Session cookie values (only token prefix).
+- MCP raw token (only `token_prefix`).
+- Secret site setting values.
+- Plugin response bodies (commit `eb0c1eb` removed the leaky preview log).
+
+### Required Fields on Errors
+- Request-id (auto-injected).
+- Error category (`auth`, `database`, `external`, `validation`).
+- Caller info (when known).
+
+---
+
+## 14. Threat Model Quick Reference
+
+| Threat | Status |
+|---|---|
+| **Tengo sandbox escape** | Restricted standard library (`os`, `io`, network modules removed); 50k allocation cap; 10 s timeout; per-execution fresh VM. |
+| **Credential stuffing** | Bcrypt + per-IP rate limit + account lockout. |
+| **JSONB injection** | GORM parameterized queries; field schemas validated against block-type definition before save. |
+| **Stored XSS in blocks** | bluemonday at render-time. |
+| **CSRF** | JSON-only mutations + strict CORS + SameSite cookie. |
+| **MIME header injection** | Subjects rendered with `text/template` then validated for CR/LF (commit `eb0c1eb`). |
+| **MITM STARTTLS downgrade** | `email_smtp_require_tls=true` setting (commit `eb0c1eb`); refuses plaintext if STARTTLS unavailable. |
+| **Plugin tampering** | Signed binaries + handshake validation. |
+| **SSRF via http.Fetch** | Scheme allowlist + internal-host blocklist. |
+| **Theme webhook replay** | HMAC validation + rate limit. |
+| **Mass-assignment via JSON parse** | Update handlers strip protected fields (`id`, `created_at`, `is_system`, `role_id` for non-self) before `db.Updates`. |
+| **Privilege escalation via PATCH /users/me** | Self-edit cannot change `role_id`. |
+| **Stored token replay (password reset)** | Single-use; `used_at` set on consumption. |
+| **Search bypassing access filter** | Search applies `NodeAccess` filter (commit `9f9239c`). |
+| **Filter handler leak** | `RegisterFilter` returns `UnsubscribeFunc`; opaque ID-based unregister (commit `9f9239c`). |
+| **Subscribe handler leak** | `Subscribe` returns `UnsubscribeFunc`; bus supports proper unregister. |
+| **SSE blocking on slow client** | Bounded buffer (cap 32) with drop-on-full. |
+
+---
+
+## 15. PR-Time Security Checklist
+
+Before merging any change touching kernel code:
+
+- [ ] Capability gate on every admin endpoint that mutates state.
+- [ ] DTO for body parsing — no `c.BodyParser(&model)` direct.
+- [ ] Mass-assignment safe: protected fields explicitly stripped.
+- [ ] Validation: enum fields whitelisted, required fields non-empty, lengths bounded.
+- [ ] Constant-time compare for any secret check.
+- [ ] No URL injection: scheme allowlist, no leading-wildcard ILIKE on indexed columns.
+- [ ] No CRLF in headers: strip `\r\n` from any user-supplied value before writing to a header.
+- [ ] Path-traversal defense on FS reads: `filepath.Clean` + prefix check against absolute base.
+- [ ] Context propagation: pass `c.UserContext()` through DB/HTTP/script calls.
+- [ ] Error wrapping: `fmt.Errorf("...: %w", err)`.
+- [ ] No silent `json.Marshal`: handle the error.
+- [ ] No new file > 500 LOC.
+- [ ] Tests for the new code path (capability denied, invalid input, success).
+
+---
+
+## 16. Reporting Vulnerabilities
+
+Email `security@vibecms.local` (placeholder — set in your fork). Disclose privately first; we aim for 7-day acknowledgement and 30-day fix turnaround for critical issues.

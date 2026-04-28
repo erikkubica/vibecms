@@ -249,12 +249,18 @@ See `extensions/README.md` for the complete guide and `docs/extension_api.md` fo
 | Doc | Description |
 |-----|-------------|
 | `CLAUDE.md` | AI coding assistant context (architecture, conventions) |
-| `docs/theming.md` | Complete theming guide |
-| `docs/extension_api.md` | Extension API reference |
-| `docs/scripting_api.md` | Tengo scripting reference |
-| `docs/architecture.md` | Technical architecture decisions |
-| `docs/database-schema.md` | Database schema reference |
-| `extensions/README.md` | Extension development guide |
+| `docs/architecture.md` | Canonical architectural reference |
+| `docs/extension_api.md` | Building extensions (manifests, gRPC plugins, capabilities) |
+| `docs/scripting_api.md` | Tengo `core/*` modules for theme + extension scripts |
+| `docs/theming.md` | Complete theming guide (layouts, partials, blocks, assets) |
+| `docs/forms.md` | Forms extension public API reference |
+| `docs/vdus.md` | Server-Driven UI (admin shell + layout trees + SSE) |
+| `docs/core_dev_guide.md` | Kernel development workflows |
+| `docs/core_features.md` | Exhaustive feature inventory |
+| `docs/database-schema.md` | Database schema reference (27 GORM models, 38 migrations) |
+| `docs/security.md` | Security posture and PR-time checklist |
+| `extensions/README.md` | Extension development guide (alternative entry to `docs/extension_api.md`) |
+| `docs/archive/` | Historical planning docs (March 2026) — kept for reference, do not consult for current behavior |
 
 ## License
 

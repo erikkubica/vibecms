@@ -843,10 +843,10 @@ The file `scripts/theme.tengo` is the scripting entry point. It runs once at sta
 
 ```tengo
 // scripts/theme.tengo
-log := import("cms/log")
-events := import("cms/events")
-http := import("cms/http")
-filters := import("cms/filters")
+log := import("core/log")
+events := import("core/events")
+http := import("core/http")
+filters := import("core/filters")
 
 log.info("Theme scripts initializing...")
 
@@ -1115,7 +1115,7 @@ Active themes cannot be deleted -- deactivate first. Deletion removes both the d
 
 - **Keep `theme.tengo` light** -- Use it only for registration. Put actual handler logic in separate files under `hooks/`, `handlers/`, `filters/`, and `api/`.
 - **Use priorities wisely** -- Lower numbers run first. Default is 50. Use 10 for early hooks, 90 for late filters.
-- **Scripts are sandboxed** -- They cannot access the filesystem, network, or system resources directly. Use the provided `cms/*` imports.
+- **Scripts are sandboxed** -- They cannot access the filesystem, network, or system resources directly. Use the provided `core/*` imports.
 
 ### Themes and Multi-Language
 
@@ -1327,8 +1327,8 @@ Here is a minimal but complete theme demonstrating all the major features workin
 ### scripts/theme.tengo
 
 ```tengo
-log := import("cms/log")
-events := import("cms/events")
+log := import("core/log")
+events := import("core/events")
 
 log.info("Agency Starter theme initializing...")
 

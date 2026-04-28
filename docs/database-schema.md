@@ -1,236 +1,609 @@
 # VibeCMS Database Schema
 
-## About This Document
+Authoritative reference for the PostgreSQL schema, derived directly from the GORM models in `internal/models/`. The schema is managed by 38 embedded SQL migrations in `internal/db/migrations/` (`0001_initial_schema.sql` … `0037_password_reset_tokens.sql`); GORM is **not** used for auto-migrate. To add or modify a table, write a new migration file — see `core_dev_guide.md` §3.4.
 
-**Purpose:** Authoritative table definitions and relationships. Every database interaction in the codebase must conform to this schema.
-
-**Consistency requirements:** Data stores must match components defined in `architecture.md`; request and response fields in `api-spec.md` must trace to columns in these tables.
-
-This document describes the complete structure of the VibeCMS database based on the GORM models in `internal/models`. It utilizes PostgreSQL's JSONB capabilities for flexible block-based data while maintaining strict relational integrity.
+PostgreSQL 16+ is required. JSONB columns use GIN indexes where queried. Soft deletes use GORM's `gorm.DeletedAt`.
 
 ---
 
-## Entity Relationship Diagram
+## Conventions
+
+- All tables have `created_at` (and most have `updated_at`) populated by `autoCreateTime` / `autoUpdateTime` GORM tags. Times are `TIMESTAMPTZ`.
+- Soft-delete tables (`content_nodes`) use `deleted_at TIMESTAMPTZ` indexed.
+- Primary keys are `BIGSERIAL` for high-volume log tables, `SERIAL` otherwise. UUIDs (`gen_random_uuid()`) are used for sessions and revisions where ID predictability matters.
+- Secret-bearing settings are encrypted at rest with AES-256-GCM (envelope format `enc:v1:<base64>`). The `is_encrypted` flag indicates current encryption status; the secret heuristic in `internal/secrets/` matches keys containing `_password`, `_key`, `_token`, `_apikey`, `_api_key`, `_credentials`, or `_secret`.
+
+---
+
+## Entity Relationships
 
 ```mermaid
 erDiagram
-    users ||--o{ sessions : creates
-    users }|--|| roles : belongs_to
-    content_nodes ||--o{ content_node_revisions : has
-    layouts ||--o{ layout_blocks : contains
-    menus ||--o{ menu_items : has
-    themes }|--|| templates : implements
+    users ||--o{ sessions : "has"
+    users ||--o{ password_reset_tokens : "requests"
+    users }o--|| roles : "has"
+    users }o--o| languages : "prefers"
+    users ||--o{ mcp_tokens : "owns"
+    users ||--o{ content_node_revisions : "creates"
+    users ||--o{ content_nodes : "authors"
+
+    content_nodes ||--o{ content_node_revisions : "has"
+    content_nodes ||--o{ content_nodes : "parent"
+    content_nodes }o--o| layouts : "uses"
+    content_nodes }o--|| node_types : "of_type"
+    content_nodes }o--o| languages : "in"
+
+    layouts }o--o| languages : "for"
+    layout_blocks }o--o| languages : "for"
+    block_types ||--o{ block_types : "—"
+
+    menus ||--o{ menu_items : "contains"
+    menu_items }o--o| content_nodes : "links_to"
+    menus }o--o| languages : "for"
+
+    taxonomies ||--o{ taxonomy_terms : "has"
+    taxonomy_terms ||--o{ taxonomy_terms : "parent"
+
+    extensions ||--o{ extension_migrations : "applies"
+
+    email_rules }o--|| email_templates : "renders"
+    email_rules ||--o{ email_logs : "fires"
+    email_templates }o--o| languages : "in"
+    email_layouts }o--o| languages : "for"
+
+    mcp_tokens ||--o{ mcp_audit_log : "produces"
 ```
 
 ---
 
-## Core Infrastructure
+## Auth & Identity
 
-### site_settings
-Global configuration and external API keys.
-- `key` (VARCHAR(100), PK)
-- `value` (TEXT)
-- `is_encrypted` (BOOLEAN)
-- `updated_at` (TIMESTAMPTZ)
+### `users`
+Administrative accounts.
 
-### extensions
-Tracks installed extensions and their configuration.
-- `id` (SERIAL, PK)
-- `slug` (VARCHAR(100), UNIQUE)
-- `version` (VARCHAR(50))
-- `is_active` (BOOLEAN)
-- `priority` (INT)
-- `config` (JSONB)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `email` | VARCHAR(255) UNIQUE NOT NULL | |
+| `password_hash` | VARCHAR(255) NOT NULL | bcrypt; cost configurable via `BCRYPT_COST` env |
+| `role_id` | INT NOT NULL | FK → `roles.id` |
+| `language_id` | INT NULL | FK → `languages.id` |
+| `full_name` | VARCHAR(100) NULL | |
+| `last_login_at` | TIMESTAMPTZ NULL | |
+| `created_at`, `updated_at` | TIMESTAMPTZ | |
 
-### themes
-Manages installed themes and Git repositories.
-- `id` (SERIAL, PK)
-- `slug` (VARCHAR(100), UNIQUE)
-- `name` (VARCHAR(200))
-- `description` (TEXT)
-- `version` (VARCHAR(50))
-- `author` (VARCHAR(200))
-- `source` (VARCHAR(20)) - upload, git
-- `git_url`, `git_branch`, `git_token` (TEXT)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+### `roles`
+RBAC role definitions. The `capabilities` JSONB stores boolean flags (`manage_users`, `manage_settings`, `default_node_access`) plus a per-node-type access map.
 
----
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(50) UNIQUE NOT NULL | `admin`, `editor`, `author`, `member` are seeded with `is_system=true` |
+| `name` | VARCHAR(100) NOT NULL | |
+| `description` | TEXT NULL | |
+| `is_system` | BOOL DEFAULT false | Built-in roles cannot be deleted |
+| `capabilities` | JSONB NOT NULL DEFAULT '{}' | See shape below |
 
-## Authentication & Authorization
+Capability shape:
+```json
+{
+  "admin_access": true,
+  "manage_users": true,
+  "manage_roles": true,
+  "manage_settings": true,
+  "manage_menus": true,
+  "manage_layouts": true,
+  "manage_email": true,
+  "default_node_access": { "access": "write", "scope": "all" },
+  "nodes": {
+    "post": { "access": "read", "scope": "own" }
+  },
+  "email_subscriptions": ["user.registered", "node.published"]
+}
+```
 
-### users
-Stores administrative accounts.
-- `id` (SERIAL, PK)
-- `email` (VARCHAR(255), UNIQUE)
-- `password_hash` (VARCHAR(255))
-- `role_id` (INT, FK -> roles)
-- `language_id` (INT, FK -> languages)
-- `full_name` (VARCHAR(100))
-- `last_login_at` (TIMESTAMPTZ)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+### `sessions`
+Active admin sessions. Cookie `vibecms_session` carries the raw token; only the SHA-256 hash is stored.
 
-### roles
-Role-Based Access Control definitions.
-- `id` (SERIAL, PK)
-- `slug` (VARCHAR(50), UNIQUE)
-- `name` (VARCHAR(100))
-- `description` (TEXT)
-- `is_system` (BOOLEAN)
-- `capabilities` (JSONB) - Defines allowed CoreAPI permissions
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK DEFAULT gen_random_uuid() | |
+| `user_id` | INT NOT NULL | FK → `users.id` |
+| `token_hash` | VARCHAR(255) UNIQUE NOT NULL | |
+| `ip_address` | VARCHAR(45) NULL | |
+| `user_agent` | TEXT NULL | |
+| `expires_at` | TIMESTAMPTZ NOT NULL | |
+| `created_at` | TIMESTAMPTZ | Hourly cleanup loop deletes expired rows |
 
-### sessions
-Manages active administrative sessions.
-- `id` (UUID, PK)
-- `user_id` (INT, FK -> users)
-- `token_hash` (VARCHAR(255), UNIQUE)
-- `ip_address` (VARCHAR(45))
-- `user_agent` (TEXT)
-- `expires_at` (TIMESTAMPTZ)
-- `created_at` (TIMESTAMPTZ)
+### `password_reset_tokens`
+In-flight password reset requests. The raw token is sent once via email; only the SHA-256 hash is stored.
 
----
-
-## Content & Data
-
-### content_nodes
-Primary table for all routable entities.
-- `id` (SERIAL, PK)
-- `uuid` (UUID, UNIQUE)
-- `parent_id` (INT, FK -> content_nodes)
-- `node_type` (VARCHAR(50))
-- `status` (VARCHAR(20))
-- `language_code` (VARCHAR(10))
-- `slug` (VARCHAR(255))
-- `full_url` (TEXT, UNIQUE)
-- `title` (VARCHAR(255))
-- `blocks_data` (JSONB)
-- `seo_settings` (JSONB)
-- `translation_group_id` (UUID)
-- `version` (INT)
-- `published_at`, `created_at`, `updated_at`, `deleted_at` (TIMESTAMPTZ)
-
-### content_node_revisions
-Point-in-Time recovery snapshots for nodes.
-- `id` (BIGSERIAL, PK)
-- `node_id` (INT, FK -> content_nodes)
-- `blocks_snapshot` (JSONB)
-- `seo_snapshot` (JSONB)
-- `created_by` (INT, FK -> users)
-- `created_at` (TIMESTAMPTZ)
-
-### node_types
-Custom content schemas (e.g., Pages, Products).
-- `id` (SERIAL, PK)
-- `slug` (VARCHAR(50), UNIQUE)
-- `label` (VARCHAR(100))
-- `icon` (VARCHAR(50))
-- `description` (TEXT)
-- `field_schema` (JSONB)
-- `url_prefixes` (JSONB)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
-
-### languages
-Multi-language support definitions.
-- `id` (SERIAL, PK)
-- `code` (VARCHAR(10), UNIQUE)
-- `name` (VARCHAR(100))
-- `is_default`, `is_active` (BOOLEAN)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
-
-### media_files
-Central asset library.
-- `id` (UUID, PK)
-- `filename` (VARCHAR(255))
-- `mime_type` (VARCHAR(100))
-- `path` (TEXT)
-- `size` (BIGINT)
-- `provider` (VARCHAR(20))
-- `width`, `height` (INT)
-- `created_at` (TIMESTAMPTZ)
-
-### redirects
-301/302 routing rules.
-- `id` (SERIAL, PK)
-- `old_url` (TEXT, UNIQUE)
-- `new_url` (TEXT)
-- `http_code` (INT)
-- `created_at` (TIMESTAMPTZ)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `user_id` | INT NOT NULL | FK → `users.id` |
+| `token_hash` | VARCHAR(64) UNIQUE NOT NULL | |
+| `expires_at` | TIMESTAMPTZ NOT NULL | |
+| `used_at` | TIMESTAMPTZ NULL | Set on successful reset; row is preserved to detect replay |
+| `ip_address` | VARCHAR(64) NULL | |
+| `user_agent` | TEXT NULL | |
+| `created_at` | TIMESTAMPTZ | Hourly cleanup loop deletes expired rows |
 
 ---
 
-## Layouts & Components
+## Content
 
-### layouts
-Page layout configurations.
-- `id` (SERIAL, PK)
-- `name` (VARCHAR(100), UNIQUE)
-- `description` (TEXT)
-- `is_default` (BOOLEAN)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+### `content_nodes`
+The atomic unit of CMS content. Every page, post, product, etc. is a row here.
 
-### layout_blocks
-Instances of blocks attached to a layout.
-- `id` (SERIAL, PK)
-- `layout_id` (INT, FK -> layouts)
-- `block_type_id` (INT, FK -> block_types)
-- `region` (VARCHAR(50))
-- `sort_order` (INT)
-- `settings` (JSONB)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `uuid` | UUID UNIQUE NOT NULL DEFAULT gen_random_uuid() | |
+| `parent_id` | INT NULL | FK → `content_nodes.id` (self-FK, recursive) |
+| `node_type` | VARCHAR(50) NOT NULL DEFAULT 'page' | FK by slug → `node_types.slug` |
+| `status` | VARCHAR(20) NOT NULL DEFAULT 'draft' | `draft`, `published`, `archived` |
+| `language_code` | VARCHAR(10) NOT NULL DEFAULT 'en' | |
+| `language_id` | INT NULL | FK → `languages.id` |
+| `slug` | VARCHAR(255) NOT NULL | URL slug |
+| `full_url` | TEXT NOT NULL | Computed cascading URL; partial unique index `WHERE deleted_at IS NULL` |
+| `title` | VARCHAR(255) NOT NULL | |
+| `featured_image` | JSONB NOT NULL DEFAULT '{}' | `{ "media_id", "url", "alt", ... }` |
+| `excerpt` | TEXT NOT NULL DEFAULT '' | |
+| `taxonomies` | JSONB NOT NULL DEFAULT '{}' | `{ "category": [12, 14], "tag": [...] }` |
+| `blocks_data` | JSONB NOT NULL DEFAULT '[]' | Block tree; **GIN-indexed** |
+| `seo_settings` | JSONB NOT NULL DEFAULT '{}' | `{ "title", "description", "og_image", "noindex" }` |
+| `fields_data` | JSONB NOT NULL DEFAULT '{}' | Custom fields keyed by node type field schema |
+| `layout_data` | JSONB NOT NULL DEFAULT '{}' | Layout-specific config |
+| `author_id` | INT NULL | FK → `users.id` |
+| `layout_id` | INT NULL | FK → `layouts.id` |
+| `layout_slug` | VARCHAR NULL | Auto-synced from `layout_id` via `BeforeSave`; survives theme cycles |
+| `translation_group_id` | UUID NULL | Sibling translations share this UUID |
+| `version` | INT NOT NULL DEFAULT 1 | Incremented on update |
+| `published_at` | TIMESTAMPTZ NULL | |
+| `created_at`, `updated_at` | TIMESTAMPTZ | |
+| `deleted_at` | TIMESTAMPTZ NULL | Soft delete (GORM `gorm.DeletedAt`) |
 
-### block_types
-Schema for reusable layout blocks.
-- `id` (SERIAL, PK)
-- `name` (VARCHAR(100), UNIQUE)
-- `description` (TEXT)
-- `icon` (VARCHAR(50))
-- `is_system` (BOOLEAN)
-- `schema` (JSONB)
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+Indexes: GIN on `blocks_data`, partial unique on `full_url WHERE deleted_at IS NULL`, B-tree on `(status, language_code)`, `(parent_id)`, `(language_id)`, `(deleted_at)`.
 
-### templates
-Pre-configured block arrangements for nodes.
-- `id` (SERIAL, PK)
-- `slug` (VARCHAR(50), UNIQUE)
-- `label` (VARCHAR(100))
-- `description` (TEXT)
-- `block_config` (JSONB)
-- `source` (VARCHAR(20))
-- `theme_name` (VARCHAR(100))
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+### `content_node_revisions`
+Point-in-time snapshots created on every UpdateNode.
 
-### menus & menu_items
-Navigation trees.
-- `id` (SERIAL, PK)
-- `slug` (VARCHAR(50), UNIQUE)
-- `name` (VARCHAR(100))
-- `items` (JSONB) - Stored as a nested JSON structure for high performance
-- `created_at` / `updated_at` (TIMESTAMPTZ)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | BIGSERIAL PK | |
+| `node_id` | INT NOT NULL | FK → `content_nodes.id` |
+| `blocks_snapshot` | JSONB NOT NULL | |
+| `seo_snapshot` | JSONB NOT NULL | |
+| `created_by` | INT NULL | FK → `users.id`; null for MCP/extension/system callers |
+| `created_at` | TIMESTAMPTZ | Daily retention sweep keeps 50 most-recent revisions per node |
+
+### `node_types`
+Custom content types beyond `page`/`post`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(50) UNIQUE NOT NULL | `page`, `post`, `recipe`, `product`, ... |
+| `label` | VARCHAR(100) NOT NULL | |
+| `label_plural` | VARCHAR(100) NOT NULL DEFAULT '' | |
+| `icon` | VARCHAR(50) NOT NULL DEFAULT 'file-text' | Lucide icon name |
+| `description` | TEXT NOT NULL DEFAULT '' | |
+| `taxonomies` | JSONB NOT NULL DEFAULT '[]' | Allowed taxonomy slugs |
+| `field_schema` | JSONB NOT NULL DEFAULT '[]' | Array of field definitions |
+| `url_prefixes` | JSONB NOT NULL DEFAULT '{}' | `{ "en": "blog", "fr": "journal" }` |
+| `supports_blocks` | BOOL NOT NULL DEFAULT true | False = node has only fields_data, no block tree |
+
+### `taxonomies`
+Taxonomy definitions (Category, Tag, Topic, etc.).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(50) UNIQUE NOT NULL | |
+| `label`, `label_plural` | VARCHAR(255) NOT NULL | |
+| `description` | TEXT NOT NULL DEFAULT '' | |
+| `hierarchical` | BOOL NOT NULL DEFAULT false | |
+| `show_ui` | BOOL NOT NULL DEFAULT true | |
+| `node_types` | TEXT[] NOT NULL DEFAULT '{}' | Which node types use this taxonomy |
+| `field_schema` | JSONB NOT NULL DEFAULT '[]' | Custom term fields |
+
+### `taxonomy_terms`
+Individual terms within a taxonomy.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `node_type` | VARCHAR(50) NOT NULL | |
+| `taxonomy` | VARCHAR(50) NOT NULL | |
+| `slug`, `name` | VARCHAR(255) NOT NULL | |
+| `description` | TEXT NOT NULL DEFAULT '' | |
+| `parent_id` | INT NULL | FK → `taxonomy_terms.id` (hierarchical taxonomies only) |
+| `count` | INT NOT NULL DEFAULT 0 | Denormalized usage count |
+| `fields_data` | JSONB NOT NULL DEFAULT '{}' | |
+
+### `redirects`
+URL redirect rules (301/302).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `old_url` | TEXT UNIQUE NOT NULL | |
+| `new_url` | TEXT NOT NULL | |
+| `http_code` | INT NOT NULL DEFAULT 301 | 301 or 302 |
 
 ---
 
-## Systems & Communication
+## Layouts, Blocks, Templates
 
-### email_logs
-Audit trail for communications.
-- `id` (UUID, PK)
-- `recipient` (VARCHAR(255))
-- `subject` (TEXT)
-- `provider` (VARCHAR(20))
-- `status` (VARCHAR(20))
-- `created_at`, `sent_at` (TIMESTAMPTZ)
+### `block_types`
+Reusable component definitions (hero, feature-grid, login-form).
 
-### email_rules & email_templates
-Configuration for automated system emails.
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(50) UNIQUE NOT NULL | |
+| `label` | VARCHAR(100) NOT NULL | |
+| `icon` | VARCHAR(50) NOT NULL DEFAULT 'square' | |
+| `description` | TEXT NOT NULL DEFAULT '' | |
+| `field_schema` | JSONB NOT NULL DEFAULT '[]' | Field definitions for the block editor |
+| `html_template` | TEXT NOT NULL DEFAULT '' | Go `html/template` source |
+| `test_data` | JSONB NOT NULL DEFAULT '{}' | Sample data for the editor preview |
+| `source` | VARCHAR(20) NOT NULL DEFAULT 'custom' | `custom`, `seed`, `theme`, `system` |
+| `theme_name` | VARCHAR(100) NULL | Set when block ships with a theme |
+| `view_file`, `block_css`, `block_js` | TEXT | |
+| `content_hash` | VARCHAR(64) | For cache keying |
+| `cache_output` | BOOL NOT NULL DEFAULT true | Skip re-render if `(slug, content_hash)` matches |
 
-### system_actions
-Registry of background operations available to automation.
-- `id` (SERIAL, PK)
-- `slug` (VARCHAR(100), UNIQUE)
-- `label` (VARCHAR(150))
-- `category` (VARCHAR(50))
-- `description` (TEXT)
-- `payload_schema` (JSONB)
-- `created_at` (TIMESTAMPTZ)
+### `layouts`
+Page-level templates (full HTML document).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(255) NOT NULL | Resilient reference; survives theme cycles |
+| `name` | VARCHAR(255) NOT NULL | |
+| `description` | TEXT | |
+| `language_id` | INT NULL | FK → `languages.id` |
+| `template_code` | TEXT NOT NULL | Go template source |
+| `source`, `theme_name` | (same shape as block_types) | |
+| `is_default` | BOOL NOT NULL DEFAULT false | |
+| `supports_blocks` | BOOL NOT NULL DEFAULT true | |
+| `content_hash` | VARCHAR(64) | |
+
+### `layout_blocks`
+Reusable HTML chunks composable into layouts via `{{renderLayoutBlock "<slug>"}}`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug`, `name` | VARCHAR(255) NOT NULL | |
+| `description` | TEXT | |
+| `language_id` | INT NULL | |
+| `template_code` | TEXT NOT NULL | |
+| `source`, `theme_name` | (same shape) | |
+| `field_schema` | JSONB NOT NULL DEFAULT '[]' | |
+| `content_hash` | VARCHAR(64) | |
+
+Built-in seeded blocks: `primary-nav`, `user-menu`, `site-header`, `footer-nav`, `site-footer`.
+
+### `templates`
+Pre-configured block arrangements applied to nodes.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(50) UNIQUE NOT NULL | |
+| `label` | VARCHAR(100) NOT NULL | |
+| `description` | TEXT NOT NULL DEFAULT '' | |
+| `block_config` | JSONB NOT NULL DEFAULT '[]' | |
+| `source`, `theme_name`, `content_hash` | | |
+
+---
+
+## Internationalization
+
+### `languages`
+Multi-language support.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `code` | VARCHAR(10) UNIQUE NOT NULL | `en`, `fr`, `de`, ... |
+| `slug` | VARCHAR(20) UNIQUE NOT NULL | URL-safe variant of code |
+| `name` | VARCHAR(100) NOT NULL | English name (`English`, `French`) |
+| `native_name` | VARCHAR(100) NOT NULL DEFAULT '' | (`English`, `Français`) |
+| `flag` | VARCHAR(10) NOT NULL DEFAULT '' | Emoji or icon identifier |
+| `is_default` | BOOL NOT NULL DEFAULT false | Only one row should be true |
+| `is_active` | BOOL NOT NULL DEFAULT true | |
+| `hide_prefix` | BOOL NOT NULL DEFAULT false | Default + `hide_prefix=true` → `/about` instead of `/en/about` |
+| `sort_order` | INT NOT NULL DEFAULT 0 | |
+
+---
+
+## Menus
+
+### `menus`
+Navigation menus, with optimistic locking via `version`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug`, `name` | VARCHAR(255) NOT NULL | |
+| `language_id` | INT NULL | |
+| `version` | INT NOT NULL DEFAULT 1 | Incremented on item replacement |
+
+### `menu_items`
+Tree of menu entries, hierarchical via `parent_id`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `menu_id` | INT NOT NULL | FK → `menus.id`; cascade-delete |
+| `parent_id` | INT NULL | Self-FK; tree depth limit = 3 (depth 0/1/2) |
+| `title` | VARCHAR(255) NOT NULL | |
+| `item_type` | VARCHAR(20) NOT NULL DEFAULT 'custom' | `custom`, `node` |
+| `node_id` | INT NULL | FK → `content_nodes.id` (item_type=`node`) |
+| `url` | VARCHAR(2048) | Required when `item_type='custom'` |
+| `target` | VARCHAR(20) NOT NULL DEFAULT '_self' | |
+| `css_class` | VARCHAR(255) | |
+| `sort_order` | INT NOT NULL DEFAULT 0 | |
+
+---
+
+## Media
+
+### `media_files`
+Uploaded assets. Real handlers live in the `media-manager` extension; the kernel exposes only `MediaFile` model + `CoreAPI.UploadMedia`/`Get`/`Query`/`Delete`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uint PK | |
+| `filename` | text NOT NULL | Stored UUID-based filename |
+| `original_name` | text NOT NULL | Upload name |
+| `mime_type` | text NOT NULL | |
+| `size` | BIGINT NOT NULL | Bytes |
+| `path` | text NOT NULL | Relative storage path |
+| `url` | text NOT NULL | Full public URL |
+| `width`, `height` | INT NULL | Nil for non-images |
+| `alt` | text | Alt text |
+| `slug` | text NULL UNIQUE | Portable reference (backfilled by migration 0031) |
+
+Image sizes (`media_image_sizes`) and asset metadata are owned by the `media-manager` extension via its own migrations.
+
+---
+
+## Email
+
+### `email_templates`
+Reusable subject + body templates rendered with `html/template`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(100) NOT NULL | |
+| `name` | VARCHAR(150) NOT NULL | |
+| `language_id` | INT NULL | NULL = universal/fallback |
+| `subject_template`, `body_template` | TEXT NOT NULL | |
+| `test_data` | JSONB NOT NULL DEFAULT '{}' | |
+
+### `email_layouts`
+HTML wrapper applied to all outgoing emails (`{{.email_body}}` is injected).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `name` | VARCHAR(150) NOT NULL | |
+| `language_id` | INT NULL | |
+| `body_template` | TEXT NOT NULL | |
+| `is_default` | BOOL NOT NULL DEFAULT false | |
+
+### `email_rules`
+Maps event actions to templates + recipient strategies.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `action` | VARCHAR(100) NOT NULL | E.g. `user.registered`, `node.published` |
+| `node_type` | VARCHAR(50) NULL | Optional filter |
+| `template_id` | INT NOT NULL | FK → `email_templates.id` |
+| `recipient_type` | VARCHAR(20) NOT NULL | `actor`, `node_author`, `fixed`, `role` |
+| `recipient_value` | VARCHAR(500) NOT NULL | Email address, role slug, etc. |
+| `enabled` | BOOL NOT NULL DEFAULT true | |
+
+### `email_logs`
+Per-send audit trail. Daily retention sweep (commit `eb0c1eb`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `rule_id` | INT NULL | FK → `email_rules.id` |
+| `template_slug`, `action` | VARCHAR(100) NOT NULL | |
+| `recipient_email` | VARCHAR(255) NOT NULL | |
+| `subject` | TEXT NOT NULL | |
+| `rendered_body` | TEXT NOT NULL | Full rendered HTML |
+| `status` | VARCHAR(20) NOT NULL DEFAULT 'pending' | `pending`, `sent`, `failed` |
+| `error_message` | TEXT NULL | |
+| `provider` | VARCHAR(50) NULL | `smtp`, `resend`, ... |
+
+### `system_actions`
+Registry of named actions usable as email rule triggers.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(100) UNIQUE NOT NULL | |
+| `label` | VARCHAR(150) NOT NULL | |
+| `category` | VARCHAR(50) NOT NULL | |
+| `description` | TEXT | |
+| `payload_schema` | JSONB NOT NULL DEFAULT '{}' | |
+
+---
+
+## Themes & Extensions
+
+### `themes`
+Installed theme registry. Migration `0022_single_active_theme` enforces only one active theme via partial unique index.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(100) UNIQUE NOT NULL | |
+| `name` | VARCHAR(200) NOT NULL | |
+| `description` | TEXT NOT NULL DEFAULT '' | |
+| `version` | VARCHAR(50) NOT NULL DEFAULT '' | |
+| `author` | VARCHAR(200) NOT NULL DEFAULT '' | |
+| `source` | VARCHAR(20) NOT NULL DEFAULT 'upload' | `upload`, `git`, `scan` |
+| `git_url` | TEXT NULL | |
+| `git_branch` | VARCHAR(100) NOT NULL DEFAULT 'main' | |
+| `git_token` | TEXT NULL | Encrypted at rest (commit `f4ac40f`); never serialized to JSON |
+| `is_active` | BOOL NOT NULL DEFAULT false | |
+| `path` | VARCHAR(500) NOT NULL | Filesystem location |
+| `thumbnail` | VARCHAR(500) NULL | |
+
+### `extensions`
+Installed extension registry.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `slug` | VARCHAR(100) UNIQUE NOT NULL | |
+| `name` | VARCHAR(150) NOT NULL | |
+| `version` | VARCHAR(50) NOT NULL DEFAULT '1.0.0' | |
+| `description`, `author` | TEXT, VARCHAR(150) NOT NULL DEFAULT '' | |
+| `path` | TEXT NOT NULL | |
+| `is_active` | BOOL NOT NULL DEFAULT false | |
+| `priority` | INT NOT NULL DEFAULT 50 | Boot order |
+| `settings` | JSONB NOT NULL DEFAULT '{}' | |
+| `manifest` | JSONB NOT NULL DEFAULT '{}' | Full `extension.json` cached for fast lookup |
+| `installed_at` | TIMESTAMPTZ | |
+
+### `extension_migrations`
+Per-extension migration ledger (analogous to core's `schema_migrations`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `extension_slug` | VARCHAR(100) NOT NULL | |
+| `filename` | TEXT NOT NULL | |
+| `applied_at` | TIMESTAMPTZ | |
+| | | UNIQUE on `(extension_slug, filename)` |
+
+### `schema_migrations`
+Core migration ledger.
+
+| Column | Type | Notes |
+|---|---|---|
+| `filename` | TEXT PK | |
+| `applied_at` | TIMESTAMPTZ | |
+
+---
+
+## Configuration
+
+### `site_settings`
+Key-value site configuration. Sensitive values (matched by the `internal/secrets/` heuristic) are stored in the AES-256-GCM envelope format `enc:v1:<base64>`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `key` | VARCHAR(100) PK | |
+| `value` | TEXT NULL | Plaintext or `enc:v1:...` |
+| `is_encrypted` | BOOL DEFAULT false | |
+| `updated_at` | TIMESTAMPTZ | |
+
+Reads via `GET /admin/api/settings` redact secret-shaped keys (commit `54f573a`).
+
+---
+
+## MCP (AI Interface)
+
+### `mcp_tokens`
+Bearer tokens for AI clients calling `/mcp`. Raw token is shown once; only the SHA-256 hash is stored.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | |
+| `user_id` | INT NOT NULL | FK → `users.id` (token issuer) |
+| `name` | VARCHAR(100) NOT NULL | Human label |
+| `token_hash` | VARCHAR(64) UNIQUE NOT NULL | |
+| `token_prefix` | VARCHAR(16) NOT NULL | First few chars (for log identification) |
+| `scope` | VARCHAR(16) NOT NULL DEFAULT 'full' | `read`, `content`, `full` |
+| `capabilities` | JSONB NOT NULL DEFAULT '{}' | Reserved for future per-tool grants |
+| `last_used_at` | TIMESTAMPTZ NULL | |
+| `expires_at` | TIMESTAMPTZ NULL | |
+
+### `mcp_audit_log`
+Per-tool-call audit trail. Daily retention sweep (commit `eb0c1eb`).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | BIGSERIAL PK | |
+| `token_id` | INT NULL | FK → `mcp_tokens.id` |
+| `tool` | VARCHAR(100) NOT NULL | E.g. `core.node.create` |
+| `args_hash` | VARCHAR(64) | SHA-256 of marshalled args (no PII) |
+| `status` | VARCHAR(16) NOT NULL | `ok`, `error`, `denied`, `rate_limited` |
+| `error_code` | VARCHAR(64) | |
+| `duration_ms` | INT NOT NULL DEFAULT 0 | |
+
+Indexes: `(token_id, created_at DESC)`, `(tool, created_at DESC)`.
+
+---
+
+## Migration Catalog
+
+| Filename | Adds |
+|---|---|
+| `0001_initial_schema.sql` | users, sessions, content_nodes |
+| `0002_partial_unique_full_url.sql` | partial unique index on `full_url WHERE deleted_at IS NULL` |
+| `0003_node_types.sql` | node_types |
+| `0004_languages.sql` | languages, language fields on nodes |
+| `0005_blocks_templates.sql` | block_types, templates |
+| `0006_block_html_templates.sql` | `block_types.html_template` |
+| `0007_block_test_data.sql` | `block_types.test_data` |
+| `0008_layouts_menus.sql` | layouts, layout_blocks, menus, menu_items |
+| `0009_roles_actions_email.sql` | roles, system_actions, email_rules, email_templates, email_logs |
+| `0010_email_template_language.sql` | language fallback for email templates |
+| `0011_themes.sql` | themes |
+| `0012_extensions.sql` | extensions |
+| `0012_template_source.sql` | `templates.source`, `theme_name` |
+| `0013_default_lang_hide_prefix.sql` | `languages.hide_prefix` |
+| `0014_extension_manifest.sql` | `extensions.manifest` JSONB |
+| `0015_media_files.sql` | media_files |
+| `0016_add_manage_content_capability.sql` | seed admin role with `manage_content` |
+| `0017_extension_migrations.sql` | extension_migrations |
+| `0018_activate_builtin_extensions.sql` | activate media-manager + email-manager + sitemap-generator + smtp-provider + resend-provider |
+| `0019_block_type_cache_output.sql` | `block_types.cache_output` |
+| `0020_email_layouts.sql` | email_layouts |
+| `0021_block_type_content_hash.sql` | `block_types.content_hash` |
+| `0022_single_active_theme.sql` | partial unique on `themes.is_active` |
+| `0023_node_standard_fields.sql` | featured_image, excerpt, taxonomies on content_nodes |
+| `0024_taxonomies_table.sql` | taxonomies |
+| `0025_taxonomy_terms_table.sql` | taxonomy_terms |
+| `0026_advanced_taxonomies.sql` | hierarchical, show_ui, node_types[], field_schema |
+| `0027_layout_partial_fields.sql` | `layout_blocks.field_schema` |
+| `0028_mcp.sql` | mcp_tokens, mcp_audit_log |
+| `0029_node_type_label_plural.sql` | `node_types.label_plural` |
+| `0030_taxonomy_label_plural.sql` | `taxonomies.label_plural` |
+| `0031_slug_refs.sql` | `media_files.slug`, `content_nodes.layout_slug` |
+| `0032_supports_blocks.sql` | `node_types.supports_blocks`, `layouts.supports_blocks` |
+| `0033_activate_forms_extension.sql` | activate forms |
+| `0034_media_files_asset_metadata.sql` | media_files asset metadata |
+| `0035_builtin_node_type_labels.sql` | seed labels |
+| `0036_default_layout_seed_source.sql` | mark default layout source |
+| `0037_password_reset_tokens.sql` | password_reset_tokens |
+
+Migrations are idempotent (`IF NOT EXISTS`, `IF EXISTS`, `ON CONFLICT DO NOTHING`) and run in numeric order. There is no rollback infrastructure — every migration must be designed so a failed deploy can be hand-rolled back.
+
+---
+
+## Extension-Owned Tables
+
+Extensions ship their own SQL migrations and own their own tables. The kernel does **not** know these schemas. Examples:
+
+| Extension | Tables |
+|---|---|
+| `forms` | forms, form_submissions, form_webhook_logs |
+| `email-manager` | (uses core email_* tables) |
+| `media-manager` | media_image_sizes (sibling to core's `media_files`), media optimization queue |
+| `sitemap-generator` | sitemap snapshots |
+
+Extensions access only their declared `data_owned_tables` (manifest), enforced by the per-table ACL (commit `654dae5`).

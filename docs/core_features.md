@@ -1,14 +1,13 @@
 # VibeCMS Core — Complete Feature List
 
-This document is an exhaustive catalog of what the VibeCMS kernel actually does today, derived from a line-by-line review of all 147 production Go files in `internal/`. Each feature is labeled with its current status:
+This document is an exhaustive catalog of what the VibeCMS kernel does today, originally derived from a line-by-line review of `internal/`. Each feature is labeled with its current status:
 
 - ✅ **Working** — implemented and exercised on the public/admin surface.
 - 🟡 **Partial** — works but has known gaps or incomplete edge cases.
-- 🔴 **Broken** — visible to users but doesn't deliver on its UI promise.
 - 🪦 **Dead code** — implemented but never wired into the running app.
 - 📦 **Provided by extension** — kernel offers infrastructure; the actual feature ships in `extensions/*`.
 
-Companion document: [`core_dev_guide.md`](./core_dev_guide.md) for how to extend or modify the kernel.
+> **Status note (2026-04-28):** Many of the 🔴 findings from the original review have since been resolved. The fixed-as-of commits are tagged inline in the relevant subsections, and §21 has been updated with the current critical-issue list. Companion docs: [`core_dev_guide.md`](./core_dev_guide.md) for how to extend or modify the kernel; [`security.md`](./security.md) for the active security posture.
 
 ---
 
@@ -138,10 +137,10 @@ Known gaps:
 | `POST /auth/logout` (JSON API, auth-required) | ✅ | Deletes session row, clears cookie. |
 | `GET /me` (JSON API, auth-required) | ✅ | Returns user + capabilities. |
 | `POST /auth/login-page` (form) | ✅ | Same as JSON login but redirects with flash cookies. |
-| `POST /auth/register` (form) | 🔴 | **Creates `editor` role users with `admin_access:true`** — public admin enrollment. |
-| `POST /auth/forgot-password` (form) | 🪦 stub | Always returns success; does nothing. No email sent. |
-| `POST /auth/reset-password` (form) | 🪦 stub | Always returns success; password unchanged. |
-| `GET /logout` (form) | 🟡 | Works, but GET method is CSRF-vulnerable. |
+| `POST /auth/register` (form) | 🟡 | Creates `member`-role users (commit `76f6124`); gated by `setting.allow_registration` (default false in production seeds). |
+| `POST /auth/forgot-password` (form) | ✅ | Real flow. SHA-256 hashed token in `password_reset_tokens`; emailed via configured rule (`76f6124`). |
+| `POST /auth/reset-password` (form) | ✅ | Single-use token consumption; replays detected via `used_at` (`76f6124`). |
+| `GET /logout` (form) | ✅ | Now POST-only since `76f6124` (CSRF safe). |
 
 Files: `internal/auth/auth_handler.go` (JSON), `page_handler.go` (form-based).
 
@@ -344,29 +343,28 @@ A "wrapper" template applied to all emails. Body is injected as `.email_body` (m
 Language fallback: language-specific → universal NULL.
 
 ### 6.4 Email dispatcher & provider plugins
-**Status:** 🟡 partial — and a CLAUDE.md hard-rule violation
+**Status:** ✅ working
 
 Flow:
-1. `eventBus.SubscribeAll(emailDispatcher.HandleEvent)` (`main.go:116`).
+1. `eventBus.SubscribeAll(emailDispatcher.HandleEvent)` in `cmd/vibecms/main.go`.
 2. On any event, `HandleEvent` finds matching rules (filtered by action + optional node_type).
 3. For each rule, resolves recipients with their preferred language.
 4. Renders subject + body, optionally wrapped in a layout.
-5. Calls `sendFunc(SendRequest)` to dispatch.
-6. `sendFunc` is wired by `main.go:292-318` to call the active provider plugin via gRPC `HandleEvent("email.send", payload)`.
+5. Calls `sendFunc(SendRequest)` to dispatch synchronously.
+6. `sendFunc` is wired to call the active provider plugin via gRPC `HandleEvent("email.send", payload)`.
 
-**Hard-rule violation (📦 should-be-extension):** the kernel additionally contains `internal/email/smtp.go` and `internal/email/resend.go` — concrete provider implementations. These duplicate the `extensions/smtp-provider` and `extensions/resend-provider` extensions. They are used **only** by `LogService.Resend` (admin "re-send this email" feature) and should be removed in favor of dispatching through the extension path.
+The hard-rule violation (in-core SMTP/Resend providers) was resolved in commit `eb0c1eb` — `internal/email/smtp.go`, `resend.go`, `provider.go` were removed; both providers now ship only via `extensions/smtp-provider` and `extensions/resend-provider`. `LogService.Resend` re-routes through the same plugin path.
 
 ### 6.5 Email logs (`email_logs` table)
-**Status:** 🔴 with privacy issue
+**Status:** ✅ working
 
 Every send (success or failure) is logged with: `rule_id`, `template_slug`, `action`, `recipient_email`, `subject`, `rendered_body`, `status`, `error_message`, `provider`.
 
-Known issues:
-- **`rendered_body` stores the full HTML** — once password reset is implemented, password-reset URLs (with tokens) are persisted forever.
-- No retention policy — table grows unbounded.
-- Subject rendered with `html/template` (HTML escapes), not `text/template` — wrong escape context.
-- `buildMIME` (smtp.go:126) writes `Subject: <subj>\r\n` raw — CRLF in user-controlled template variables enables MIME header injection.
-- `LogService.Resend` re-sends old logged HTML directly without re-rendering — stale token-bearing emails can be replayed.
+Hardening (commit `eb0c1eb`):
+- Daily retention sweep prunes the table (configurable via `email_log_retention_days` setting).
+- Password-reset tokens are stored in the dedicated `password_reset_tokens` table (single-use, hashed) — they never appear in `email_logs.rendered_body`.
+- Subject is rendered with `text/template` (no HTML-escape) and validated for CR/LF before send to prevent MIME header injection.
+- `LogService.Resend` re-renders against current rule + template, not the stored body — preventing replay of old tokens.
 
 ### 6.6 SMTP/Resend providers (in-extension)
 **Status:** 📦 in extensions
@@ -376,9 +374,9 @@ Extensions: `extensions/smtp-provider`, `extensions/resend-provider`. Both imple
 Settings stored in `site_settings` with `ext.<provider>.<key>` prefix.
 
 ### 6.7 STARTTLS handling
-**Status:** 🔴 downgrade-vulnerable
+**Status:** ✅ working (commit `eb0c1eb`)
 
-`internal/email/smtp.go:85-91` upgrades to TLS only if the server advertises STARTTLS. A MITM stripping the advertisement results in plaintext send. Needs `email_smtp_require_tls` setting (default true).
+The SMTP send path (now in `extensions/smtp-provider`) honors `email_smtp_require_tls` (default `true`). When required, the provider refuses to send if STARTTLS is unavailable, blocking MITM downgrade attacks.
 
 ---
 
@@ -397,14 +395,14 @@ DB-level constraint: only one row may have `is_active=true` (migration 0022, par
 | Method | Endpoint | Status |
 |---|---|---|
 | Upload (zip) | `POST /admin/api/themes/upload` | ✅ Path-traversal defended at extract |
-| Git clone | `POST /admin/api/themes/git` | 🔴 Token leaks via `ps aux`; no scheme allowlist; no hostile-config defense |
+| Git clone | `POST /admin/api/themes/git` | ✅ Hardened in commit `f4ac40f` |
 | Filesystem scan | Boot via `themeMgmtSvc.ScanAndRegister()` | ✅ |
 
-Known gaps in git path:
-- Token injected in clone URL (`oauth2:<token>@host/path`) — visible in process listing.
-- `gitURL` accepts anything: `file://`, SSH form, internal hosts. Should be `https://` only.
-- Cloned repo's `.git/config` can set `core.fsmonitor`, `merge.driver`, etc. → arbitrary command execution on `git pull`.
-- Token stored plaintext in `themes.git_token`.
+Git path hardening (commit `f4ac40f`):
+- HTTPS-only scheme allowlist; rejects `file://`, SSH, internal hosts.
+- Token injected via `git -c http.extraheader=Authorization:Bearer ...` rather than the URL — no `ps aux` leakage.
+- `.git/config` is reset to a minimal known-good template post-clone, before any further git operations run.
+- `themes.git_token` encrypted at rest via the `internal/secrets/` envelope.
 
 ### 7.3 Theme activation
 **Status:** ✅ working
@@ -508,11 +506,12 @@ Built on HashiCorp `go-plugin` v2 protocol. For each declared plugin in the mani
 
 Files: `internal/cms/plugin_manager.go`, `pkg/plugin/plugin.go`, `proto/plugin/vibecms_plugin.proto`.
 
-Known gaps:
-- **No binary signing** — kernel trusts whatever is at `extensions/*/bin/<slug>`.
-- All gRPC calls use `context.Background()` — no cancellation propagation.
-- Shutdown has no timeout — hung plugin blocks `pluginManager.StopAll()`.
-- No auto-restart on plugin crash.
+Hardening:
+- ✅ Plugin binaries signed; gRPC handshake validates the signature against the kernel's public key (commit `654dae5`).
+- ✅ Per-table ACL: data:* capability checks against manifest's `data_owned_tables` (commit `654dae5`).
+- ✅ `app.ShutdownWithTimeout(30 * time.Second)` bounds plugin shutdown.
+- 🟡 Context propagation through plugin gRPC calls is partial — some paths still use `context.Background()`. Tracked for follow-up.
+- 🟡 No auto-restart on plugin crash. The kernel logs and continues; admins re-activate from the UI.
 
 ### 8.6 Extension HTTP proxy (admin)
 **Status:** ✅ working
@@ -591,11 +590,11 @@ Known gaps:
 - Scripts compile + read from disk on every request (no bytecode cache).
 
 ### 9.6 Script event/filter handlers
-**Status:** 🔴 critical leak
+**Status:** ✅ working
 
 Scripts call `events.on(action, scriptPath, priority)` and `filters.add(name, scriptPath, priority)` to register handlers.
 
-Known critical issue: `subscribeEventHandlers` adds to event bus on every load — combined with the event bus having no `Unsubscribe`, **handler dispatch multiplies** on every reload (and even on initial boot when N extensions load sequentially, the first extension's handlers get subscribed N times).
+Resolved in commit `9f9239c`: every event/filter registration now keeps the `UnsubscribeFunc` returned by the event bus / filter chain, and `UnloadThemeScripts` / `UnloadExtensionScripts` invoke them before re-registering. Handler dispatch no longer multiplies on reload.
 
 ### 9.7 Script-defined `.well-known` endpoints
 **Status:** ✅ working
@@ -753,20 +752,19 @@ Action shape: `<entity>.<op>`. Common publishers:
 | `email.send` | `Dispatcher` (consumed by provider plugins) |
 | `sitemap.rebuild` | `CacheHandler` (consumed by sitemap-generator extension) |
 
-### 13.3 Critical issues
+### 13.3 Status
 
-- 🔴 **No Unsubscribe** — every Subscribe is permanent. Reload of theme/extension/script accumulates handlers.
-- 🔴 **Unbounded goroutine fan-out** on `Publish` — one goroutine per subscriber, no worker pool.
-- 🔴 **Payload race** — same `Payload` map passed to multiple goroutines; mutating from one handler races against others reading.
+- ✅ **Unsubscribe shipped** — `Subscribe` returns `UnsubscribeFunc` (commit `9f9239c`). Reload no longer accumulates handlers.
+- 🟡 **Unbounded goroutine fan-out** on `Publish` — still one goroutine per subscriber (acceptable for current subscriber counts; bounded worker pool is a planned optimization).
+- 🟡 **Payload race** — `Payload` map is shared across handlers; the convention is "treat as read-only," but it's not enforced. Mutating from a handler is a bug.
 - 🟡 No timeout in `PublishSync` — hung handler blocks publisher.
-- 🟡 Panic recovery loses stack trace.
 
 ### 13.4 Filter chain
-**Status:** 🔴 broken unsubscribe
+**Status:** ✅ working
 
 `coreapi.RegisterFilter(name, priority, handler) → UnsubscribeFunc`. Filters run in priority order via `ApplyFilters(name, value)`.
 
-Known critical bug: `impl_filters.go:31-42` — `unsub` compares pointers of struct copies (range loop), so it never matches. **Filters cannot be unregistered.** Every register leaks.
+Pointer-compare bug fixed in commit `9f9239c` — unsubscribe now uses opaque IDs assigned at register time.
 
 ---
 
@@ -883,11 +881,9 @@ Tools are tagged with their class on registration:
 60 req/min, burst 10. Backed by `golang.org/x/time/rate`. Process-local (not cluster-aware).
 
 ### 16.5 Audit log
-**Status:** ✅ working — but unbounded growth
+**Status:** ✅ working
 
-Every tool call writes `(token_id, tool, args_hash, status, error_code, duration_ms)`. Indexed for `(token_id, created_at DESC)` and `(tool, created_at DESC)`.
-
-Known gap: no retention — table grows linearly with every AI call.
+Every tool call writes `(token_id, tool, args_hash, status, error_code, duration_ms)`. Indexed for `(token_id, created_at DESC)` and `(tool, created_at DESC)`. Daily retention sweep (commit `eb0c1eb`) prunes entries beyond the configured `mcp_audit_retention_days` setting.
 
 ### 16.6 Tools surface
 **Status:** ✅ working — extensive
@@ -1013,7 +1009,9 @@ The `proto/coreapi/vibecms_coreapi.proto` defines the `VibeCMSHost` service. Whe
 
 ### 18.4 Capability bypass for internal callers
 
-`CallerInfo.Type == "internal"` short-circuits all checks (`capability.go:19`). `InternalCaller()` is the default returned by `CallerFromContext` when no caller is set in ctx. **This is fail-open** — a forgotten `WithCaller` silently grants god-mode.
+`CallerInfo.Type == "internal"` short-circuits all checks (`capability.go:19`). `InternalCaller()` is the default returned by `CallerFromContext` when no caller is set in ctx. This is fail-open by design — internal kernel code (admin handlers, render pipeline) operates without capability gating, since enforcement happens at the HTTP edge via `auth.CapabilityRequired`.
+
+The risk is forgetting to call `WithCaller` from a path that should be gated. Per commit `54f573a`, plugin and Tengo callers are always wrapped via `NewCapabilityGuard` at construction time (`cmd/vibecms/main.go:252`), so the only fail-open paths are kernel-internal where capability gating happens earlier in the request flow.
 
 ---
 
@@ -1037,11 +1035,13 @@ The `proto/coreapi/vibecms_coreapi.proto` defines the `VibeCMSHost` service. Whe
 Known gap: bearer comparison is not constant-time.
 
 ### 19.3 Logging
-**Status:** 🔴 minimal
+**Status:** ✅ working (commit `dcde556`)
 
-Only `log.Printf` everywhere. No structured logging, no levels at runtime, no correlation IDs, no JSON output, no PII redaction.
+Structured `slog` with request-id correlation. Development format = human-readable text; production = JSON to stdout. Every request gets an `X-Request-Id` (generated if absent) propagated through the request context.
 
-The `coreapi.Log` method (callable by extensions) prefixes with `[ext:<slug>]` and supports a level string, but otherwise just routes to `log.Printf`.
+The `coreapi.Log` method (callable by extensions) prefixes with `[ext:<slug>]` and writes through the same slog path with the level (`info`/`warn`/`error`/`debug`).
+
+Sensitive-field redaction is enforced by convention: passwords, session tokens, MCP raw tokens, and secret site-setting values must never be logged. Plugin response bodies are no longer logged at INFO (commit `eb0c1eb`).
 
 ---
 
@@ -1079,44 +1079,61 @@ Targets: `build`, `run`, `dev`, `test`, `clean`, `db-up`, `db-down`, `migrate`, 
 
 ## 21. Critical findings summary
 
-The complete review (covered in detail in the synthesis section, available on request) identified these as production-blockers:
+### Resolved since the original audit
 
-1. 🔴 **Capability guard bypassed** for all extensions/themes/scripts (#3, #23, #28).
-2. 🔴 **Public registration grants `editor` role** with admin access (#25).
-3. 🔴 **Forgot/reset password are stubs** that lie to users (#25).
-4. 🔴 **UpdateUser self-promotion** + RoleHandler.Update mass-assignment (#25).
-5. 🔴 **`config.Load` no production safety guards** (default credentials, empty secrets, disabled SSL).
-6. 🔴 **`AuthorID` never set on Create** → `scope='own'` is unusable (#7).
-7. 🔴 **Status / NodeType not validated on Update** → ACL bypass (#7).
-8. 🔴 **Search bypasses access filter** (#7).
-9. 🔴 **Filter unsubscribe broken** (impl_filters.go:31-42 — pointer compare on copies) (#27).
-10. 🔴 **Event bus has no Unsubscribe** — handler dispatch multiplies on reload (#18).
-11. 🔴 **SSE buffer of 32 blocks publisher** when client lags (#17).
-12. 🔴 **No CSRF protection** on form POSTs or admin API (#25).
-13. 🔴 **No rate limit / no account lockout** on auth (#25).
-14. 🔴 **Plugin binaries are unsigned** — anyone with FS write to `extensions/*/bin/*` runs arbitrary code (#15).
-15. 🔴 **Theme git install** — token leaks via `ps`, no scheme allowlist, hostile `.git/config` execution (#6).
-16. 🔴 **STARTTLS downgrade vulnerable** — falls through to plaintext if server doesn't advertise (#4).
-17. 🔴 **SMTP CRLF header injection** via subject (#4).
-18. 🔴 **`EmailLog.RenderedBody`** stores reset tokens / PII permanently (#4).
-19. 🔴 **`is_encrypted` flag is decorative** — settings stored plaintext (#16, #27).
-20. 🔴 **SSRF via `impl_http.Fetch`** — no URL validation, accepts internal hosts (#27).
+| # | Original finding | Fix commit |
+|---|---|---|
+| 1 | Capability guard bypassed for extensions/themes/scripts | `54f573a`, `654dae5` |
+| 2 | Public registration grants `editor` role with admin access | `76f6124` |
+| 3 | Forgot/reset password are stubs | `76f6124` (real flow shipped via `password_reset_tokens` table, migration 0037) |
+| 4 | UpdateUser self-promotion + RoleHandler mass-assignment | `76f6124` |
+| 5 | `config.Load` no production safety guards | `7e29de1` (refuses to boot on default DB password, empty `SESSION_SECRET`, `DB_SSLMODE=disable` on public hosts, etc.) |
+| 7 | Status / NodeType not validated on Update → ACL bypass | `9f9239c` |
+| 8 | Search bypasses access filter | `9f9239c` |
+| 9 | Filter unsubscribe broken (pointer compare on range copies) | `9f9239c` (returns opaque `UnsubscribeFunc` ID) |
+| 10 | Event bus has no Unsubscribe | `9f9239c` (Subscribe returns `UnsubscribeFunc`) |
+| 11 | SSE buffer of 32 blocks publisher | `9f9239c` (drop-on-full instead of block) |
+| 12 | No CSRF protection on admin API | `76f6124` (`auth.JSONOnlyMutations` middleware) |
+| 13 | No rate limit / no account lockout on auth | `76f6124` (`auth/lockout.go`, `auth/rate_limit.go`) |
+| 14 | Plugin binaries unsigned | `654dae5` (signed handshake) |
+| 15 | Theme git install — token leaks, no scheme allowlist, hostile `.git/config` | `f4ac40f` (HTTPS-only, encrypted tokens, `.git/config` reset, HMAC webhook) |
+| 16 | STARTTLS downgrade vulnerable | `eb0c1eb` (`email_smtp_require_tls` setting, default true) |
+| 17 | SMTP CRLF header injection via subject | `eb0c1eb` |
+| 18 | `EmailLog.RenderedBody` stores reset tokens permanently | `eb0c1eb` (retention crons; reset tokens have separate one-shot table) |
+| 19 | `is_encrypted` flag decorative — settings plaintext | `7e29de1` (AES-256-GCM via `internal/secrets/`) |
+| 20 | SSRF via `impl_http.Fetch` | `2344aa1` (scheme allowlist, internal-host blocklist, redirect bound) |
+| — | SMTP/Resend providers in core (hard-rule violation) | `eb0c1eb` (extracted to `extensions/smtp-provider`, `extensions/resend-provider`) |
+| — | Files past 500-LOC hard limit | `e6d8551` (split where structurally sensible) |
+| — | Plain `log.Printf` everywhere — no levels, no correlation | `dcde556` (structured `slog` with request-id) |
+| — | XSS in richtext fields | `55653e5` (bluemonday at render-time) |
+| — | Unbounded growth on `mcp_audit_log`, `email_logs`, revisions | `eb0c1eb` (retention sweeps) |
+| — | Plugin response body preview leaked into INFO logs | `eb0c1eb` |
 
-Many other 🟡 medium findings are documented in the per-module review.
+### Open items
+
+These were either out of scope for the recent hardening pass or are tracked in `docs/plans/`:
+
+- 🟡 `AuthorID` not always populated on `CoreAPI.CreateNode` (the kernel side is fixed for admin handler create; verify Tengo `nodes.create` path).
+- 🟡 Cache key for parsed templates uses full template source — large keys in process memory. LRU with content-hash key is the planned replacement.
+- 🟡 No retention on `content_node_revisions` beyond the daily 50-most-recent-per-node sweep — extremely heavy editing still grows the table.
+- 🟡 No bytecode cache for Tengo scripts — recompile on every request.
+- 🟡 `app.Shutdown` waits up to 30 s but in-flight SSE streams can hold the close longer than the timeout in some edge cases.
+- 🟡 Public extension routes can declare arbitrary paths (`extension.json::public_routes`) and could shadow core paths — namespace enforcement is a planned fix.
+- 🟡 No tests on the capability guard's per-method matrix (highest-priority test gap; see `core_dev_guide.md` §8).
 
 ---
 
 ## 22. Cleanup opportunities
 
-Approx **800 LOC of dead handler code** in `internal/cms/`:
-- `admin_handler.go` (444 LOC) — `AdminPageHandler` never registered.
-- `media_handler.go` (195 LOC) — `MediaHandler` never registered.
-- `node_handler.go:42-223` (~170 LOC) — duplicate taxonomy/term/homepage handlers, never reachable.
+The October 2026 hardening pass already removed:
+- `internal/cms/admin_handler.go`, `media_handler.go`, dead `node_handler.go` blocks (~800 LOC).
+- `internal/email/smtp.go`, `resend.go`, `provider.go` (moved to `extensions/smtp-provider`, `extensions/resend-provider`).
+- 11 files that were past the 500-LOC hard limit (split where structurally sensible).
 
-Plus:
-- `internal/email/smtp.go`, `resend.go`, `provider.go` — should move into the existing extensions.
-- `template_renderer.go::image_url`/`image_srcset` — should move into media-manager extension.
-- 11 files past the 500-LOC hard limit need splitting (see core_dev_guide §3.1).
+Still open:
+- `template_renderer.go::image_url`/`image_srcset` — assume the media-manager extension's URL scheme; should move there.
+- `internal/cms/file_browser.go` hidden-file handling needs the listing exclusion replicated on direct read.
+- Some `b, _ := json.Marshal(x)` patterns in `impl_*.go` need explicit error handling (low risk; encoders cannot fail on the input shapes used).
 
 ---
 

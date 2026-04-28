@@ -113,11 +113,31 @@ func main() {
 	app.Use(logging.RequestID())
 	app.Use(fiberlogger.New())
 	app.Use(recover.New())
+	// Strict admin/public CORS: cookie-bearing requests (admin SPA, SSE)
+	// must originate from the configured allowlist. /mcp is intentionally
+	// excluded — it's bearer-token gated and meant to be reachable by any
+	// AI client (Claude Code, Cursor, custom integrations) regardless of
+	// origin. The MCP-specific permissive CORS is registered just below.
 	app.Use(cors.New(cors.Config{
+		Next: func(c *fiber.Ctx) bool {
+			return strings.HasPrefix(c.Path(), "/mcp")
+		},
 		AllowOrigins:     corsOrigins(cfg.AppEnv),
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
 		AllowCredentials: true,
+	}))
+	// Permissive CORS scoped to /mcp. The Authorization bearer token is
+	// the actual access control — anyone holding a valid token is meant
+	// to reach this endpoint from anywhere, including browser-based MCP
+	// inspectors. AllowCredentials must stay false because the wildcard
+	// origin and credentials are mutually exclusive per the CORS spec.
+	app.Use("/mcp", cors.New(cors.Config{
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,OPTIONS",
+		AllowHeaders:     "*",
+		ExposeHeaders:    "Mcp-Session-Id,Mcp-Protocol-Version",
+		AllowCredentials: false,
 	}))
 
 	// Services.

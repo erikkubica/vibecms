@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, RefreshCw, Loader2 } from "@vibecms/icons";
 import {
   ListHeader,
@@ -44,6 +44,20 @@ interface SystemAction {
 }
 
 const PER_PAGE = 20;
+
+// Bypass the Chromium srcDoc + sandbox="" rendering glitch by writing the
+// HTML through contentWindow.document instead.
+function PreviewIframe({ html, title }: { html: string; title: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    const win = ref.current?.contentWindow;
+    if (!win) return;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }, [html]);
+  return <iframe ref={ref} title={title} className="w-full h-full border-0" />;
+}
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
@@ -366,12 +380,7 @@ export default function EmailLogs() {
                 )}
               </div>
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden" style={{ height: "400px" }}>
-                <iframe
-                  srcDoc={viewingLog.rendered_body}
-                  title="Rendered Email"
-                  className="w-full h-full border-0"
-                  sandbox=""
-                />
+                <PreviewIframe html={viewingLog.rendered_body} title="Rendered Email" />
               </div>
             </div>
           )}

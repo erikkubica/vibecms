@@ -94,8 +94,12 @@ func (d *Dispatcher) HandleEvent(action string, payload events.Payload) {
 		providerSettings["from_name"] = v
 	}
 
-	// Build site data for template rendering.
+	// Build site data exposed to templates as `.site.X`. Friendly keys
+	// (`name`, `url`) are the canonical accessors; the redundant `site_*`
+	// aliases keep older templates rendering after the rename.
 	siteData := map[string]string{
+		"name":      settings["site_name"],
+		"url":       settings["site_url"],
 		"site_name": settings["site_name"],
 		"site_url":  settings["site_url"],
 	}
@@ -140,15 +144,35 @@ func (d *Dispatcher) processRule(
 	// Base template from the rule (universal fallback).
 	baseTmpl := rule.Template
 
-	// Build template data: merge payload + site settings.
+	// Build template data: payload (flat keys) + nested objects so authors
+	// can write either `{{.user_full_name}}` (legacy flat) or
+	// `{{.user.full_name}}` (preferred, mirrors Twig/Jinja conventions).
 	data := make(map[string]interface{})
 	for k, v := range payload {
 		data[k] = v
 	}
 	data["site"] = siteData
 
+	// `.user` = subject of the event (the user being created/reset/etc).
+	if u := d.lookupUserMap(payload["user_id"], payload["user_email"]); u != nil {
+		data["user"] = u
+	}
+	// `.actor` = who performed the action (often == user, but distinguished
+	// for admin-on-behalf actions like "admin reset Bob's password").
+	if a := d.lookupUserMap(nil, payload["actor_email"]); a != nil {
+		data["actor"] = a
+	}
+
 	// Group recipients by language for efficient template resolution.
 	for _, ri := range recipientInfos {
+		// `.recipient` = the address this email is going to. Useful for
+		// role-based rules where the recipient differs from `.user`/`.actor`.
+		if r := d.lookupUserMap(nil, ri.email); r != nil {
+			data["recipient"] = r
+		} else {
+			data["recipient"] = map[string]any{"email": ri.email}
+		}
+
 		// Resolve best template for this recipient's language.
 		tmpl := d.resolveTemplateForLang(baseTmpl.Slug, ri.languageID)
 		if tmpl == nil {
@@ -324,6 +348,66 @@ func (d *Dispatcher) lookupUserLangByEmail(email string) *int {
 		return user.LanguageID
 	}
 	return nil
+}
+
+// lookupUserMap loads a user by id (preferred) or email and returns a map
+// suitable for use as `.user` / `.actor` / `.recipient` in templates.
+// Both `full_name` and `name` are exposed because templates wrote both
+// before `name` was settled on as the canonical key.
+func (d *Dispatcher) lookupUserMap(idVal any, emailVal any) map[string]any {
+	var user models.User
+	q := d.db.Select("id", "email", "full_name", "language_id", "role_id")
+
+	switch v := idVal.(type) {
+	case nil:
+		// fall through to email lookup
+	case int:
+		if v > 0 {
+			if err := q.Where("id = ?", v).First(&user).Error; err == nil {
+				return userToMap(&user)
+			}
+		}
+	case int64:
+		if v > 0 {
+			if err := q.Where("id = ?", v).First(&user).Error; err == nil {
+				return userToMap(&user)
+			}
+		}
+	case uint:
+		if v > 0 {
+			if err := q.Where("id = ?", v).First(&user).Error; err == nil {
+				return userToMap(&user)
+			}
+		}
+	case float64:
+		if v > 0 {
+			if err := q.Where("id = ?", int(v)).First(&user).Error; err == nil {
+				return userToMap(&user)
+			}
+		}
+	}
+
+	if email, ok := emailVal.(string); ok && email != "" {
+		if err := q.Where("email = ?", email).First(&user).Error; err == nil {
+			return userToMap(&user)
+		}
+	}
+	return nil
+}
+
+func userToMap(u *models.User) map[string]any {
+	fullName := ""
+	if u.FullName != nil {
+		fullName = *u.FullName
+	}
+	return map[string]any{
+		"id":          u.ID,
+		"email":       u.Email,
+		"full_name":   fullName,
+		"name":        fullName,
+		"language_id": u.LanguageID,
+		"role_id":     u.RoleID,
+	}
 }
 
 // resolveRoleRecipientsWithLang finds users with the given role slug whose role capabilities

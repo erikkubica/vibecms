@@ -144,24 +144,13 @@ func (p *EmailManagerPlugin) updateLayout(ctx context.Context, id uint, body []b
 		return jsonError(400, "NO_UPDATES", "No valid fields to update"), nil
 	}
 
-	// Handle language_id: null means universal fallback.
-	langIDNull := false
-	if lid, ok := updates["language_id"]; ok && lid == nil {
-		langIDNull = true
-		delete(updates, "language_id")
-	}
-
+	// `language_id: null` means universal fallback. DataUpdate maps Go nil
+	// to a SQL NULL parameter, so we pass it through directly — no DataExec
+	// workaround (extensions can't call DataExec, it's internal-only).
 	updates["updated_at"] = time.Now().Format(time.RFC3339)
 
 	if err := p.host.DataUpdate(ctx, "email_layouts", id, updates); err != nil {
 		return jsonError(500, "UPDATE_FAILED", "Failed to update email layout"), nil
-	}
-
-	if langIDNull {
-		_, err := p.host.DataExec(ctx, "UPDATE email_layouts SET language_id = NULL WHERE id = ?", id)
-		if err != nil {
-			return jsonError(500, "UPDATE_FAILED", "Failed to clear language on email layout"), nil
-		}
 	}
 
 	row, err := p.host.DataGet(ctx, "email_layouts", id)

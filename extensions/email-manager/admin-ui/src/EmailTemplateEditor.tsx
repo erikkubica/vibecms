@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Save, Loader2, Eye } from "@vibecms/icons";
 import {
@@ -41,12 +41,38 @@ interface Language {
   flag: string;
 }
 
+function resolvePath(data: Record<string, any>, path: string): unknown {
+  return path.split(".").reduce<unknown>((acc, key) => {
+    if (acc === null || acc === undefined) return undefined;
+    return (acc as Record<string, unknown>)[key];
+  }, data);
+}
+
+// PreviewIframe writes the HTML via contentWindow.document instead of the
+// `srcDoc` attribute. Chromium has a long-standing rendering glitch where
+// `srcDoc` content loads in the DOM but never paints (the document exists
+// but is detached from the compositor) when combined with a strict
+// `sandbox=""`. document.write() puts us on a code path that always paints.
+function PreviewIframe({ html, title }: { html: string; title: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    const win = ref.current?.contentWindow;
+    if (!win) return;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }, [html]);
+  return <iframe ref={ref} title={title} className="w-full h-full border-0" />;
+}
+
 function renderPreview(bodyTemplate: string, testData: Record<string, any>): string {
-  let html = bodyTemplate;
-  html = html.replace(/\{\{\.\s*(\w+)\s*\}\}/g, (_match: string, key: string) => {
-    return testData[key] !== undefined ? String(testData[key]) : `{{.${key}}}`;
-  });
-  return html;
+  return bodyTemplate.replace(
+    /\{\{\s*\.([\w.]+)(?:\s*\|\s*(?:raw|safeHTML|safeURL))?\s*\}\}/g,
+    (_match: string, path: string) => {
+      const value = resolvePath(testData, path);
+      return value !== undefined && value !== null ? String(value) : `{{.${path}}}`;
+    },
+  );
 }
 
 export default function EmailTemplateEditor() {
@@ -175,14 +201,12 @@ export default function EmailTemplateEditor() {
   function getPreviewHtml(): string {
     try {
       const testData = JSON.parse(formTestData);
-      let html = renderPreview(formBody, testData);
+      const body = renderPreview(formBody, testData);
       if (baseLayout) {
-        html = baseLayout
-          .replace(/\{\{\s*\.email_body\s*\}\}/g, html)
-          .replace(/\{\{\s*\.site\.site_name\s*\}\}/g, testData.site_name || "My Site")
-          .replace(/\{\{\s*\.site\.site_url\s*\}\}/g, testData.site_url || "#");
+        const wrapped = baseLayout.replace(/\{\{\s*\.email_body\s*\}\}/g, body);
+        return renderPreview(wrapped, testData);
       }
-      return html;
+      return body;
     } catch {
       return formBody;
     }
@@ -310,12 +334,7 @@ export default function EmailTemplateEditor() {
             </CardHeader>
             <CardContent>
               <div className="h-96 rounded-lg border border-slate-300 bg-white overflow-auto">
-                <iframe
-                  srcDoc={getPreviewHtml()}
-                  title="Email Preview"
-                  className="w-full h-full border-0"
-                  sandbox=""
-                />
+                <PreviewIframe html={getPreviewHtml()} title="Email Preview" />
               </div>
             </CardContent>
           </Card>

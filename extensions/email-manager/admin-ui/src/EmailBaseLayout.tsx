@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Save, Loader2, Eye, Plus, Trash2, Globe, RotateCcw, Pencil } from "@vibecms/icons";
 import {
   Button,
@@ -122,6 +122,23 @@ const SAMPLE_EMAIL_BODY = `<h2 style="margin:0 0 16px; color:#1e293b; font-size:
   Use base layouts to wrap all outgoing emails with consistent branding.
 </p>`;
 
+// PreviewIframe writes the HTML via contentWindow.document instead of the
+// `srcDoc` attribute. Chromium has a long-standing rendering glitch where
+// `srcDoc` content loads in the DOM but never paints (the document exists
+// but is detached from the compositor) when combined with a strict
+// `sandbox=""`. document.write() puts us on a code path that always paints.
+function PreviewIframe({ html, title }: { html: string; title: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  useEffect(() => {
+    const win = ref.current?.contentWindow;
+    if (!win) return;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }, [html]);
+  return <iframe ref={ref} title={title} className="w-full h-full border-0" />;
+}
+
 export default function EmailBaseLayout() {
   const [layouts, setLayouts] = useState<EmailLayout[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -228,10 +245,21 @@ export default function EmailBaseLayout() {
   }
 
   function getPreviewHtml(): string {
-    let html = formBody;
-    html = html.replace(/\{\{\s*\.email_body\s*\}\}/g, SAMPLE_EMAIL_BODY);
-    html = html.replace(/\{\{\s*\.site\.site_name\s*\}\}/g, "My Site");
-    return html;
+    const sampleData: Record<string, any> = {
+      email_body: SAMPLE_EMAIL_BODY,
+      site: { name: "My Site", url: "#", site_name: "My Site", site_url: "#" },
+      user: { full_name: "Jane Doe", name: "Jane Doe", email: "jane@example.com" },
+      recipient: { full_name: "Jane Doe", name: "Jane Doe", email: "jane@example.com" },
+    };
+    return formBody.replace(
+      /\{\{\s*\.([\w.]+)(?:\s*\|\s*(?:raw|safeHTML|safeURL))?\s*\}\}/g,
+      (_match, path: string) => {
+        const value = path
+          .split(".")
+          .reduce<unknown>((acc, key) => (acc == null ? undefined : (acc as Record<string, unknown>)[key]), sampleData);
+        return value !== undefined && value !== null ? String(value) : `{{.${path}}}`;
+      },
+    );
   }
 
   function getLanguageLabel(languageId: number | null): React.ReactNode {
@@ -389,12 +417,7 @@ export default function EmailBaseLayout() {
             </CardHeader>
             <CardContent>
               <div className="rounded-lg border border-slate-300 bg-white overflow-auto" style={{ height: "500px" }}>
-                <iframe
-                  srcDoc={getPreviewHtml()}
-                  title="Layout Preview"
-                  className="w-full h-full border-0"
-                  sandbox=""
-                />
+                <PreviewIframe html={getPreviewHtml()} title="Layout Preview" />
               </div>
             </CardContent>
           </Card>

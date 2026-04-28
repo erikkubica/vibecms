@@ -145,26 +145,13 @@ func (p *EmailManagerPlugin) updateTemplate(ctx context.Context, id uint, body [
 		}
 	}
 
-	// Handle language_id: null means universal fallback.
-	// Use DataExec for the SET language_id = NULL case since DataUpdate
-	// may not handle untyped nil correctly through gRPC/database/sql.
-	langIDNull := false
-	if lid, ok := updates["language_id"]; ok && lid == nil {
-		langIDNull = true
-		delete(updates, "language_id")
-	}
-
+	// `language_id: null` means universal fallback. DataUpdate maps Go nil
+	// to a SQL NULL parameter, so we pass it through directly — no DataExec
+	// workaround (extensions can't call DataExec, it's internal-only).
 	updates["updated_at"] = time.Now().Format(time.RFC3339)
 
 	if err := p.host.DataUpdate(ctx, "email_templates", id, updates); err != nil {
 		return jsonError(500, "UPDATE_FAILED", "Failed to update email template"), nil
-	}
-
-	if langIDNull {
-		_, err := p.host.DataExec(ctx, "UPDATE email_templates SET language_id = NULL WHERE id = ?", id)
-		if err != nil {
-			return jsonError(500, "UPDATE_FAILED", "Failed to clear language on email template"), nil
-		}
 	}
 
 	row, err := p.host.DataGet(ctx, "email_templates", id)

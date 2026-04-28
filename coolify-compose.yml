@@ -21,19 +21,32 @@ services:
       - PORT=8099
       - APP_ENV=production
       - SERVICE_FQDN_APP_8099
-      # Public origin used for CORS allowlist. SERVICE_FQDN_APP_8099 is
-      # filled by Coolify with the user-set domain; falling back to the
-      # raw FQDN keeps single-domain deployments working out of the box.
+      # Public origin used for CORS allowlist. Coolify fills
+      # SERVICE_FQDN_APP_8099 once a domain is bound to the app service
+      # in the dashboard — until then this expands to "https://" and
+      # the validator will refuse to start. Set the domain first.
       - CORS_ORIGINS=https://$SERVICE_FQDN_APP_8099
       # AES-256 master key for at-rest encryption of theme git tokens
-      # and secret-shaped settings. SERVICE_BASE64_32 generates a random
-      # 32-byte value base64-encoded — exactly what internal/secrets
-      # expects (32 raw bytes after decode).
-      - VIBECMS_SECRET_KEY=$SERVICE_BASE64_32_SECRETKEY
-      # DB lives on the compose private network (`db` is the service
-      # name, no public DNS). sslmode=disable is acceptable here; the
-      # config validator allows it for non-public DB hosts.
-      - DATABASE_URL=postgres://$SERVICE_USER_POSTGRES:$SERVICE_PASSWORD_POSTGRES@db:5432/vibecms?sslmode=disable
+      # and secret-shaped settings. internal/secrets expects exactly
+      # 32 raw bytes after base64 decode — Coolify's SERVICE_BASE64_<NAME>
+      # produces that (the longer SERVICE_BASE64_64_<NAME> would fail
+      # because it generates 64 bytes, not 32).
+      - VIBECMS_SECRET_KEY=$SERVICE_BASE64_SECRETKEY
+      # DB credentials are passed as separate vars rather than crammed
+      # into a DATABASE_URL: SERVICE_PASSWORD_POSTGRES routinely contains
+      # shell special chars including '$', and embedding it in a URL
+      # makes docker-compose re-expand fragments like "$dht5mbz9" as
+      # phantom variables (warnings + a mangled password reaching the
+      # container). Individual env vars sidestep that entirely.
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=$SERVICE_USER_POSTGRES
+      - DB_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - DB_NAME=vibecms
+      # sslmode=disable is acceptable here because `db` is on the
+      # compose private network; config.Validate allows it for
+      # non-public DB hosts.
+      - DB_SSLMODE=disable
       - SESSION_SECRET=$SERVICE_BASE64_64_SESSION
       - SESSION_EXPIRY_HOURS=24
       - MONITOR_BEARER_TOKEN=$SERVICE_BASE64_64_MONITOR

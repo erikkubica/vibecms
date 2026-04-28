@@ -44,6 +44,7 @@ func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, r
 	modules.AddBuiltinModule("core/log", logModule(api, ctx))
 	modules.AddBuiltinModule("core/nodetypes", nodeTypesModule(api, ctx))
 	modules.AddBuiltinModule("core/taxonomies", taxonomiesModule(api, ctx))
+	modules.AddBuiltinModule("core/terms", termsModule(api, ctx))
 	modules.AddBuiltinModule("core/helpers", helpersModule())
 	modules.AddBuiltinModule("core/events", eventsModule(api, ctx, cb))
 	modules.AddBuiltinModule("core/settings", settingsModule(api, ctx))
@@ -59,7 +60,6 @@ func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, r
 	// Load any source modules from the scripts directory
 	loadSourceModules(modules, scriptsDir)
 }
-
 
 // ---------------------------------------------------------------------------
 // Source module loader

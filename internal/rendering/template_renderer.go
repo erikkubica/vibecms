@@ -161,6 +161,16 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 				return template.HTML(fmt.Sprintf("%v", v))
 			}
 		},
+		"raw": func(s interface{}) template.HTML {
+			switch v := s.(type) {
+			case string:
+				return template.HTML(v)
+			case template.HTML:
+				return v
+			default:
+				return template.HTML(fmt.Sprintf("%v", v))
+			}
+		},
 		"safeURL": func(s interface{}) template.URL {
 			switch v := s.(type) {
 			case string:

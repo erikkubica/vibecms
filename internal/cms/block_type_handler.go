@@ -288,6 +288,9 @@ func (h *BlockTypeHandler) PreviewBlockTemplate(c *fiber.Ctx) error {
 		"safeHTML": func(s interface{}) template.HTML {
 			return template.HTML(fmt.Sprintf("%v", s))
 		},
+		"raw": func(s interface{}) template.HTML {
+			return template.HTML(fmt.Sprintf("%v", s))
+		},
 		"safeURL": func(s interface{}) template.URL {
 			return template.URL(fmt.Sprintf("%v", s))
 		},

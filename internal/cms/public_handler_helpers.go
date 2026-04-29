@@ -12,33 +12,98 @@ import (
 // caches, blocks_data parsing, theme-asset reference resolution, and
 // block-slug extraction.
 
-// loadSiteSettings loads all site settings into a map keyed by setting key.
+// loadSiteSettings returns site settings for the site's default language.
+// Equivalent to loadSiteSettingsForLocale("") — kept for callers that don't
+// have request-language context (admin tools, retention loops, etc.).
 func (h *PublicHandler) loadSiteSettings() map[string]string {
-	h.cacheMu.RLock()
-	settings := h.siteSettings
-	h.cacheMu.RUnlock()
+	return h.loadSiteSettingsForLocale("")
+}
 
-	if settings != nil {
-		return settings
+// loadSiteSettingsForLocale loads site settings scoped to a request locale,
+// falling back to the default-language row when the locale doesn't override
+// a key. Cached per-locale; invalidated by setting.updated and the
+// .ClearCache() entry point.
+//
+// settings rows carry a language_code (migration 0038); without locale
+// scoping, GORM's Find returns every row and last-write-wins on duplicate
+// keys non-deterministically. That broke seo_robots_index — the public
+// renderer would sometimes see "true" even after the operator saved
+// "false" on the default-language admin.
+func (h *PublicHandler) loadSiteSettingsForLocale(locale string) map[string]string {
+	defLang := h.defaultLanguageCode()
+	if locale == "" {
+		locale = defLang
 	}
+
+	h.cacheMu.RLock()
+	if h.siteSettingsByLocale != nil {
+		if cached, ok := h.siteSettingsByLocale[locale]; ok {
+			h.cacheMu.RUnlock()
+			return cached
+		}
+	}
+	h.cacheMu.RUnlock()
 
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
-	if h.siteSettings != nil {
-		return h.siteSettings
+	if h.siteSettingsByLocale == nil {
+		h.siteSettingsByLocale = map[string]map[string]string{}
+	}
+	if cached, ok := h.siteSettingsByLocale[locale]; ok {
+		return cached
 	}
 
-	settings = make(map[string]string)
-	var allSettings []models.SiteSetting
-	h.db.Find(&allSettings)
-	for _, s := range allSettings {
-		if s.Value != nil {
-			settings[s.Key] = *s.Value
+	settings := make(map[string]string)
+	var rows []models.SiteSetting
+	q := h.db
+	switch {
+	case defLang == "":
+		// No default language seeded yet — fall back to a single
+		// last-write-wins read so a fresh install can still surface
+		// boot-time defaults.
+		_ = q.Find(&rows).Error
+	case locale == defLang:
+		_ = q.Where("language_code = ?", defLang).Find(&rows).Error
+	default:
+		// Pull both the requested locale AND the default-language row,
+		// then prefer the requested locale per-key with default-language
+		// fallback. One query, two values per key max.
+		_ = q.Where("language_code IN ?", []string{locale, defLang}).Find(&rows).Error
+	}
+
+	type pick struct {
+		val    string
+		locale string
+	}
+	chosen := map[string]pick{}
+	for _, s := range rows {
+		if s.Value == nil {
+			continue
+		}
+		existing, ok := chosen[s.Key]
+		if !ok {
+			chosen[s.Key] = pick{val: *s.Value, locale: s.LanguageCode}
+			continue
+		}
+		// Prefer the requested locale's value over the default's.
+		if existing.locale == defLang && s.LanguageCode == locale {
+			chosen[s.Key] = pick{val: *s.Value, locale: s.LanguageCode}
 		}
 	}
+	for k, p := range chosen {
+		settings[k] = p.val
+	}
 
-	h.siteSettings = settings
+	h.siteSettingsByLocale[locale] = settings
 	return settings
+}
+
+// defaultLanguageCode returns the code of the language flagged is_default
+// on the languages table, or "" before any language has been seeded.
+func (h *PublicHandler) defaultLanguageCode() string {
+	var code string
+	_ = h.db.Table("languages").Select("code").Where("is_default = ?", true).Limit(1).Scan(&code).Error
+	return code
 }
 
 // loadActiveLanguages loads all active languages as a slice.

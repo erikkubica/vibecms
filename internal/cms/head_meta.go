@@ -71,12 +71,13 @@ func BuildHeadMeta(node *models.ContentNode, seo map[string]interface{}, setting
 		tag(`<link rel="canonical" href="%s">`, html.EscapeString(canonical))
 	}
 
-	// Meta robots — site_settings_robots toggle wins. Per-node noindex
-	// could land later as a node.seo.noindex flag; for now site-wide is
-	// the only signal.
-	if v := settings["seo_robots_index"]; v == "false" {
-		tag(`<meta name="robots" content="noindex,nofollow">`)
-	}
+	// Meta robots — always emitted so the indexing intent is explicit
+	// in the rendered HTML, not just in the X-Robots-Tag response
+	// header. Allowed mode pairs `index, follow` with the modern
+	// rich-snippet opt-ins (max-image-preview, max-snippet,
+	// max-video-preview) so Google can surface large previews; without
+	// these flags Google falls back to small thumbnails.
+	tag(`<meta name="robots" content="%s">`, html.EscapeString(robotsDirective(settings)))
 
 	// Open Graph
 	if title != "" {
@@ -141,6 +142,22 @@ func BuildHeadMeta(node *models.ContentNode, seo map[string]interface{}, setting
 	}
 
 	return template.HTML(b.String())
+}
+
+// robotsDirective returns the canonical robots directive driven by the
+// seo_robots_index site setting. Used by both the X-Robots-Tag header
+// middleware and the <meta name=robots> emitted in head_meta so the two
+// signals can never disagree on a given page.
+//
+// "false" → noindex,nofollow (operator opted out — staging or hidden site).
+// anything else (including empty / unset) → index,follow + modern preview
+// opt-ins so search engines render rich snippets / large images / long
+// snippets when our content is good enough to deserve them.
+func robotsDirective(settings map[string]string) string {
+	if settings["seo_robots_index"] == "false" {
+		return "noindex, nofollow"
+	}
+	return "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
 }
 
 // mapClone returns a shallow copy of a string→string map. Used when a

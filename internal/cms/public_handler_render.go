@@ -47,7 +47,12 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 	}
 
 	// Load site settings
-	settings := h.loadSiteSettings()
+	// Site settings are per-language (migration 0038). Resolve scoped to
+	// the node's locale with default-language fallback so per-locale
+	// overrides (e.g. seo_robots_index=false on a staging es subsite)
+	// reach both the head_meta and the X-Robots-Tag header.
+	settings := h.loadSiteSettingsForLocale(node.LanguageCode)
+	c.Set("X-Robots-Tag", robotsDirective(settings))
 
 	// Load menus
 	menus := h.renderCtx.LoadMenus(languageID)

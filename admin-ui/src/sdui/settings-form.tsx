@@ -38,6 +38,11 @@ export interface SettingsFieldDef {
   type: "text" | "textarea" | "node_select" | "toggle";
   placeholder?: string;
   help?: string;
+  /** Inline warning rendered in an amber callout below the help line. Use
+   *  for settings that have non-obvious cross-cutting behaviour (e.g.
+   *  per-language toggles where OFF on one language doesn't affect
+   *  others). */
+  warning?: string;
   rows?: number;
   font_mono?: boolean;
   // node_select-specific
@@ -336,6 +341,12 @@ function SettingsField({
         </Select>
       )}
       {field.help && <p className="text-[11px] text-slate-400">{field.help}</p>}
+      {field.warning && (
+        <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5">
+          <span className="text-amber-600 text-[11px] leading-tight" aria-hidden="true">⚠</span>
+          <p className="text-[11px] leading-snug text-amber-800">{field.warning}</p>
+        </div>
+      )}
     </div>
   );
 }

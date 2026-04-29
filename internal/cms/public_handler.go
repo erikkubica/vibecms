@@ -38,12 +38,13 @@ type PublicHandler struct {
 	renderCtx      *RenderContext
 	eventBus       *events.EventBus
 
-	cacheMu          sync.RWMutex
-	siteSettings     map[string]string
-	blockTypes       map[string]models.BlockType
-	themeBlockCache  map[string]string
-	activeLanguages  []models.Language
-	blockOutputCache map[string]string
+	cacheMu              sync.RWMutex
+	siteSettings         map[string]string
+	siteSettingsByLocale map[string]map[string]string
+	blockTypes           map[string]models.BlockType
+	themeBlockCache      map[string]string
+	activeLanguages      []models.Language
+	blockOutputCache     map[string]string
 
 	themeSettingsRegistry *ThemeSettingsRegistry
 	themeSettingsAPI      settingsReader
@@ -94,6 +95,7 @@ func (h *PublicHandler) ClearCache() {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 	h.siteSettings = nil
+	h.siteSettingsByLocale = nil
 	h.blockTypes = nil
 	h.activeLanguages = nil
 	h.themeBlockCache = make(map[string]string)
@@ -120,15 +122,21 @@ func (h *PublicHandler) CacheStats() map[string]interface{} {
 
 // RegisterRoutes registers public page routes on the Fiber app.
 func (h *PublicHandler) RegisterRoutes(app *fiber.App) {
-	// X-Robots-Tag middleware: when seo_robots_index="false" in site
-	// settings, emit `noindex, nofollow` on every public response so a
-	// site can be hidden from search engines without per-theme work.
-	// Defaults to indexing allowed (no header) when unset.
+	// X-Robots-Tag middleware: drives indexing on every public response.
+	// When seo_robots_index="false" the kernel emits `noindex, nofollow`
+	// so a site can be hidden from search engines without per-theme
+	// work. When indexing is allowed (default), emit a positive robots
+	// directive that gives modern crawlers explicit permission to use
+	// rich snippets and large image previews — Google has documented
+	// these as needing an explicit opt-in to surface in SERPs at full
+	// fidelity.
+	//
+	// Setting is per-language (settings rows carry language_code). The
+	// middleware reads the default-language row at request time;
+	// per-page rendering can override on a per-locale basis via the
+	// .app.head_meta block which uses loadSiteSettingsForLocale.
 	app.Use(func(c *fiber.Ctx) error {
-		settings := h.loadSiteSettings()
-		if v, ok := settings["seo_robots_index"]; ok && v == "false" {
-			c.Set("X-Robots-Tag", "noindex, nofollow")
-		}
+		c.Set("X-Robots-Tag", robotsDirective(h.loadSiteSettings()))
 		return c.Next()
 	})
 	app.Get("/", h.HomePage)

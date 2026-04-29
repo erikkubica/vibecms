@@ -338,20 +338,33 @@
     border-radius: var(--radius-lg);
   }
 
-  /* Scrollbars — app default */
+  /* Scrollbars — app default. Tied to the accent color (violet by
+     default, but the user's chosen accent flows through) so the
+     primary brand colour shows up everywhere there's overflow. Idle
+     state uses a faint accent tint so the bar reads as part of the
+     UI, not a system chrome artefact; hover deepens to the full
+     accent. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--accent) 55%, transparent) transparent;
+  }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
+    background: color-mix(in oklab, var(--accent) 55%, transparent);
     border-radius: 8px;
     border: 2px solid var(--app-bg);
   }
-  ::-webkit-scrollbar-thumb:hover { background: var(--fg-subtle); }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
 
-  /* Sidebar scroll — slim, theme-aware, auto-hiding */
+  /* Sidebar scroll — slim, accent-tinted to match the rest of the app
+     while keeping the "auto-hides until you hover the sidebar"
+     behaviour. */
   .sb-scroll {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+    scrollbar-color: color-mix(in oklab, var(--accent) 35%, transparent) transparent;
     scrollbar-gutter: stable;
   }
   .sb-scroll::-webkit-scrollbar {
@@ -360,14 +373,14 @@
   }
   .sb-scroll::-webkit-scrollbar-track { background: transparent; }
   .sb-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in oklab, var(--accent) 25%, transparent);
     border-radius: 3px;
     border: none;
   }
   .sb-scroll:hover::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.18);
+    background: color-mix(in oklab, var(--accent) 55%, transparent);
   }
   .sb-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.28);
+    background: var(--accent);
   }
 }

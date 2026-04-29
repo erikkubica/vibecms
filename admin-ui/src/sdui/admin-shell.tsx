@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useBoot } from "../hooks/use-boot";
-import { useSSE } from "../hooks/use-sse";
 import { useAuth } from "../hooks/use-auth";
 import type { NavItem } from "./types";
 import * as Lucide from "lucide-react";
@@ -335,9 +334,6 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
   const location = useLocation();
   const { user, logout } = useAuth();
   const { data: boot } = useBoot();
-
-  // Connect SSE for real-time updates
-  useSSE();
 
   const breadcrumbs = useMemo(
     () => computeBreadcrumbs(location.pathname),

@@ -131,7 +131,20 @@ Built with React 19, Vite, TypeScript, Tailwind v4, shadcn/ui. Extension micro-f
 
 Self-contained packages: `theme.json` manifest + `layouts/`, `partials/`, `blocks/`, `templates/`, `assets/`, `scripts/`. Activated via `core.theme.activate(id)` (no restart). On activation: previous theme deregisters, `theme.deactivated` event fires, new theme upserts layouts/blocks/partials/templates into the DB, `theme.tengo` runs (registering node types, seeding content, wiring event handlers and filters), `theme.activated` event fires.
 
-Themes may also declare editor-driven **settings pages** via `theme.json` `settings_pages[]` — each entry references a JSON field-schema file that becomes a sidebar entry under "Theme Settings" in the admin. Values reuse the `site_settings` table under a per-theme namespace (`theme:<slug>:<page>:<field>`), so encryption-at-rest and the existing settings cache apply automatically. Per-theme isolation means switching themes hides the previous theme's pages while preserving the stored rows for later reactivation; only full deletion wipes them. The schema loader is soft-fail: a malformed page is logged and skipped without blocking activation. See `themes/README.md` (`Theme settings (editor-driven)`) for the author-facing guide and `docs/theming.md` §11a for the architectural reference (storage, lifecycle, capability matrix, mismatch handling).
+Themes may also declare editor-driven **settings pages** via `theme.json` `settings_pages[]` — each entry references a JSON field-schema file that becomes a sidebar entry under "Theme Settings" in the admin. Values reuse the `site_settings` table under a per-theme namespace (`theme:<slug>:<page>:<field>`), so encryption-at-rest, per-language storage (default-language fallback), and the existing settings cache all apply automatically. Per-theme isolation means switching themes hides the previous theme's pages while preserving the stored rows for later reactivation; only full deletion wipes them. The schema loader is soft-fail: a malformed page is logged and skipped without blocking activation. See `themes/README.md` (`Theme settings (editor-driven)`) for the author-facing guide and `docs/theming.md` §11a for the architectural reference (storage, lifecycle, capability matrix, mismatch handling).
+
+#### 3.4.1 Persistent themes/extensions data dir
+
+Themes and extensions live in **two parallel directories** so operator content survives container restarts on platforms like Coolify (where the writable image layer is ephemeral):
+
+| Directory | Source | Mount type | Writes |
+|---|---|---|---|
+| `themes/`, `extensions/` | Image-baked, ships in the build | Read-only intent | Never written at runtime |
+| `data/themes/`, `data/extensions/` | Operator-installed (git, zip, MCP `theme.deploy`/`extension.deploy`) | Persistent volume (`./data:/app/data` or named `squilla-data:/app/data`) | All install/deploy paths |
+
+Both roots are scanned at boot. On slug collision the data-dir copy wins, so an operator can override a bundled theme by deploying a same-slug replacement without renaming. Delete refuses to rmdir under the bundled root — the row goes, the next scan re-registers the bundled fallback as inactive. Activation does a pre-flight `stat()` on the new theme's `theme.json` before destroying the previous registration so a missing-files state never wipes layouts/blocks/templates with nothing to replace them.
+
+Drop-in watchers (`internal/cms/fs_watcher.go`) only watch the data dirs since the bundled dirs are immutable at runtime.
 
 ---
 

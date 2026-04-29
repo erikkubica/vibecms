@@ -119,7 +119,7 @@ func guideRecipes(topic string) []map[string]any {
 			"goal":  "Tag content with a new taxonomy",
 			"topic": "taxonomies",
 			"steps": []string{"core.taxonomy.create", "core.term.create", "core.node.update"},
-			"notes": "term field values are objects {slug, name}, not bare strings.",
+			"notes": "term field values are objects {slug, name}, not bare strings. Terms are per-language (rows carry language_code; default = site's default language when omitted). To localize an existing term across languages call POST /admin/api/terms/<id>/translations with {language_code:'<code>'} — source and clone share a translation_group_id UUID. Slug uniqueness is per (node_type, taxonomy, slug, language_code), so the same slug can exist across languages.",
 		},
 		{
 			"goal":  "Wire up an extension (media manager, email, etc.)",
@@ -191,13 +191,13 @@ func guideRecipes(topic string) []map[string]any {
 			"goal":  "Deploy a theme that lives outside the primary repo",
 			"topic": "themes",
 			"steps": []string{"core.theme.standards", "core.theme.deploy", "core.render.node_preview"},
-			"notes": "Build the theme directory locally, zip it (theme.json at root or one level deep), base64-encode the bytes, call core.theme.deploy({body_base64, activate:true}). The archive is unpacked into themes/<slug>/ via an atomic dir swap, the row is upserted, and — when activate=true — the theme is activated immediately. 50 MB cap. Slug must match [A-Za-z0-9_-]+. Re-deploying the same slug refreshes the existing row and overwrites files in place.",
+			"notes": "Build the theme directory locally, zip it (theme.json at root or one level deep), base64-encode the bytes, call core.theme.deploy({body_base64, activate:true}). The archive is unpacked into data/themes/<slug>/ (persistent volume — survives container restarts) via an atomic dir swap, the row is upserted, and — when activate=true — the theme is activated immediately. Image-bundled themes in themes/ are read-only; deploying a same-slug theme overrides the bundled copy on the next scan (data wins on collision). 50 MB cap. Slug must match [A-Za-z0-9_-]+. Re-deploying the same slug refreshes the existing row and overwrites files in place.",
 		},
 		{
 			"goal":  "Deploy an extension from a local build (no docker cp, no git push)",
 			"topic": "extensions",
 			"steps": []string{"core.extension.standards", "core.extension.deploy", "core.extension.get"},
-			"notes": "Zip the extension directory (extension.json + admin-ui/dist + scripts + bin/<plugin> if any), base64-encode, call core.extension.deploy({body_base64, activate:true}). Plugin binaries declared in manifest.plugins[].binary are chmod'd to 0755 automatically. Pre-build them for the host OS/arch — Squilla does not cross-compile. activate=true runs HotActivate (migrations, plugin spawn, script load, block load) without a server restart. 50 MB cap.",
+			"notes": "Zip the extension directory (extension.json + admin-ui/dist + scripts + bin/<plugin> if any), base64-encode, call core.extension.deploy({body_base64, activate:true}). The archive lands in data/extensions/<slug>/ (persistent volume); image-bundled extensions in extensions/ stay untouched. Plugin binaries declared in manifest.plugins[].binary are chmod'd to 0755 automatically. Pre-build them for the host OS/arch — Squilla does not cross-compile. activate=true runs HotActivate (migrations, plugin spawn, script load, block load) without a server restart. 50 MB cap.",
 		},
 	}
 	if topic == "" {
@@ -288,6 +288,30 @@ func guideGotchas() []map[string]any {
 		{
 			"topic":   "filter_args_required",
 			"summary": "`{{ filter \"name\" }}` (no value arg) errors with \"wrong number of args\". For filters that take no input, pass `(dict)` as the value argument.",
+		},
+		{
+			"topic":   "settings_per_language",
+			"summary": "site_settings rows carry a language_code. Reads scope to the caller's locale (X-Admin-Language for admin, request locale for public render) and FALL BACK to the default-language row when no per-locale value exists. The legacy `''` shared sentinel is gone — every row has a real language code (migration 0040 backfilled). Theme settings inherit the same model; there is no `translatable` flag on the schema, every field is implicitly per-locale.",
+		},
+		{
+			"topic":   "terms_per_language",
+			"summary": "taxonomy_terms rows are per-language. Slug uniqueness is (node_type, taxonomy, slug, language_code). To create a translation of an existing term: POST /admin/api/terms/<id>/translations with {language_code:'<code>'} — source row gets a fresh translation_group_id UUID if it didn't have one, clone joins the same group. Routes /terms/:id/translations are registered before the generic /terms/:nodeType/:taxonomy because they share a 3-segment shape and Fiber matches by registration order.",
+		},
+		{
+			"topic":   "themes_persistent_data_dir",
+			"summary": "Themes and extensions live in two parallel dirs: image-bundled (themes/, extensions/, read-only) + operator-installed (data/themes/, data/extensions/, persistent volume). Both scanned at boot; data wins on slug collision. Writes (theme.deploy, extension.deploy, git install, zip upload) all target data/. Delete refuses to rmdir under the bundled root so a same-slug bundled theme stays available as fallback. docker-compose mounts ./data:/app/data; coolify-compose mounts the squilla-data named volume. Without this volume, theme.deploy unpacks into the container's writable layer and gets wiped on restart.",
+		},
+		{
+			"topic":   "theme_activate_pre_flight",
+			"summary": "core.theme.activate stat()s theme.json on disk before destroying the previous theme's registration. If the manifest is missing (e.g. files wiped from a non-persistent layer), Activate returns an error and the previous theme stays intact — preventing the 'reactivate to fix it' flow from wiping all blocks/layouts/templates with nothing to replace them.",
+		},
+		{
+			"topic":   "lost_admin_password",
+			"summary": "Recover via CLI: `docker exec -it <app> ./squilla reset-password <email> <new-password>`. Hashes via the same auth.HashPassword used at signup, writes directly to users.password_hash. Idempotent. Works without SMTP. Setting ADMIN_PASSWORD env var only takes effect during first-boot seed (when no admin user exists yet); it does NOT reset an existing user's password.",
+		},
+		{
+			"topic":   "git_install_https_only",
+			"summary": "core.theme.git_install (and InstallFromGit) only accepts https:// URLs. SSH-style git@github.com:owner/repo.git is rejected upfront with a clear message — the kernel SSH key would be overprivileged for cloning arbitrary themes. For private repos use a https URL + a personal access token in the token field.",
 		},
 	}
 }

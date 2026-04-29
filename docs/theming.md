@@ -1046,6 +1046,15 @@ theme:<theme-slug>:<page-slug>:<field-key>
 
 `cms.ThemePrefix(slug)` returns `"theme:<slug>:"` — the LIKE prefix used by `GetSettings(prefix)` calls and by lifecycle cleanup. Reusing `site_settings` means encryption (for secret-shaped keys), audit hooks, and the existing settings cache all apply for free.
 
+Storage is **per-language** in lock-step with `site_settings`. Every row carries a real `language_code`; reads scope to the active locale and fall back to the default-language row when no per-locale value exists. There is **no `translatable` flag** on theme settings fields — every field is implicitly translatable, just like every site-settings key. The admin form's language selector picks which locale's value the operator is editing; templates and Tengo helpers resolve to the request locale automatically.
+
+| Surface | Locale resolution |
+|---|---|
+| Admin save (`PUT /admin/api/theme-settings/:page`) | `X-Admin-Language` header, falling back to the site default. Writes a single row per (key, language). |
+| Admin read (`GET /admin/api/theme-settings/:page`) | Same: per-key resolved at the admin's locale with fallback to default. |
+| Render-time injection (`.theme_settings.<page>.<field>`) | Request's language code (the visited URL's locale segment). Falls back to default-language row. |
+| Tengo `core/theme_settings.get/all` | Request locale via the same fallback path (defaults to default-language when no request scope, e.g. background scripts). |
+
 ### 11a.3 Lifecycle
 
 | Event | Effect on registry | Effect on stored rows |

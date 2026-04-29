@@ -209,18 +209,24 @@ Taxonomy definitions (Category, Tag, Topic, etc.).
 | `field_schema` | JSONB NOT NULL DEFAULT '[]' | Custom term fields |
 
 ### `taxonomy_terms`
-Individual terms within a taxonomy.
+Individual terms within a taxonomy. Each language version of a term is its own row, linked via `translation_group_id` — same model as `content_nodes`.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | SERIAL PK | |
 | `node_type` | VARCHAR(50) NOT NULL | |
 | `taxonomy` | VARCHAR(50) NOT NULL | |
+| `language_code` | VARCHAR(10) NOT NULL DEFAULT 'en' | Language this row's name/slug/description belong to. Backfilled to the site's default language by migration `0040_taxonomy_terms_i18n.sql`. |
+| `translation_group_id` | UUID NULL | Shared across rows that are translations of each other. NULL until the first sibling translation is created (POST `/admin/api/terms/:id/translations`), at which point both source and clone get the same fresh UUID. |
 | `slug`, `name` | VARCHAR(255) NOT NULL | |
 | `description` | TEXT NOT NULL DEFAULT '' | |
 | `parent_id` | INT NULL | FK → `taxonomy_terms.id` (hierarchical taxonomies only) |
 | `count` | INT NOT NULL DEFAULT 0 | Denormalized usage count |
 | `fields_data` | JSONB NOT NULL DEFAULT '{}' | |
+
+**Uniqueness:** `(node_type, taxonomy, slug, language_code)` — slugs may recur across languages so EN "documentation" and PT "documentação" don't collide.
+
+**Indexes:** `idx_taxonomy_terms_translation_group` on `translation_group_id` (partial, NULLs excluded), `idx_taxonomy_terms_language` on `(node_type, taxonomy, language_code)`.
 
 ### `redirects`
 URL redirect rules (301/302).
@@ -501,14 +507,26 @@ Core migration ledger.
 ## Configuration
 
 ### `site_settings`
-Key-value site configuration. Sensitive values (matched by the `internal/secrets/` heuristic) are stored in the AES-256-GCM envelope format `enc:v1:<base64>`.
+Key-value site configuration with per-language storage. Sensitive values (matched by the `internal/secrets/` heuristic) are stored in the AES-256-GCM envelope format `enc:v1:<base64>`.
 
 | Column | Type | Notes |
 |---|---|---|
-| `key` | VARCHAR(100) PK | |
+| `key` | VARCHAR(100) | |
+| `language_code` | VARCHAR(8) NOT NULL DEFAULT '' | Language this row applies to. See "Per-language storage" below. |
 | `value` | TEXT NULL | Plaintext or `enc:v1:...` |
 | `is_encrypted` | BOOL DEFAULT false | |
 | `updated_at` | TIMESTAMPTZ | |
+
+**Primary key:** composite `(key, language_code)`. Same key may have one row per language plus one default-language fallback row.
+
+**Per-language storage** (introduced in migrations `0038_site_settings_language_code.sql` and `0039_site_settings_default_locale.sql`):
+
+- Every row carries the language code it applies to (e.g. `'en'`, `'vi'`, `'pt'`).
+- Reads scope to the caller's language (X-Admin-Language header for admin, current request locale for public render) and **fall back to the default-language row** when no per-locale row exists.
+- Writes target the caller's locale; an empty `""` is resolved to the default language at write time.
+- The legacy `''` "shared sentinel" is gone — migration 0039 backfills any leftover `''` rows to the default-language code, deduping against existing per-locale rows on the way (per-locale row wins).
+
+`GET /admin/api/settings` accepts `X-Admin-Language` and returns each key's value resolved for that locale (with default-language fallback). `PUT /admin/api/settings` writes at the caller's admin language. Both theme settings and site settings use this same mechanism — there is no separate "translatable flag" anymore; every setting is implicitly per-locale.
 
 Reads via `GET /admin/api/settings` redact secret-shaped keys (commit `54f573a`).
 

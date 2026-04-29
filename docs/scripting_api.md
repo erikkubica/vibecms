@@ -1340,12 +1340,17 @@ tax.register("cuisine", {
 #### Term CRUD
 
 ```tengo
-tax.create_term({ taxonomy: "cuisine", node_type: "recipe", slug: "italian", name: "Italian", fields_data: { flag: "🇮🇹" } })
-tax.list_terms("recipe", "cuisine")     // [TaxonomyTerm, ...]
+tax.create_term({ taxonomy: "cuisine", node_type: "recipe", slug: "italian", name: "Italian",
+                  language_code: "en", fields_data: { flag: "🇮🇹" } })
+tax.list_terms("recipe", "cuisine")     // [TaxonomyTerm, ...] — filtered by current request locale
 tax.get_term(42)
-tax.update_term(42, { name: "Italiano" })
+tax.update_term(42, { name: "Italiano", language_code: "it" })
 tax.delete_term(42)
 ```
+
+**Per-language terms** — every term row carries a `language_code` (defaulting to the site's default language when omitted) and an optional `translation_group_id` (UUID) that links rows representing the same logical term across languages. Slug uniqueness is `(node_type, taxonomy, slug, language_code)`, so EN `documentation` and PT `documentação` can coexist and even share a slug if you want.
+
+To create a translation of an existing term, use the HTTP endpoint `POST /admin/api/terms/:id/translations` with `{ "language_code": "vi" }`; the source row gets a fresh `translation_group_id` if it didn't have one, and the new clone joins the same group. Tengo seeders that need this should orchestrate via two `create_term` calls with the same `translation_group_id` field set to a generated UUID.
 
 Capability: `nodetypes:read`/`write` for definitions, `nodes:read`/`write`/`delete` for terms.
 

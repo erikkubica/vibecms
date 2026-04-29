@@ -998,8 +998,10 @@ Field shapes follow the same field-types reference used by blocks (see [§6](#6-
 
 - A "Theme Settings" sidebar group appears as soon as the active theme declares **one or more** pages. Themes with no `settings_pages` show no extra UI.
 - Each page renders the same `CustomFieldInput` controls used by node-edit forms — visual parity with the rest of the admin is automatic.
-- Values are **per theme**: switching themes hides the previous theme's pages but **preserves the stored rows**. Reactivating later restores the values.
-- Saving a page replaces every field's value with the new typed payload; secret-shaped keys are auto-encrypted by the existing settings layer.
+- Values are **per theme** AND **per language**: switching themes hides the previous theme's pages but **preserves the stored rows**. Reactivating later restores the values. Switching languages in the admin header (or via the per-page Language picker on the right rail) loads/saves values for that locale.
+- Saving a page replaces every field's value with the new typed payload **for the active locale only**; other languages' values are untouched. Secret-shaped keys are auto-encrypted by the existing settings layer.
+
+> **Per-language storage** — every theme settings field is implicitly translatable. There is no `translatable` flag on the schema. Render-time reads (template, block helpers, Tengo) resolve to the request's language with fallback to the default-language row, so a `de` page automatically picks up `de` values and falls back to the site's default-language values when the operator hasn't translated them yet.
 
 ### Reading values from layouts and partials
 

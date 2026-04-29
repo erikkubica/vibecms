@@ -61,10 +61,11 @@ func (p *MediaManagerPlugin) handleOwnedAssetsActivated(payload []byte, kind own
 	spec := kind.spec()
 
 	var evt struct {
-		Name   string                   `json:"name"`
-		Slug   string                   `json:"slug"`
-		Path   string                   `json:"path"`
-		Assets []map[string]interface{} `json:"assets"`
+		Name       string                   `json:"name"`
+		Slug       string                   `json:"slug"`
+		Path       string                   `json:"path"`
+		Assets     []map[string]interface{} `json:"assets"`
+		ImageSizes []map[string]interface{} `json:"image_sizes"`
 	}
 	if err := json.Unmarshal(payload, &evt); err != nil {
 		return fmt.Errorf("%s.activated: decode payload: %w", spec.label, err)
@@ -230,7 +231,78 @@ func (p *MediaManagerPlugin) handleOwnedAssetsActivated(payload []byte, kind own
 	}
 
 	_ = p.host.Log(ctx, "info", fmt.Sprintf("%s assets synced: %s (%d declared)", spec.label, ownerID, len(evt.Assets)), nil)
+
+	// Image sizes — only themes ship these in the manifest. Idempotent upsert
+	// by name. Source is "<kind>:<owner>" so admin UI can show provenance.
+	if len(evt.ImageSizes) > 0 {
+		p.upsertManifestImageSizes(ctx, evt.ImageSizes, fmt.Sprintf("%s:%s", spec.label, ownerID))
+	}
+
 	return nil
+}
+
+// upsertManifestImageSizes inserts or updates rows in media_image_sizes from
+// the theme/extension manifest's image_sizes[] entries. Idempotent: rows are
+// keyed by name and re-applied per activation. Existing rows owned by a
+// different source are NOT clobbered (admin-created sizes win).
+func (p *MediaManagerPlugin) upsertManifestImageSizes(ctx context.Context, defs []map[string]interface{}, source string) {
+	emitChange := false
+	for _, d := range defs {
+		name, _ := d["name"].(string)
+		if name == "" {
+			continue
+		}
+		width, _ := toInt(d["width"])
+		height, _ := toInt(d["height"])
+		if width <= 0 || height <= 0 {
+			_ = p.host.Log(ctx, "warn", fmt.Sprintf("image_sizes %q: invalid dimensions (%dx%d), skipped", name, width, height), nil)
+			continue
+		}
+		mode, _ := d["mode"].(string)
+		if mode == "" {
+			mode = "fit"
+		}
+		quality, _ := toInt(d["quality"])
+
+		row := map[string]any{
+			"name":    name,
+			"width":   width,
+			"height":  height,
+			"mode":    mode,
+			"source":  source,
+			"quality": quality,
+		}
+
+		existing, err := p.host.DataQuery(ctx, sizesTable, coreapi.DataStoreQuery{
+			Where: map[string]any{"name": name}, Limit: 1,
+		})
+		if err != nil {
+			_ = p.host.Log(ctx, "warn", fmt.Sprintf("image_sizes %q: query: %v", name, err), nil)
+			continue
+		}
+		if existing != nil && len(existing.Rows) == 1 {
+			prevSource, _ := existing.Rows[0]["source"].(string)
+			// Don't clobber admin-created or differently-owned sizes.
+			if prevSource != "" && prevSource != source && !strings.HasPrefix(prevSource, "default") {
+				continue
+			}
+			idU, _ := toUint(existing.Rows[0]["id"])
+			if err := p.host.DataUpdate(ctx, sizesTable, idU, row); err != nil {
+				_ = p.host.Log(ctx, "warn", fmt.Sprintf("image_sizes %q: update: %v", name, err), nil)
+				continue
+			}
+			emitChange = true
+			continue
+		}
+		if _, err := p.host.DataCreate(ctx, sizesTable, row); err != nil {
+			_ = p.host.Log(ctx, "warn", fmt.Sprintf("image_sizes %q: create: %v", name, err), nil)
+			continue
+		}
+		emitChange = true
+	}
+	if emitChange {
+		_ = p.host.Emit(ctx, "media:sizes_changed", map[string]any{"action": "manifest", "source": source})
+	}
 }
 
 // handleOwnedAssetsDeactivated deletes all rows (and files) tagged with the

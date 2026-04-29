@@ -172,6 +172,15 @@ Every theme starts here. Every layout, partial, block, template, asset, style, a
   "assets": [
     { "key": "hero",   "src": "images/hero.webp",   "alt": "…", "width": 1920, "height": 1080 },
     { "key": "about",  "src": "images/about.webp",  "alt": "…" }
+  ],
+
+  // Image sizes — named variants the theme depends on. Carried in the
+  // theme.activated payload; media-manager upserts them into its sizes
+  // table so /media/cache/<name>/<path> URLs resolve. Sizes already owned
+  // by the admin (or another source) are NOT clobbered.
+  "image_sizes": [
+    { "name": "card-thumb",     "width": 480, "height": 320, "mode": "crop" },
+    { "name": "showcase-thumb", "width": 450, "height": 350, "mode": "crop" }
   ]
 }
 ```
@@ -760,6 +769,43 @@ hero_image: { url: "theme-asset:hero-grandma", alt: "Vietnamese grandma cooking"
 ```
 
 Sizes (`small`, `medium`, `large`, `thumbnail`, etc.) are managed by the media-manager extension and are configurable site-wide.
+
+### 9.4 Theme-defined image sizes
+
+A theme may need a variant the default sizes don't cover (a 450×350 showcase thumbnail, an editorial 4:3 card crop). Declare them in `theme.json` `image_sizes[]` and reference them through `image_url`:
+
+```jsonc
+// theme.json
+"image_sizes": [
+  { "name": "showcase-thumb", "width": 450, "height": 350, "mode": "crop" }
+]
+```
+
+```html
+{{- /* In a block view: assume `screenshot` is an `image` field. */ -}}
+{{- $url := "" -}}{{- with .screenshot -}}{{- with .url -}}{{- $url = . -}}{{- end -}}{{- end -}}
+{{- if $url -}}
+  <img src="{{ image_url $url "showcase-thumb" }}"
+       width="450" height="350"
+       loading="lazy" decoding="async"
+       alt="{{ .screenshot.alt }}">
+{{- end -}}
+```
+
+**What happens at activation**: the theme.activated event carries `image_sizes[]` alongside `assets[]`. The media-manager extension upserts each entry into its `media_image_sizes` table (keyed by `name`, idempotent). If a row with the same name already exists from a different source (e.g. the admin or a previous theme), the manifest entry **does not** clobber it — admin-curated sizes win.
+
+**Field reference**:
+
+| Field | Required | Meaning |
+|---|---|---|
+| `name` | ✓ | Slug used in the URL: `/media/cache/<name>/<path>`. Must match `^[a-z0-9_-]+$`. |
+| `width` / `height` | ✓ | Target dimensions in pixels. |
+| `mode` | optional | `"fit"` (default — letterbox/contain) or `"crop"` (cover-and-trim). |
+| `quality` | optional | JPEG/WebP quality 1–100. Omit (or 0) to use the site-wide default. |
+
+**Don't ship a manifest size with a name the admin already tweaked** (`thumbnail`, `medium`, `large` are seeded by media-manager and protected). Use a theme-prefixed name (`<prefix>-thumb`, `<prefix>-card`) when in doubt.
+
+**Fallback when the size isn't registered yet**: `image_url` rewrites `/media/foo.jpg` to `/media/cache/<name>/foo.jpg`. If the cache route 404s (size unknown to media-manager), the image won't render. On first activation the size is registered before assets are imported, so this is only relevant for cold deploys where media-manager hasn't booted yet — not a concern in normal use.
 
 ---
 

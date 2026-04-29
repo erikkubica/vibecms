@@ -26,6 +26,20 @@ type ThemeManifest struct {
 	Blocks      []ThemeBlockDef      `json:"blocks"`
 	Templates   []ThemeTemplateDef   `json:"templates"`
 	Assets      []ThemeMediaAssetDef `json:"assets"`
+	ImageSizes  []ThemeImageSizeDef  `json:"image_sizes"`
+}
+
+// ThemeImageSizeDef declares a named image size the theme depends on
+// (e.g. `{name:"showcase-thumb", width:450, height:350, mode:"crop"}`).
+// Carried in the theme.activated payload so the media-manager extension
+// can upsert the row into media_image_sizes; URLs of the form
+// /media/cache/<name>/<storage-path> then resolve.
+type ThemeImageSizeDef struct {
+	Name    string `json:"name"`
+	Width   int    `json:"width"`
+	Height  int    `json:"height"`
+	Mode    string `json:"mode,omitempty"`    // "fit" (default) | "crop"
+	Quality int    `json:"quality,omitempty"` // 0 = use site default
 }
 
 // ThemeMediaAssetDef defines an image or media asset shipped with the theme.
@@ -226,4 +240,3 @@ type ThemeLoader struct {
 	registry *ThemeAssetRegistry
 	eventBus *events.EventBus
 }
-

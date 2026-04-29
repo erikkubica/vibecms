@@ -113,10 +113,11 @@ func (tl *ThemeLoader) LoadTheme(themeDir string) error {
 		// media_files) complete before this function returns. First-request
 		// renders can then rely on imported assets being in place.
 		tl.eventBus.PublishSync("theme.activated", events.Payload{
-			"name":    manifest.Name,
-			"path":    themeDir,
-			"version": manifest.Version,
-			"assets":  themeAssetsPayload(themeDir, manifest.Assets),
+			"name":        manifest.Name,
+			"path":        themeDir,
+			"version":     manifest.Version,
+			"assets":      themeAssetsPayload(themeDir, manifest.Assets),
+			"image_sizes": themeImageSizesPayload(manifest.ImageSizes),
 		})
 	}
 
@@ -176,7 +177,6 @@ type themeTemplateFile struct {
 		Fields map[string]interface{} `json:"fields"`
 	} `json:"blocks"`
 }
-
 
 // registerBlock reads block files and upserts the block type (theme source).
 func (tl *ThemeLoader) registerBlock(themeName string, def ThemeBlockDef, themeDir string) {
@@ -280,6 +280,27 @@ func themeAssetsPayload(themeDir string, defs []ThemeMediaAssetDef) []map[string
 			"width":    d.Width,
 			"height":   d.Height,
 			"abs_path": abs,
+		})
+	}
+	return out
+}
+
+// themeImageSizesPayload converts a manifest's image_sizes definitions into
+// the shape carried by the theme.activated event so extensions (media-manager)
+// can upsert them into the registered-sizes table.
+func themeImageSizesPayload(defs []ThemeImageSizeDef) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(defs))
+	for _, d := range defs {
+		mode := d.Mode
+		if mode == "" {
+			mode = "fit"
+		}
+		out = append(out, map[string]interface{}{
+			"name":    d.Name,
+			"width":   d.Width,
+			"height":  d.Height,
+			"mode":    mode,
+			"quality": d.Quality,
 		})
 	}
 	return out

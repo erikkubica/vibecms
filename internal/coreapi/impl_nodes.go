@@ -318,8 +318,8 @@ func (c *coreImpl) CreateNode(ctx context.Context, input NodeInput) (*Node, erro
 		m.LayoutSlug = &s
 	}
 
-	if input.FeaturedImage != nil {
-		b, err := json.Marshal(input.FeaturedImage)
+	if fi := normalizeFeaturedImage(input.FeaturedImage); fi != nil {
+		b, err := json.Marshal(fi)
 		if err != nil {
 			return nil, fmt.Errorf("coreapi CreateNode marshal featured_image: %w", err)
 		}
@@ -381,8 +381,14 @@ func (c *coreImpl) UpdateNode(ctx context.Context, id uint, input NodeInput) (*N
 		updates["layout_slug"] = input.LayoutSlug
 	}
 	if input.FeaturedImage != nil {
-		if b, err := json.Marshal(input.FeaturedImage); err == nil {
-			updates["featured_image"] = models.JSONB(b)
+		if fi := normalizeFeaturedImage(input.FeaturedImage); fi != nil {
+			if b, err := json.Marshal(fi); err == nil {
+				updates["featured_image"] = models.JSONB(b)
+			}
+		} else {
+			// Caller explicitly passed an empty/url-less object — treat as a
+			// clear request so `{{ if .featured_image }}` flips to false.
+			updates["featured_image"] = models.JSONB("null")
 		}
 	}
 	if input.Excerpt != "" {
@@ -424,4 +430,30 @@ func (c *coreImpl) DeleteNode(ctx context.Context, id uint) error {
 		return fmt.Errorf("coreapi DeleteNode: %w", err)
 	}
 	return nil
+}
+
+// normalizeFeaturedImage canonicalizes a featured_image input so a caller
+// passing an empty or url-less object doesn't poison templates. Templates
+// commonly guard with `{{ if .featured_image }}` — a literal empty map is
+// truthy in Go templates, so the image branch fires with no URL and renders
+// `<img src="">`. Returning nil for empty objects flips the guard back to
+// false. Non-object values pass through unchanged so existing string-shaped
+// payloads (legacy data) keep working at render time.
+func normalizeFeaturedImage(v any) any {
+	if v == nil {
+		return nil
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		return v
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	if u, _ := m["url"].(string); u == "" {
+		// No URL is the only signal that matters for the truthy-empty footgun.
+		// alt-only / width-only payloads get dropped — there's nothing to render.
+		return nil
+	}
+	return m
 }

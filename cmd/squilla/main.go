@@ -254,7 +254,7 @@ func main() {
 
 	// Theme scripting engine (theme .tgo scripts are loaded later, after
 	// extensions have subscribed and after the theme is activated).
-	scriptEngine := scripting.NewScriptEngine(eventBus, guardedAPI)
+	scriptEngine := scripting.NewScriptEngine(eventBus, guardedAPI, themeLoader.SettingsRegistry)
 	// Wire script engine into theme management so runtime activation loads Tengo scripts.
 	themeMgmtSvc.SetScriptLoader(scriptEngine.LoadThemeScripts, scriptEngine.UnloadThemeScripts)
 

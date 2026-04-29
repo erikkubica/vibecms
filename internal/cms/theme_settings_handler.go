@@ -5,37 +5,58 @@ import (
 	"encoding/json"
 
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 
 	"squilla/internal/api"
 	"squilla/internal/auth"
+	"squilla/internal/events"
+	"squilla/internal/models"
+	"squilla/internal/secrets"
 )
 
-// settingsAPI is the narrow slice of coreapi.CoreAPI consumed by this
-// handler. Defined locally to avoid the import cycle internal/cms ↔
-// internal/coreapi (coreapi/impl.go imports cms). The full CoreAPI
-// satisfies this interface implicitly.
+// settingsAPI is the narrow slice of coreapi.CoreAPI consumed by this handler
+// for READ paths only. Writes go directly to GORM in a single batch so that
+// saving N fields fires exactly ONE setting.updated event — see the comment on
+// Save. Defined locally to avoid the import cycle internal/cms ↔
+// internal/coreapi.
 type settingsAPI interface {
 	GetSetting(ctx context.Context, key string) (string, error)
+	GetSettings(ctx context.Context, prefix string) (map[string]string, error)
 	SetSetting(ctx context.Context, key, value string) error
 }
 
 // ThemeSettingsHandler exposes admin HTTP endpoints for the active theme's
 // declared settings pages. It reads the schema from an in-memory registry
-// (populated on theme activation) and persists values via the unguarded
-// CoreAPI — which transparently encrypts secret-shaped keys and emits
-// setting.updated events.
+// (populated on theme activation), reads values via GetSettings(prefix) in a
+// single query, and persists writes directly to GORM in one batch with a
+// single setting.updated event at the end. The latter avoids subscriber
+// fan-out (e.g. sitemap regeneration) firing once per saved field.
 type ThemeSettingsHandler struct {
 	registry *ThemeSettingsRegistry
 	coreAPI  settingsAPI
+	db       *gorm.DB
+	secrets  *secrets.Service
+	eventBus *events.EventBus
 }
 
-// NewThemeSettingsHandler constructs a handler bound to the given registry
-// and CoreAPI. Pass the unguarded core implementation — capability checks
-// belong at the route layer, not at the data layer. The parameter accepts
-// any type satisfying the local settingsAPI interface, which the full
-// coreapi.CoreAPI implements implicitly.
-func NewThemeSettingsHandler(registry *ThemeSettingsRegistry, coreAPI settingsAPI) *ThemeSettingsHandler {
-	return &ThemeSettingsHandler{registry: registry, coreAPI: coreAPI}
+// NewThemeSettingsHandler constructs a handler. Pass the unguarded core
+// implementation for reads (capability checks belong at the route layer) plus
+// the same db/secrets/eventBus the SettingsHandler uses so writes share its
+// batch-event pattern.
+func NewThemeSettingsHandler(
+	registry *ThemeSettingsRegistry,
+	coreAPI settingsAPI,
+	db *gorm.DB,
+	secretsSvc *secrets.Service,
+	eventBus *events.EventBus,
+) *ThemeSettingsHandler {
+	return &ThemeSettingsHandler{
+		registry: registry,
+		coreAPI:  coreAPI,
+		db:       db,
+		secrets:  secretsSvc,
+		eventBus: eventBus,
+	}
 }
 
 // RegisterRoutes mounts the theme-settings endpoints on the supplied admin
@@ -137,13 +158,15 @@ func (h *ThemeSettingsHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusNotFound, "PAGE_NOT_FOUND", "Settings page not declared by active theme")
 	}
 
+	// Single bulk read for the whole theme — keys come back without the
+	// theme prefix, so map lookup is "<page>:<field>".
+	rawAll, err := h.coreAPI.GetSettings(c.Context(), ThemePrefix(themeSlug))
+	if err != nil {
+		return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
+	}
 	values := make(map[string]valueDTO, len(page.Fields))
 	for _, field := range page.Fields {
-		key := SettingKey(themeSlug, page.Slug, field.Key)
-		raw, err := h.coreAPI.GetSetting(c.Context(), key)
-		if err != nil {
-			return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
-		}
+		raw := rawAll[page.Slug+":"+field.Key]
 		res := CoerceWithDefault(field, raw)
 		values[field.Key] = valueDTO{Value: res.Value, Compatible: res.Compatible, Raw: res.Raw}
 	}
@@ -174,6 +197,12 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusBadRequest, "INVALID_BODY", "Invalid request body")
 	}
 
+	// Write directly to GORM in one batch and fire a single setting.updated
+	// event at the end (matching SettingsHandler.BulkUpdate). Calling
+	// CoreAPI.SetSetting per field would publish setting.updated N times,
+	// which fans out to subscribers like sitemap-generator that fully rebuild
+	// on each event — N parallel rebuilds row-lock site_settings and time
+	// out at 25s, killing the process.
 	for _, field := range page.Fields {
 		raw, present := body.Values[field.Key]
 		if !present {
@@ -184,9 +213,35 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 			return api.Error(c, fiber.StatusBadRequest, "ENCODE_FAILED", "Failed to encode field value")
 		}
 		key := SettingKey(themeSlug, page.Slug, field.Key)
-		if err := h.coreAPI.SetSetting(c.Context(), key, stored); err != nil {
-			return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist theme setting")
+		// Production path: direct GORM write (db != nil). Tests pass db=nil
+		// and exercise the SetSetting fallback so they stay DB-free.
+		if h.db != nil {
+			toStore := stored
+			if h.secrets != nil && secrets.IsSecretKey(field.Key) {
+				enc, err := h.secrets.MaybeEncrypt(toStore)
+				if err != nil {
+					return api.Error(c, fiber.StatusInternalServerError, "ENCRYPT_FAILED", "Failed to encrypt secret setting")
+				}
+				toStore = enc
+			}
+			v := toStore
+			setting := models.SiteSetting{Key: key, Value: &v}
+			if err := h.db.Where("\"key\" = ?", key).Assign(setting).FirstOrCreate(&setting).Error; err != nil {
+				return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist theme setting")
+			}
+		} else {
+			if err := h.coreAPI.SetSetting(c.Context(), key, stored); err != nil {
+				return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist theme setting")
+			}
 		}
+	}
+
+	if h.eventBus != nil {
+		go h.eventBus.Publish("setting.updated", events.Payload{
+			"bulk":         true,
+			"theme_slug":   themeSlug,
+			"page_slug":    page.Slug,
+		})
 	}
 
 	return api.Success(c, fiber.Map{"saved": true})

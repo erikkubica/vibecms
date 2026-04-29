@@ -250,7 +250,7 @@ func main() {
 	// caller that lacks the required capability declared in extension.json.
 	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, nil, nodeTypeSvc, emailDispatcher, app, secretsSvc)
 	guardedAPI := coreapi.NewCapabilityGuard(coreAPI)
-	themeSettingsHandler := cms.NewThemeSettingsHandler(themeLoader.SettingsRegistry, coreAPI)
+	themeSettingsHandler := cms.NewThemeSettingsHandler(themeLoader.SettingsRegistry, coreAPI, database, secretsSvc, eventBus)
 
 	// Theme scripting engine (theme .tgo scripts are loaded later, after
 	// extensions have subscribed and after the theme is activated).

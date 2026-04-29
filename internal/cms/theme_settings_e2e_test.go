@@ -74,7 +74,7 @@ func TestThemeSettings_LoadSaveRender_RoundTrip(t *testing.T) {
 	api := &fakeRoundtripAPI{store: map[string]string{}}
 
 	// 3. Build a Fiber app with just the handler routes (no auth in tests).
-	h := NewThemeSettingsHandler(registry, api)
+	h := NewThemeSettingsHandler(registry, api, nil, nil, nil)
 	app := fiber.New()
 	app.Get("/theme-settings", h.List)
 	app.Get("/theme-settings/:page", h.Get)

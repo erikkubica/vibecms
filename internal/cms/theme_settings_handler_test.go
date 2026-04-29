@@ -31,6 +31,16 @@ func (f *fakeCoreAPI) SetSetting(_ context.Context, key, value string) error {
 	return nil
 }
 
+func (f *fakeCoreAPI) GetSettings(_ context.Context, prefix string) (map[string]string, error) {
+	out := map[string]string{}
+	for k, v := range f.store {
+		if len(k) >= len(prefix) && k[:len(prefix)] == prefix {
+			out[k[len(prefix):]] = v
+		}
+	}
+	return out, nil
+}
+
 // newTestApp wires the handler onto a Fiber app WITHOUT the auth middleware,
 // so tests can exercise route logic without faking session context. Auth
 // wiring is covered by the E2E smoke test in Task 11.
@@ -77,7 +87,7 @@ func decodeData(t *testing.T, resp *http.Response, into any) {
 // TestList_NoActiveTheme — empty registry → 200 with empty pages array.
 func TestList_NoActiveTheme(t *testing.T) {
 	reg := NewThemeSettingsRegistry()
-	h := NewThemeSettingsHandler(reg, newFakeAPI())
+	h := NewThemeSettingsHandler(reg, newFakeAPI(), nil, nil, nil)
 	app := newTestApp(h)
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/theme-settings", nil))
@@ -107,7 +117,7 @@ func TestList_TwoPages(t *testing.T) {
 		{Slug: "header", Name: "Header Settings", Icon: "panel-top"},
 		{Slug: "api-keys", Name: "API Keys", Icon: "key"},
 	})
-	h := NewThemeSettingsHandler(reg, newFakeAPI())
+	h := NewThemeSettingsHandler(reg, newFakeAPI(), nil, nil, nil)
 	app := newTestApp(h)
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/theme-settings", nil))
@@ -128,7 +138,7 @@ func TestList_TwoPages(t *testing.T) {
 func TestGet_PageNotFound(t *testing.T) {
 	reg := NewThemeSettingsRegistry()
 	reg.SetActive("hello", []ThemeSettingsPage{{Slug: "header", Name: "H"}})
-	h := NewThemeSettingsHandler(reg, newFakeAPI())
+	h := NewThemeSettingsHandler(reg, newFakeAPI(), nil, nil, nil)
 	app := newTestApp(h)
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/theme-settings/footer", nil))
@@ -154,7 +164,7 @@ func TestGet_ReturnsSchemaPlusValues(t *testing.T) {
 	}})
 	api := newFakeAPI()
 	api.store[SettingKey("hv", "header", "a")] = "stored"
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/theme-settings/header", nil))
@@ -190,7 +200,7 @@ func TestGet_IncompatibleValueFallsBackToDefault(t *testing.T) {
 	}})
 	api := newFakeAPI()
 	api.store[SettingKey("hv", "p", "x")] = "abc"
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp, err := app.Test(httptest.NewRequest("GET", "/theme-settings/p", nil))
@@ -242,7 +252,7 @@ func TestSave_PersistsAllProvidedFields(t *testing.T) {
 		},
 	}})
 	api := newFakeAPI()
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/p", map[string]any{
@@ -289,7 +299,7 @@ func TestSave_TextFieldStoresRawString(t *testing.T) {
 		Fields: []ThemeSettingsField{makeField(t, "tagline", "T", "text", nil)},
 	}})
 	api := newFakeAPI()
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/p", map[string]any{"values": map[string]any{"tagline": "Hi"}})
@@ -309,7 +319,7 @@ func TestSave_NumberFieldStoresJSON(t *testing.T) {
 		Fields: []ThemeSettingsField{makeField(t, "count", "C", "number", nil)},
 	}})
 	api := newFakeAPI()
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/p", map[string]any{"values": map[string]any{"count": 42}})
@@ -329,7 +339,7 @@ func TestSave_ToggleStoresJSON(t *testing.T) {
 		Fields: []ThemeSettingsField{makeField(t, "show", "S", "toggle", nil)},
 	}})
 	api := newFakeAPI()
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/p", map[string]any{"values": map[string]any{"show": true}})
@@ -350,7 +360,7 @@ func TestSave_ObjectFieldStoresJSON(t *testing.T) {
 		Fields: []ThemeSettingsField{makeField(t, "logo", "L", "image", nil)},
 	}})
 	api := newFakeAPI()
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/p", map[string]any{"values": map[string]any{"logo": map[string]any{"id": 1, "url": "/x"}}})
@@ -376,7 +386,7 @@ func TestSave_FieldNotInPagesIgnored(t *testing.T) {
 		Fields: []ThemeSettingsField{makeField(t, "tagline", "T", "text", nil)},
 	}})
 	api := newFakeAPI()
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/p", map[string]any{"values": map[string]any{
@@ -395,7 +405,7 @@ func TestSave_FieldNotInPagesIgnored(t *testing.T) {
 func TestSave_PageNotFound(t *testing.T) {
 	reg := NewThemeSettingsRegistry()
 	reg.SetActive("hv", []ThemeSettingsPage{{Slug: "p", Fields: []ThemeSettingsField{}}})
-	h := NewThemeSettingsHandler(reg, newFakeAPI())
+	h := NewThemeSettingsHandler(reg, newFakeAPI(), nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/missing", map[string]any{"values": map[string]any{}})
@@ -408,7 +418,7 @@ func TestSave_PageNotFound(t *testing.T) {
 func TestSave_BadBody(t *testing.T) {
 	reg := NewThemeSettingsRegistry()
 	reg.SetActive("hv", []ThemeSettingsPage{{Slug: "p", Fields: []ThemeSettingsField{}}})
-	h := NewThemeSettingsHandler(reg, newFakeAPI())
+	h := NewThemeSettingsHandler(reg, newFakeAPI(), nil, nil, nil)
 	app := newTestApp(h)
 
 	req := httptest.NewRequest("PUT", "/theme-settings/p", strings.NewReader("not json"))
@@ -435,7 +445,7 @@ func TestSave_OmittedFieldsNotTouched(t *testing.T) {
 	}})
 	api := newFakeAPI()
 	api.store[SettingKey("hv", "p", "a")] = "preserved"
-	h := NewThemeSettingsHandler(reg, api)
+	h := NewThemeSettingsHandler(reg, api, nil, nil, nil)
 	app := newTestApp(h)
 
 	resp := putJSON(t, app, "/theme-settings/p", map[string]any{"values": map[string]any{"b": "new"}})

@@ -202,12 +202,20 @@ func (p *MediaManagerPlugin) handlePublicMediaRequest(ctx context.Context, req *
 		return &pb.PluginHTTPResponse{StatusCode: 404}, nil
 	}
 
-	// Only process image files.
+	// Reject directory traversal — the cache route rejects it too, and
+	// this entry would otherwise read arbitrary files via /media/../etc.
+	if strings.Contains(relPath, "..") || strings.ContainsRune(relPath, 0) {
+		return &pb.PluginHTTPResponse{StatusCode: 404}, nil
+	}
+
 	ext := strings.ToLower(filepath.Ext(relPath))
 	imageExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true}
 	if !imageExts[ext] {
-		// Not an image — let it fall through (return 404 so Fiber tries next handler / static).
-		return &pb.PluginHTTPResponse{StatusCode: 404}, nil
+		// Non-image (video / audio / pdf / docx / etc.) — serve from disk
+		// directly. Honors HTTP Range requests so HTML5 <video> / <audio>
+		// elements can seek; the plugin proxy returns the full body so we
+		// slice it ourselves.
+		return p.serveStaticAsset(relPath, ext, req)
 	}
 
 	// Check if browser accepts WebP.
@@ -303,6 +311,121 @@ func (p *MediaManagerPlugin) handlePublicMediaRequest(ctx context.Context, req *
 		},
 		Body: webpData,
 	}, nil
+}
+
+// serveStaticAsset serves a non-image media file (video, audio, document)
+// from storage/media with HTTP Range support so HTML5 <video>/<audio> can
+// seek without buffering the full file. The plugin proxy returns whole
+// payloads, so we slice the bytes ourselves and emit 206 Partial Content
+// when the client asks for a byte range.
+func (p *MediaManagerPlugin) serveStaticAsset(relPath, ext string, req *pb.PluginHTTPRequest) (*pb.PluginHTTPResponse, error) {
+	originalFile := filepath.Join("storage", "media", relPath)
+	data, err := os.ReadFile(originalFile)
+	if err != nil {
+		return &pb.PluginHTTPResponse{StatusCode: 404}, nil
+	}
+
+	mimeType := mimeFromExt(ext)
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	total := int64(len(data))
+
+	rangeHeader := ""
+	for k, v := range req.GetHeaders() {
+		if strings.EqualFold(k, "range") {
+			rangeHeader = v
+			break
+		}
+	}
+
+	headers := map[string]string{
+		"Content-Type":  mimeType,
+		"Cache-Control": "public, max-age=31536000",
+		"Accept-Ranges": "bytes",
+	}
+
+	// Parse a single 'bytes=start-end' range. Multipart ranges fall back
+	// to a full-body response — they're rare in the wild for the formats
+	// we serve.
+	if start, end, ok := parseSingleByteRange(rangeHeader, total); ok {
+		headers["Content-Range"] = fmt.Sprintf("bytes %d-%d/%d", start, end, total)
+		headers["Content-Length"] = strconv.FormatInt(end-start+1, 10)
+		return &pb.PluginHTTPResponse{
+			StatusCode: 206,
+			Headers:    headers,
+			Body:       data[start : end+1],
+		}, nil
+	}
+
+	headers["Content-Length"] = strconv.FormatInt(total, 10)
+	return &pb.PluginHTTPResponse{
+		StatusCode: 200,
+		Headers:    headers,
+		Body:       data,
+	}, nil
+}
+
+// parseSingleByteRange parses a single-range Range header of the form
+// `bytes=start-end` (either bound optional). Returns the resolved
+// inclusive byte indices and ok=true on success. Multi-range, malformed,
+// or unsatisfiable ranges return ok=false so the caller falls back to a
+// full 200 response.
+func parseSingleByteRange(header string, total int64) (int64, int64, bool) {
+	if header == "" || total <= 0 {
+		return 0, 0, false
+	}
+	const prefix = "bytes="
+	if !strings.HasPrefix(header, prefix) {
+		return 0, 0, false
+	}
+	spec := strings.TrimSpace(header[len(prefix):])
+	if strings.Contains(spec, ",") {
+		// Multi-range — out of scope; fall back to 200.
+		return 0, 0, false
+	}
+	parts := strings.SplitN(spec, "-", 2)
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	startStr := strings.TrimSpace(parts[0])
+	endStr := strings.TrimSpace(parts[1])
+
+	var start, end int64
+	switch {
+	case startStr == "" && endStr != "":
+		// Suffix range: last N bytes.
+		n, err := strconv.ParseInt(endStr, 10, 64)
+		if err != nil || n <= 0 {
+			return 0, 0, false
+		}
+		if n > total {
+			n = total
+		}
+		start = total - n
+		end = total - 1
+	case startStr != "":
+		s, err := strconv.ParseInt(startStr, 10, 64)
+		if err != nil || s < 0 || s >= total {
+			return 0, 0, false
+		}
+		start = s
+		if endStr == "" {
+			end = total - 1
+		} else {
+			e, err := strconv.ParseInt(endStr, 10, 64)
+			if err != nil || e < start {
+				return 0, 0, false
+			}
+			if e >= total {
+				e = total - 1
+			}
+			end = e
+		}
+	default:
+		return 0, 0, false
+	}
+	return start, end, true
 }
 
 // mimeFromExt returns the MIME type for a file extension.

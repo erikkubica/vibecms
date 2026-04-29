@@ -75,8 +75,21 @@ var allowedMimePrefixes = []string{
 	"audio/",
 	"application/pdf",
 	"application/zip",
+	// Office / iWork document mime-types — added in the editing audit
+	// follow-up so common downloadable assets (specs, contracts,
+	// spreadsheets) can live alongside images.
+	"application/msword",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	"application/vnd.ms-excel",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	"application/vnd.ms-powerpoint",
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	"application/vnd.oasis.opendocument.text",
+	"application/vnd.oasis.opendocument.spreadsheet",
+	"application/vnd.oasis.opendocument.presentation",
 	"text/plain",
 	"text/csv",
+	"text/markdown",
 }
 
 // isAllowedMimeType checks if a MIME type is in the upload allowlist.
@@ -216,6 +229,61 @@ func mimeFromExt(ext string) string {
 		return "image/gif"
 	case ".webp":
 		return "image/webp"
+	case ".avif":
+		return "image/avif"
+	case ".svg":
+		return "image/svg+xml"
+	// Video
+	case ".mp4":
+		return "video/mp4"
+	case ".webm":
+		return "video/webm"
+	case ".mov":
+		return "video/quicktime"
+	case ".m4v":
+		return "video/x-m4v"
+	case ".mkv":
+		return "video/x-matroska"
+	// Audio
+	case ".mp3":
+		return "audio/mpeg"
+	case ".wav":
+		return "audio/wav"
+	case ".ogg", ".oga":
+		return "audio/ogg"
+	case ".m4a":
+		return "audio/mp4"
+	case ".flac":
+		return "audio/flac"
+	// Documents
+	case ".pdf":
+		return "application/pdf"
+	case ".zip":
+		return "application/zip"
+	case ".doc":
+		return "application/msword"
+	case ".docx":
+		return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	case ".xls":
+		return "application/vnd.ms-excel"
+	case ".xlsx":
+		return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	case ".ppt":
+		return "application/vnd.ms-powerpoint"
+	case ".pptx":
+		return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	case ".odt":
+		return "application/vnd.oasis.opendocument.text"
+	case ".ods":
+		return "application/vnd.oasis.opendocument.spreadsheet"
+	case ".odp":
+		return "application/vnd.oasis.opendocument.presentation"
+	case ".txt":
+		return "text/plain; charset=utf-8"
+	case ".csv":
+		return "text/csv; charset=utf-8"
+	case ".md":
+		return "text/markdown; charset=utf-8"
 	default:
 		return "application/octet-stream"
 	}

@@ -15,6 +15,7 @@ import {
   type ThemeSettingsPageResponse,
 } from "@/api/client";
 import { SduiAdminShell } from "@/sdui/admin-shell";
+import { useAdminLanguage } from "@/hooks/use-admin-language";
 
 // Adapt the theme-settings schema (key/label/type/default/config) to the
 // NodeTypeField shape that CustomFieldInput already understands. Config keys
@@ -34,6 +35,10 @@ function toNodeTypeField(f: ThemeSettingsField): NodeTypeField {
 
 export function ThemeSettingsPage() {
   const { page: pageSlug } = useParams<{ page: string }>();
+  // Re-fetch when the admin's selected language changes — translatable
+  // fields resolve per-locale on the backend, so the form must reload to
+  // show the right values for the current language.
+  const { currentCode } = useAdminLanguage();
   const [data, setData] = useState<ThemeSettingsPageResponse | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [original, setOriginal] = useState<Record<string, unknown>>({});
@@ -66,7 +71,7 @@ export function ThemeSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [pageSlug]);
+  }, [pageSlug, currentCode]);
 
   const handleSave = async () => {
     if (!pageSlug || !data) return;

@@ -250,11 +250,23 @@ function SidebarNav({
       );
     }
 
+    // Child rows live inside a parent group and visually attach to the
+    // group's left border. They render with right-only rounding and a
+    // full-height active indicator that sits flush against the border —
+    // the rounded left edge looks detached when each child is supposed
+    // to read as 'part of this group'.
+    const isChild = depth > 0;
+    const radiusClass = isChild ? "rounded-r-md rounded-l-none" : "rounded-lg";
+
     // Leaf item
     const linkContent = (
       <>
         {active && !collapsed && (
-          <span className="absolute left-0 top-1 bottom-1 w-[2px] rounded bg-indigo-400" />
+          <span
+            className={`absolute left-0 w-[2px] bg-indigo-400 ${
+              isChild ? "top-0 bottom-0" : "top-1 bottom-1 rounded"
+            }`}
+          />
         )}
         {IconComp && (
           <IconComp
@@ -272,13 +284,13 @@ function SidebarNav({
           key={item.id}
           to={item.path}
           onClick={onClose}
-          className={`relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+          className={`relative flex w-full items-center gap-2.5 ${radiusClass} px-3 py-2 text-[13px] font-medium transition-colors ${
             active
               ? "bg-slate-800 text-white"
               : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
           }`}
           style={{
-            paddingLeft: depth > 0 ? `${12 + depth * 12}px` : undefined,
+            paddingLeft: isChild ? `${12 + depth * 12}px` : undefined,
           }}
           title={collapsed ? item.label : undefined}
         >
@@ -290,7 +302,7 @@ function SidebarNav({
     return (
       <button
         key={item.id}
-        className={`relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+        className={`relative flex w-full items-center gap-2.5 ${radiusClass} px-3 py-2 text-[13px] font-medium transition-colors ${
           active
             ? "bg-slate-800 text-white"
             : "text-slate-300 hover:bg-slate-800/60 hover:text-white"

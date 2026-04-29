@@ -735,13 +735,7 @@ function AdminLayoutInner() {
                   style={{ color: "var(--fg-2)" }}
                 >
                   <Globe className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
-                  {currentCode === "all" ? (
-                    "All languages"
-                  ) : (
-                    <>
-                      {currentLanguage?.flag} {currentLanguage?.name || currentCode}
-                    </>
-                  )}
+                  {currentCode === "all" ? "All languages" : currentLanguage?.name || currentCode}
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>

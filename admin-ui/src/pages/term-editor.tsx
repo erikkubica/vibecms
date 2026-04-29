@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LanguageSelect, LanguageLabel } from "@/components/ui/language-select";
 import { toast } from "sonner";
 import CustomFieldInput from "@/components/ui/custom-field-input";
 import { usePageMeta } from "@/components/layout/page-meta";
@@ -358,18 +359,11 @@ export default function TermEditorPage() {
           {languages.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-slate-500">Language</Label>
-              <Select value={languageCode} onValueChange={setLanguageCode}>
-                <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name || lang.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <LanguageSelect
+                languages={languages}
+                value={languageCode}
+                onChange={setLanguageCode}
+              />
             </div>
           )}
 
@@ -427,7 +421,7 @@ export default function TermEditorPage() {
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-2">
                 <span className="text-xs font-medium text-indigo-700 flex-1 truncate">
-                  {languages.find((l) => l.code === languageCode)?.name || languageCode}
+                  <LanguageLabel languages={languages} code={languageCode} />
                 </span>
                 <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">
                   Current
@@ -440,38 +434,19 @@ export default function TermEditorPage() {
                   className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
                 >
                   <span className="text-xs font-medium text-slate-700 flex-1 truncate">
-                    {languages.find((l) => l.code === t.language_code)?.name || t.language_code}
+                    <LanguageLabel languages={languages} code={t.language_code} />
                   </span>
                 </Link>
               ))}
             </div>
-            {(() => {
-              const taken = new Set([languageCode, ...translations.map((t) => t.language_code)]);
-              const remaining = languages.filter((l) => !taken.has(l.code));
-              if (remaining.length === 0) return null;
-              return (
-                <Select
-                  value=""
-                  onValueChange={(v) => v && handleCreateTranslation(v)}
-                  disabled={creatingTranslation}
-                >
-                  <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
-                    <SelectValue
-                      placeholder={
-                        creatingTranslation ? "Creating…" : "+ Add translation"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {remaining.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.name || lang.code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              );
-            })()}
+            <LanguageSelect
+              mode="add"
+              languages={languages}
+              existing={[languageCode, ...translations.map((t) => t.language_code)]}
+              onAdd={handleCreateTranslation}
+              disabled={creatingTranslation}
+              placeholder={creatingTranslation ? "Creating…" : "+ Add translation"}
+            />
           </SidebarCard>
         )}
       </aside>

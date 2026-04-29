@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
 import { SidebarCard } from "@/components/ui/sidebar-card";
+import { LanguageSelect } from "@/components/ui/language-select";
 import {
   Select,
   SelectContent,
@@ -220,18 +221,11 @@ export function SettingsForm({
                 <Label className="text-xs font-medium text-slate-500">
                   Language
                 </Label>
-                <Select value={pageLocale} onValueChange={setPageLocale}>
-                  <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {languages.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        {lang.name || lang.code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <LanguageSelect
+                  languages={languages}
+                  value={pageLocale}
+                  onChange={setPageLocale}
+                />
                 <p className="text-[11px] leading-snug text-slate-500">
                   Each setting stores a separate value per language. Languages
                   without an override read from the default language.

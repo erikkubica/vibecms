@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LanguageSelect, LanguageLabel } from "@/components/ui/language-select";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -1222,18 +1223,11 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-slate-500">Language</Label>
-                  <Select value={languageCode} onValueChange={setLanguageCode}>
-                    <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languages.map((lang) => (
-                        <SelectItem key={lang.code} value={lang.code}>
-                          {lang.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <LanguageSelect
+                    languages={languages}
+                    value={languageCode}
+                    onChange={setLanguageCode}
+                  />
                 </div>
               </div>
 
@@ -1572,64 +1566,47 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
           )}
 
           {/* Translations (edit mode) — single dropdown pattern matches the
-              term editor for consistency across the admin. */}
+              term editor for consistency across the admin. No flags;
+              language names are the canonical identifier. */}
           {isEdit && (
             <Card className="rounded-xl border border-slate-200 shadow-sm">
               <SectionHeader title="Translations" />
               <CardContent>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-2">
-                    <span className="text-sm">{languages.find(l => l.code === languageCode)?.flag || "🌐"}</span>
-                    <span className="text-xs font-medium text-indigo-700 flex-1 truncate">{languages.find(l => l.code === languageCode)?.name || languageCode}</span>
+                    <span className="text-xs font-medium text-indigo-700 flex-1 truncate">
+                      <LanguageLabel languages={languages} code={languageCode} />
+                    </span>
                     <Badge className="bg-indigo-100 text-indigo-600 border-0 text-[10px] h-5">Current</Badge>
                   </div>
-                  {translations.map((t) => {
-                    const lang = languages.find(l => l.code === t.language_code);
-                    return (
-                      <Link
-                        key={t.id}
-                        to={`${basePath}/${t.id}/edit`}
-                        className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
-                      >
-                        <span className="text-sm">{lang?.flag || "🌐"}</span>
-                        <span className="text-xs font-medium text-slate-700 flex-1 truncate">{lang?.name || t.language_code}</span>
-                        <Badge className={`border-0 text-[10px] h-5 ${t.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                          {t.status}
-                        </Badge>
-                      </Link>
-                    );
-                  })}
+                  {translations.map((t) => (
+                    <Link
+                      key={t.id}
+                      to={`${basePath}/${t.id}/edit`}
+                      className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
+                    >
+                      <span className="text-xs font-medium text-slate-700 flex-1 truncate">
+                        <LanguageLabel languages={languages} code={t.language_code} />
+                      </span>
+                      <Badge className={`border-0 text-[10px] h-5 ${t.status === "published" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                        {t.status}
+                      </Badge>
+                    </Link>
+                  ))}
                   {translations.length === 0 && (
                     <p className="text-[11px] text-slate-400 text-center py-1">No translations yet</p>
                   )}
                 </div>
-                {(() => {
-                  const taken = new Set([languageCode, ...translations.map((t) => t.language_code)]);
-                  const remaining = languages.filter((l) => !taken.has(l.code));
-                  if (remaining.length === 0) return null;
-                  return (
-                    <div className="mt-2">
-                      <Select
-                        value=""
-                        onValueChange={(v) => v && handleCreateTranslation(v)}
-                        disabled={creatingTranslation}
-                      >
-                        <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
-                          <SelectValue
-                            placeholder={creatingTranslation ? "Creating…" : "+ Add translation"}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {remaining.map((lang) => (
-                            <SelectItem key={lang.code} value={lang.code}>
-                              {lang.flag ? `${lang.flag} ` : ""}{lang.name || lang.code}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  );
-                })()}
+                <div className="mt-2">
+                  <LanguageSelect
+                    mode="add"
+                    languages={languages}
+                    existing={[languageCode, ...translations.map((t) => t.language_code)]}
+                    onAdd={handleCreateTranslation}
+                    disabled={creatingTranslation}
+                    placeholder={creatingTranslation ? "Creating…" : "+ Add translation"}
+                  />
+                </div>
               </CardContent>
             </Card>
           )}

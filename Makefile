@@ -1,4 +1,4 @@
-.PHONY: build run dev test clean db-up db-down migrate seed deploy-local ui
+.PHONY: build run dev test clean db-up db-down migrate seed deploy-local ui theme
 
 BINARY=squilla
 CMD=./cmd/squilla
@@ -37,6 +37,14 @@ ui:
 	cd admin-ui && npm run build --silent
 	docker cp admin-ui/dist/. squilla-app-1:/app/admin-ui/dist/
 	@echo "==> UI hot-copied into container"
+
+THEME ?= squilla
+
+theme:
+	@echo "==> Hot-copying theme '$(THEME)' into container..."
+	docker compose cp themes/$(THEME)/. app:/app/themes/$(THEME)/
+	docker compose restart app
+	@echo "==> Theme '$(THEME)' hot-deployed (use THEME=<slug> to target a different theme)"
 
 deploy-local:
 	@echo "==> Building admin UI..."

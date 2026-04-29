@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Save, Loader2, RefreshCw, Globe, Home, FileText } from "lucide-react";
+import { Save, Loader2, RefreshCw, Globe, Home, FileText, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   getSiteSettings,
@@ -30,6 +31,14 @@ interface SettingsState {
   analytics_code: string;
   custom_head_code: string;
   custom_footer_code: string;
+  // SEO defaults — site-wide fallbacks emitted in the head when a node
+  // doesn't override them. Keys map 1:1 to settings rows.
+  seo_default_meta_title: string;
+  seo_default_meta_description: string;
+  seo_default_og_image: string;
+  seo_og_site_name: string;
+  seo_twitter_handle: string;
+  seo_robots_index: string;
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -40,6 +49,12 @@ const DEFAULT_SETTINGS: SettingsState = {
   analytics_code: "",
   custom_head_code: "",
   custom_footer_code: "",
+  seo_default_meta_title: "",
+  seo_default_meta_description: "",
+  seo_default_og_image: "",
+  seo_og_site_name: "",
+  seo_twitter_handle: "",
+  seo_robots_index: "true",
 };
 
 export default function SiteSettingsPage() {
@@ -65,6 +80,15 @@ export default function SiteSettingsPage() {
         analytics_code: data.analytics_code || "",
         custom_head_code: data.custom_head_code || "",
         custom_footer_code: data.custom_footer_code || "",
+        seo_default_meta_title: data.seo_default_meta_title || "",
+        seo_default_meta_description: data.seo_default_meta_description || "",
+        seo_default_og_image: data.seo_default_og_image || "",
+        seo_og_site_name: data.seo_og_site_name || "",
+        seo_twitter_handle: data.seo_twitter_handle || "",
+        // Robots default = "true" (allow indexing) when unset, so a brand
+        // new install doesn't accidentally noindex itself before any value
+        // is saved.
+        seo_robots_index: data.seo_robots_index ?? "true",
       };
       setSettings(loaded);
       setOriginal(loaded);
@@ -239,6 +263,107 @@ export default function SiteSettingsPage() {
               <p className="text-[11px] text-slate-400">
                 This page will be displayed when visitors access your site root
               </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SEO defaults — emitted in the rendered <head> when a node
+            doesn't override them. Per-node SEO (Meta Title / Description
+            on the node edit screen) always wins. */}
+        <Card className="rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+          <SectionHeader title="SEO" icon={<Search className="h-4 w-4 text-sky-500" />} />
+          <CardContent className="space-y-4">
+            <p className="text-xs text-slate-500 -mt-1">
+              Site-wide defaults. Per-node SEO settings always take precedence.
+              Themes read these as <code className="text-[11px] font-mono">{`{{ index $s "seo_default_og_image" }}`}</code> etc.
+            </p>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700">Default Meta Title</Label>
+                <Input
+                  placeholder={settings.site_name || "Site title fallback"}
+                  value={settings.seo_default_meta_title}
+                  onChange={(e) => update("seo_default_meta_title", e.target.value)}
+                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Used when a page has no Meta Title. {settings.seo_default_meta_title.length || 0}/60.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700">Default Meta Description</Label>
+                <Textarea
+                  placeholder={settings.site_description || "Brief site description"}
+                  value={settings.seo_default_meta_description}
+                  onChange={(e) => update("seo_default_meta_description", e.target.value)}
+                  rows={2}
+                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                />
+                <p className="text-[11px] text-slate-400">
+                  {settings.seo_default_meta_description.length || 0}/160 recommended.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700">Default OG Image</Label>
+                <Input
+                  placeholder="https://example.com/og.png"
+                  value={settings.seo_default_og_image}
+                  onChange={(e) => update("seo_default_og_image", e.target.value)}
+                  className="rounded-lg border-slate-300 font-mono text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Fallback for og:image / twitter:image when a page has no featured image.
+                  1200×630 recommended.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700">OG Site Name</Label>
+                <Input
+                  placeholder={settings.site_name}
+                  value={settings.seo_og_site_name}
+                  onChange={(e) => update("seo_og_site_name", e.target.value)}
+                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Emitted as og:site_name. Defaults to Site Name when blank.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-slate-700">Twitter Handle</Label>
+                <Input
+                  placeholder="@yoursite"
+                  value={settings.seo_twitter_handle}
+                  onChange={(e) => update("seo_twitter_handle", e.target.value)}
+                  className="rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <p className="text-[11px] text-slate-400">Emitted as twitter:site for cards.</p>
+              </div>
+              <div className="space-y-1.5 flex flex-col justify-between">
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">Search Engines</Label>
+                  <p className="text-[11px] text-slate-400">
+                    When off, every page emits <code className="font-mono">noindex,nofollow</code>.
+                    Use during staging or to take a site offline from search.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-2">
+                  <Switch
+                    id="seo_robots_index"
+                    checked={settings.seo_robots_index === "true"}
+                    onCheckedChange={(v: boolean) => update("seo_robots_index", v ? "true" : "false")}
+                  />
+                  <Label htmlFor="seo_robots_index" className="text-sm">
+                    {settings.seo_robots_index === "true" ? "Indexing allowed" : "Site hidden from search"}
+                  </Label>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -120,6 +120,17 @@ func (h *PublicHandler) CacheStats() map[string]interface{} {
 
 // RegisterRoutes registers public page routes on the Fiber app.
 func (h *PublicHandler) RegisterRoutes(app *fiber.App) {
+	// X-Robots-Tag middleware: when seo_robots_index="false" in site
+	// settings, emit `noindex, nofollow` on every public response so a
+	// site can be hidden from search engines without per-theme work.
+	// Defaults to indexing allowed (no header) when unset.
+	app.Use(func(c *fiber.Ctx) error {
+		settings := h.loadSiteSettings()
+		if v, ok := settings["seo_robots_index"]; ok && v == "false" {
+			c.Set("X-Robots-Tag", "noindex, nofollow")
+		}
+		return c.Next()
+	})
 	app.Get("/", h.HomePage)
 	// Catch-all for public pages: match by full_url stored in DB
 	app.Get("/*", h.PageByFullURL)

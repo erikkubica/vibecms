@@ -79,7 +79,7 @@ func summarizeActivatedThemeChecklist(mgmt *cms.ThemeMgmtService, id int) map[st
 // (which covers the things only a human or agentic browser loop can verify).
 func (s *Server) registerThemeChecklistTool() {
 	s.addTool(mcp.NewTool("core.theme.checklist",
-		mcp.WithDescription("Run automated production-readiness checks on a theme. Walks themes/<slug>/ on disk, validates theme.json, every block.json field schema and test_data completeness, every block view.html for hardcoded fallback strings (`{{ or .x \"Default\" }}` patterns that fake a completed render and defeat screenshot verification), seed-script Tengo gotchas (top-level `fields:` typos, `log.error(` usage, missing `term_node_type`, object-shaped select options). Layouts and partials are also scanned for fallback strings. Returns {checks:[{id,severity,pass,message,file?}], summary:{passed,failed,warnings}}. Pair with docs/theme-checklist.md for the manual checks (admin UX, public render visual sanity)."),
+		mcp.WithDescription("Run automated production-readiness checks on a theme. Walks themes/<slug>/ on disk, validates theme.json (including any declared settings_pages[] — referenced files must exist, parse, and declare at least one valid field), every block.json field schema and test_data completeness, every block view.html for hardcoded fallback strings (`{{ or .x \"Default\" }}` patterns that fake a completed render and defeat screenshot verification), seed-script Tengo gotchas (top-level `fields:` typos, `log.error(` usage, missing `term_node_type`, object-shaped select options). Layouts and partials are also scanned for fallback strings. Returns {checks:[{id,severity,pass,message,file?}], summary:{passed,failed,warnings}}. Pair with docs/theme-checklist.md for the manual checks (admin UX, public render visual sanity)."),
 		mcp.WithString("slug", mcp.Description("Theme slug (directory name). Defaults to the active theme.")),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
 		slug := stringArg(args, "slug")
@@ -193,6 +193,24 @@ func runThemeChecklist(slug, themeDir string) map[string]any {
 			Message: "no layout has is_default: true — nodes without explicit layout_slug will fail to render",
 			File:    themeJSONPath,
 		})
+	}
+
+	// 1b. settings_pages[] declared files exist + parse + carry valid fields.
+	// Soft-fail at runtime (the loader logs & skips bad pages), but for an
+	// authoring-time check we want to surface every issue so the agent fixes
+	// them before shipping. Themes without settings_pages skip this block.
+	if pages, ok := manifest["settings_pages"].([]any); ok && len(pages) > 0 {
+		settingsIssues := validateSettingsPages(themeDir, pages)
+		if len(settingsIssues) == 0 {
+			checks = append(checks, checklistItem{
+				ID: "theme.json.settings_pages", Severity: "pass", Pass: true,
+				Message: fmt.Sprintf("settings_pages: %d page(s) declared, all files present with valid fields", len(pages)),
+			})
+		} else {
+			for _, it := range settingsIssues {
+				checks = append(checks, it)
+			}
+		}
 	}
 
 	// 2. blocks/*/block.json field-schema checks ----------------------------
@@ -562,6 +580,90 @@ func scanTengoScripts(dir string) []checklistItem {
 // topLevelFieldsRegex matches a line whose first non-whitespace token is
 // `fields:` (with optional indentation), excluding commented-out lines.
 var topLevelFieldsRegex = regexp.MustCompile(`(?m)^\s*fields\s*:`)
+
+// validateSettingsPages walks every entry in theme.json's settings_pages[],
+// confirms the referenced JSON file exists, parses, and declares at least one
+// well-formed field. Soft-fail at runtime (loader logs & skips), so the
+// checklist surfaces these as fail-severity items so the author sees them
+// before shipping a theme whose admin sidebar is silently empty.
+func validateSettingsPages(themeDir string, pages []any) []checklistItem {
+	out := []checklistItem{}
+	for i, raw := range pages {
+		page, ok := raw.(map[string]any)
+		if !ok {
+			out = append(out, checklistItem{
+				ID: "theme.json.settings_pages", Severity: "fail", Pass: false,
+				Message: fmt.Sprintf("settings_pages[%d] is not an object", i),
+			})
+			continue
+		}
+		slug, _ := page["slug"].(string)
+		file, _ := page["file"].(string)
+		if slug == "" {
+			out = append(out, checklistItem{
+				ID: "theme.json.settings_pages", Severity: "fail", Pass: false,
+				Message: fmt.Sprintf("settings_pages[%d] is missing `slug`", i),
+			})
+			continue
+		}
+		if file == "" {
+			out = append(out, checklistItem{
+				ID: "theme.json.settings_pages." + slug, Severity: "fail", Pass: false,
+				Message: fmt.Sprintf("settings_pages[%q] is missing `file`", slug),
+			})
+			continue
+		}
+		path := filepath.Join(themeDir, file)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			out = append(out, checklistItem{
+				ID: "theme.json.settings_pages." + slug, Severity: "fail", Pass: false,
+				Message: fmt.Sprintf("settings_pages[%q] file %s not readable: %v — loader will skip this page silently", slug, file, err),
+				File:    path,
+			})
+			continue
+		}
+		var parsed map[string]any
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			out = append(out, checklistItem{
+				ID: "theme.json.settings_pages." + slug, Severity: "fail", Pass: false,
+				Message: fmt.Sprintf("settings_pages[%q] file %s failed to parse: %v", slug, file, err),
+				File:    path,
+			})
+			continue
+		}
+		fields, _ := parsed["fields"].([]any)
+		if len(fields) == 0 {
+			out = append(out, checklistItem{
+				ID: "theme.json.settings_pages." + slug, Severity: "warn", Pass: false,
+				Message: fmt.Sprintf("settings_pages[%q] file %s declares no fields — page will render empty in admin", slug, file),
+				File:    path,
+			})
+			continue
+		}
+		for j, fraw := range fields {
+			f, ok := fraw.(map[string]any)
+			if !ok {
+				out = append(out, checklistItem{
+					ID: "theme.json.settings_pages." + slug, Severity: "fail", Pass: false,
+					Message: fmt.Sprintf("settings_pages[%q] field #%d is not an object", slug, j),
+					File:    path,
+				})
+				continue
+			}
+			key, _ := f["key"].(string)
+			typ, _ := f["type"].(string)
+			if key == "" || typ == "" {
+				out = append(out, checklistItem{
+					ID: "theme.json.settings_pages." + slug, Severity: "fail", Pass: false,
+					Message: fmt.Sprintf("settings_pages[%q] field #%d missing `key` or `type` — loader will skip", slug, j),
+					File:    path,
+				})
+			}
+		}
+	}
+	return out
+}
 
 func summarize(slug, themeDir string, checks []checklistItem) map[string]any {
 	passed, failed, warnings := 0, 0, 0

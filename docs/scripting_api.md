@@ -14,6 +14,7 @@ Complete developer reference for Squilla's embedded Tengo scripting system. Teng
 6. [core/routing](#6-corerouting)
 7. [core/nodes](#7-corenodes)
 8. [core/settings](#8-coresettings)
+8a. [core/theme_settings](#8a-coretheme_settings)
 9. [core/routes — register HTTP endpoints](#9-coreroutes--register-http-endpoints)
 10. [core/http — outbound HTTP fetch](#10-corehttp--outbound-http-fetch)
 11. [Triggering emails from scripts](#11-triggering-emails-from-scripts)
@@ -134,6 +135,7 @@ nodetypes  := import("core/nodetypes")  // Custom node type registration
 taxonomies := import("core/taxonomies") // Taxonomy + term CRUD
 menus      := import("core/menus")      // Menu retrieval + upsert
 settings   := import("core/settings")   // Site settings read/write
+theme_settings := import("core/theme_settings") // Read editor-managed theme settings (active theme)
 wellknown  := import("core/wellknown")  // Register /.well-known/* endpoints
 assets     := import("core/assets")     // Read theme/extension files
 helpers    := import("core/helpers")    // String/text utility functions
@@ -802,6 +804,94 @@ Returns all non-encrypted settings as a `{key: value}` map. Encrypted settings a
 all_settings := settings.all()
 // all_settings.site_name, all_settings.site_url, etc.
 ```
+
+---
+
+## 8a. core/theme_settings
+
+Read editor-managed values from the **active theme's settings pages**. Themes declare these pages in `theme.json` under `settings_pages` (see `themes/README.md` §11a and `docs/theming.md` §11a for the schema and lifecycle); this module is the runtime read surface.
+
+### Capability
+
+`theme_settings:read` is required for non-internal callers. Themes ship without explicit capability declarations and bypass the gate; extensions must list it in `extension.json`'s `capabilities` array. Internal callers (core code) bypass.
+
+The module is intentionally **read-only**. Editors save values through the admin UI; scripts have no `set` verb so seed scripts can't accidentally clobber editor input.
+
+### Return shapes
+
+Returned values are coerced to runtime forms based on the field's declared `type`:
+
+| Field type | Tengo shape |
+|---|---|
+| `text`, `textarea`, `richtext`, `select`, `radio`, `color` | string |
+| `number` | float |
+| `toggle`, `checkbox` | bool |
+| `image`, `link`, `term`, `node` | map |
+| `gallery`, `repeater` | array (of maps) |
+| `form_selector` | string (form slug) |
+
+When the stored value is incompatible with the current schema (e.g. the field used to be `text`, the editor saved `"Hello"`, the schema is now `image`) the module returns the field's declared **default** instead of the raw mismatch — so templates and scripts always see a value of the right shape.
+
+### API
+
+#### `theme_settings.get(page, key)` -> any | undefined
+
+Returns one coerced field value from the active theme's named settings page. Returns `undefined` when no theme is active, the page or field isn't declared, or the registry hasn't been populated yet.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | string | yes | Settings page slug (matches `slug` in `theme.json` `settings_pages[]`). |
+| `key` | string | yes | Field key on that page. |
+
+```tengo
+ts := import("core/theme_settings")
+
+logo := ts.get("header", "logo")
+if !is_undefined(logo) {
+    // logo is a map: { url: "...", alt: "...", width: 1024, height: 768 }
+}
+
+sticky := ts.get("header", "sticky")  // bool from a toggle field
+```
+
+#### `theme_settings.all(page)` -> map
+
+Returns every field on the named page as `{key: value}`. Empty map (not `undefined`) when the active theme has no such page or no theme is active — keeps callers' iteration code simple.
+
+```tengo
+header := ts.all("header")
+log.info("site label: " + string(header.site_label))
+```
+
+#### `theme_settings.pages()` -> [ {slug, name, icon}, ... ]
+
+Returns the active theme's declared settings pages — handy for building dynamic menus or auditing what a theme exposes. Empty array when no theme is active.
+
+```tengo
+for p in ts.pages() {
+    log.info("settings page: " + p.slug + " (" + p.name + ")")
+}
+```
+
+#### `theme_settings.active_theme()` -> string
+
+Returns the active theme slug, or `""` when no theme is active. Useful for cross-theme guards in shared filters/handlers.
+
+```tengo
+if ts.active_theme() == "hello-vietnam" {
+    // theme-specific branch
+}
+```
+
+### Storage key reference
+
+For debugging or direct DB inspection, every field is stored under:
+
+```
+theme:<theme-slug>:<page-slug>:<field-key>
+```
+
+in the existing `site_settings` table. See `docs/theming.md` §11a for the full lifecycle (activate / deactivate / delete) and mismatch policy.
 
 ---
 

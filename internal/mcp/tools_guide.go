@@ -175,6 +175,19 @@ func guideRecipes(topic string) []map[string]any {
 			"notes": "ASYMMETRIES TO INTERNALIZE: (1) node level uses fields_data, blocks inside blocks_data use fields. (2) block.json uses key:, nodetypes.register uses name:. (3) select options are PLAIN STRINGS, never {value,label}. (4) term-typed fields need term_node_type in schema and store as {slug, name} object. (5) Settings keys keep their dots — templates use `index $s \"squilla.brand.version\"` or `mustSetting`. (6) Theme HTTP routes mount at /api/theme/<path>, not /<path>. (7) `dev_mode` global in seeds (true when SQUILLA_DEV_MODE=true) — branch to overwrite-on-reseed for fast iteration.",
 		},
 		{
+			"goal":  "Add a settings page to a theme",
+			"topic": "themes",
+			"steps": []string{
+				"1. Edit themes/<slug>/theme.json and add a settings_pages entry:\n     { \"slug\": \"header\", \"name\": \"Header Settings\", \"file\": \"settings/header.json\" }",
+				"2. Create themes/<slug>/settings/header.json with { name, fields: [...] }.",
+				"3. core.theme.activate(<slug>) — picks up the new schema.",
+				"4. In templates: {{ .theme_settings.header.logo }}\n   In blocks:    {{ themeSetting \"header\" \"logo\" }}\n   In Tengo:     ts := import(\"core/theme_settings\"); ts.get(\"header\", \"logo\")",
+				"5. Storage: theme:<slug>:header:logo in site_settings (auto-encrypted for\n   secret-shaped keys).",
+				"6. Admin UI: a \"Theme Settings\" sidebar section appears with one entry per\n   declared page.",
+			},
+			"notes": "Field shapes follow the standard field-types reference (text/number/toggle/image/select/repeater/...). Type mismatches after a saved value never auto-mutate the DB — render falls back to the field's declared default and the admin form surfaces a 'previous value' hint. Tengo callers need the `theme_settings:read` capability (themes bypass; extensions list it in extension.json). Bad pages are soft-failed at activation (logged & skipped). Run core.theme.checklist({slug}) to verify schema files parse before activating.",
+		},
+		{
 			"goal":  "Deploy a theme that lives outside the primary repo",
 			"topic": "themes",
 			"steps": []string{"core.theme.standards", "core.theme.deploy", "core.render.node_preview"},
@@ -307,6 +320,7 @@ func themeStandards() map[string]any {
 			"templates/": "Page templates: pre-built block sequences editors can apply with one click. Not seeds — use theme.tengo for seeding.",
 			"scripts/":   "scripts/theme.tengo (entry — runs once on activation) plus scripts/filters/<name>.tengo for template-callable filters.",
 			"forms/":     "Optional. Theme-owned form layouts as Go templates, registered via the forms-extension handshake (events.emit \"forms:upsert\").",
+			"settings/":  "Optional. Per-page JSON schemas referenced from theme.json's settings_pages[]. Each file declares { name, description?, fields: [...] }; field shapes follow the standard field-types reference. Stored under theme:<slug>:<page>:<field> in site_settings (per-theme namespace). Surfaced in admin under a 'Theme Settings' sidebar group; readable from layouts via .theme_settings.<page>.<field>, from blocks via themeSetting/themeSettingsPage helpers, from Tengo via core/theme_settings (capability theme_settings:read).",
 		},
 		"template_functions": []string{
 			"{{ renderLayoutBlock \"slug\" }} — render a partial. LAYOUT/PARTIAL ONLY. There is NO `partial` template function.",

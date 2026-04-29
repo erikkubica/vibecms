@@ -17,6 +17,7 @@ The complete reference for building, customizing, and deploying Squilla themes.
 9. [Assets](#9-assets)
 10. [Scripting Integration](#10-scripting-integration)
 11. [Template Data Deep Dive](#11-template-data-deep-dive)
+11a. [Theme Settings](#11a-theme-settings)
 12. [Theme Installation & Deployment](#12-theme-installation--deployment)
 13. [Best Practices](#13-best-practices)
 14. [Complete Example Theme](#14-complete-example-theme)
@@ -1012,6 +1013,97 @@ Show different content based on login state:
     <span>{{.flag}} {{.native_name}}</span>
 {{end}}
 ```
+
+---
+
+## 11a. Theme Settings
+
+Theme Settings is the architectural reference for the editor-driven settings UI a theme can declare. The author-facing how-to lives in `themes/README.md` (`Theme settings (editor-driven)`); this section covers the engine internals — storage, lifecycle, capability gating, and the mismatch-safe coercion layer — so extension authors and core contributors can reason about the wire shape without reading the source.
+
+### 11a.1 Manifest surface
+
+`theme.json` may declare a `settings_pages` array. Each entry references a JSON file that holds the page's field schema:
+
+```json
+{
+  "settings_pages": [
+    { "slug": "header", "name": "Header Settings", "file": "settings/header.json", "icon": "PanelTop" }
+  ]
+}
+```
+
+The manifest type is `cms.ThemeSettingsPageDef` (`internal/cms/theme_loader.go`). The per-page file is parsed by `cms.LoadSettingsPages` into `[]cms.ThemeSettingsPage` (`internal/cms/theme_settings_loader.go`), which in turn parses each field into `cms.ThemeSettingsField` — `key`, `label`, `type`, `default` (raw JSON), plus an opaque `Config` bag holding everything else (so renderer-specific extras like `options`, `min`, `placeholder`, taxonomy hints, and extension-contributed field-type config survive without core having to enumerate them).
+
+Soft-fail policy: a page whose file is missing or fails to parse is logged and skipped; a single bad page never blocks theme activation.
+
+### 11a.2 Storage model
+
+Every value lives in the existing `site_settings` table under a per-theme namespace. The canonical key is computed by `cms.SettingKey(themeSlug, pageSlug, fieldKey)` (`internal/cms/theme_settings_keys.go`) and has the exact shape:
+
+```
+theme:<theme-slug>:<page-slug>:<field-key>
+```
+
+`cms.ThemePrefix(slug)` returns `"theme:<slug>:"` — the LIKE prefix used by `GetSettings(prefix)` calls and by lifecycle cleanup. Reusing `site_settings` means encryption (for secret-shaped keys), audit hooks, and the existing settings cache all apply for free.
+
+### 11a.3 Lifecycle
+
+| Event | Effect on registry | Effect on stored rows |
+|---|---|---|
+| `core.theme.activate` | Populated from `theme.json` + per-page schemas; bad pages logged & skipped | Untouched |
+| `core.theme.deactivate` | Cleared (sidebar UI hides) | Preserved verbatim — reactivating restores values |
+| `core.theme.delete` (full removal) | Already cleared from prior deactivate | Wiped via `cms.DeleteThemeSettings(ctx, db, slug)` |
+
+The registry (`cms.ThemeSettingsRegistry`, `internal/cms/theme_settings_registry.go`) holds an in-memory snapshot of the active theme's pages. It's single-active by design — there's at most one active theme, so there's at most one active settings registry.
+
+### 11a.4 Mismatch handling
+
+Schema changes after values are saved are **not** auto-migrated. The contract is:
+
+- The DB column for the value is **never auto-mutated**. Whatever the editor saved stays exactly as saved (modulo encryption-at-rest for secret keys).
+- At read time (`cms.CoerceWithDefault` in `internal/cms/theme_settings_coerce.go`), an incompatible stored value falls back to the field's declared `default` — render templates and Tengo callers see the default, never garbage.
+- The admin form surfaces a small "previous value" hint above the input so the editor can recover or replace the value deliberately.
+- Saving the page replaces the stored payload with the new typed value, ending the mismatch.
+
+Rationale: schema evolution and downgrades both happen in real-world projects, and silently coercing or dropping data on schema change is the failure mode that costs hours of debugging. Loud mismatch + safe default + editor-side hint is the explicit design choice.
+
+Empty raw values (`""`, the absence of a row) coerce to `nil` and are reported "compatible" by `CoerceValue` — they render as the type's zero value at the template layer.
+
+### 11a.5 Capability matrix
+
+| Surface | Capability required |
+|---|---|
+| Admin HTTP routes (`GET /admin/api/theme-settings`, `GET /admin/api/theme-settings/:page`, `PUT /admin/api/theme-settings/:page`) | `manage_settings` |
+| Tengo `core/theme_settings` module (`get`, `all`, `pages`, `active_theme`) | `theme_settings:read` for non-internal callers; internal callers bypass |
+| Render context (`.theme_settings.<page>.<field>`, `themeSetting`/`themeSettingsPage` block helpers) | None — invoked under an internal-caller scope, gated only by the visitor reaching a published page |
+
+Internal-caller scoping is set explicitly in `internal/coreapi/tengo_theme_settings.go` so the inner `GetSetting`/`GetSettings` calls don't trigger the underlying `settings:read` gate — Tengo callers only need `theme_settings:read`.
+
+### 11a.6 Edge cases
+
+- **No active theme.** Admin HTTP endpoints return 404 (`GET /admin/api/theme-settings` returns an empty list); the sidebar group is hidden; render context is an empty map (templates `{{ with }}` over it as usual).
+- **Theme declares a page but the file is missing or malformed.** The page is omitted with a `[theme] settings page <slug> skipped: <error>` log line; the rest of the theme activates normally.
+- **Schema changes type after a save.** Stored value remains untouched; `cms.CoerceWithDefault` returns the declared default. Admin form shows the previous-value hint until the editor saves.
+- **Extension contributes a custom field type.** Just works — the loader stores `Config` opaquely, `CustomFieldInput` resolves the input component from the type registry, and the render layer delegates coercion to the registry too. Core does not need to know about the type.
+- **Secret-shaped keys** (e.g. a field key containing `password`, `secret`, `api_key`). The existing settings layer's encryption-at-rest applies automatically — stored ciphertext is decrypted on read before coercion.
+
+### 11a.7 Internal API references
+
+| Concern | File / symbol |
+|---|---|
+| Manifest type | `internal/cms/theme_loader.go` — `ThemeManifest.SettingsPages`, `ThemeSettingsPageDef` |
+| Per-page parser | `internal/cms/theme_settings_loader.go` — `LoadSettingsPages`, `ThemeSettingsPage`, `ThemeSettingsField` |
+| Active-theme registry | `internal/cms/theme_settings_registry.go` — `ThemeSettingsRegistry` |
+| Storage keys + cleanup | `internal/cms/theme_settings_keys.go` — `SettingKey`, `ThemePrefix`, `DeleteThemeSettings` |
+| Type coercion | `internal/cms/theme_settings_coerce.go` — `CoerceValue`, `CoerceWithDefault` |
+| Admin HTTP | `internal/cms/theme_settings_handler.go` |
+| Render-time injection | `internal/cms/theme_settings_render.go` — `BuildThemeSettingsContext`, `themeSetting` / `themeSettingsPage` template funcs |
+| Tengo module | `internal/coreapi/tengo_theme_settings.go` — `core/theme_settings` |
+| Admin SPA page | `admin-ui/src/pages/theme-settings.tsx` |
+| Admin SPA sidebar wiring | `admin-ui/src/sdui/admin-shell.tsx` |
+| API client | `admin-ui/src/api/client.ts` (`getThemeSettingsPages`, `getThemeSettingsPage`, `saveThemeSettingsPage`) |
+
+For the author-facing how-to (declaring pages, reading from templates/blocks/Tengo, sizing guideline) see `themes/README.md` §11a.
 
 ---
 

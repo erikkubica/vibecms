@@ -59,7 +59,12 @@ func (s *Server) registerNodeTools() {
 		mcp.WithObject("seo_settings"),
 		mcp.WithObject("featured_image"),
 	), "content", func(ctx context.Context, args map[string]any) (any, error) {
-		return api.CreateNode(ctx, nodeInputFromArgs(args))
+		input := nodeInputFromArgs(args)
+		node, err := api.CreateNode(ctx, input)
+		if err != nil {
+			return nil, err
+		}
+		return wrapNodeResult(node, input), nil
 	})
 
 	s.addTool(mcp.NewTool("core.node.update",
@@ -79,7 +84,12 @@ func (s *Server) registerNodeTools() {
 		if id == 0 {
 			return nil, fmt.Errorf("id is required")
 		}
-		return api.UpdateNode(ctx, id, nodeInputFromArgs(args))
+		input := nodeInputFromArgs(args)
+		node, err := api.UpdateNode(ctx, id, input)
+		if err != nil {
+			return nil, err
+		}
+		return wrapNodeResult(node, input), nil
 	})
 
 	s.addTool(mcp.NewTool("core.node.delete",
@@ -147,6 +157,65 @@ func jsonFieldBytes(v any, fallback string) []byte {
 		return []byte(fallback)
 	}
 	return b
+}
+
+// nodeWriteResult embeds a Node so all node fields stay top-level (existing
+// callers reading result.id / result.full_url keep working) while also
+// surfacing AI-authoring hints — preview tooling and soft validation
+// warnings — that would otherwise require a follow-up round trip.
+type nodeWriteResult struct {
+	*coreapi.Node
+	PreviewTool string              `json:"preview_tool,omitempty"`
+	Warnings    []map[string]string `json:"warnings,omitempty"`
+}
+
+// wrapNodeResult composes a node-write response with preview hint + soft
+// validation warnings. Warnings are advisory (no field is rejected); they
+// surface common authoring oversights flagged in the editing playbook
+// (missing layout for non-default sections, empty or over-long SEO meta).
+func wrapNodeResult(node *coreapi.Node, input coreapi.NodeInput) *nodeWriteResult {
+	out := &nodeWriteResult{Node: node}
+	if node != nil {
+		out.PreviewTool = fmt.Sprintf("core.render.node_preview(id=%d) — returns rendered HTML; or open %s in a browser once status='published'", node.ID, node.FullURL)
+	}
+	out.Warnings = nodeAuthoringWarnings(node, input)
+	return out
+}
+
+// nodeAuthoringWarnings emits soft validation hints. Returns nil when the
+// node looks clean. Length thresholds match common SEO guidance (Yoast):
+// meta_title up to 60 chars, meta_description up to 160 chars.
+func nodeAuthoringWarnings(node *coreapi.Node, input coreapi.NodeInput) []map[string]string {
+	var w []map[string]string
+	add := func(field, level, msg string) {
+		w = append(w, map[string]string{"field": field, "level": level, "message": msg})
+	}
+
+	seo := input.SeoSettings
+	if seo == nil && node != nil {
+		seo = node.SeoSettings
+	}
+
+	title := seo["meta_title"]
+	desc := seo["meta_description"]
+
+	if strings.TrimSpace(title) == "" {
+		add("seo_settings.meta_title", "info", "missing — search/social cards will fall back to node title. Set explicitly for better SEO.")
+	} else if n := len(title); n > 60 {
+		add("seo_settings.meta_title", "warn", fmt.Sprintf("length %d exceeds the 60-char recommendation; engines may truncate.", n))
+	}
+
+	if strings.TrimSpace(desc) == "" {
+		add("seo_settings.meta_description", "info", "missing — page ships with empty meta description. Set explicitly or it will fall back to excerpt/empty.")
+	} else if n := len(desc); n > 160 {
+		add("seo_settings.meta_description", "warn", fmt.Sprintf("length %d exceeds the 160-char recommendation; engines may truncate.", n))
+	}
+
+	if node != nil && strings.TrimSpace(node.Excerpt) == "" {
+		add("excerpt", "info", "missing — list/index views will show no summary. Consider deriving from the first paragraph.")
+	}
+
+	return w
 }
 
 // jsonFieldDecode unwraps a JSON-encoded string back into its decoded value.

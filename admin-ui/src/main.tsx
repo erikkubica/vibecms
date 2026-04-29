@@ -293,7 +293,23 @@ createRoot(document.getElementById("root")!).render(
         <SduiProviders>
           <App />
           <ConfirmDialogHost />
-          <Toaster position="top-right" richColors />
+          {/* Toasts:
+              - top-center keeps them out of the corner glance and on the
+                eyeline path between editor and sidebar.
+              - visibleToasts={1} stops the stacking that was burying old
+                toasts under new ones during chatty save flows.
+              - duration 2.2s makes successes feel snappy without missing
+                them; errors stay around longer (Sonner default 4s for
+                error level, kept via duration override per-call when
+                callers want it).
+              - closeButton renders a manual dismiss in every toast. */}
+          <Toaster
+            position="top-center"
+            richColors
+            closeButton
+            visibleToasts={1}
+            duration={2200}
+          />
         </SduiProviders>
       </BrowserRouter>
     </QueryClientProvider>

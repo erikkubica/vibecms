@@ -71,6 +71,11 @@ func TestLoadSettingsPages_ValidPagesParsed(t *testing.T) {
 	if pages[0].Fields[1].Key != "tagline" || string(pages[0].Fields[1].Default) != `"Welcome"` {
 		t.Errorf("default not preserved: %+v", pages[0].Fields[1])
 	}
+	// Field with only reserved keys (key/label/type/default) must leave Config nil
+	// so callers can use non-nil Config as a signal that renderer extras exist.
+	if pages[0].Fields[1].Config != nil {
+		t.Errorf("Config should be nil when only reserved keys present, got: %+v", pages[0].Fields[1].Config)
+	}
 }
 
 func TestLoadSettingsPages_InvalidPageSkippedWithLog(t *testing.T) {

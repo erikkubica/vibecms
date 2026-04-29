@@ -123,7 +123,9 @@ func parseSettingsFields(pageSlug string, raw []json.RawMessage) []ThemeSettings
 				}
 				cfg[k] = v
 			}
-			f.Config = cfg
+			if len(cfg) > 0 {
+				f.Config = cfg
+			}
 		}
 		f.Raw = append(json.RawMessage(nil), item...)
 

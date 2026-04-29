@@ -195,11 +195,11 @@ export default function MenuEditorPage() {
     );
   }
 
+  // Match the editor template used by node / taxonomy / term editors:
+  // a fluid main column plus a fixed 320px sidebar. Was lg:grid-cols-3
+  // with col-span-2, which gave the sidebar a third of the viewport on
+  // wide screens — much wider than every other edit page.
   return (
-    {/* Match the editor template used by node / taxonomy / term editors:
-        a fluid main column plus a fixed 320px sidebar. Was lg:grid-cols-3
-        with col-span-2, which gave the sidebar a third of the viewport
-        on wide screens — much wider than every other edit page. */}
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       {/* Main content */}
       <div className="space-y-4 min-w-0">

@@ -10,6 +10,7 @@ import {
   Underline as UnderlineIcon,
   Strikethrough,
   Code,
+  FileCode,
   List,
   ListOrdered,
   Quote,
@@ -142,6 +143,13 @@ function Toolbar({ editor }: { editor: Editor }) {
         title="Inline Code"
       >
         <Code className="h-4 w-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        active={editor.isActive("codeBlock")}
+        title="Code Block"
+      >
+        <FileCode className="h-4 w-4" />
       </ToolbarButton>
 
       <ToolbarDivider />

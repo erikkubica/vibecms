@@ -15,6 +15,7 @@ import {
   LayoutTemplate,
   Square,
   ExternalLink,
+  Eye,
   Code as CodeIcon,
   Tag,
   type LucideIcon,
@@ -1300,6 +1301,25 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                   </Button>
                 )}
               </div>
+
+              {/* Preview — opens the rendered node in a new tab. Always
+                  renders the persisted state, so save first if you want
+                  to see your latest unsaved edits. */}
+              {isEdit && id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full rounded-lg font-medium h-8 text-xs"
+                  disabled={saving}
+                  onClick={() => {
+                    window.open(`/admin/api/nodes/${id}/preview`, "_blank", "noopener,noreferrer");
+                  }}
+                  title="Open the rendered page in a new tab. Save first to preview unsaved changes."
+                >
+                  <Eye className="mr-1.5 h-3.5 w-3.5" />
+                  Preview
+                </Button>
+              )}
 
               {/* Actions (edit mode) */}
               {isEdit && (

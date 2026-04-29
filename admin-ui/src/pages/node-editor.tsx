@@ -181,7 +181,6 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
 
   // Translations
   const [translations, setTranslations] = useState<ContentNode[]>([]);
-  const [showCreateTranslation, setShowCreateTranslation] = useState(false);
   const [creatingTranslation, setCreatingTranslation] = useState(false);
 
   // Block editor state — persisted to localStorage per node
@@ -327,7 +326,6 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
       toast.error(message);
     } finally {
       setCreatingTranslation(false);
-      setShowCreateTranslation(false);
     }
   }
 
@@ -1514,29 +1512,16 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
             </Card>
           )}
 
-          {/* Translations (edit mode) */}
+          {/* Translations (edit mode) — single dropdown pattern matches the
+              term editor for consistency across the admin. */}
           {isEdit && (
             <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <SectionHeader
-                title="Translations"
-                actions={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs text-indigo-600 hover:text-indigo-700 px-2"
-                    onClick={() => setShowCreateTranslation(true)}
-                  >
-                    + Add
-                  </Button>
-                }
-              />
+              <SectionHeader title="Translations" />
               <CardContent>
-                {/* Current language */}
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-2">
                     <span className="text-sm">{languages.find(l => l.code === languageCode)?.flag || "🌐"}</span>
-                    <span className="text-xs font-medium text-indigo-700 flex-1">{languages.find(l => l.code === languageCode)?.name || languageCode}</span>
+                    <span className="text-xs font-medium text-indigo-700 flex-1 truncate">{languages.find(l => l.code === languageCode)?.name || languageCode}</span>
                     <Badge className="bg-indigo-100 text-indigo-600 border-0 text-[10px] h-5">Current</Badge>
                   </div>
                   {translations.map((t) => {
@@ -1559,6 +1544,33 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                     <p className="text-[11px] text-slate-400 text-center py-1">No translations yet</p>
                   )}
                 </div>
+                {(() => {
+                  const taken = new Set([languageCode, ...translations.map((t) => t.language_code)]);
+                  const remaining = languages.filter((l) => !taken.has(l.code));
+                  if (remaining.length === 0) return null;
+                  return (
+                    <div className="mt-2">
+                      <Select
+                        value=""
+                        onValueChange={(v) => v && handleCreateTranslation(v)}
+                        disabled={creatingTranslation}
+                      >
+                        <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                          <SelectValue
+                            placeholder={creatingTranslation ? "Creating…" : "+ Add translation"}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {remaining.map((lang) => (
+                            <SelectItem key={lang.code} value={lang.code}>
+                              {lang.flag ? `${lang.flag} ` : ""}{lang.name || lang.code}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           )}
@@ -1737,41 +1749,6 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Create Translation dialog */}
-      <Dialog open={showCreateTranslation} onOpenChange={setShowCreateTranslation}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Create Translation</DialogTitle>
-            <DialogDescription>
-              Choose a language to create a translation of this content.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 max-h-64 overflow-y-auto py-2">
-            {languages
-              .filter((l) => l.code !== languageCode && !translations.some((t) => t.language_code === l.code))
-              .map((lang) => (
-                <button
-                  key={lang.id}
-                  type="button"
-                  onClick={() => handleCreateTranslation(lang.code)}
-                  disabled={creatingTranslation}
-                  className="flex items-center gap-3 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50"
-                >
-                  <span className="text-lg">{lang.flag}</span>
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{lang.name}</p>
-                    <p className="text-xs text-slate-400">{lang.native_name}</p>
-                  </div>
-                </button>
-              ))}
-            {languages.filter((l) => l.code !== languageCode && !translations.some((t) => t.language_code === l.code)).length === 0 && (
-              <p className="text-center text-sm text-slate-400 py-4">
-                All available languages already have translations.
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

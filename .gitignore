@@ -42,3 +42,6 @@ themes/*/
 !themes/default/
 !themes/hello-vietnam/
 !themes/curriculum-vitae/
+
+# Git worktrees for isolated feature development
+.worktrees/

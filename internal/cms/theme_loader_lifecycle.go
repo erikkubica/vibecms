@@ -22,9 +22,10 @@ import (
 // NewThemeLoader creates a new ThemeLoader.
 func NewThemeLoader(db *gorm.DB, registry *ThemeAssetRegistry, eventBus *events.EventBus) *ThemeLoader {
 	return &ThemeLoader{
-		db:       db,
-		registry: registry,
-		eventBus: eventBus,
+		db:               db,
+		registry:         registry,
+		eventBus:         eventBus,
+		SettingsRegistry: NewThemeSettingsRegistry(),
 	}
 }
 
@@ -98,6 +99,12 @@ func (tl *ThemeLoader) LoadTheme(themeDir string) error {
 
 	// Upsert theme record in the themes table.
 	tl.upsertThemeRecord(manifest, themeDir)
+
+	// Snapshot settings pages into the in-memory registry. Slug derived
+	// the same way as upsertThemeRecord so admin/Tengo lookups by active
+	// theme slug match the DB row.
+	themeSlug := strings.ToLower(strings.ReplaceAll(manifest.Name, " ", "-"))
+	tl.SettingsRegistry.SetActive(themeSlug, LoadSettingsPages(themeDir, manifest))
 
 	log.Printf("theme loaded: %s (%d layouts, %d partials, %d blocks, %d styles, %d scripts)",
 		manifest.Name, len(manifest.Layouts), len(manifest.Partials), len(manifest.Blocks),
@@ -255,6 +262,20 @@ func (tl *ThemeLoader) DeregisterTheme(themeName string) error {
 			delete(tl.registry.blockAssets, slug)
 		}
 		tl.registry.mu.Unlock()
+	}
+
+	// Clear the in-memory settings snapshot ONLY when the theme being
+	// deregistered is the one currently held by the registry. The activation
+	// flow deregisters several themes in sequence (the previously-active one
+	// plus a sweep of already-inactive ones); without this guard, those
+	// follow-up deregisters wipe the just-loaded settings of the NEW active
+	// theme. Persisted site_settings rows are preserved either way; only
+	// ThemeMgmtService.Delete wipes them.
+	if tl.SettingsRegistry != nil {
+		deregSlug := strings.ToLower(strings.ReplaceAll(themeName, " ", "-"))
+		if tl.SettingsRegistry.ActiveSlug() == deregSlug {
+			tl.SettingsRegistry.Clear()
+		}
 	}
 
 	log.Printf("theme deregistered: %s (%d blocks removed)", themeName, len(blockSlugs))

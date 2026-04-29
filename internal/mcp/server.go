@@ -101,6 +101,7 @@ func New(deps Deps) *Server {
 	s.registerDeployTools()
 	s.registerRenderTools()
 	s.registerGuideTools()
+	s.registerThemeChecklistTool()
 	s.registerResources()
 
 	return s

@@ -43,6 +43,7 @@ func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, 
 		"recipes":     guideRecipes(topic),
 		"data_shapes": guideShapes(),
 		"conventions": guideConventions(),
+		"gotchas":     guideGotchas(),
 	}
 
 	// Live snapshot — best-effort. Any failure becomes a note rather than a
@@ -157,6 +158,36 @@ func guideRecipes(topic string) []map[string]any {
 			"notes": "Subscribe to node_type.{created,updated,deleted} and taxonomy.{created,updated,deleted}, plus extension.activated, theme.activated and their deactivated counterparts.",
 		},
 		{
+			"goal":  "Build a theme end-to-end (cold-boot, AI one-shot)",
+			"topic": "themes",
+			"steps": []string{
+				"core.theme.standards",
+				"core.nodetype.create (custom node types — register BEFORE taxonomies that reference them)",
+				"core.taxonomy.create (with node_types: [...] to attach to a node type)",
+				"core.term.create (with node_type matching where the term is used)",
+				"core.block_types.create (or via theme files: blocks/<slug>/{block.json,view.html})",
+				"core.node.create (pages/posts; use fields_data:{} at top level, blocks_data:[{type, fields:{}}])",
+				"core.menu.upsert (items use page:'<slug>' for slug-stable menu)",
+				"core.theme.activate",
+				"core.theme.standards (run again — verify no warnings)",
+				"GET / (curl/playwright — confirm public render returns 200, not empty)",
+			},
+			"notes": "ASYMMETRIES TO INTERNALIZE: (1) node level uses fields_data, blocks inside blocks_data use fields. (2) block.json uses key:, nodetypes.register uses name:. (3) select options are PLAIN STRINGS, never {value,label}. (4) term-typed fields need term_node_type in schema and store as {slug, name} object. (5) Settings keys keep their dots — templates use `index $s \"squilla.brand.version\"` or `mustSetting`. (6) Theme HTTP routes mount at /api/theme/<path>, not /<path>. (7) `dev_mode` global in seeds (true when SQUILLA_DEV_MODE=true) — branch to overwrite-on-reseed for fast iteration.",
+		},
+		{
+			"goal":  "Add a settings page to a theme",
+			"topic": "themes",
+			"steps": []string{
+				"1. Edit themes/<slug>/theme.json and add a settings_pages entry:\n     { \"slug\": \"header\", \"name\": \"Header Settings\", \"file\": \"settings/header.json\" }",
+				"2. Create themes/<slug>/settings/header.json with { name, fields: [...] }.",
+				"3. core.theme.activate(<slug>) — picks up the new schema.",
+				"4. In templates: {{ .theme_settings.header.logo }}\n   In blocks:    {{ themeSetting \"header\" \"logo\" }}\n   In Tengo:     ts := import(\"core/theme_settings\"); ts.get(\"header\", \"logo\")",
+				"5. Storage: theme:<slug>:header:logo in site_settings (auto-encrypted for\n   secret-shaped keys).",
+				"6. Admin UI: a \"Theme Settings\" sidebar section appears with one entry per\n   declared page.",
+			},
+			"notes": "Field shapes follow the standard field-types reference (text/number/toggle/image/select/repeater/...). Type mismatches after a saved value never auto-mutate the DB — render falls back to the field's declared default and the admin form surfaces a 'previous value' hint. Tengo callers need the `theme_settings:read` capability (themes bypass; extensions list it in extension.json). Bad pages are soft-failed at activation (logged & skipped). Run core.theme.checklist({slug}) to verify schema files parse before activating.",
+		},
+		{
 			"goal":  "Deploy a theme that lives outside the primary repo",
 			"topic": "themes",
 			"steps": []string{"core.theme.standards", "core.theme.deploy", "core.render.node_preview"},
@@ -183,12 +214,81 @@ func guideRecipes(topic string) []map[string]any {
 
 func guideShapes() map[string]string {
 	return map[string]string{
-		"image":        `{ "url": "/media/...", "alt": "...", "width": 800, "height": 600 }`,
-		"link":         `{ "label": "Read more", "url": "/about", "target": "_self" }`,
-		"repeater":     `[ { "<sub_field>": "..." }, ... ]`,
-		"term":         `{ "slug": "travel", "name": "Travel", "taxonomy": "tag" }`,
-		"blocks_data":  `[ { "type": "<slug>", "fields": { ... } }, ... ]`,
-		"select/radio": `"<string value>"  // options in schemas MUST be plain strings, not {label,value} objects`,
+		"image":            `{ "url": "/media/...", "alt": "...", "width": 800, "height": 600 }`,
+		"link":             `{ "label": "Read more", "url": "/about", "target": "_self" }`,
+		"repeater":         `[ { "<sub_field>": "..." }, ... ]`,
+		"term":             `{ "slug": "travel", "name": "Travel", "taxonomy": "tag" }  // STORE AS OBJECT, not bare slug — admin's term-field component requires {slug,name} to pre-select. Templates handle both shapes for safety.`,
+		"blocks_data":      `[ { "type": "<slug>", "fields": { ... } }, ... ]  // INSIDE a block: use "fields" (not "fields_data")`,
+		"node_fields_data": `{ "<field_name>": <value>, ... }  // TOP-LEVEL on a node: use "fields_data" (not "fields"). Asymmetric on purpose; misnaming silently drops data.`,
+		"node_taxonomies":  `{ "category": ["engineering"], "tag": ["go", "cms"] }  // For real taxonomies (admin "Taxonomies" tab, tax_query). Term-typed fields go in fields_data instead.`,
+		"select/radio":     `"<string value>"  // options in schemas MUST be plain strings, not {label,value} objects (admin crashes with React #31)`,
+		"menu_item_in":     `{ "label": "Home", "page": "home" }  // input uses label: + page:'<slug>'`,
+		"menu_item_out":    `{ "title": "Home", "url": "/", ... }  // !! Templates iterate menu items and read .title and .url, NOT .label`,
+		"settings_lookup":  `{{ index $s "squilla.brand.version" }}  // settings keys keep their dots; use the index fn or mustSetting helper`,
+	}
+}
+
+// guideGotchas returns machine-readable asymmetries and silent-failure modes.
+// Surfaced on every core.guide call so AI agents internalize them up front
+// rather than rediscovering each one through trial and error.
+func guideGotchas() []map[string]any {
+	return []map[string]any{
+		{
+			"topic":   "fields_vs_fields_data",
+			"summary": "Top-level node uses `fields_data:` — blocks inside blocks_data use `fields:`. Mismatching either silently drops the data; nodes.create/update now warn at runtime.",
+		},
+		{
+			"topic":   "block_select_options",
+			"summary": "block.json `field_schema` `select`/`radio` options must be plain strings (`[\"a\",\"b\"]`), never `[{value,label}]`. Object options are rejected at theme load and would otherwise crash the admin with React #31.",
+		},
+		{
+			"topic":   "term_field_shape",
+			"summary": "Term-typed fields: schema needs `term_node_type`; values must be stored as `{slug, name}` objects (not bare slug strings) so admin pre-selects. Hydration accepts strings on render only.",
+		},
+		{
+			"topic":   "schema_key_vs_name",
+			"summary": "block.json field_schema uses `key:` (and `key:` for sub_fields). Tengo nodetypes.register / taxonomies.register use `name:`. Don't mix — empty admin inputs are the symptom.",
+		},
+		{
+			"topic":   "settings_dot_keys",
+			"summary": "Settings keys keep their dots in the DB (`squilla.brand.version`). Go templates can't dot-traverse — use `{{ index $s \"key\" }}` or `{{ mustSetting $s \"key\" }}` (loud error on miss).",
+		},
+		{
+			"topic":   "menu_label_vs_title",
+			"summary": "menus.upsert input uses `label:` + `page:'<slug>'`. The Tengo→template bridge currently emits `label` to templates; check the active code path before assuming `.title`. Use slug-based `page:` for rename-stable menus.",
+		},
+		{
+			"topic":   "theme_routes_prefix",
+			"summary": "routes.register(\"GET\", \"/docs\", …) mounts at `/api/theme/docs`, NOT `/docs`. Themes cannot shadow public node routes; for redirects either point the menu link directly at the destination or use an extension public_route.",
+		},
+		{
+			"topic":   "homepage_and_settings_cache",
+			"summary": "site-settings (incl. homepage_node_id) are cached in-process; `core.settings.set` now publishes setting.updated which invalidates the cache. Older builds required theme.activate to bust the cache.",
+		},
+		{
+			"topic":   "log_error_unreachable",
+			"summary": "`error` is a reserved Tengo selector — `log.error(\"…\")` is a parse error. Use `log.warn(…)`, `log.info(…)`, or the alias `log.err(…)`. Direct CoreAPI callers (gRPC/Go) still use `error`.",
+		},
+		{
+			"topic":   "theme_layout_cache",
+			"summary": "Layouts and partials are loaded into the renderer cache at theme activation. Editing files on disk requires re-activating the theme (or in dev: `make theme` which restarts the container).",
+		},
+		{
+			"topic":   "seed_idempotency",
+			"summary": "Production seeds must be idempotent (existence-checked nodes/terms, upsert menus). In dev (SQUILLA_DEV_MODE=true) seeds receive a top-level `dev_mode` boolean and may branch to delete-then-create so AI iteration loops can see template + data changes immediately.",
+		},
+		{
+			"topic":   "no_default_fallbacks",
+			"summary": "Don't write `{{ or .x \"Default copy\" }}` in templates — defaults silently mask missing data and turn schema/seed bugs into mystery renders. Strip fallbacks; let empty fields render empty so the bug is loud.",
+		},
+		{
+			"topic":   "block_slug_collisions",
+			"summary": "Prefix theme block slugs (e.g. `sq-hero`, `mytheme-cta`) so they don't collide with extension blocks (`cb-*` from content-blocks) or other themes. Last-write wins per slug — collisions are silent.",
+		},
+		{
+			"topic":   "filter_args_required",
+			"summary": "`{{ filter \"name\" }}` (no value arg) errors with \"wrong number of args\". For filters that take no input, pass `(dict)` as the value argument.",
+		},
 	}
 }
 
@@ -220,6 +320,7 @@ func themeStandards() map[string]any {
 			"templates/": "Page templates: pre-built block sequences editors can apply with one click. Not seeds — use theme.tengo for seeding.",
 			"scripts/":   "scripts/theme.tengo (entry — runs once on activation) plus scripts/filters/<name>.tengo for template-callable filters.",
 			"forms/":     "Optional. Theme-owned form layouts as Go templates, registered via the forms-extension handshake (events.emit \"forms:upsert\").",
+			"settings/":  "Optional. Per-page JSON schemas referenced from theme.json's settings_pages[]. Each file declares { name, description?, fields: [...] }; field shapes follow the standard field-types reference. Stored under theme:<slug>:<page>:<field> in site_settings (per-theme namespace). Surfaced in admin under a 'Theme Settings' sidebar group; readable from layouts via .theme_settings.<page>.<field>, from blocks via themeSetting/themeSettingsPage helpers, from Tengo via core/theme_settings (capability theme_settings:read).",
 		},
 		"template_functions": []string{
 			"{{ renderLayoutBlock \"slug\" }} — render a partial. LAYOUT/PARTIAL ONLY. There is NO `partial` template function.",

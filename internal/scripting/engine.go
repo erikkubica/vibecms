@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"squilla/internal/cms"
 	"squilla/internal/coreapi"
 	"squilla/internal/events"
 
@@ -22,6 +23,11 @@ import (
 type ScriptEngine struct {
 	eventBus *events.EventBus
 	coreAPI  coreapi.CoreAPI
+
+	// themeSettingsRegistry is the active-theme settings registry shared
+	// with the cms package. Passed into BuildTengoModules so the
+	// core/theme_settings Tengo module can read declared pages/fields.
+	themeSettingsRegistry *cms.ThemeSettingsRegistry
 
 	themeDir   string // path to active theme root
 	scriptsDir string // themeDir + "/scripts"
@@ -59,16 +65,30 @@ type WellKnownRegistrar interface {
 	Register(path string, handler fiber.Handler)
 }
 
+// devMode reads SQUILLA_DEV_MODE and returns true when set to a truthy value
+// (1, true, yes, on — case-insensitive). Exposed to seed scripts via
+// `dev_mode` so themes can branch to overwrite-on-reseed in dev and stay
+// idempotent skip-if-exists in production.
+func devMode() bool {
+	switch v := os.Getenv("SQUILLA_DEV_MODE"); v {
+	case "1", "true", "TRUE", "True", "yes", "YES", "Yes", "on", "ON", "On":
+		return true
+	}
+	return false
+}
+
 // NewScriptEngine creates a new ScriptEngine.
 func NewScriptEngine(
 	eventBus *events.EventBus,
 	coreAPI coreapi.CoreAPI,
+	themeSettingsRegistry *cms.ThemeSettingsRegistry,
 ) *ScriptEngine {
 	return &ScriptEngine{
-		eventBus:       eventBus,
-		coreAPI:        coreAPI,
-		eventHandlers:  make(map[string][]scriptHandler),
-		filterHandlers: make(map[string][]scriptHandler),
+		eventBus:              eventBus,
+		coreAPI:               coreAPI,
+		themeSettingsRegistry: themeSettingsRegistry,
+		eventHandlers:         make(map[string][]scriptHandler),
+		filterHandlers:        make(map[string][]scriptHandler),
 	}
 }
 
@@ -118,7 +138,13 @@ func (e *ScriptEngine) LoadThemeScripts(themeDir string) error {
 	// enforces this against the CoreAPI.
 	script := tengo.NewScript(src)
 	caller := coreapi.CallerInfo{Slug: "theme", Type: "tengo", Capabilities: e.activeCapabilities}
-	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, e.scriptsDir, e.scriptCallbacks()))
+	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, e.scriptsDir, e.scriptCallbacks(), e.themeSettingsRegistry))
+	// Expose the dev-mode flag so seeds can branch to overwrite-on-reseed
+	// instead of skip-if-exists. Production stays safe (false); operators
+	// opt in via SQUILLA_DEV_MODE=true for autonomous AI dev/test loops.
+	if err := script.Add("dev_mode", devMode()); err != nil {
+		return fmt.Errorf("seeding dev_mode: %w", err)
+	}
 
 	// Set a max execution time for safety
 	script.SetMaxAllocs(50000)
@@ -188,7 +214,7 @@ func (e *ScriptEngine) runScript(scriptPath, slug string, capabilities map[strin
 
 	script := tengo.NewScript(src)
 	caller := coreapi.CallerInfo{Slug: slug, Type: "tengo", Capabilities: capabilities}
-	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, renderCtx, scriptsDir, e.scriptCallbacks()))
+	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, renderCtx, scriptsDir, e.scriptCallbacks(), e.themeSettingsRegistry))
 	script.SetMaxAllocs(50000)
 
 	// Inject context variables — convert to Tengo objects first to handle
@@ -257,7 +283,10 @@ func (e *ScriptEngine) LoadExtensionScripts(extDir string, slug string, capabili
 
 	caller := coreapi.CallerInfo{Slug: slug, Type: "tengo", Capabilities: caps}
 	script := tengo.NewScript(src)
-	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, extScriptsDir, e.scriptCallbacks()))
+	script.SetImports(coreapi.BuildTengoModules(e.coreAPI, caller, nil, extScriptsDir, e.scriptCallbacks(), e.themeSettingsRegistry))
+	if err := script.Add("dev_mode", devMode()); err != nil {
+		return fmt.Errorf("seeding dev_mode: %w", err)
+	}
 	script.SetMaxAllocs(50000)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

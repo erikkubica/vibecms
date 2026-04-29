@@ -265,6 +265,72 @@ func RegisterPartialFromFile(db *gorm.DB, def ThemePartialDef, code string, sour
 	return nil
 }
 
+// validateBlockFieldSchema enforces block.json invariants that, if violated,
+// silently break the admin or render path. Today it catches:
+//   - select-typed fields whose options contain {value,label} objects (admin
+//     crashes with React error #31 — must be plain string options).
+//   - term-typed fields without term_node_type (hydration won't match).
+//   - mixing `name:` instead of `key:` at the field-schema level (block.json
+//     readers expect `key`, admin will render empty inputs).
+//
+// Recurses into sub_fields for repeater/group fields.
+func validateBlockFieldSchema(blockSlug string, raw json.RawMessage) error {
+	if len(raw) == 0 {
+		return nil
+	}
+	var fields []map[string]any
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		// Schema isn't an array — let the rest of the load surface that.
+		return nil
+	}
+	return validateBlockFieldsRecursive(blockSlug, "", fields)
+}
+
+func validateBlockFieldsRecursive(blockSlug, parentPath string, fields []map[string]any) error {
+	for _, f := range fields {
+		key, _ := f["key"].(string)
+		if key == "" {
+			if name, ok := f["name"].(string); ok && name != "" {
+				return fmt.Errorf("block %q field schema: use `key:` (not `name:`) — block.json readers expect `key`. Offending field: %q",
+					blockSlug, name)
+			}
+		}
+		path := key
+		if parentPath != "" {
+			path = parentPath + "." + key
+		}
+		typ, _ := f["type"].(string)
+		switch typ {
+		case "select", "radio":
+			if opts, ok := f["options"].([]any); ok {
+				for _, o := range opts {
+					if _, isObj := o.(map[string]any); isObj {
+						return fmt.Errorf("block %q field %q: type=%q options must be plain strings, not {value,label} objects (admin will crash with React error #31)",
+							blockSlug, path, typ)
+					}
+				}
+			}
+		case "term":
+			tnt, _ := f["term_node_type"].(string)
+			if tnt == "" {
+				log.Printf("WARN: block %q field %q is type=term but term_node_type is empty — hydration will not match any term row", blockSlug, path)
+			}
+		}
+		if sub, ok := f["sub_fields"].([]any); ok {
+			subFields := make([]map[string]any, 0, len(sub))
+			for _, s := range sub {
+				if sm, ok := s.(map[string]any); ok {
+					subFields = append(subFields, sm)
+				}
+			}
+			if err := validateBlockFieldsRecursive(blockSlug, path, subFields); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // blockManifest is the structure of a block's block.json file.
 type blockManifest struct {
 	Slug        string          `json:"slug"`
@@ -287,6 +353,10 @@ func RegisterBlockFromDir(db *gorm.DB, registry *ThemeAssetRegistry, blockDir st
 	var bm blockManifest
 	if err := json.Unmarshal(bjData, &bm); err != nil {
 		return fmt.Errorf("failed to parse block.json for %s: %w", slug, err)
+	}
+
+	if err := validateBlockFieldSchema(slug, bm.FieldSchema); err != nil {
+		return err
 	}
 
 	// Read view.html (the HTML template for the block).

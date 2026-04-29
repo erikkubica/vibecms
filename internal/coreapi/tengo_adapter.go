@@ -8,6 +8,8 @@ import (
 
 	"github.com/d5/tengo/v2"
 	"github.com/d5/tengo/v2/stdlib"
+
+	"squilla/internal/cms"
 )
 
 // ScriptCallbacks allows the ScriptEngine to communicate back to the CMS.
@@ -19,14 +21,14 @@ type ScriptCallbacks struct {
 }
 
 // BuildTengoModules creates a new ModuleMap and registers all Squilla modules.
-func BuildTengoModules(api CoreAPI, caller CallerInfo, renderCtx interface{}, scriptsDir string, cb *ScriptCallbacks) *tengo.ModuleMap {
+func BuildTengoModules(api CoreAPI, caller CallerInfo, renderCtx interface{}, scriptsDir string, cb *ScriptCallbacks, tsRegistry *cms.ThemeSettingsRegistry) *tengo.ModuleMap {
 	modules := tengo.NewModuleMap()
-	RegisterModules(modules, api, caller, renderCtx, scriptsDir, cb)
+	RegisterModules(modules, api, caller, renderCtx, scriptsDir, cb, tsRegistry)
 	return modules
 }
 
 // RegisterModules adds all Squilla core modules to the Tengo module map.
-func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, renderCtx interface{}, scriptsDir string, cb *ScriptCallbacks) {
+func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, renderCtx interface{}, scriptsDir string, cb *ScriptCallbacks, tsRegistry *cms.ThemeSettingsRegistry) {
 	// Use WithCaller to associate the script caller with the context
 	ctx := WithCaller(context.Background(), caller)
 
@@ -48,6 +50,7 @@ func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, r
 	modules.AddBuiltinModule("core/helpers", helpersModule())
 	modules.AddBuiltinModule("core/events", eventsModule(api, ctx, cb))
 	modules.AddBuiltinModule("core/settings", settingsModule(api, ctx))
+	modules.AddBuiltinModule("core/theme_settings", themeSettingsModule(api, ctx, tsRegistry))
 	modules.AddBuiltinModule("core/wellknown", wellKnownModule(cb))
 	modules.AddBuiltinModule("core/assets", assetsModule(scriptsDir))
 

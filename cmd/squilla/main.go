@@ -250,10 +250,11 @@ func main() {
 	// caller that lacks the required capability declared in extension.json.
 	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, nil, nodeTypeSvc, emailDispatcher, app, secretsSvc)
 	guardedAPI := coreapi.NewCapabilityGuard(coreAPI)
+	themeSettingsHandler := cms.NewThemeSettingsHandler(themeLoader.SettingsRegistry, coreAPI, database, secretsSvc, eventBus)
 
 	// Theme scripting engine (theme .tgo scripts are loaded later, after
 	// extensions have subscribed and after the theme is activated).
-	scriptEngine := scripting.NewScriptEngine(eventBus, guardedAPI)
+	scriptEngine := scripting.NewScriptEngine(eventBus, guardedAPI, themeLoader.SettingsRegistry)
 	// Wire script engine into theme management so runtime activation loads Tengo scripts.
 	themeMgmtSvc.SetScriptLoader(scriptEngine.LoadThemeScripts, scriptEngine.UnloadThemeScripts)
 
@@ -292,7 +293,7 @@ func main() {
 	renderer.SetFilterRunner(scriptEngine.ApplyFilter)
 
 	renderCtx := cms.NewRenderContext(database, layoutSvc, layoutBlockSvc, menuSvc, themeAssets)
-	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx, eventBus)
+	publicHandler := cms.NewPublicHandler(database, renderer, sessionSvc, layoutSvc, layoutBlockSvc, menuSvc, renderCtx, eventBus, themeLoader.SettingsRegistry, coreAPI)
 
 	// --- Public HTML pages ---
 	pageAuthHandler.RegisterRoutes(app)
@@ -329,6 +330,7 @@ func main() {
 	cacheHandler := cms.NewCacheHandler(publicHandler, eventBus)
 	cacheHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)
+	themeSettingsHandler.RegisterRoutes(adminAPI)
 	cms.NewFieldTypeHandler().RegisterRoutes(adminAPI)
 
 	// SDUI endpoints — boot manifest, layout trees, and SSE event stream.

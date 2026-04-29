@@ -2,6 +2,7 @@ package cms
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -50,6 +51,10 @@ func (h *PublicHandler) getBlockType(slug string) (models.BlockType, bool) {
 
 // renderBlocks renders each block's HTML template with its field values.
 func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
+	// Load theme settings once per call so the GetSettings round-trip
+	// happens exactly once, not once per block.
+	ts := h.loadThemeSettingsForRender(context.Background())
+
 	var rendered []string
 	for _, block := range blocks {
 		blockType, _ := block["type"].(string)
@@ -105,14 +110,14 @@ func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
 		// Use the new RenderParsed method for cached template execution
 		cacheKey := "block:" + blockType + ":" + tmplContent
 		var buf bytes.Buffer
-		err := h.renderer.RenderParsed(&buf, cacheKey, tmplContent, fields, template.FuncMap{
+		err := h.renderer.RenderParsed(&buf, cacheKey, tmplContent, fields, mergeFuncMaps(template.FuncMap{
 			"safeHTML": func(s interface{}) template.HTML {
 				return template.HTML(fmt.Sprintf("%v", s))
 			},
 			"safeURL": func(s interface{}) template.URL {
 				return template.URL(fmt.Sprintf("%v", s))
 			},
-		})
+		}, themeSettingsFuncs(ts)))
 		if err != nil {
 			// Escape blockType and err — both can carry user input
 			// (slug from a malicious manifest, parser error echoing
@@ -135,6 +140,10 @@ func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}) []str
 	if len(blocks) == 0 {
 		return rendered
 	}
+
+	// Load theme settings once per page render so the GetSettings round-trip
+	// happens exactly once, regardless of how many blocks we render.
+	ts := h.loadThemeSettingsForRender(context.Background())
 
 	// Step 1: Collect all node IDs across all blocks
 	allNodeIDs := make(map[int]bool)
@@ -276,14 +285,14 @@ func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}) []str
 
 		tmplCacheKey := "block:" + blockType + ":" + tmplContent
 		var buf bytes.Buffer
-		err := h.renderer.RenderParsed(&buf, tmplCacheKey, tmplContent, fields, template.FuncMap{
+		err := h.renderer.RenderParsed(&buf, tmplCacheKey, tmplContent, fields, mergeFuncMaps(template.FuncMap{
 			"safeHTML": func(s interface{}) template.HTML {
 				return template.HTML(fmt.Sprintf("%v", s))
 			},
 			"safeURL": func(s interface{}) template.URL {
 				return template.URL(fmt.Sprintf("%v", s))
 			},
-		})
+		}, themeSettingsFuncs(ts)))
 		if err != nil {
 			log.Printf("WARN: block template render error [%s]: %v", blockType, err)
 			continue

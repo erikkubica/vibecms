@@ -16,6 +16,21 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 )
 
+// lookupSetting reads a settings map by literal key. Settings are stored
+// with their dotted keys preserved (e.g. "squilla.brand.version"), so Go
+// templates can't dot-traverse into them — they must use a fn like this.
+func lookupSetting(settings interface{}, key string) (interface{}, bool) {
+	switch m := settings.(type) {
+	case map[string]string:
+		v, ok := m[key]
+		return v, ok
+	case map[string]interface{}:
+		v, ok := m[key]
+		return v, ok
+	}
+	return nil, false
+}
+
 // defaultCacheSize bounds each LRU cache. 1024 templates is generous —
 // most sites don't have more than a few hundred distinct ones. Operators
 // with massive content can override via SQUILLA_TEMPLATE_CACHE_SIZE.
@@ -246,6 +261,28 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 		},
 		"image_url": func(originalURL string, sizeName string) string {
 			return imageURL(r.imagePrefixSnapshot(), originalURL, sizeName)
+		},
+		// setting returns settings[key] or "" if missing. Use when a missing
+		// key is acceptable (optional flags, soft-coded copy).
+		"setting": func(settings interface{}, key string) interface{} {
+			if v, ok := lookupSetting(settings, key); ok {
+				return v
+			}
+			return ""
+		},
+		// mustSetting returns settings[key] or fails the template render if
+		// the key is missing or empty. Use this for any setting your template
+		// REQUIRES — it turns a silent empty render into a loud error so
+		// theme bugs (typos in dotted keys, forgotten seeds) surface instantly.
+		"mustSetting": func(settings interface{}, key string) (interface{}, error) {
+			v, ok := lookupSetting(settings, key)
+			if !ok {
+				return nil, fmt.Errorf("mustSetting: %q not found in settings (check theme seed and remember keys keep their dots, e.g. `mustSetting $s \"squilla.brand.version\"`)", key)
+			}
+			if s, isStr := v.(string); isStr && s == "" {
+				return nil, fmt.Errorf("mustSetting: %q is empty", key)
+			}
+			return v, nil
 		},
 		"image_srcset": func(originalURL string, sizeNames ...string) string {
 			return imageSrcset(r.imagePrefixSnapshot(), originalURL, sizeNames)

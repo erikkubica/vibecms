@@ -65,14 +65,32 @@ func (p *SitemapPlugin) HandleEvent(action string, payload []byte) (*pb.EventRes
 			return &pb.EventResponse{Handled: true, Error: fmt.Sprintf("sitemap build failed: %v", err)}, nil
 		}
 		return &pb.EventResponse{Handled: true}, nil
-	case "setting.updated",
-		"node.created", "node.updated", "node.published", "node.deleted":
-		// Rebuild sitemaps when settings or content changes.
+	case "setting.updated":
+		// Skip rebuilds triggered by our own writes (sitemap_*_*) — otherwise
+		// every rebuild's SetSetting calls fan back in here, causing a storm
+		// of nested rebuilds whenever ANY setting is saved.
+		if isOwnSitemapEvent(payload) {
+			return &pb.EventResponse{Handled: false}, nil
+		}
+		_ = p.buildAllSitemaps()
+		return &pb.EventResponse{Handled: false}, nil
+	case "node.created", "node.updated", "node.published", "node.deleted":
 		_ = p.buildAllSitemaps()
 		return &pb.EventResponse{Handled: false}, nil
 	default:
 		return &pb.EventResponse{Handled: false}, nil
 	}
+}
+
+// isOwnSitemapEvent returns true when the setting.updated payload reports a
+// key starting with "sitemap_" — i.e. one this plugin just wrote. The payload
+// is a JSON object {"key": "..."} (and may also carry "bulk":true for batch
+// updates, which we still want to handle).
+func isOwnSitemapEvent(payload []byte) bool {
+	// Cheap substring check — avoids importing encoding/json just for this
+	// hot path. The bus payload is a small JSON object, so a contains test
+	// is unambiguous in practice.
+	return strings.Contains(string(payload), `"key":"sitemap_`)
 }
 
 func (p *SitemapPlugin) Initialize(hostConn *grpc.ClientConn) error {

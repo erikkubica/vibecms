@@ -269,10 +269,16 @@ func logModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 		}
 	}
 
+	// `error` is reserved by the Tengo parser as a selector token, so
+	// `log.error("…")` is a parse error even though the function exists.
+	// We register both names: `log.err` is the reachable alias for scripts.
+	// (Direct API callers — gRPC, internal Go — still use the `error` name.)
+	errFn := makeLogger("error")
 	return map[string]tengo.Object{
 		"info":  &tengo.UserFunction{Name: "info", Value: makeLogger("info")},
 		"warn":  &tengo.UserFunction{Name: "warn", Value: makeLogger("warn")},
-		"error": &tengo.UserFunction{Name: "error", Value: makeLogger("error")},
+		"error": &tengo.UserFunction{Name: "error", Value: errFn},
+		"err":   &tengo.UserFunction{Name: "err", Value: errFn},
 		"debug": &tengo.UserFunction{Name: "debug", Value: makeLogger("debug")},
 	}
 }

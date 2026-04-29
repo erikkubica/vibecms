@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useBoot } from "../hooks/use-boot";
 import { useAuth } from "../hooks/use-auth";
+import { getThemeSettingsPages } from "../api/client";
 import type { NavItem } from "./types";
 import * as Lucide from "lucide-react";
 import {
@@ -334,13 +336,43 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
   const location = useLocation();
   const { user, logout } = useAuth();
   const { data: boot } = useBoot();
+  const { data: themePages } = useQuery({
+    queryKey: ["theme-settings-pages"],
+    queryFn: getThemeSettingsPages,
+    staleTime: 60_000,
+  });
 
   const breadcrumbs = useMemo(
     () => computeBreadcrumbs(location.pathname),
     [location.pathname],
   );
 
-  const navigation = boot?.navigation || [];
+  const navigation = useMemo<NavItem[]>(() => {
+    const base = boot?.navigation || [];
+    const pages = themePages?.pages || [];
+    if (pages.length === 0) return base;
+    const themeSection: NavItem[] = [
+      {
+        id: "theme-settings-section",
+        label: "Theme Settings",
+        is_section: true,
+      },
+      ...pages.map<NavItem>((p) => ({
+        id: `theme-settings-${p.slug}`,
+        label: p.name,
+        icon: p.icon || "Palette",
+        path: `/admin/theme-settings/${p.slug}`,
+      })),
+    ];
+    // Insert immediately before the kernel "Settings" section so theme
+    // settings appear above core settings — they're touched far more often
+    // (theme tweaks vs. one-time site config).
+    const insertAt = base.findIndex((item) => item.id === "section-settings");
+    if (insertAt === -1) {
+      return [...base, ...themeSection];
+    }
+    return [...base.slice(0, insertAt), ...themeSection, ...base.slice(insertAt)];
+  }, [boot?.navigation, themePages?.pages]);
 
   const sidebarWidth = collapsed ? 56 : 256;
 

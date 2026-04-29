@@ -19,6 +19,9 @@
     { "slug": "footer-nav", "name": "Footer Navigation", "file": "footer-nav.html" },
     { "slug": "language-switcher", "name": "Language Switcher", "file": "language-switcher.html" }
   ],
+  "settings_pages": [
+    { "slug": "general", "name": "General", "file": "settings/general.json" }
+  ],
   "blocks": [
     { "slug": "hero", "dir": "hero" },
     { "slug": "rich-text", "dir": "rich-text" },

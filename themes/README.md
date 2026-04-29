@@ -19,6 +19,7 @@
 9. [Assets and `theme-asset:` references](#9-assets-and-theme-asset-references)
 10. [Forms wiring (forms extension)](#10-forms-wiring-forms-extension)
 11. [Site settings convention](#11-site-settings-convention)
+11a. [Theme settings (editor-driven)](#11a-theme-settings-editor-driven)
 12. [Template functions reference](#12-template-functions-reference)
 13. [Build & live-reload loop](#13-build--live-reload-loop)
 14. [The Mandalorian rules](#14-the-mandalorian-rules)
@@ -941,6 +942,135 @@ Settings **belong to layouts/partials/Tengo**, not to blocks. A block needing si
 
 ---
 
+## 11a. Theme settings (editor-driven)
+
+The convention in §11 covers settings the **theme** owns and seeds. **Theme settings** is the complement: a structured admin UI that lets editors edit theme-specific values (logo, palette swatches, copyright lines, integration keys, …) without touching `theme.tengo`. Each declared page becomes a sidebar entry in the admin under "Theme Settings"; values are stored in the same `site_settings` table under a per-theme namespace and are exposed to layouts, partials, blocks, and Tengo.
+
+### Declaring pages in `theme.json`
+
+Add a `settings_pages` array to the manifest. Each entry references an external JSON file so the manifest stays compact:
+
+```jsonc
+{
+  "name":    "My Theme",
+  "version": "1.0.0",
+  // …
+  "settings_pages": [
+    { "slug": "header", "name": "Header Settings", "file": "settings/header.json", "icon": "PanelTop" },
+    { "slug": "footer", "name": "Footer Settings", "file": "settings/footer.json", "icon": "PanelBottom" }
+  ]
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `slug` | ✓ | URL slug + storage namespace (`^[a-z0-9_-]+$`). |
+| `name` | ✓ | Sidebar label. Falls back to the per-page file's `name`. |
+| `file` | ✓ | Path to the schema JSON file, relative to the theme directory. |
+| `icon` | optional | Lucide-style icon name; defaults to a generic settings icon. |
+
+A page whose `file` is missing or fails to parse is **skipped with a log warning** — the theme still activates. This is the same soft-fail policy used elsewhere in the loader.
+
+### Per-page schema file
+
+The referenced JSON file declares the page's fields:
+
+```jsonc
+// themes/my-theme/settings/header.json
+{
+  "name":        "Header",
+  "description": "Logo, navigation behaviour, and contact CTA shown in the site header.",
+  "fields": [
+    { "key": "site_label", "label": "Site label",  "type": "text",
+      "default": "My Theme", "help": "Falls back to .app.settings.site_name when empty." },
+    { "key": "menu_depth", "label": "Menu depth",  "type": "number", "default": 2 },
+    { "key": "sticky",     "label": "Sticky header", "type": "toggle", "default": true },
+    { "key": "logo",       "label": "Logo",        "type": "image" },
+    { "key": "cta_style",  "label": "CTA style",   "type": "select",
+      "options": ["primary", "ghost", "link"], "default": "primary" }
+  ]
+}
+```
+
+Field shapes follow the same field-types reference used by blocks (see [§6](#6-field-types-reference)). Custom field types contributed by extensions work out of the box — the loader stores any unrecognised keys (`options`, `placeholder`, taxonomy hints, etc.) opaquely so the renderer's type registry can interpret them.
+
+### Admin UI behaviour
+
+- A "Theme Settings" sidebar group appears as soon as the active theme declares **one or more** pages. Themes with no `settings_pages` show no extra UI.
+- Each page renders the same `CustomFieldInput` controls used by node-edit forms — visual parity with the rest of the admin is automatic.
+- Values are **per theme**: switching themes hides the previous theme's pages but **preserves the stored rows**. Reactivating later restores the values.
+- Saving a page replaces every field's value with the new typed payload; secret-shaped keys are auto-encrypted by the existing settings layer.
+
+### Reading values from layouts and partials
+
+The render context exposes `.theme_settings.<page>.<field>`:
+
+```html
+{{- $logo := .theme_settings.header.logo -}}
+{{- with $logo.url -}}
+  <img src="{{ image_url . "medium" }}" alt="{{ $logo.alt }}">
+{{- end -}}
+
+{{ if .theme_settings.header.sticky }}<body class="has-sticky-header">{{ end }}
+```
+
+### Reading values from blocks
+
+Blocks don't see `.theme_settings` (they're sandboxed to their own field values), so two helpers are added to block templates:
+
+```html
+{{- $logo := themeSetting "header" "logo" -}}
+{{- $hdr  := themeSettingsPage "header" -}}
+{{ with $logo.url }}<img src="{{ . }}" alt="{{ $logo.alt }}">{{ end }}
+{{ with $hdr.site_label }}<span class="brand">{{ . }}</span>{{ end }}
+```
+
+Both helpers return `nil` (or an empty map) when the active theme has no matching page/field — gate with `{{ with }}` as you would for any other field.
+
+### Reading values from Tengo
+
+```tengo
+ts := import("core/theme_settings")
+
+logo := ts.get("header", "logo")          // single field, coerced to its declared type
+all  := ts.all("header")                  // map of every field on the page
+pages := ts.pages()                       // [{slug, name, icon}, ...] for the active theme
+slug  := ts.active_theme()                // active theme slug, "" when no theme is active
+```
+
+The module requires the `theme_settings:read` capability for non-internal callers (themes ship without explicit capability declarations and bypass the gate; extensions list it in `extension.json`'s `capabilities`). Returned shapes follow the field-type table in §6: text-types are strings, `number` is a float, `toggle` is a bool, structured types (`image`, `link`, `repeater`, …) are maps/arrays.
+
+### Field-type mismatch behaviour
+
+Stored values are **never auto-mutated** in the database, even when the schema changes:
+
+- Schema changes from `text` to `media` after a value `"Hello"` was saved → render layer (template, block helpers, Tengo) returns the field's declared `default` and the admin form surfaces a "previous value" hint above the input.
+- Saving the page with a new value replaces the stored payload with the new typed value.
+
+This is a deliberate trade-off: forward-compatible (schema evolution doesn't lose data the editor might still want to recover), reverse-compatible (downgrading the schema doesn't corrupt the form).
+
+### Storage model + lifecycle
+
+Every setting is stored in the existing `site_settings` table under the key:
+
+```
+theme:<theme-slug>:<page-slug>:<field-key>
+```
+
+Lifecycle:
+
+| Event | Effect |
+|---|---|
+| **Activate** | Registry populated from `theme.json` + per-page files. Bad pages logged & skipped. |
+| **Deactivate** | Registry cleared. Stored rows **preserved** for later reactivation. |
+| **Delete** | All rows under the theme's prefix wiped via `cms.DeleteThemeSettings`. |
+
+### Sizing guideline
+
+Keep the total fields under **~50 across all pages**. Long forms hurt UX — split into more pages instead of growing one page. The sidebar groups them naturally; a dozen narrowly-scoped pages reads better than one mega-form.
+
+---
+
 ## 12. Template functions reference
 
 Available in **every** theme template (layouts, partials, blocks, page templates, even string templates). Provided by the core renderer.
@@ -962,6 +1092,8 @@ Available in **every** theme template (layouts, partials, blocks, page templates
 | `filter` | `filter(name, value) → any` | Run a registered Tengo filter. |
 | `event` | `event(name, ctx, args…) → template.HTML` | Fire an event; collect HTML responses. |
 | `renderLayoutBlock` | `renderLayoutBlock(slug) → template.HTML` | **Layout/partial only.** Render a partial by slug. |
+| `themeSetting` | `themeSetting(page, key) → any` | **Block templates.** One field from a theme settings page (see [§11a](#11a-theme-settings-editor-driven)). |
+| `themeSettingsPage` | `themeSettingsPage(page) → map` | **Block templates.** Every field on a theme settings page. |
 
 **Block templates and partials also receive standard Go html/template builtins**: `if`, `range`, `with`, `define`/`block`/`template`, `printf`, `urlquery`, `html`, `js`, `or`, `and`, `not`, `eq`/`ne`/`lt`/`gt`, `len`, `index`, `slice`, etc. See [Go's html/template docs](https://pkg.go.dev/html/template).
 

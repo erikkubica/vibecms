@@ -53,15 +53,20 @@ type UserData struct {
 
 // TemplateData is the top-level context passed to layout templates.
 type TemplateData struct {
-	App  AppData
-	Node NodeData
-	User UserData
+	App           AppData
+	Node          NodeData
+	User          UserData
+	ThemeSettings map[string]map[string]any
 }
 
 // ToMap converts TemplateData to a map with snake_case keys for template access.
 // All keys use snake_case for consistency: {{.app.head_styles}}, {{.node.blocks_html}}.
 // All nested structs (languages, current_lang) are also converted to maps.
 func (td TemplateData) ToMap() map[string]interface{} {
+	ts := td.ThemeSettings
+	if ts == nil {
+		ts = map[string]map[string]any{}
+	}
 	return map[string]interface{}{
 		"app": map[string]interface{}{
 			"menus":         td.App.Menus,
@@ -98,6 +103,7 @@ func (td TemplateData) ToMap() map[string]interface{} {
 			"role": td.User.Role,
 			"full_name": td.User.FullName,
 		},
+		"theme_settings": ts,
 	}
 }
 

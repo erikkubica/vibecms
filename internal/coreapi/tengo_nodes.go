@@ -55,6 +55,8 @@ func nodesModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 			if m == nil {
 				return wrapError(fmt.Errorf("nodes.create: input must be a map")), nil
 			}
+			warnNodeInputShape(api, ctx, "nodes.create", m)
+			warnBlocksDataShape(api, ctx, "nodes.create", m)
 			n, err := api.CreateNode(ctx, nodeInputFromMap(m))
 			if err != nil {
 				return wrapError(err), nil
@@ -70,6 +72,8 @@ func nodesModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 			if m == nil {
 				return wrapError(fmt.Errorf("nodes.update: input must be a map")), nil
 			}
+			warnNodeInputShape(api, ctx, "nodes.update", m)
+			warnBlocksDataShape(api, ctx, "nodes.update", m)
 			n, err := api.UpdateNode(ctx, id, nodeInputFromMap(m))
 			if err != nil {
 				return wrapError(err), nil
@@ -354,4 +358,81 @@ func nodeToTengoObj(n *Node) tengo.Object {
 	}
 
 	return &tengo.ImmutableMap{Value: m}
+}
+
+// warnNodeInputShape catches the #1 silent data-loss bug: passing top-level
+// `fields:` instead of `fields_data:` to nodes.create/update. nodeInputFromMap
+// only reads `fields_data`, so `fields` is silently dropped.
+func warnNodeInputShape(api CoreAPI, ctx context.Context, op string, m map[string]tengo.Object) {
+	if _, hasFields := m["fields"]; hasFields {
+		if _, hasFieldsData := m["fields_data"]; !hasFieldsData {
+			_ = api.Log(ctx, "warn",
+				op+": top-level `fields:` is ignored — did you mean `fields_data:`? (node-level uses fields_data, blocks inside blocks_data use fields)",
+				nil)
+		}
+	}
+}
+
+// warnBlocksDataShape catches the inverse: blocks inside blocks_data must use
+// `fields:`, not `fields_data:`. Author confusion is symmetric and equally
+// silent — the renderer reads block["fields"], so block["fields_data"] is dropped.
+func warnBlocksDataShape(api CoreAPI, ctx context.Context, op string, m map[string]tengo.Object) {
+	bd, ok := m["blocks_data"]
+	if !ok {
+		return
+	}
+	arr, ok := bd.(*tengo.Array)
+	if !ok {
+		if iarr, ok := bd.(*tengo.ImmutableArray); ok {
+			for i, b := range iarr.Value {
+				checkBlockFieldsShape(api, ctx, op, i, b)
+			}
+		}
+		return
+	}
+	for i, b := range arr.Value {
+		checkBlockFieldsShape(api, ctx, op, i, b)
+	}
+}
+
+// warnFieldSchemaShape catches schema misconfigurations at register time:
+//   - term-typed fields missing `term_node_type` won't hydrate at render
+//   - select-typed fields whose options contain {value,label} objects crash
+//     the admin (React error #31). block.json options must be plain strings;
+//     this also catches the equivalent mistake in nodetypes.register schemas.
+func warnFieldSchemaShape(api CoreAPI, ctx context.Context, op string, fields []NodeTypeField) {
+	for _, f := range fields {
+		if f.Type == "term" && f.TermNodeType == "" {
+			_ = api.Log(ctx, "warn",
+				fmt.Sprintf("%s: field %q is type=term but term_node_type is empty — hydration will not match any term row", op, f.Name),
+				nil)
+		}
+		if f.Type == "select" {
+			for _, o := range f.Options {
+				if _, isMap := o.(map[string]any); isMap {
+					_ = api.Log(ctx, "warn",
+						fmt.Sprintf("%s: field %q is type=select with object options ({value,label}) — admin requires plain string options", op, f.Name),
+						nil)
+					break
+				}
+			}
+		}
+		if len(f.SubFields) > 0 {
+			warnFieldSchemaShape(api, ctx, op+"."+f.Name, f.SubFields)
+		}
+	}
+}
+
+func checkBlockFieldsShape(api CoreAPI, ctx context.Context, op string, idx int, b tengo.Object) {
+	bm := getTengoMap(b)
+	if bm == nil {
+		return
+	}
+	if _, hasFD := bm["fields_data"]; hasFD {
+		if _, hasF := bm["fields"]; !hasF {
+			_ = api.Log(ctx, "warn",
+				fmt.Sprintf("%s: blocks_data[%d] uses `fields_data:` — blocks inside blocks_data must use `fields:` (only the top-level node uses fields_data)", op, idx),
+				nil)
+		}
+	}
 }

@@ -63,9 +63,10 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 	nodeData := h.renderCtx.BuildNodeData(node, blocksHTML, languages)
 
 	templateData := TemplateData{
-		App:  appData,
-		Node: nodeData,
-		User: buildUserData(user),
+		App:           appData,
+		Node:          nodeData,
+		User:          buildUserData(user),
+		ThemeSettings: h.loadThemeSettingsForRender(c.Context()),
 	}
 
 	// Build block resolver
@@ -317,7 +318,12 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 	}
 
 	user := h.currentUser(c)
-	templateData := TemplateData{App: appData, Node: nodeData, User: buildUserData(user)}
+	templateData := TemplateData{
+		App:           appData,
+		Node:          nodeData,
+		User:          buildUserData(user),
+		ThemeSettings: h.loadThemeSettingsForRender(c.Context()),
+	}
 
 	blockResolver := func(slug string) (string, error) {
 		lb, err := h.layoutBlockSvc.Resolve(slug, defaultLangID)
@@ -375,7 +381,12 @@ func (h *PublicHandler) RenderWithLayout(c *fiber.Ctx, title string, innerHTML t
 		NodeType:   "page",
 	}
 
-	templateData := TemplateData{App: appData, Node: nodeData, User: buildUserData(user)}
+	templateData := TemplateData{
+		App:           appData,
+		Node:          nodeData,
+		User:          buildUserData(user),
+		ThemeSettings: h.loadThemeSettingsForRender(c.Context()),
+	}
 
 	blockResolver := func(slug string) (string, error) {
 		lb, err := h.layoutBlockSvc.Resolve(slug, defaultLangID)

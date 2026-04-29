@@ -3,6 +3,7 @@ package cms
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -186,6 +187,10 @@ func (s *ThemeMgmtService) GetByID(id int) (*models.Theme, error) {
 	}
 	return &theme, nil
 }
+
+// ThemesDir returns the base directory holding theme directories.
+// Exposed so the MCP checklist tool can introspect on-disk theme files.
+func (s *ThemeMgmtService) ThemesDir() string { return s.themesDir }
 
 // GetActive returns the currently active theme.
 func (s *ThemeMgmtService) GetActive() (*models.Theme, error) {
@@ -435,6 +440,14 @@ func (s *ThemeMgmtService) Delete(id int) error {
 	// Delete DB record.
 	if err := s.db.Delete(&models.Theme{}, id).Error; err != nil {
 		return fmt.Errorf("failed to delete theme record: %w", err)
+	}
+
+	// Settings rows wiped here only on full deletion; deactivation preserves
+	// them so re-activating restores user values.
+	if err := DeleteThemeSettings(context.Background(), s.db, theme.Slug); err != nil {
+		log.Printf("WARN: failed to delete theme settings for %s: %v", theme.Slug, err)
+		// Don't fail the whole Delete on this — theme row is already gone, settings
+		// rows are orphaned but harmless and the operator can clean up manually.
 	}
 
 	return nil

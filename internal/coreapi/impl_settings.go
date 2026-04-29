@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"squilla/internal/events"
 	"squilla/internal/models"
 	"squilla/internal/secrets"
 )
@@ -72,6 +73,7 @@ func (c *coreImpl) SetSetting(ctx context.Context, key, value string) error {
 		if err := db.Create(&s).Error; err != nil {
 			return fmt.Errorf("coreapi SetSetting create: %w", err)
 		}
+		c.publishSettingUpdated(key)
 		return nil
 	}
 
@@ -80,7 +82,20 @@ func (c *coreImpl) SetSetting(ctx context.Context, key, value string) error {
 	if err := db.Save(&s).Error; err != nil {
 		return fmt.Errorf("coreapi SetSetting update: %w", err)
 	}
+	c.publishSettingUpdated(key)
 	return nil
+}
+
+// publishSettingUpdated fires `setting.updated` so subscribers (notably the
+// public handler's site-settings cache) can invalidate. Without this,
+// scripts that mutate settings — including kernel pointers like
+// `homepage_node_id` — leave the in-process cache stale until the next
+// theme.activate or process restart.
+func (c *coreImpl) publishSettingUpdated(key string) {
+	if c.eventBus == nil {
+		return
+	}
+	c.eventBus.Publish("setting.updated", events.Payload{"key": key})
 }
 
 // GetSettings returns settings matching an optional prefix.

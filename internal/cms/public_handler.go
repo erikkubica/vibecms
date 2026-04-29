@@ -44,6 +44,9 @@ type PublicHandler struct {
 	themeBlockCache  map[string]string
 	activeLanguages  []models.Language
 	blockOutputCache map[string]string
+
+	themeSettingsRegistry *ThemeSettingsRegistry
+	themeSettingsAPI      settingsReader
 }
 
 // NewPublicHandler creates a new PublicHandler.
@@ -56,16 +59,20 @@ func NewPublicHandler(
 	menuSvc *MenuService,
 	renderCtx *RenderContext,
 	eventBus *events.EventBus,
+	themeSettingsRegistry *ThemeSettingsRegistry,
+	themeSettingsAPI settingsReader,
 ) *PublicHandler {
 	h := &PublicHandler{
-		db:             db,
-		renderer:       renderer,
-		sessions:       sessions,
-		layoutSvc:      layoutSvc,
-		layoutBlockSvc: layoutBlockSvc,
-		menuSvc:        menuSvc,
-		renderCtx:      renderCtx,
-		eventBus:       eventBus,
+		db:                    db,
+		renderer:              renderer,
+		sessions:              sessions,
+		layoutSvc:             layoutSvc,
+		layoutBlockSvc:        layoutBlockSvc,
+		menuSvc:               menuSvc,
+		renderCtx:             renderCtx,
+		eventBus:              eventBus,
+		themeSettingsRegistry: themeSettingsRegistry,
+		themeSettingsAPI:      themeSettingsAPI,
 	}
 	h.ClearCache()
 

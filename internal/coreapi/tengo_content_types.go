@@ -25,6 +25,7 @@ func nodeTypesModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 				return wrapError(fmt.Errorf("nodetypes.register: input must be a map")), nil
 			}
 			input := nodeTypeInputFromMap(m)
+			warnFieldSchemaShape(api, ctx, "nodetypes.register["+input.Slug+"]", input.FieldSchema)
 			res, err := api.RegisterNodeType(ctx, input)
 			if err != nil {
 				return wrapError(err), nil
@@ -156,6 +157,7 @@ func taxonomiesModule(api CoreAPI, ctx context.Context) map[string]tengo.Object 
 				return wrapError(fmt.Errorf("taxonomies.register: input must be a map")), nil
 			}
 			input := taxonomyInputFromMap(m)
+			warnFieldSchemaShape(api, ctx, "taxonomies.register["+input.Slug+"]", input.FieldSchema)
 			res, err := api.RegisterTaxonomy(ctx, input)
 			if err != nil {
 				return wrapError(err), nil
@@ -194,6 +196,7 @@ func taxonomiesModule(api CoreAPI, ctx context.Context) map[string]tengo.Object 
 				return wrapError(fmt.Errorf("taxonomies.update: input must be a map")), nil
 			}
 			input := taxonomyInputFromMap(m)
+			warnFieldSchemaShape(api, ctx, "taxonomies.update["+slug+"]", input.FieldSchema)
 			res, err := api.UpdateTaxonomy(ctx, slug, input)
 			if err != nil {
 				return wrapError(err), nil

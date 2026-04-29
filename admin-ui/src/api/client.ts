@@ -530,6 +530,70 @@ export async function updateSiteSettings(settings: Record<string, string>): Prom
   });
 }
 
+// ---------------------------------------------------------------------------
+// Theme settings
+// ---------------------------------------------------------------------------
+
+export interface ThemeSettingsPageSummary {
+  slug: string;
+  name: string;
+  icon?: string;
+}
+
+export interface ThemeSettingsListResponse {
+  active_theme_slug: string;
+  pages: ThemeSettingsPageSummary[];
+}
+
+export interface ThemeSettingsField {
+  key: string;
+  label: string;
+  type: string;
+  default?: unknown;
+  config?: Record<string, unknown>;
+}
+
+export interface ThemeSettingsPage {
+  slug: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  fields: ThemeSettingsField[];
+}
+
+export interface ThemeSettingsValue {
+  value: unknown;
+  compatible: boolean;
+  raw: string;
+}
+
+export interface ThemeSettingsPageResponse {
+  page: ThemeSettingsPage;
+  values: Record<string, ThemeSettingsValue>;
+}
+
+export async function getThemeSettingsPages(): Promise<ThemeSettingsListResponse> {
+  const res = await api<ApiResponse<ThemeSettingsListResponse>>("/admin/api/theme-settings");
+  return res.data;
+}
+
+export async function getThemeSettingsPage(slug: string): Promise<ThemeSettingsPageResponse> {
+  const res = await api<ApiResponse<ThemeSettingsPageResponse>>(
+    `/admin/api/theme-settings/${encodeURIComponent(slug)}`,
+  );
+  return res.data;
+}
+
+export async function saveThemeSettingsPage(
+  slug: string,
+  values: Record<string, unknown>,
+): Promise<void> {
+  await api(`/admin/api/theme-settings/${encodeURIComponent(slug)}`, {
+    method: "PUT",
+    body: JSON.stringify({ values }),
+  });
+}
+
 export async function clearCache(): Promise<{ message: string }> {
   const res = await api<ApiResponse<{ message: string }>>("/admin/api/cache/clear", {
     method: "POST",

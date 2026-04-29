@@ -48,14 +48,22 @@ func (s *Server) registerThemeTools() {
 	})
 
 	s.addTool(mcp.NewTool("core.theme.activate",
-		mcp.WithDescription("Activate a theme by ID. Emits theme.activated; layouts and blocks from the theme become live. Theme activation does NOT require a server restart."),
+		mcp.WithDescription("Activate a theme by ID. Emits theme.activated; layouts and blocks from the theme become live. Theme activation does NOT require a server restart. The response embeds a summary of core.theme.checklist for the activated theme — when checklist.failed > 0 you MUST call core.theme.checklist for details and address the failures BEFORE declaring the work done."),
 		mcp.WithNumber("id", mcp.Required()),
 	), "full", func(ctx context.Context, args map[string]any) (any, error) {
 		if mgmt == nil {
 			return nil, fmt.Errorf("theme management service not wired")
 		}
-		err := mgmt.Activate(intArg(args, "id"))
-		return map[string]any{"ok": err == nil, "restart_required": false}, err
+		id := intArg(args, "id")
+		err := mgmt.Activate(id)
+		out := map[string]any{"ok": err == nil, "restart_required": false}
+		if cl := summarizeActivatedThemeChecklist(mgmt, id); cl != nil {
+			out["checklist"] = cl
+			if failed, _ := cl["failed"].(int); failed > 0 {
+				out["next_step"] = "core.theme.checklist returned failures — call it for the full list and fix every fail before claiming done. Hardcoded fallbacks and missing test_data make screenshots fake-pass."
+			}
+		}
+		return out, err
 	})
 
 	s.addTool(mcp.NewTool("core.theme.deactivate",

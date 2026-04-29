@@ -17,6 +17,7 @@ The complete reference for building, customizing, and deploying Squilla themes.
 9. [Assets](#9-assets)
 10. [Scripting Integration](#10-scripting-integration)
 11. [Template Data Deep Dive](#11-template-data-deep-dive)
+11a. [Theme Settings](#11a-theme-settings)
 12. [Theme Installation & Deployment](#12-theme-installation--deployment)
 13. [Best Practices](#13-best-practices)
 14. [Complete Example Theme](#14-complete-example-theme)
@@ -1015,6 +1016,97 @@ Show different content based on login state:
 
 ---
 
+## 11a. Theme Settings
+
+Theme Settings is the architectural reference for the editor-driven settings UI a theme can declare. The author-facing how-to lives in `themes/README.md` (`Theme settings (editor-driven)`); this section covers the engine internals — storage, lifecycle, capability gating, and the mismatch-safe coercion layer — so extension authors and core contributors can reason about the wire shape without reading the source.
+
+### 11a.1 Manifest surface
+
+`theme.json` may declare a `settings_pages` array. Each entry references a JSON file that holds the page's field schema:
+
+```json
+{
+  "settings_pages": [
+    { "slug": "header", "name": "Header Settings", "file": "settings/header.json", "icon": "PanelTop" }
+  ]
+}
+```
+
+The manifest type is `cms.ThemeSettingsPageDef` (`internal/cms/theme_loader.go`). The per-page file is parsed by `cms.LoadSettingsPages` into `[]cms.ThemeSettingsPage` (`internal/cms/theme_settings_loader.go`), which in turn parses each field into `cms.ThemeSettingsField` — `key`, `label`, `type`, `default` (raw JSON), plus an opaque `Config` bag holding everything else (so renderer-specific extras like `options`, `min`, `placeholder`, taxonomy hints, and extension-contributed field-type config survive without core having to enumerate them).
+
+Soft-fail policy: a page whose file is missing or fails to parse is logged and skipped; a single bad page never blocks theme activation.
+
+### 11a.2 Storage model
+
+Every value lives in the existing `site_settings` table under a per-theme namespace. The canonical key is computed by `cms.SettingKey(themeSlug, pageSlug, fieldKey)` (`internal/cms/theme_settings_keys.go`) and has the exact shape:
+
+```
+theme:<theme-slug>:<page-slug>:<field-key>
+```
+
+`cms.ThemePrefix(slug)` returns `"theme:<slug>:"` — the LIKE prefix used by `GetSettings(prefix)` calls and by lifecycle cleanup. Reusing `site_settings` means encryption (for secret-shaped keys), audit hooks, and the existing settings cache all apply for free.
+
+### 11a.3 Lifecycle
+
+| Event | Effect on registry | Effect on stored rows |
+|---|---|---|
+| `core.theme.activate` | Populated from `theme.json` + per-page schemas; bad pages logged & skipped | Untouched |
+| `core.theme.deactivate` | Cleared (sidebar UI hides) | Preserved verbatim — reactivating restores values |
+| `core.theme.delete` (full removal) | Already cleared from prior deactivate | Wiped via `cms.DeleteThemeSettings(ctx, db, slug)` |
+
+The registry (`cms.ThemeSettingsRegistry`, `internal/cms/theme_settings_registry.go`) holds an in-memory snapshot of the active theme's pages. It's single-active by design — there's at most one active theme, so there's at most one active settings registry.
+
+### 11a.4 Mismatch handling
+
+Schema changes after values are saved are **not** auto-migrated. The contract is:
+
+- The DB column for the value is **never auto-mutated**. Whatever the editor saved stays exactly as saved (modulo encryption-at-rest for secret keys).
+- At read time (`cms.CoerceWithDefault` in `internal/cms/theme_settings_coerce.go`), an incompatible stored value falls back to the field's declared `default` — render templates and Tengo callers see the default, never garbage.
+- The admin form surfaces a small "previous value" hint above the input so the editor can recover or replace the value deliberately.
+- Saving the page replaces the stored payload with the new typed value, ending the mismatch.
+
+Rationale: schema evolution and downgrades both happen in real-world projects, and silently coercing or dropping data on schema change is the failure mode that costs hours of debugging. Loud mismatch + safe default + editor-side hint is the explicit design choice.
+
+Empty raw values (`""`, the absence of a row) coerce to `nil` and are reported "compatible" by `CoerceValue` — they render as the type's zero value at the template layer.
+
+### 11a.5 Capability matrix
+
+| Surface | Capability required |
+|---|---|
+| Admin HTTP routes (`GET /admin/api/theme-settings`, `GET /admin/api/theme-settings/:page`, `PUT /admin/api/theme-settings/:page`) | `manage_settings` |
+| Tengo `core/theme_settings` module (`get`, `all`, `pages`, `active_theme`) | `theme_settings:read` for non-internal callers; internal callers bypass |
+| Render context (`.theme_settings.<page>.<field>`, `themeSetting`/`themeSettingsPage` block helpers) | None — invoked under an internal-caller scope, gated only by the visitor reaching a published page |
+
+Internal-caller scoping is set explicitly in `internal/coreapi/tengo_theme_settings.go` so the inner `GetSetting`/`GetSettings` calls don't trigger the underlying `settings:read` gate — Tengo callers only need `theme_settings:read`.
+
+### 11a.6 Edge cases
+
+- **No active theme.** Admin HTTP endpoints return 404 (`GET /admin/api/theme-settings` returns an empty list); the sidebar group is hidden; render context is an empty map (templates `{{ with }}` over it as usual).
+- **Theme declares a page but the file is missing or malformed.** The page is omitted with a `[theme] settings page <slug> skipped: <error>` log line; the rest of the theme activates normally.
+- **Schema changes type after a save.** Stored value remains untouched; `cms.CoerceWithDefault` returns the declared default. Admin form shows the previous-value hint until the editor saves.
+- **Extension contributes a custom field type.** Just works — the loader stores `Config` opaquely, `CustomFieldInput` resolves the input component from the type registry, and the render layer delegates coercion to the registry too. Core does not need to know about the type.
+- **Secret-shaped keys** (e.g. a field key containing `password`, `secret`, `api_key`). The existing settings layer's encryption-at-rest applies automatically — stored ciphertext is decrypted on read before coercion.
+
+### 11a.7 Internal API references
+
+| Concern | File / symbol |
+|---|---|
+| Manifest type | `internal/cms/theme_loader.go` — `ThemeManifest.SettingsPages`, `ThemeSettingsPageDef` |
+| Per-page parser | `internal/cms/theme_settings_loader.go` — `LoadSettingsPages`, `ThemeSettingsPage`, `ThemeSettingsField` |
+| Active-theme registry | `internal/cms/theme_settings_registry.go` — `ThemeSettingsRegistry` |
+| Storage keys + cleanup | `internal/cms/theme_settings_keys.go` — `SettingKey`, `ThemePrefix`, `DeleteThemeSettings` |
+| Type coercion | `internal/cms/theme_settings_coerce.go` — `CoerceValue`, `CoerceWithDefault` |
+| Admin HTTP | `internal/cms/theme_settings_handler.go` |
+| Render-time injection | `internal/cms/theme_settings_render.go` — `BuildThemeSettingsContext`, `themeSetting` / `themeSettingsPage` template funcs |
+| Tengo module | `internal/coreapi/tengo_theme_settings.go` — `core/theme_settings` |
+| Admin SPA page | `admin-ui/src/pages/theme-settings.tsx` |
+| Admin SPA sidebar wiring | `admin-ui/src/sdui/admin-shell.tsx` |
+| API client | `admin-ui/src/api/client.ts` (`getThemeSettingsPages`, `getThemeSettingsPage`, `saveThemeSettingsPage`) |
+
+For the author-facing how-to (declaring pages, reading from templates/blocks/Tengo, sizing guideline) see `themes/README.md` §11a.
+
+---
+
 ## 12. Theme Installation & Deployment
 
 ### Loading at Startup
@@ -1341,3 +1433,134 @@ log.info("Agency Starter theme loaded!")
 ---
 
 This completes the Squilla theming reference. For questions about the Tengo scripting API, see `docs/scripting_api.md`. For admin UI customization, see `docs/admin_ui.md`.
+
+---
+
+## Appendix A — Common silent-failure modes
+
+A real-world theme port (`docs/theme-build-notes.md`) catalogued ~40
+silent failures. Most are now fail-loud — log warnings or hard rejection
+at theme load. This appendix is a quick-scan reference. The MCP tool
+`core.guide` also returns a machine-readable `gotchas` array covering
+the same content.
+
+### Data-shape asymmetries (the silent data-loss family)
+
+| Where | Required key | Wrong (silent) | Note |
+|---|---|---|---|
+| `nodes.create({...})` top level | `fields_data:` | `fields:` | Now logs a warning on misuse. |
+| Block inside `blocks_data: [{type, ...}]` | `fields:` | `fields_data:` | Now logs a warning on misuse. |
+| `block.json` `field_schema` entry | `key:` | `name:` | Theme loader now hard-rejects. |
+| `nodetypes.register({field_schema:[...]})` | `name:` | `key:` | Auto-falls back to `key` for compatibility but stay consistent. |
+| `block.json` `select`/`radio` options | `["a","b"]` | `[{value,label}]` | Theme loader now hard-rejects (used to crash admin with React #31). |
+| `term`-typed schema entry | `term_node_type:` set | omitted | Logs a warning at register time; hydration won't match. |
+| Term-typed field value | `{slug, name}` object | bare slug string | Admin can't pre-select bare strings; templates handle both. |
+| Real taxonomy on a node | `taxonomies: { tax: [slugs] }` | `fields_data: { tax: [...] }` | The taxonomies tab and `tax_query` only see the `taxonomies` JSONB column. |
+| Settings template lookup | `index $s "key.with.dots"` or `mustSetting $s "k"` | `.app.settings.key.with.dots` | Settings keys keep their dots — Go templates can't dot-traverse them. |
+
+### Fail-loud helpers
+
+- **`mustSetting $settings "<key>"`** — errors loudly when a required
+  setting is missing or empty. Use for any setting your template can't
+  render correctly without.
+- **`setting $settings "<key>"`** — graceful: returns "" on miss. Use
+  for optional settings only.
+
+### Tengo language gotchas
+
+- `log.error("…")` is a **parse error** — `error` is a reserved selector.
+  Use `log.warn(…)`, `log.info(…)`, or the alias `log.err(…)`.
+- `is_string`, `is_undefined`, `is_error` are built-ins. Use them on
+  optional map keys (no exception thrown for missing key).
+- Tengo imports are relative without extension: `import("./setup/foo")`.
+  Each module needs `export {…}`.
+- A bare top-level `return` inside a filter terminates the script.
+  Wrap in `if/else` so `response =` is set first.
+
+### Cache & lifecycle
+
+| Change | What invalidates the cache |
+|---|---|
+| Edit `view.html` / `block.json` | Re-activate the theme (or wait for `content_hash` resync to detect file changes). |
+| Edit `layouts/*.html` / `partials/*.html` | Re-activate. Layouts/partials only re-read at activation. |
+| `core.settings.set(...)` | Now publishes `setting.updated` and busts the in-process settings cache. |
+| `core.theme.activate` | Busts everything: layouts, partials, blocks, settings. |
+
+### Theme HTTP routes
+
+`routes.register("GET", "/docs", "./routes/docs")` mounts the handler at
+**`/api/theme/docs`** — NOT at `/docs`. Themes cannot shadow public node
+routes. To redirect a bare path, point a menu link directly at the
+destination, or use an extension `public_route` (extensions are not
+prefixed).
+
+### Filter usage
+
+`{{ filter "name" }}` (no value arg) throws `"wrong number of args"`.
+For input-less filters pass an empty dict:
+```html
+{{ $things := filter "list_things" (dict) }}
+```
+
+Filters defined in `scripts/filters/*.tengo` are auto-loaded as importable
+modules but **not** registered as named filter handlers — register
+explicitly:
+```tengo
+filters := import("core/filters")
+filters.add("list_docs", "./filters/list_docs")
+```
+
+### Dev-mode iteration
+
+Set `SQUILLA_DEV_MODE=true` in dev environments. Seeds receive a
+top-level `dev_mode` boolean. Branch on it to overwrite-on-reseed for
+fast iteration; production stays idempotent because the env var is unset:
+
+```tengo
+res := nodes.query({ node_type: "page", slug: "home", limit: 1 })
+if res.total > 0 && dev_mode {
+    nodes.delete(res.nodes[0].id)
+    res = { total: 0 }
+}
+if res.total == 0 {
+    nodes.create({ ... })
+}
+```
+
+### Production-readiness checklist
+
+- Run `core.theme.checklist({ slug: "<slug>" })` for automated structural
+  checks (theme.json validity, schemas, slug prefixing, Tengo gotchas).
+- Walk `docs/theme-checklist.md` for the manual checks (admin UX,
+  public render, idempotency).
+- Don't claim done until both pass.
+
+## Appendix B — Template function reference (verified whitelist)
+
+| Function | Purpose |
+|---|---|
+| `safeHTML s` | Bypass HTML escaping. Use only on trusted strings or `event` results. |
+| `safeURL s` | Bypass URL escaping. |
+| `raw s` | Same as `safeHTML`. |
+| `dict k1 v1 k2 v2 ...` | Build a map literal. |
+| `list a b c ...` | Build a slice. |
+| `seq n` | Range `[0..n-1]`. |
+| `mod a b` / `add a b` / `sub a b` | Integer math. |
+| `json v` | Pretty-print v as JSON. |
+| `lastWord s` / `beforeLastWord s` | String helpers. |
+| `split sep s` | Split into a slice. |
+| `image_url url size` | Cached/optimized image URL. |
+| `image_srcset url size1 size2 ...` | Responsive `srcset`. |
+| `filter name value` | Run a registered Tengo filter (2 args required). |
+| `event name ctx ...` | Fire an event; collect HTML responses. |
+| `deref v` | Dereference `*string`/`*int` → bare value. |
+| `renderLayoutBlock slug` | Render a partial (layout/partial scope only). |
+| `setting settings key` | Settings lookup with empty-on-miss fallback. |
+| `mustSetting settings key` | Settings lookup that errors on miss/empty. |
+
+Notably **absent** from the funcmap (these are Go template built-ins, used
+without a leading function name): `eq`, `ne`, `lt`, `gt`, `and`, `or`,
+`not`, `index`, `len`, `range`, `with`, `if`, `printf`. Common helpers
+that don't exist in Squilla: `trimPrefix`, `hasPrefix`, `default`. If you
+reach for one of those, write the logic inline or move it to a Tengo
+filter.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -108,9 +109,56 @@ func renderPreview(c *fiber.Ctx, h *PublicHandler, id uint, draft *NodeDraftOver
 		return previewHTMLError(c, fiber.StatusInternalServerError,
 			"Renderer returned an empty document. Verify the node has a layout assigned and that the active theme provides templates for it.")
 	}
+	// Inject <base href> so absolute paths in the rendered HTML resolve
+	// against the live site origin even when the editor opens this
+	// response inside a blob: URL. Without this, /theme/assets/...,
+	// /media/..., and /forms/submit/... 404 because the browser tries
+	// to resolve them against the blob URL's path component.
+	rendered = injectBaseHref(rendered, baseHrefForRequest(c))
 	c.Set("Content-Type", "text/html; charset=utf-8")
 	c.Set("Cache-Control", "no-store, max-age=0")
 	return c.Status(fiber.StatusOK).SendString(rendered)
+}
+
+// baseHrefForRequest returns the absolute origin (scheme + host) the
+// editor opened the admin from, so the preview response carries a real
+// base URL even when it's loaded inside a blob: document.
+func baseHrefForRequest(c *fiber.Ctx) string {
+	scheme := c.Protocol()
+	host := c.Hostname()
+	if host == "" {
+		host = string(c.Request().Host())
+	}
+	if host == "" {
+		// No way to recover — return relative root and hope the consumer
+		// is still loading the response on the same origin.
+		return "/"
+	}
+	return scheme + "://" + host + "/"
+}
+
+// injectBaseHref inserts a <base href="..."> tag immediately after <head>
+// in the rendered HTML. Idempotent: if the document already declares a
+// base tag we leave it alone (themes can opt out by shipping their own).
+func injectBaseHref(htmlDoc, base string) string {
+	// Quick guard — if the theme already wrote its own base tag, don't
+	// double up.
+	if strings.Contains(htmlDoc, "<base ") {
+		return htmlDoc
+	}
+	idx := strings.Index(htmlDoc, "<head>")
+	if idx < 0 {
+		idx = strings.Index(htmlDoc, "<head ")
+	}
+	if idx < 0 {
+		return htmlDoc
+	}
+	closeTag := strings.Index(htmlDoc[idx:], ">")
+	if closeTag < 0 {
+		return htmlDoc
+	}
+	insertPos := idx + closeTag + 1
+	return htmlDoc[:insertPos] + `<base href="` + html.EscapeString(base) + `">` + htmlDoc[insertPos:]
 }
 
 // previewHTMLError renders a minimal-but-readable error page. Used in

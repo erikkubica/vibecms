@@ -14,8 +14,8 @@ import (
 // does not burn 10 discovery calls before it does useful work.
 func (s *Server) registerGuideTools() {
 	s.addTool(mcp.NewTool("core.guide",
-		mcp.WithDescription("META. Call this first when you're new to Squilla or unsure which tool to reach for. Returns a goal→tool decision tree (recipes for common journeys) plus a live snapshot of CMS state (active theme, counts, node types, recent nodes). Replaces ~10 discovery calls. Optional topic narrows the response: 'pages' | 'blocks' | 'themes' | 'taxonomies' | 'media' | 'extensions'."),
-		mcp.WithString("topic", mcp.Description("Optional: narrow the response to one domain.")),
+		mcp.WithDescription("META. Call this first when you're new to Squilla or unsure which tool to reach for. Returns a goal→tool decision tree (recipes for common journeys) plus a live snapshot of CMS state (active theme, counts, node types, recent nodes). Replaces ~10 discovery calls. Optional topic narrows the response: 'pages' | 'editing' | 'blocks' | 'themes' | 'taxonomies' | 'media' | 'extensions'. The full list is always returned in available_topics on the response."),
+		mcp.WithString("topic", mcp.Description("Optional: narrow the response to one domain. See available_topics on the response for the full set.")),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
 		return s.buildGuide(ctx, stringArg(args, "topic"))
 	})
@@ -38,12 +38,14 @@ func (s *Server) registerGuideTools() {
 // now" in a single payload.
 func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, error) {
 	out := map[string]any{
-		"version":     "1",
-		"namespace":   "core.<domain>.<verb>",
-		"recipes":     guideRecipes(topic),
-		"data_shapes": guideShapes(),
-		"conventions": guideConventions(),
-		"gotchas":     guideGotchas(),
+		"version":          "1",
+		"namespace":        "core.<domain>.<verb>",
+		"recipes":          guideRecipes(topic),
+		"data_shapes":      guideShapes(),
+		"conventions":      guideConventions(),
+		"gotchas":          guideGotchas(),
+		"available_topics": guideTopics(),
+		"editing_playbook": editingPlaybook(),
 	}
 
 	// Live snapshot — best-effort. Any failure becomes a note rather than a
@@ -68,6 +70,12 @@ func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, 
 		}
 		if q, err := s.deps.CoreAPI.QueryNodes(ctx, coreapi.NodeQuery{Limit: 5, OrderBy: "updated_at DESC"}); err == nil {
 			snap["recent_nodes"] = q
+		}
+		// Sections per node-type — derived from fields_data.section.{slug,name}
+		// across existing nodes. Surfaces the otherwise-invisible "what
+		// docs/category sections already exist?" question raised by AI authors.
+		if sections, err := s.collectNodeSections(ctx); err == nil && len(sections) > 0 {
+			snap["sections_by_node_type"] = sections
 		}
 	}
 	out["snapshot"] = snap
@@ -198,6 +206,35 @@ func guideRecipes(topic string) []map[string]any {
 			"topic": "extensions",
 			"steps": []string{"core.extension.standards", "core.extension.deploy", "core.extension.get"},
 			"notes": "Zip the extension directory (extension.json + admin-ui/dist + scripts + bin/<plugin> if any), base64-encode, call core.extension.deploy({body_base64, activate:true}). The archive lands in data/extensions/<slug>/ (persistent volume); image-bundled extensions in extensions/ stay untouched. Plugin binaries declared in manifest.plugins[].binary are chmod'd to 0755 automatically. Pre-build them for the host OS/arch — Squilla does not cross-compile. activate=true runs HotActivate (migrations, plugin spawn, script load, block load) without a server restart. 50 MB cap.",
+		},
+		{
+			"goal":  "Author and publish a documentation page (squilla theme)",
+			"topic": "editing",
+			"steps": []string{
+				"core.nodetype.get(slug='documentation') — confirm the field_schema (order, section{name,slug}, summary)",
+				"core.guide(topic='editing') — read editing_playbook.docs_page.fields_data and editing_playbook.docs_blocks for shapes",
+				"core.layout.list — confirm 'docs' layout exists",
+				"core.node.query({node_type:'documentation', limit:200}) — see existing fields_data.section values to reuse a section, or coin a new {name,slug}",
+				"core.node.create({node_type:'documentation', language_code:'en', title, slug, status:'published', layout_slug:'docs', excerpt, seo_settings:{meta_title, meta_description}, fields_data:{order, section:{name,slug}, summary}, blocks_data:[...]})",
+				"Inspect the response.warnings[] — fix anything flagged before declaring done",
+				"core.render.node_preview(id) — verify rendered HTML; or open response.full_url in a browser",
+			},
+			"notes": "layout_slug:'docs' is REQUIRED — the documentation node-type does not auto-fill a default layout. Sections are an editorial concept (sidebar grouping); the slug must be kebab-case and stable (used as the URL fragment / sidebar key). Reuse an existing section.slug to keep the sidebar grouping coherent.",
+		},
+		{
+			"goal":  "List the existing 'sections' inside a node-type (docs sidebar groups, etc.)",
+			"topic": "editing",
+			"steps": []string{
+				"core.guide(topic='editing') — read snapshot.sections_by_node_type",
+				"core.node.query({node_type:'documentation', limit:200}) — fall back when the snapshot is omitted (cold cache)",
+			},
+			"notes": "There's no dedicated 'list sections' tool because sections are a soft convention on fields_data.section. The guide snapshot aggregates distinct {slug,name} per node-type for cheap discovery.",
+		},
+		{
+			"goal":  "Pick a layout for a content node (set layout_slug)",
+			"topic": "editing",
+			"steps": []string{"core.layout.list", "core.node.create / core.node.update with layout_slug:'<slug>'"},
+			"notes": "If layout_slug is omitted, the node uses the active theme's default layout. Node-type-level defaults are NOT applied at write time; setting layout_slug explicitly is the only reliable way to opt into a non-default layout (e.g. 'docs').",
 		},
 	}
 	if topic == "" {
@@ -330,6 +367,31 @@ func guideConventions() []string {
 // one-line description, captured at registration time by addTool.
 func (s *Server) toolIndex() []toolCatalogEntry {
 	return s.toolCatalog
+}
+
+// guideTopics enumerates every topic referenced by the static recipes plus
+// the synthetic 'editing' topic. Returned on every core.guide call so
+// clients can discover narrowing options without trial and error.
+func guideTopics() []string {
+	seen := map[string]bool{}
+	for _, r := range guideRecipes("") {
+		if t, ok := r["topic"].(string); ok && t != "" {
+			seen[t] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for t := range seen {
+		out = append(out, t)
+	}
+	// Stable order — easier diff and predictable AI prompts.
+	for i := range out {
+		for j := i + 1; j < len(out); j++ {
+			if out[j] < out[i] {
+				out[i], out[j] = out[j], out[i]
+			}
+		}
+	}
+	return out
 }
 
 func themeStandards() map[string]any {

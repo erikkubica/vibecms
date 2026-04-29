@@ -3,6 +3,7 @@ package cms
 import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"squilla/internal/api"
 	"squilla/internal/auth"
@@ -51,32 +52,69 @@ type settingValue struct {
 func (h *SettingsHandler) List(c *fiber.Ctx) error {
 	prefix := c.Query("prefix", "")
 
-	var settings []models.SiteSetting
+	// Resolve per-key with locale fallback: prefer the admin's current
+	// language; fall back to the default language for keys that haven't
+	// been overridden in that locale yet.
+	locale := string(c.Request().Header.Peek("X-Admin-Language"))
+	def := h.defaultLanguageCode()
+	if locale == "" {
+		locale = def
+	}
+
 	q := h.db.Order("key ASC")
 	if prefix != "" {
 		q = q.Where("key LIKE ?", prefix+"%")
 	}
+	switch {
+	case locale == "" && def == "":
+		// No languages seeded yet — return empty rather than dump every
+		// row regardless of language.
+		return api.Success(c, map[string]any{})
+	case def == "" || locale == def:
+		q = q.Where("language_code = ?", locale)
+	default:
+		q = q.Where("language_code IN ?", []string{locale, def})
+	}
+
+	var settings []models.SiteSetting
 	if err := q.Find(&settings).Error; err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list settings")
 	}
 
-	result := make(map[string]any)
+	type pick struct {
+		raw    string
+		locale string
+	}
+	chosen := make(map[string]pick, len(settings))
 	for _, s := range settings {
 		raw := ""
 		if s.Value != nil {
 			raw = *s.Value
 		}
-		if secrets.IsSecretKey(s.Key) {
-			// `is_set` accounts for either a plaintext non-empty value or
-			// a stored ciphertext envelope; both indicate "the operator
-			// has provided this credential".
-			result[s.Key] = settingValue{Value: "***", IsSet: raw != ""}
+		existing, ok := chosen[s.Key]
+		if !ok || (existing.locale == def && s.LanguageCode == locale) {
+			chosen[s.Key] = pick{raw: raw, locale: s.LanguageCode}
+		}
+	}
+
+	result := make(map[string]any, len(chosen))
+	for key, p := range chosen {
+		if secrets.IsSecretKey(key) {
+			result[key] = settingValue{Value: "***", IsSet: p.raw != ""}
 			continue
 		}
-		result[s.Key] = raw
+		result[key] = p.raw
 	}
 
 	return api.Success(c, result)
+}
+
+// defaultLanguageCode returns the code of the language flagged is_default=true,
+// or "" before any language has been seeded.
+func (h *SettingsHandler) defaultLanguageCode() string {
+	var code string
+	_ = h.db.Table("languages").Select("code").Where("is_default = ?", true).Limit(1).Scan(&code).Error
+	return code
 }
 
 // BulkUpdate handles PUT /settings — updates multiple settings at once.
@@ -87,6 +125,20 @@ func (h *SettingsHandler) BulkUpdate(c *fiber.Ctx) error {
 	var body map[string]string
 	if err := c.BodyParser(&body); err != nil {
 		return api.Error(c, fiber.StatusBadRequest, "INVALID_BODY", "Invalid request body")
+	}
+
+	// Resolve write locale: admin's selected language, falling back to the
+	// site default. Every settings row carries a real language code now, so
+	// an empty locale is only possible on a fresh install before any
+	// language has been seeded — in that case we skip the write rather than
+	// stash data under "".
+	locale := string(c.Request().Header.Peek("X-Admin-Language"))
+	if locale == "" {
+		locale = h.defaultLanguageCode()
+	}
+	if locale == "" {
+		return api.Error(c, fiber.StatusBadRequest, "NO_LANGUAGE",
+			"No language is configured; create a default language before saving settings")
 	}
 
 	for key, value := range body {
@@ -107,11 +159,13 @@ func (h *SettingsHandler) BulkUpdate(c *fiber.Ctx) error {
 			}
 		}
 		v := stored
-		setting := models.SiteSetting{
-			Key:   key,
-			Value: &v,
+		row := models.SiteSetting{Key: key, LanguageCode: locale, Value: &v}
+		if err := h.db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "key"}, {Name: "language_code"}},
+			DoUpdates: clause.AssignmentColumns([]string{"value", "updated_at"}),
+		}).Create(&row).Error; err != nil {
+			return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist setting")
 		}
-		h.db.Where("key = ?", key).Assign(setting).FirstOrCreate(&setting)
 	}
 
 	if h.eventBus != nil {

@@ -82,22 +82,16 @@ func (e *Engine) siteSettingsLayout() *LayoutNode {
 		},
 	}
 
+	// SettingsForm owns its own page-level spacing (title row + 2-col grid).
+	// The admin shell's <main> already provides outer padding, so we don't
+	// wrap with another padded VerticalStack here.
 	return &LayoutNode{
-		Type: "VerticalStack",
+		Type: "SettingsForm",
 		Props: map[string]any{
-			"gap":       6,
-			"className": "p-6",
-		},
-		Children: []LayoutNode{
-			{
-				Type: "SettingsForm",
-				Props: map[string]any{
-					"title":            "Site Settings",
-					"description":      "Configure your site's core settings",
-					"schema":           schema,
-					"show_clear_cache": true,
-				},
-			},
+			"title":            "Site Settings",
+			"description":      "Configure your site's core settings",
+			"schema":           schema,
+			"show_clear_cache": true,
 		},
 	}
 }

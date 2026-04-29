@@ -97,12 +97,11 @@ type listResponse struct {
 // loader's Raw blob or expose Config as raw map keys mixed with reserved
 // keys — clients see a clean { key, label, type, default, config } object.
 type fieldDTO struct {
-	Key          string          `json:"key"`
-	Label        string          `json:"label"`
-	Type         string          `json:"type"`
-	Default      json.RawMessage `json:"default,omitempty"`
-	Translatable bool            `json:"translatable,omitempty"`
-	Config       map[string]any  `json:"config,omitempty"`
+	Key     string          `json:"key"`
+	Label   string          `json:"label"`
+	Type    string          `json:"type"`
+	Default json.RawMessage `json:"default,omitempty"`
+	Config  map[string]any  `json:"config,omitempty"`
 }
 
 // pageDTO is the full page schema returned by Get.
@@ -170,8 +169,7 @@ func (h *ThemeSettingsHandler) Get(c *fiber.Ctx) error {
 
 	// Single bulk read scoped to the admin's current language. The Loc
 	// variant returns each key resolved for that locale, falling back to the
-	// shared row when no per-locale value exists. Non-translatable fields
-	// always live at the shared row, so they come through unchanged.
+	// default-language row when no per-locale value exists.
 	locale := adminLocale(c)
 	rawAll, err := h.coreAPI.GetSettingsLoc(c.Context(), ThemePrefix(themeSlug), locale)
 	if err != nil {
@@ -216,7 +214,15 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 	// which fans out to subscribers like sitemap-generator that fully rebuild
 	// on each event — N parallel rebuilds row-lock site_settings and time
 	// out at 25s, killing the process.
-	adminLoc := adminLocale(c)
+	// Resolve the write locale once: the admin's selected language if set,
+	// otherwise the site's default language. Every settings field is now
+	// implicitly translatable, so each row carries a real language code.
+	fieldLoc := adminLocale(c)
+	if fieldLoc == "" && h.db != nil {
+		var def string
+		_ = h.db.Table("languages").Select("code").Where("is_default = ?", true).Limit(1).Scan(&def).Error
+		fieldLoc = def
+	}
 	for _, field := range page.Fields {
 		raw, present := body.Values[field.Key]
 		if !present {
@@ -225,13 +231,6 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 		stored, err := encodeForStorage(field.Type, raw)
 		if err != nil {
 			return api.Error(c, fiber.StatusBadRequest, "ENCODE_FAILED", "Failed to encode field value")
-		}
-		// Translatable fields land in the admin's current locale; everything
-		// else lives at the shared row regardless of UI selection. An empty
-		// adminLoc collapses to the shared row in either case.
-		fieldLoc := ""
-		if field.Translatable {
-			fieldLoc = adminLoc
 		}
 		key := SettingKey(themeSlug, page.Slug, field.Key)
 		// Production path: direct GORM write (db != nil). Tests pass db=nil
@@ -278,12 +277,11 @@ func toPageDTO(p ThemeSettingsPage) pageDTO {
 	fields := make([]fieldDTO, 0, len(p.Fields))
 	for _, f := range p.Fields {
 		fields = append(fields, fieldDTO{
-			Key:          f.Key,
-			Label:        f.Label,
-			Type:         f.Type,
-			Default:      f.Default,
-			Translatable: f.Translatable,
-			Config:       f.Config,
+			Key:     f.Key,
+			Label:   f.Label,
+			Type:    f.Type,
+			Default: f.Default,
+			Config:  f.Config,
 		})
 	}
 	return pageDTO{

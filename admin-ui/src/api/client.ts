@@ -531,16 +531,33 @@ export async function reattachBlockType(id: number | string): Promise<BlockType>
   return res.data;
 }
 
-export async function getSiteSettings(): Promise<Record<string, string>> {
-  const res = await api<ApiResponse<Record<string, string>>>("/admin/api/settings");
+export async function getSiteSettings(
+  locale?: string,
+): Promise<Record<string, string>> {
+  const res = await api<ApiResponse<Record<string, string>>>(
+    "/admin/api/settings",
+    { headers: siteSettingsLocaleHeader(locale) },
+  );
   return res.data;
 }
 
-export async function updateSiteSettings(settings: Record<string, string>): Promise<void> {
+export async function updateSiteSettings(
+  settings: Record<string, string>,
+  locale?: string,
+): Promise<void> {
   await api<ApiResponse<{ message: string }>>("/admin/api/settings", {
     method: "PUT",
     body: JSON.stringify(settings),
+    headers: siteSettingsLocaleHeader(locale),
   });
+}
+
+// siteSettingsLocaleHeader is the same shape as localeHeader (defined further
+// down in this file). Re-declared here so this block doesn't depend on source
+// ordering — the helper is trivial.
+function siteSettingsLocaleHeader(locale?: string): Record<string, string> {
+  if (!locale || locale === "all") return {};
+  return { "X-Admin-Language": locale };
 }
 
 // ---------------------------------------------------------------------------
@@ -563,7 +580,6 @@ export interface ThemeSettingsField {
   label: string;
   type: string;
   default?: unknown;
-  translatable?: boolean;
   config?: Record<string, unknown>;
 }
 

@@ -88,10 +88,9 @@ export function SettingsForm({
   const [clearing, setClearing] = useState(false);
   const { languages, currentCode } = useAdminLanguage();
   // Per-form language override. Defaults to and follows the admin header
-  // language, but the in-form selector below can pin a different value.
-  // Currently a placeholder for site/extension settings — fields don't yet
-  // carry a translatable flag at this layer, so changing it has no visible
-  // effect until those forms opt into per-locale storage.
+  // language; the in-form selector below pins a different value if the
+  // operator wants to edit a specific language without affecting the rest
+  // of the admin.
   const [pageLocale, setPageLocale] = useState<string>(currentCode);
   useEffect(() => {
     setPageLocale(currentCode);
@@ -102,7 +101,7 @@ export function SettingsForm({
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const promises: Promise<unknown>[] = [getSiteSettings()];
+      const promises: Promise<unknown>[] = [getSiteSettings(pageLocale)];
       if (needsPages) {
         promises.push(getNodes({ page: 1, per_page: 200, status: "published" }));
       }
@@ -125,7 +124,7 @@ export function SettingsForm({
     } finally {
       setLoading(false);
     }
-  }, [schema, needsPages]);
+  }, [schema, needsPages, pageLocale]);
 
   useEffect(() => {
     fetchAll();
@@ -142,7 +141,7 @@ export function SettingsForm({
         toast.info("No changes to save");
         return;
       }
-      await updateSiteSettings(diff);
+      await updateSiteSettings(diff, pageLocale);
       setOriginal({ ...values });
       toast.success("Settings saved");
     } catch {
@@ -226,7 +225,6 @@ export function SettingsForm({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All languages (shared)</SelectItem>
                     {languages.map((lang) => (
                       <SelectItem key={lang.code} value={lang.code}>
                         {lang.flag ? `${lang.flag} ` : ""}
@@ -236,9 +234,8 @@ export function SettingsForm({
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] leading-snug text-slate-500">
-                  Defaults to the admin header language. Site settings don't
-                  yet support per-locale values — picking a language here is
-                  a no-op until those fields opt in.
+                  Each setting stores a separate value per language. Languages
+                  without an override read from the default language.
                 </p>
               </div>
             )}

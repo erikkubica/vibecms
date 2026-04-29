@@ -10,7 +10,7 @@ interface AdminLanguageContextType {
 
 const AdminLanguageContext = createContext<AdminLanguageContextType>({
   languages: [],
-  currentCode: "all",
+  currentCode: "",
   currentLanguage: undefined,
   setCurrentCode: () => {},
 });
@@ -20,19 +20,25 @@ const STORAGE_KEY = "squilla_admin_lang";
 export function AdminLanguageProvider({ children }: { children: ReactNode }) {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [currentCode, setCurrentCodeState] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEY) || "all";
+    // Legacy "all" sentinel collapses to "" so the backend resolves it to
+    // the site's default language.
+    const stored = localStorage.getItem(STORAGE_KEY) || "";
+    return stored === "all" ? "" : stored;
   });
 
   useEffect(() => {
     getLanguages(true).then((langs) => {
       setLanguages(langs);
-      // If stored code no longer exists, reset to default language or "all"
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored && stored !== "all" && !langs.some((l) => l.code === stored)) {
-        const def = langs.find((l) => l.is_default);
-        const fallback = def?.code || "all";
+      const isInvalid =
+        !stored ||
+        stored === "all" ||
+        !langs.some((l) => l.code === stored);
+      if (isInvalid) {
+        const fallback = langs.find((l) => l.is_default)?.code || langs[0]?.code || "";
         setCurrentCodeState(fallback);
-        localStorage.setItem(STORAGE_KEY, fallback);
+        if (fallback) localStorage.setItem(STORAGE_KEY, fallback);
+        else localStorage.removeItem(STORAGE_KEY);
       }
     }).catch(() => {});
   }, []);

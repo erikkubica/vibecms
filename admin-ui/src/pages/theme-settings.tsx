@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Save, Loader2, AlertCircle, Palette, Globe } from "lucide-react";
+import { Save, Loader2, AlertCircle, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -113,10 +113,6 @@ export function ThemeSettingsPage() {
   );
 
   const hasChanges = JSON.stringify(values) !== JSON.stringify(original);
-  const hasTranslatable = useMemo(
-    () => (data ? data.page.fields.some((f) => f.translatable) : false),
-    [data],
-  );
 
   if (loading && !data) {
     return (
@@ -170,20 +166,9 @@ export function ThemeSettingsPage() {
                     v && v.compatible === false && v.raw !== "";
                   return (
                     <div key={originalField.key} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={`tf-${originalField.key}`}>
-                          {originalField.label}
-                        </Label>
-                        {originalField.translatable && (
-                          <span
-                            className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-700"
-                            title="This field stores a separate value per language."
-                          >
-                            <Globe className="h-2.5 w-2.5" />
-                            translatable
-                          </span>
-                        )}
-                      </div>
+                      <Label htmlFor={`tf-${originalField.key}`}>
+                        {originalField.label}
+                      </Label>
                       <CustomFieldInput
                         field={field}
                         value={values[originalField.key]}
@@ -226,7 +211,6 @@ export function ThemeSettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All languages (shared)</SelectItem>
                       {languages.map((lang) => (
                         <SelectItem key={lang.code} value={lang.code}>
                           {lang.flag ? `${lang.flag} ` : ""}
@@ -236,9 +220,8 @@ export function ThemeSettingsPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] leading-snug text-slate-500">
-                    {hasTranslatable
-                      ? "Translatable fields store a separate value per language. Defaults to the admin header language."
-                      : "No fields here are marked translatable, so the language pick is a no-op."}
+                    Each field stores a separate value per language. Languages
+                    without an override read from the default language.
                   </p>
                 </div>
               )}

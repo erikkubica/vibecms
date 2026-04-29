@@ -542,9 +542,10 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Admin language selector — controls the locale used by every
-                locale-aware setting (theme settings + site settings). "All"
-                writes to the shared row that applies regardless of language. */}
+            {/* Admin language selector — picks which locale the admin is
+                editing. Every translatable surface (settings pages, content
+                lists) uses this as its default; the per-page selector can
+                override it. */}
             {languages.length > 0 && (
               <label className="hidden h-7 items-center gap-1.5 rounded-md border border-slate-200 pl-2 pr-1 text-xs font-medium text-slate-600 sm:flex">
                 <Globe size={12} className="text-slate-500" />
@@ -554,7 +555,6 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
                   className="bg-transparent pr-1 text-xs font-medium text-slate-700 outline-none"
                   aria-label="Admin language"
                 >
-                  <option value="all">All languages</option>
                   {languages.map((lang) => (
                     <option key={lang.code} value={lang.code}>
                       {lang.flag ? `${lang.flag} ` : ""}

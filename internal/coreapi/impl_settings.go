@@ -12,16 +12,36 @@ import (
 	"squilla/internal/secrets"
 )
 
-// fallbackLocale is the sentinel stored in site_settings.language_code when a
-// value applies across every language. Empty string is preferred over NULL so
-// it can sit cleanly in a composite primary key.
-const fallbackLocale = ""
+// defaultLocale returns the code of the language flagged is_default=true.
+// Used as the read-fallback row when a per-locale value is missing and as
+// the implicit write target when the caller didn't specify a locale.
+//
+// Returns "" when no default language exists (fresh install before language
+// seeding); callers treat that the same way they used to treat the legacy
+// shared sentinel.
+func (c *coreImpl) defaultLocale(ctx context.Context) string {
+	var code string
+	err := c.db.WithContext(ctx).
+		Table("languages").
+		Select("code").
+		Where("is_default = ?", true).
+		Limit(1).
+		Scan(&code).Error
+	if err != nil {
+		return ""
+	}
+	return code
+}
 
 // readSettingForLocale fetches the raw stored value for (key, locale) with
-// fallback to (key, ""). Returns ("", nil) for absent rows so "setting not
-// configured" stays an expected path instead of an error.
+// fallback to (key, default_locale). Returns ("", nil) for absent rows so
+// "setting not configured" stays an expected path instead of an error.
 func (c *coreImpl) readSettingForLocale(ctx context.Context, key, locale string) (string, error) {
-	if locale != fallbackLocale {
+	def := c.defaultLocale(ctx)
+	if locale == "" {
+		locale = def
+	}
+	if locale != "" {
 		v, ok, err := c.readSettingExact(ctx, key, locale)
 		if err != nil {
 			return "", err
@@ -30,8 +50,11 @@ func (c *coreImpl) readSettingForLocale(ctx context.Context, key, locale string)
 			return v, nil
 		}
 	}
-	v, _, err := c.readSettingExact(ctx, key, fallbackLocale)
-	return v, err
+	if def != "" && def != locale {
+		v, _, err := c.readSettingExact(ctx, key, def)
+		return v, err
+	}
+	return "", nil
 }
 
 // readSettingExact looks up the row at exactly (key, locale) without falling
@@ -64,15 +87,15 @@ func (c *coreImpl) decryptIfSecret(key, raw string) (string, error) {
 	return c.secrets.Decrypt(raw)
 }
 
-// GetSetting returns the value for a site setting key (fallback locale only).
-// Locale-aware callers should use GetSettingLoc.
+// GetSetting returns the value for a site setting key resolved at the
+// default language. Locale-aware callers should use GetSettingLoc.
 func (c *coreImpl) GetSetting(ctx context.Context, key string) (string, error) {
-	return c.GetSettingLoc(ctx, key, fallbackLocale)
+	return c.GetSettingLoc(ctx, key, "")
 }
 
-// GetSettingLoc returns the value for (key, locale), falling back to
-// (key, "") when no per-locale row exists. Pass "" to read the fallback row
-// directly without a per-locale lookup.
+// GetSettingLoc returns the value for (key, locale), falling back to the
+// default-language row when no per-locale row exists. Pass "" to read at the
+// default language directly.
 func (c *coreImpl) GetSettingLoc(ctx context.Context, key, locale string) (string, error) {
 	raw, err := c.readSettingForLocale(ctx, key, locale)
 	if err != nil {
@@ -81,15 +104,18 @@ func (c *coreImpl) GetSettingLoc(ctx context.Context, key, locale string) (strin
 	return c.decryptIfSecret(key, raw)
 }
 
-// SetSetting upserts a site setting at the fallback locale (applies to all
-// languages). Locale-aware callers should use SetSettingLoc.
+// SetSetting upserts a site setting at the default language.
+// Locale-aware callers should use SetSettingLoc.
 func (c *coreImpl) SetSetting(ctx context.Context, key, value string) error {
-	return c.SetSettingLoc(ctx, key, fallbackLocale, value)
+	return c.SetSettingLoc(ctx, key, "", value)
 }
 
 // SetSettingLoc upserts a site setting for the given (key, locale). Pass
-// "" for locale to write the fallback row.
+// "" for locale to write at the default language.
 func (c *coreImpl) SetSettingLoc(ctx context.Context, key, locale, value string) error {
+	if locale == "" {
+		locale = c.defaultLocale(ctx)
+	}
 	stored := value
 	if c.secrets != nil && secrets.IsSecretKey(key) {
 		enc, err := c.secrets.MaybeEncrypt(value)
@@ -128,29 +154,40 @@ func (c *coreImpl) publishSettingUpdated(key, locale string) {
 	})
 }
 
-// GetSettings returns settings matching an optional prefix at the fallback
-// locale only. Locale-aware callers should use GetSettingsLoc.
+// GetSettings returns settings matching an optional prefix at the default
+// language. Locale-aware callers should use GetSettingsLoc.
 func (c *coreImpl) GetSettings(ctx context.Context, prefix string) (map[string]string, error) {
-	return c.GetSettingsLoc(ctx, prefix, fallbackLocale)
+	return c.GetSettingsLoc(ctx, prefix, "")
 }
 
 // GetSettingsLoc returns settings matching an optional prefix, with per-key
 // fallback semantics: each key returns its (key, locale) value if present,
-// otherwise (key, "") if present, otherwise nothing. The result map is keyed
-// by trimmed key, same shape as GetSettings.
+// otherwise the default-language row if present, otherwise nothing. The
+// result map is keyed by trimmed key, same shape as GetSettings.
 func (c *coreImpl) GetSettingsLoc(ctx context.Context, prefix, locale string) (map[string]string, error) {
+	def := c.defaultLocale(ctx)
+	if locale == "" {
+		locale = def
+	}
+
 	var settings []models.SiteSetting
 
 	query := c.db.WithContext(ctx).Model(&models.SiteSetting{})
 	if prefix != "" {
 		query = query.Where("\"key\" LIKE ?", prefix+"%")
 	}
-	// Fetch both the requested locale and the fallback so we can resolve
-	// per-key in one pass without N round-trips.
-	if locale != fallbackLocale {
-		query = query.Where("language_code IN ?", []string{locale, fallbackLocale})
-	} else {
-		query = query.Where("language_code = ?", fallbackLocale)
+	// Fetch both the requested locale and the default so we can resolve
+	// per-key in one pass without N round-trips. When no default exists yet
+	// we just look up the requested locale.
+	switch {
+	case locale == "" && def == "":
+		// Pre-language-seed installs — no default to fall back to. Reading
+		// is empty until at least one language exists.
+		return map[string]string{}, nil
+	case def == "" || locale == def:
+		query = query.Where("language_code = ?", locale)
+	default:
+		query = query.Where("language_code IN ?", []string{locale, def})
 	}
 
 	if err := query.Find(&settings).Error; err != nil {
@@ -168,10 +205,10 @@ func (c *coreImpl) GetSettingsLoc(ctx context.Context, prefix, locale string) (m
 		if s.Value != nil {
 			v = *s.Value
 		}
-		// Always prefer the requested locale; only the fallback gets
-		// recorded when nothing for the locale has been seen.
+		// Always prefer the requested locale; the default-locale row only
+		// wins when nothing for the requested locale has been seen.
 		existing, ok := chosen[s.Key]
-		if !ok || (existing.locale == fallbackLocale && s.LanguageCode != fallbackLocale) {
+		if !ok || (existing.locale == def && s.LanguageCode == locale) {
 			chosen[s.Key] = row{val: v, locale: s.LanguageCode}
 		}
 	}

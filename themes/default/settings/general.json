@@ -2,7 +2,7 @@
   "name": "General",
   "description": "Site-wide theme settings — branding and footer.",
   "fields": [
-    { "key": "tagline", "label": "Tagline", "type": "text", "default": "Welcome", "translatable": true },
+    { "key": "tagline", "label": "Tagline", "type": "text", "default": "Welcome" },
     { "key": "show_attribution", "label": "Show 'Powered by' footer", "type": "toggle", "default": true },
     { "key": "footer_columns", "label": "Footer columns", "type": "number", "default": 3, "min": 1, "max": 6 },
     { "key": "primary_color", "label": "Primary color", "type": "color", "default": "#3b82f6" }

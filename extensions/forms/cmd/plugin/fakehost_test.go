@@ -219,6 +219,18 @@ func (h *FakeHost) GetSettings(_ context.Context, _ string) (map[string]string, 
 	return h.Settings, nil
 }
 
+func (h *FakeHost) GetSettingLoc(ctx context.Context, key, _ string) (string, error) {
+	return h.GetSetting(ctx, key)
+}
+
+func (h *FakeHost) SetSettingLoc(ctx context.Context, key, _, value string) error {
+	return h.SetSetting(ctx, key, value)
+}
+
+func (h *FakeHost) GetSettingsLoc(ctx context.Context, prefix, _ string) (map[string]string, error) {
+	return h.GetSettings(ctx, prefix)
+}
+
 // ---- Stubs for interface methods not used by forms ----
 
 func (h *FakeHost) GetNode(_ context.Context, _ uint) (*coreapi.Node, error) {

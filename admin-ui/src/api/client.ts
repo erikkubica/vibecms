@@ -309,6 +309,8 @@ export interface Taxonomy {
   description: string;
   node_types: string[];
   field_schema: NodeTypeField[];
+  hierarchical?: boolean;
+  show_ui?: boolean;
   created_at: string;
   updated_at: string;
 }

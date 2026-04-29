@@ -176,6 +176,22 @@ func (h *TermHandler) Update(c *fiber.Ctx) error {
 	if v, ok := updates["language_code"].(string); ok && v != "" {
 		existing.LanguageCode = v
 	}
+	// parent_id is the hierarchical-taxonomy nesting field. Accept both
+	// numeric forms (BodyParser decodes JSON numbers as float64) and an
+	// explicit null to detach the term from its parent.
+	if v, present := updates["parent_id"]; present {
+		switch n := v.(type) {
+		case nil:
+			existing.ParentID = nil
+		case float64:
+			id := int(n)
+			if id == 0 {
+				existing.ParentID = nil
+			} else if id != existing.ID { // never self-parent
+				existing.ParentID = &id
+			}
+		}
+	}
 
 	if err := h.db.Save(&existing).Error; err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {

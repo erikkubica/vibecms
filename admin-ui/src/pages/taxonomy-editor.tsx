@@ -66,6 +66,7 @@ export default function TaxonomyEditorPage() {
   const [description, setDescription] = useState("");
   const [nodeTypes, setNodeTypes] = useState<string[]>([]);
   const [fields, setFields] = useState<NodeTypeField[]>([]);
+  const [hierarchical, setHierarchical] = useState(false);
 
   const [availableNodeTypes, setAvailableNodeTypes] = useState<NodeType[]>([]);
   const [autoSlug, setAutoSlug] = useState(!isEdit);
@@ -87,6 +88,7 @@ export default function TaxonomyEditorPage() {
           setDescription(t.description || "");
           setNodeTypes(t.node_types || []);
           setFields(t.field_schema || []);
+          setHierarchical(!!t.hierarchical);
           setAutoSlug(false);
         })
         .catch(() => {
@@ -117,6 +119,7 @@ export default function TaxonomyEditorPage() {
       description,
       node_types: nodeTypes,
       field_schema: fields,
+      hierarchical,
     };
 
     setSaving(true);
@@ -380,6 +383,21 @@ export default function TaxonomyEditorPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <Label htmlFor="hierarchical" className="text-xs font-medium text-slate-700">Hierarchical</Label>
+                  <p className="text-[11px] text-slate-400">
+                    Terms can have a parent term (categories).
+                    Disable for flat taxonomies (tags).
+                  </p>
+                </div>
+                <Switch
+                  id="hierarchical"
+                  checked={hierarchical}
+                  onCheckedChange={setHierarchical}
                 />
               </div>
             </CardContent>

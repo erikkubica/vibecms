@@ -29,6 +29,7 @@ import {
   getTaxonomy,
   getTermTranslations,
   createTermTranslation,
+  listTerms,
   type TaxonomyTerm,
   type Taxonomy,
 } from "@/api/client";
@@ -76,6 +77,8 @@ export default function TermEditorPage() {
   const [languageCode, setLanguageCode] = useState<string>("");
   const [translations, setTranslations] = useState<TaxonomyTerm[]>([]);
   const [creatingTranslation, setCreatingTranslation] = useState(false);
+  const [parentId, setParentId] = useState<number | null>(null);
+  const [siblingTerms, setSiblingTerms] = useState<TaxonomyTerm[]>([]);
 
   const [autoSlug, setAutoSlug] = useState(!isEdit);
 
@@ -102,6 +105,7 @@ export default function TermEditorPage() {
           setDescription(term.description || "");
           setFieldsData(term.fields_data || {});
           setLanguageCode(term.language_code);
+          setParentId(term.parent_id ?? null);
           setAutoSlug(false);
           // Translations are best-effort: if the endpoint fails (or no
           // siblings exist) we just show an empty panel.
@@ -112,6 +116,23 @@ export default function TermEditorPage() {
           // Create flow: default to the admin's current language so the
           // term lands in whatever locale the operator is editing in.
           setLanguageCode(currentCode);
+        }
+
+        // Sibling terms power the parent picker (hierarchical taxonomies
+        // only). Always loaded so toggling the taxonomy's hierarchical
+        // flag in another tab doesn't require reloading this page.
+        if (tax.hierarchical) {
+          listTerms(nodeType!, taxSlug, { language_code: "all" })
+            .then((all) => {
+              const lc = isEdit && id ? undefined : currentCode;
+              const filtered = all.filter((t) => {
+                if (lc && t.language_code !== lc) return false;
+                if (isEdit && id && t.id === Number(id)) return false;
+                return true;
+              });
+              setSiblingTerms(filtered);
+            })
+            .catch(() => setSiblingTerms([]));
         }
       } catch {
         toast.error("Failed to load data");
@@ -148,6 +169,7 @@ export default function TermEditorPage() {
       description,
       fields_data: fieldsData,
       language_code: languageCode || currentCode,
+      parent_id: parentId ?? undefined,
     };
 
     setSaving(true);
@@ -348,6 +370,31 @@ export default function TermEditorPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {taxonomy?.hierarchical && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-500">Parent</Label>
+              <Select
+                value={parentId == null ? "__none__" : String(parentId)}
+                onValueChange={(v) => setParentId(v === "__none__" ? null : Number(v))}
+              >
+                <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                  <SelectValue placeholder="No parent (top-level)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— No parent —</SelectItem>
+                  {siblingTerms.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-slate-400">
+                Nests this term under another. Leave empty for a top-level term.
+              </p>
             </div>
           )}
 

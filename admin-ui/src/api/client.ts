@@ -190,6 +190,34 @@ export async function createNodeTranslation(id: number | string, data: { languag
   return res.data;
 }
 
+export interface NodeRevision {
+  id: number;
+  node_id: number;
+  title: string;
+  status: string;
+  version_number: number;
+  created_by?: number | null;
+  creator_name?: string;
+  creator_email?: string;
+  created_at: string;
+}
+
+export async function listNodeRevisions(id: number | string): Promise<NodeRevision[]> {
+  const res = await api<ApiResponse<NodeRevision[]>>(`/admin/api/nodes/${id}/revisions`);
+  return res.data || [];
+}
+
+export async function restoreNodeRevision(
+  nodeId: number | string,
+  revisionId: number,
+): Promise<{ node: ContentNode; restored_from: number }> {
+  const res = await api<ApiResponse<{ node: ContentNode; restored_from: number }>>(
+    `/admin/api/nodes/${nodeId}/revisions/${revisionId}/restore`,
+    { method: "POST" },
+  );
+  return res.data;
+}
+
 export async function getHomepageId(): Promise<number> {
   const settings = await getSiteSettings();
   return Number(settings.homepage_node_id) || 0;

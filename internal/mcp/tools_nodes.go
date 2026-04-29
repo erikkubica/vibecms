@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"squilla/internal/coreapi"
+	"squilla/internal/models"
 )
 
 func (s *Server) registerNodeTools() {
@@ -101,6 +103,21 @@ func (s *Server) registerNodeTools() {
 		mcp.WithObject("set", mcp.Required(), mcp.Description("Patch payload. Allowed keys: status ('draft'|'published'), layout_slug (string), language_code (string).")),
 	), "content", func(ctx context.Context, args map[string]any) (any, error) {
 		return runUpdateMany(ctx, s.deps.CoreAPI, args)
+	})
+
+	s.addTool(mcp.NewTool("core.node.revisions",
+		mcp.WithDescription("List historical snapshots of a node, newest first. Each revision captures the pre-update state before a save — restore via core.node.revision_restore. Returns at most 100 entries."),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Node ID")),
+	), "read", func(ctx context.Context, args map[string]any) (any, error) {
+		return s.listNodeRevisions(uintArg(args, "id"))
+	})
+
+	s.addTool(mcp.NewTool("core.node.revision_restore",
+		mcp.WithDescription("Restore a node to the state captured by a revision. The current state is itself snapshotted as a new revision before the restore lands, so this is reversible. Returns the restored node."),
+		mcp.WithNumber("id", mcp.Required(), mcp.Description("Node ID")),
+		mcp.WithNumber("revision_id", mcp.Required(), mcp.Description("Revision ID returned by core.node.revisions")),
+	), "content", func(ctx context.Context, args map[string]any) (any, error) {
+		return s.restoreNodeRevision(uintArg(args, "id"), int64(intArg(args, "revision_id")))
 	})
 
 	s.addTool(mcp.NewTool("core.node.delete",
@@ -228,6 +245,79 @@ func runUpdateMany(ctx context.Context, api coreapi.CoreAPI, args map[string]any
 		"matched": len(list.Nodes),
 		"updated": updated,
 		"ids":     ids,
+	}, nil
+}
+
+// listNodeRevisions returns slim metadata about each historical snapshot
+// for a node. Mirrors GET /admin/api/nodes/:id/revisions.
+func (s *Server) listNodeRevisions(nodeID uint) (any, error) {
+	if nodeID == 0 {
+		return nil, fmt.Errorf("id is required")
+	}
+	type row struct {
+		ID            int64     `json:"id"`
+		NodeID        int       `json:"node_id"`
+		Title         string    `json:"title"`
+		Status        string    `json:"status"`
+		VersionNumber int       `json:"version_number"`
+		CreatedBy     *int      `json:"created_by,omitempty"`
+		CreatorName   *string   `json:"creator_name,omitempty"`
+		CreatorEmail  *string   `json:"creator_email,omitempty"`
+		CreatedAt     time.Time `json:"created_at"`
+	}
+	var rows []row
+	err := s.deps.DB.Table("content_node_revisions r").
+		Select(`r.id, r.node_id, r.title, r.status, r.version_number,
+		         r.created_by, u.name AS creator_name, u.email AS creator_email,
+		         r.created_at`).
+		Joins("LEFT JOIN users u ON u.id = r.created_by").
+		Where("r.node_id = ?", nodeID).
+		Order("r.created_at DESC").
+		Limit(100).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// restoreNodeRevision restores a node to the captured snapshot. The
+// in-flight Update creates a new revision capturing the pre-restore
+// state, so the restore is reversible.
+func (s *Server) restoreNodeRevision(nodeID uint, revisionID int64) (any, error) {
+	if nodeID == 0 || revisionID == 0 {
+		return nil, fmt.Errorf("id and revision_id are required")
+	}
+	var rev models.ContentNodeRevision
+	if err := s.deps.DB.
+		Where("id = ? AND node_id = ?", revisionID, nodeID).
+		First(&rev).Error; err != nil {
+		return nil, fmt.Errorf("revision %d not found for node %d", revisionID, nodeID)
+	}
+	updates := map[string]any{
+		"title":          rev.Title,
+		"status":         rev.Status,
+		"language_code":  rev.LanguageCode,
+		"excerpt":        rev.Excerpt,
+		"featured_image": rev.FeaturedImage,
+		"blocks_data":    rev.BlocksSnapshot,
+		"fields_data":    rev.FieldsSnapshot,
+		"seo_settings":   rev.SeoSnapshot,
+		"taxonomies":     rev.TaxonomiesSnapshot,
+	}
+	if rev.LayoutSlug != nil {
+		updates["layout_slug"] = *rev.LayoutSlug
+	}
+	if rev.Slug != "" {
+		updates["slug"] = rev.Slug
+	}
+	node, err := s.deps.ContentSvc.Update(int(nodeID), updates, 0)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"node":          node,
+		"restored_from": rev.ID,
 	}, nil
 }
 

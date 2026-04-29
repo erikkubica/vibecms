@@ -18,6 +18,16 @@ import (
 // editors who save every few seconds.
 const defaultRevisionsPerNode = 50
 
+// defaultJSONB returns src when it has bytes; otherwise returns the given
+// fallback as JSONB. Used to keep snapshot rows from violating the
+// jsonb NOT NULL constraint when the source column is empty.
+func defaultJSONB(src models.JSONB, fallback string) models.JSONB {
+	if len(src) > 0 {
+		return src
+	}
+	return models.JSONB(fallback)
+}
+
 // ContentService provides business logic for managing content nodes.
 type ContentService struct {
 	db       *gorm.DB
@@ -160,9 +170,19 @@ func (s *ContentService) Update(id int, updates map[string]interface{}, userID i
 	// was issued by kernel infrastructure (MCP, extensions) rather than an
 	// authenticated admin; store NULL instead of violating the FK.
 	revision := models.ContentNodeRevision{
-		NodeID:         existing.ID,
-		BlocksSnapshot: existing.BlocksData,
-		SeoSnapshot:    existing.SeoSettings,
+		NodeID:             existing.ID,
+		Title:              existing.Title,
+		Slug:               existing.Slug,
+		Status:             existing.Status,
+		LanguageCode:       existing.LanguageCode,
+		LayoutSlug:         existing.LayoutSlug,
+		Excerpt:            existing.Excerpt,
+		FeaturedImage:      defaultJSONB(existing.FeaturedImage, "{}"),
+		BlocksSnapshot:     defaultJSONB(existing.BlocksData, "[]"),
+		FieldsSnapshot:     defaultJSONB(existing.FieldsData, "{}"),
+		SeoSnapshot:        defaultJSONB(existing.SeoSettings, "{}"),
+		TaxonomiesSnapshot: defaultJSONB(existing.Taxonomies, "{}"),
+		VersionNumber:      existing.Version,
 	}
 	if userID > 0 {
 		uid := userID

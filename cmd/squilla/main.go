@@ -337,6 +337,7 @@ func main() {
 	themeSettingsHandler.RegisterRoutes(adminAPI)
 	cms.NewFieldTypeHandler().RegisterRoutes(adminAPI)
 	publicHandler.RegisterAdminPreviewRoutes(adminAPI)
+	cms.NewRevisionHandler(database, contentSvc).RegisterRoutes(adminAPI)
 
 	// SDUI endpoints — boot manifest, layout trees, and SSE event stream.
 	bootHandler.RegisterRoutes(adminAPI)

@@ -65,6 +65,9 @@ import {
   getLayouts,
   getNodeTranslations,
   createNodeTranslation,
+  listNodeRevisions,
+  restoreNodeRevision,
+  type NodeRevision,
   searchNodes,
   listTerms,
   createTerm,
@@ -184,6 +187,13 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
   const [translations, setTranslations] = useState<ContentNode[]>([]);
   const [creatingTranslation, setCreatingTranslation] = useState(false);
 
+  // Revisions — list of historical snapshots, newest first. Loaded on
+  // mount in edit mode and refreshed after each save so a fresh save
+  // surfaces in the panel without a manual reload.
+  const [revisions, setRevisions] = useState<NodeRevision[]>([]);
+  const [restoringRevisionID, setRestoringRevisionID] = useState<number | null>(null);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState<NodeRevision | null>(null);
+
   // Block editor state — persisted to localStorage per node
   const storageKey = id ? `squilla:collapsed-blocks:${id}` : "";
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(() => {
@@ -298,6 +308,35 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
       .then(setTranslations)
       .catch(() => setTranslations([]));
   }, [id, isEdit]);
+
+  // Load revision history when editing. Refreshes after each save via
+  // the saving→idle transition so the just-created snapshot shows up
+  // without a manual reload.
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    if (saving) return;
+    listNodeRevisions(id)
+      .then(setRevisions)
+      .catch(() => setRevisions([]));
+  }, [id, isEdit, saving]);
+
+  async function handleRestoreRevision(rev: NodeRevision) {
+    if (!id) return;
+    setRestoringRevisionID(rev.id);
+    try {
+      await restoreNodeRevision(id, rev.id);
+      toast.success("Revision restored. The previous state was saved as a new revision.");
+      setShowRestoreConfirm(null);
+      // Refresh node + revisions. Easiest is a soft reload of the
+      // editor route — the page already pulls fresh data on mount.
+      window.location.reload();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to restore revision";
+      toast.error(message);
+    } finally {
+      setRestoringRevisionID(null);
+    }
+  }
 
   // Fetch available terms for each taxonomy defined on the node type.
   // Scope to the node's own language — a `de` post must only see `de`
@@ -1595,6 +1634,54 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
             </Card>
           )}
 
+          {/* Revisions — every save creates a snapshot. Restoring an older
+              revision is itself a save, so the prior state stays
+              recoverable. List capped to the most recent 100. */}
+          {isEdit && id && (
+            <Card className="rounded-xl border border-slate-200 shadow-sm">
+              <SectionHeader title="Revisions" />
+              <CardContent>
+                {revisions.length === 0 ? (
+                  <p className="text-[11px] text-slate-400 text-center py-1">
+                    No revisions yet. Save the page to create one.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                    {revisions.map((r) => {
+                      const when = new Date(r.created_at);
+                      const author = r.creator_name || r.creator_email || (r.created_by ? `user #${r.created_by}` : "system");
+                      return (
+                        <div
+                          key={r.id}
+                          className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-slate-700 truncate">
+                              v{r.version_number || "—"} · {when.toLocaleString()}
+                            </p>
+                            <p className="text-[11px] text-slate-400 truncate">
+                              {author} · {r.status}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-[11px] text-indigo-600 hover:text-indigo-700 px-2 shrink-0"
+                            disabled={restoringRevisionID !== null}
+                            onClick={() => setShowRestoreConfirm(r)}
+                          >
+                            Restore
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* SEO Settings */}
           <Card className="rounded-xl border border-slate-200 shadow-sm">
             <SectionHeader title="SEO" />
@@ -1709,6 +1796,40 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
               disabled={deleting}
             >
               {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Revision confirm */}
+      <Dialog open={showRestoreConfirm !== null} onOpenChange={(open) => !open && setShowRestoreConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore this revision?</DialogTitle>
+            <DialogDescription>
+              {showRestoreConfirm && (
+                <>
+                  This will overwrite the live page with the snapshot from{" "}
+                  <strong>{new Date(showRestoreConfirm.created_at).toLocaleString()}</strong>.
+                  The current state will be saved as a new revision first, so this action is reversible.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRestoreConfirm(null)}
+              disabled={restoringRevisionID !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => showRestoreConfirm && handleRestoreRevision(showRestoreConfirm)}
+              disabled={restoringRevisionID !== null}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {restoringRevisionID !== null ? "Restoring..." : "Restore"}
             </Button>
           </DialogFooter>
         </DialogContent>

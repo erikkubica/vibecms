@@ -364,7 +364,14 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
         path: `/admin/theme-settings/${p.slug}`,
       })),
     ];
-    return [...base, ...themeSection];
+    // Insert immediately before the kernel "Settings" section so theme
+    // settings appear above core settings — they're touched far more often
+    // (theme tweaks vs. one-time site config).
+    const insertAt = base.findIndex((item) => item.id === "section-settings");
+    if (insertAt === -1) {
+      return [...base, ...themeSection];
+    }
+    return [...base.slice(0, insertAt), ...themeSection, ...base.slice(insertAt)];
   }, [boot?.navigation, themePages?.pages]);
 
   const sidebarWidth = collapsed ? 56 : 256;

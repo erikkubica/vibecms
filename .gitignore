@@ -45,3 +45,7 @@ themes/*/
 
 # Git worktrees for isolated feature development
 .worktrees/
+
+# Operator-installed themes and extensions — bind-mounted at /app/data in
+# docker-compose. Per-deploy state, never committed.
+data/

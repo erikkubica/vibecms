@@ -28,10 +28,21 @@ type themeMgmtManifest struct {
 }
 
 // ThemeMgmtService manages theme installation, activation, and lifecycle.
+//
+// Themes live in two parallel directories:
+//   - bundledDir (e.g. "themes")        — shipped with the image, read-only intent.
+//   - dataDir    (e.g. "data/themes")   — operator-installed, persistent across
+//     container restarts when mounted as a volume.
+//
+// Both are scanned at boot. Writes (git install, zip upload, deploy, delete)
+// always target dataDir so the image's bundled themes stay intact. On slug
+// collision the dataDir copy wins so an operator can override a bundled
+// theme by deploying a same-slug replacement.
 type ThemeMgmtService struct {
 	db          *gorm.DB
 	themeLoader *ThemeLoader
-	themesDir   string           // base directory e.g. "themes"
+	bundledDir  string           // image-bundled themes (read-only intent)
+	dataDir     string           // user-installed themes (volume-backed)
 	secrets     *secrets.Service // may be nil; transparently encrypts/decrypts git tokens
 
 	// Callbacks for loading/unloading Tengo scripts. Set via SetScriptLoader
@@ -43,11 +54,18 @@ type ThemeMgmtService struct {
 // NewThemeMgmtService creates a new ThemeMgmtService. Pass a non-nil
 // *secrets.Service to encrypt git tokens at rest; nil keeps tokens
 // plaintext (legacy behaviour).
-func NewThemeMgmtService(db *gorm.DB, themeLoader *ThemeLoader, themesDir string, secretsSvc *secrets.Service) *ThemeMgmtService {
+//
+// dataDir is auto-created if missing so a fresh container without the
+// volume populated can still scan/install without an explicit mkdir.
+func NewThemeMgmtService(db *gorm.DB, themeLoader *ThemeLoader, bundledDir, dataDir string, secretsSvc *secrets.Service) *ThemeMgmtService {
+	if dataDir != "" {
+		_ = os.MkdirAll(dataDir, 0o755)
+	}
 	return &ThemeMgmtService{
 		db:          db,
 		themeLoader: themeLoader,
-		themesDir:   themesDir,
+		bundledDir:  bundledDir,
+		dataDir:     dataDir,
 		secrets:     secretsSvc,
 	}
 }
@@ -85,23 +103,37 @@ func (s *ThemeMgmtService) SetScriptLoader(load func(string) error, unload func(
 	s.unloadThemeScripts = unload
 }
 
-// ScanAndRegister walks themesDir and upserts a Theme row for every
-// subdirectory that has a valid theme.json. Mirrors the extension loader's
-// scan behaviour: new themes are registered with is_active=false; existing
-// rows have their metadata (name/version/description/author/path) refreshed
-// from disk, is_active is left untouched.
+// ScanAndRegister walks both the bundled and data theme directories and
+// upserts a Theme row for every subdirectory that has a valid theme.json.
+// Data dir wins on slug collision so an operator override replaces the
+// image-bundled copy without renaming.
 //
 // Called at startup so on-disk themes don't have to be manually uploaded after
 // a fresh install or DB reset.
 func (s *ThemeMgmtService) ScanAndRegister() {
-	entries, err := os.ReadDir(s.themesDir)
+	// Order matters: scan dataDir first to claim slugs, then bundled. The
+	// per-entry registerScannedTheme helper detects an existing row with the
+	// same slug and skips when the registered row already lives in dataDir
+	// (the override wins).
+	dataCount := s.scanDir(s.dataDir, true)
+	bundledCount := s.scanDir(s.bundledDir, false)
+	log.Printf("[themes] scanned %d themes (%d data, %d bundled) from %s + %s",
+		dataCount+bundledCount, dataCount, bundledCount, s.dataDir, s.bundledDir)
+}
+
+// scanDir walks one root and registers each theme it finds. Returns the
+// number of rows successfully upserted. Missing dir is not an error — both
+// roots are optional (image with no bundled themes, fresh volume).
+func (s *ThemeMgmtService) scanDir(root string, isData bool) int {
+	if root == "" {
+		return 0
+	}
+	entries, err := os.ReadDir(root)
 	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("[themes] no themes directory found at %s", s.themesDir)
-			return
+		if !os.IsNotExist(err) {
+			log.Printf("[themes] error reading %s: %v", root, err)
 		}
-		log.Printf("[themes] error reading themes directory: %v", err)
-		return
+		return 0
 	}
 
 	registered := 0
@@ -109,15 +141,12 @@ func (s *ThemeMgmtService) ScanAndRegister() {
 		if !entry.IsDir() {
 			continue
 		}
-		themeDir := filepath.Join(s.themesDir, entry.Name())
+		themeDir := filepath.Join(root, entry.Name())
 		manifest, _, err := findAndParseManifest(themeDir)
 		if err != nil {
-			// Missing/invalid theme.json — ignore this directory.
 			continue
 		}
 		if manifest.Slug == "" {
-			// Derive slug from name the same way ThemeLoader.upsertThemeRecord
-			// does, so both registration paths agree on the row identity.
 			if manifest.Name != "" {
 				manifest.Slug = strings.ToLower(strings.ReplaceAll(manifest.Name, " ", "-"))
 			} else {
@@ -125,15 +154,19 @@ func (s *ThemeMgmtService) ScanAndRegister() {
 			}
 		}
 
-		// Look up by path first (stable across slug derivation changes) then
-		// fall back to slug.
+		// Look up by path first (stable identifier) then by slug.
 		var existing models.Theme
 		err = s.db.Where("path = ?", themeDir).First(&existing).Error
 		if err == gorm.ErrRecordNotFound {
 			err = s.db.Where("slug = ?", manifest.Slug).First(&existing).Error
 		}
 		if err == nil {
-			// Refresh metadata + path; leave IsActive and Source alone.
+			// Bundled scan must NOT overwrite a data-backed registration —
+			// the operator's override wins. Detect by comparing the
+			// existing path against the dataDir prefix.
+			if !isData && s.dataDir != "" && strings.HasPrefix(existing.Path, s.dataDir+string(os.PathSeparator)) {
+				continue
+			}
 			existing.Name = manifest.Name
 			existing.Description = manifest.Description
 			existing.Version = manifest.Version
@@ -166,8 +199,7 @@ func (s *ThemeMgmtService) ScanAndRegister() {
 		}
 		registered++
 	}
-
-	log.Printf("[themes] scanned %d themes from %s", registered, s.themesDir)
+	return registered
 }
 
 // List returns all installed themes ordered by name.
@@ -188,9 +220,15 @@ func (s *ThemeMgmtService) GetByID(id int) (*models.Theme, error) {
 	return &theme, nil
 }
 
-// ThemesDir returns the base directory holding theme directories.
-// Exposed so the MCP checklist tool can introspect on-disk theme files.
-func (s *ThemeMgmtService) ThemesDir() string { return s.themesDir }
+// ThemesDir returns the writable directory where new themes are installed.
+// Exposed so the MCP checklist tool and install paths can target a single
+// canonical location. The bundled directory is intentionally not surfaced
+// here because nothing should ever write into it.
+func (s *ThemeMgmtService) ThemesDir() string { return s.dataDir }
+
+// BundledThemesDir returns the read-only image-bundled themes directory.
+// Useful for diagnostics; not used by write paths.
+func (s *ThemeMgmtService) BundledThemesDir() string { return s.bundledDir }
 
 // GetActive returns the currently active theme.
 func (s *ThemeMgmtService) GetActive() (*models.Theme, error) {
@@ -282,9 +320,11 @@ func (s *ThemeMgmtService) InstallFromZip(file io.Reader, filename string) (*mod
 		return nil, fmt.Errorf("theme slug %q contains invalid characters", manifest.Slug)
 	}
 
-	// Atomic swap: copy into themes/<slug>.deploy.tmp, then rename. Both paths
-	// live under themesDir so the rename never crosses a filesystem boundary.
-	destDir := filepath.Join(s.themesDir, manifest.Slug)
+	// Atomic swap: copy into <dataDir>/<slug>.deploy.tmp, then rename. Both
+	// paths live under dataDir so the rename never crosses a filesystem
+	// boundary. Writes always target dataDir; the bundled image dir stays
+	// untouched.
+	destDir := filepath.Join(s.dataDir, manifest.Slug)
 	stagingDir := destDir + ".deploy.tmp"
 	backupDir := destDir + ".deploy.old"
 
@@ -445,9 +485,16 @@ func (s *ThemeMgmtService) Delete(id int) error {
 		return fmt.Errorf("cannot delete the active theme; deactivate it first")
 	}
 
-	// Remove filesystem directory.
+	// Remove filesystem directory. Refuse to wipe anything under the
+	// image-bundled root — those are read-only by intent. The DB row goes
+	// regardless; the next scan will re-register the bundled theme as a
+	// fresh inactive entry, restoring the operator-visible "I can pick this
+	// theme" state without ever touching the image files.
 	if theme.Path != "" {
-		if err := os.RemoveAll(theme.Path); err != nil {
+		if s.bundledDir != "" && strings.HasPrefix(theme.Path, s.bundledDir+string(os.PathSeparator)) {
+			log.Printf("[themes] delete %s: skipping rmdir of bundled path %s (unregistering only)",
+				theme.Slug, theme.Path)
+		} else if err := os.RemoveAll(theme.Path); err != nil {
 			return fmt.Errorf("failed to remove theme directory %s: %w", theme.Path, err)
 		}
 	}

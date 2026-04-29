@@ -398,8 +398,12 @@ func (h *ExtensionHandler) Delete(c *fiber.Ctx) error {
 		h.loader.UnloadExtensionBlocks(slug, h.assetRegistry)
 	}
 
-	// Remove files
-	extDir := filepath.Join(h.loader.extensionsDir, slug)
+	// Remove files. Only the data-dir copy is wiped; the bundled image
+	// directory is read-only by intent. The next ScanAndRegister will
+	// re-register the bundled extension as a fresh inactive entry, so
+	// "delete" effectively means "uninstall the operator override and fall
+	// back to the bundled version" rather than "obliterate forever".
+	extDir := filepath.Join(h.loader.dataDir, slug)
 	if err := os.RemoveAll(extDir); err != nil {
 		log.Printf("WARN: failed to remove extension dir %s: %v", extDir, err)
 	}

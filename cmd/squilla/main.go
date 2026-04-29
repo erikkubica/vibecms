@@ -237,7 +237,10 @@ func main() {
 	// tokens before persisting and decrypts before passing to git
 	// operations; the handler does the same for direct token edits via
 	// the admin API and for the webhook secret read at request time.
-	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes", secretsSvc)
+	// Bundled themes ship in the image at "themes/"; user-installed ones
+	// land in "data/themes/" which docker-compose mounts as a persistent
+	// volume. Both are scanned at boot; data wins on slug collision.
+	themeMgmtSvc := cms.NewThemeMgmtService(database, themeLoader, "themes", "data/themes", secretsSvc)
 	themeMgmtSvc.ScanAndRegister()
 	themeHandler := cms.NewThemeHandler(database, themeMgmtSvc, secretsSvc)
 
@@ -259,19 +262,20 @@ func main() {
 	themeMgmtSvc.SetScriptLoader(scriptEngine.LoadThemeScripts, scriptEngine.UnloadThemeScripts)
 
 	// Extension loading.
-	extLoader := cms.NewExtensionLoader(database, "extensions")
+	// Same dual-dir model as themes: image-bundled in "extensions/",
+	// operator-installed in "data/extensions/" (persistent volume).
+	extLoader := cms.NewExtensionLoader(database, "extensions", "data/extensions")
 	extLoader.ScanAndRegister()
 	extLoader.LoadBlocksForActiveExtensions(themeAssets)
 
-	// Drop-in watchers — eliminate the "drop a folder + restart" step. When a
-	// new theme/extension directory or manifest appears under themes/ or
-	// extensions/, rescan automatically. Activation still requires an explicit
-	// admin action (themes) or activate call (extensions); this only makes the
-	// new package visible.
-	if err := cms.NewDropInWatcher("themes", "theme.json", themeMgmtSvc.ScanAndRegister).Start(bgCtx); err != nil {
+	// Drop-in watchers — eliminate the "drop a folder + restart" step. We
+	// only watch the data dirs because image-bundled dirs don't change at
+	// runtime (they're baked into the image). New theme/extension folders
+	// dropped into the persistent volume trigger an immediate rescan.
+	if err := cms.NewDropInWatcher("data/themes", "theme.json", themeMgmtSvc.ScanAndRegister).Start(bgCtx); err != nil {
 		log.Printf("WARN: themes drop-in watcher: %v", err)
 	}
-	if err := cms.NewDropInWatcher("extensions", "extension.json", extLoader.ScanAndRegister).Start(bgCtx); err != nil {
+	if err := cms.NewDropInWatcher("data/extensions", "extension.json", extLoader.ScanAndRegister).Start(bgCtx); err != nil {
 		log.Printf("WARN: extensions drop-in watcher: %v", err)
 	}
 	activeExts, _ := extLoader.GetActive()

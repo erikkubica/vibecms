@@ -64,6 +64,11 @@ services:
       - "8099"
     volumes:
       - squilla-storage:/app/storage
+      # Persistent operator data — themes installed via git/zip/MCP and
+      # operator-deployed extensions live here. Image-bundled themes and
+      # extensions stay in /app/themes and /app/extensions inside the
+      # image; the scanner reads both.
+      - squilla-data:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -95,4 +100,5 @@ services:
 
 volumes:
   squilla-storage:
+  squilla-data:
   squilla-pgdata:

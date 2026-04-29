@@ -52,8 +52,11 @@ func (s *ThemeMgmtService) InstallFromGit(gitURL, branch, token string) (*models
 		return nil, fmt.Errorf("theme.json missing required 'slug' field")
 	}
 
-	// Move cloned directory to final destination.
-	destDir := filepath.Join(s.themesDir, manifest.Slug)
+	// Move cloned directory into the writable data dir. Bundled themes in
+	// the image stay untouched; an operator can override a bundled slug by
+	// installing a same-slug theme here, and ScanAndRegister will prefer
+	// the data copy.
+	destDir := filepath.Join(s.dataDir, manifest.Slug)
 	if err := os.RemoveAll(destDir); err != nil {
 		return nil, fmt.Errorf("failed to clean destination dir: %w", err)
 	}

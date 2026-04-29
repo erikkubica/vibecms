@@ -75,7 +75,10 @@ func (h *ExtensionHandler) InstallFromZip(data []byte) (*models.Extension, error
 		return nil, fmt.Errorf("extension slug %q contains invalid characters", manifest.Slug)
 	}
 
-	finalDir := filepath.Join(h.loader.extensionsDir, manifest.Slug)
+	// Always deploy into the writable data dir; bundled extensions in the
+	// image stay untouched. ScanAndRegister prefers data on slug collision
+	// so a same-slug deploy overrides the bundled copy without renaming.
+	finalDir := filepath.Join(h.loader.dataDir, manifest.Slug)
 	stagingDir := finalDir + ".deploy.tmp"
 	backupDir := finalDir + ".deploy.old"
 

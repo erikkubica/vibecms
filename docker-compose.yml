@@ -25,6 +25,11 @@ services:
       ADMIN_PASSWORD: admin123
     volumes:
       - ./storage:/app/storage
+      # Persistent operator data — themes installed via git/zip/MCP and
+      # operator-deployed extensions live here so they survive container
+      # restarts. Image-bundled themes and extensions stay in /app/themes
+      # and /app/extensions (read-only intent); the scanner reads both.
+      - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy

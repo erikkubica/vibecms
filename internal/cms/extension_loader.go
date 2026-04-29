@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"squilla/internal/models"
 
@@ -142,30 +143,60 @@ func (m *ExtensionManifest) OwnedTablesMap() map[string]bool {
 }
 
 // ExtensionLoader handles scanning, registering, and managing extensions.
+//
+// Extensions live in two parallel directories:
+//   - bundledDir   (e.g. "extensions")        — image-shipped, read-only intent.
+//   - dataDir      (e.g. "data/extensions")   — operator-installed, persistent
+//     across container restarts when mounted as a volume.
+//
+// Both are scanned at boot. Writes (zip upload, deploy) target dataDir so
+// bundled extensions stay intact. On slug collision the data copy wins so
+// an operator override replaces a bundled extension transparently.
 type ExtensionLoader struct {
 	db            *gorm.DB
-	extensionsDir string
+	extensionsDir string // bundled (image)
+	dataDir       string // operator-installed (volume)
 }
 
-// NewExtensionLoader creates a new ExtensionLoader.
-func NewExtensionLoader(db *gorm.DB, extensionsDir string) *ExtensionLoader {
+// NewExtensionLoader creates a new ExtensionLoader. dataDir is auto-created
+// if missing so a fresh container can scan/install without an explicit mkdir.
+func NewExtensionLoader(db *gorm.DB, bundledDir, dataDir string) *ExtensionLoader {
+	if dataDir != "" {
+		_ = os.MkdirAll(dataDir, 0o755)
+	}
 	return &ExtensionLoader{
 		db:            db,
-		extensionsDir: extensionsDir,
+		extensionsDir: bundledDir,
+		dataDir:       dataDir,
 	}
 }
 
-// ScanAndRegister scans the extensions directory, reads each extension.json,
-// and upserts extension records into the database. New extensions default to is_active=false.
+// DataDir returns the writable extensions directory. Install paths target
+// it; bundled stays untouched.
+func (l *ExtensionLoader) DataDir() string { return l.dataDir }
+
+// ScanAndRegister walks both the data and bundled extension directories
+// and upserts a row per valid extension.json. Data wins on slug collision
+// because the upsert order claims dataDir slugs first; the bundled scan
+// then skips any slug whose stored path already lives under dataDir.
 func (l *ExtensionLoader) ScanAndRegister() {
-	entries, err := os.ReadDir(l.extensionsDir)
+	dataCount := l.scanDir(l.dataDir, true)
+	bundledCount := l.scanDir(l.extensionsDir, false)
+	log.Printf("[extensions] scanned %d extensions (%d data, %d bundled) from %s + %s",
+		dataCount+bundledCount, dataCount, bundledCount, l.dataDir, l.extensionsDir)
+}
+
+// scanDir walks one root and registers each extension. Missing dir is fine.
+func (l *ExtensionLoader) scanDir(root string, isData bool) int {
+	if root == "" {
+		return 0
+	}
+	entries, err := os.ReadDir(root)
 	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("[extensions] no extensions directory found at %s", l.extensionsDir)
-			return
+		if !os.IsNotExist(err) {
+			log.Printf("[extensions] error reading %s: %v", root, err)
 		}
-		log.Printf("[extensions] error reading extensions directory: %v", err)
-		return
+		return 0
 	}
 
 	registered := 0
@@ -174,12 +205,12 @@ func (l *ExtensionLoader) ScanAndRegister() {
 			continue
 		}
 
-		extDir := filepath.Join(l.extensionsDir, entry.Name())
+		extDir := filepath.Join(root, entry.Name())
 		manifestPath := filepath.Join(extDir, "extension.json")
 
 		data, err := os.ReadFile(manifestPath)
 		if err != nil {
-			continue // skip directories without a manifest
+			continue
 		}
 
 		var manifest ExtensionManifest
@@ -195,6 +226,16 @@ func (l *ExtensionLoader) ScanAndRegister() {
 			manifest.Priority = 50
 		}
 
+		// Bundled scan must not overwrite a data-backed registration.
+		if !isData && l.dataDir != "" {
+			var existing models.Extension
+			if err := l.db.Where("slug = ?", manifest.Slug).First(&existing).Error; err == nil {
+				if strings.HasPrefix(existing.Path, l.dataDir+string(os.PathSeparator)) {
+					continue
+				}
+			}
+		}
+
 		ext := models.Extension{
 			Slug:        manifest.Slug,
 			Name:        manifest.Name,
@@ -207,8 +248,6 @@ func (l *ExtensionLoader) ScanAndRegister() {
 			IsActive:    builtinActiveExtensions[manifest.Slug],
 		}
 
-		// Upsert: insert if new, update name/version/description/author/path/priority if exists.
-		// Do NOT change is_active on existing records.
 		result := l.db.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "slug"}},
 			DoUpdates: clause.AssignmentColumns([]string{
@@ -220,11 +259,9 @@ func (l *ExtensionLoader) ScanAndRegister() {
 			log.Printf("[extensions] error registering %s: %v", manifest.Slug, result.Error)
 			continue
 		}
-
 		registered++
 	}
-
-	log.Printf("[extensions] scanned %d extensions from %s", registered, l.extensionsDir)
+	return registered
 }
 
 // GetActive returns all active extensions sorted by priority (ascending).

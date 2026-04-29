@@ -250,7 +250,8 @@ func (r *ThemeAssetRegistry) BuildBlockScriptTags(usedSlugs ...[]string) templat
 
 // ThemeLoader reads theme.json and registers layouts, partials, blocks, and assets.
 type ThemeLoader struct {
-	db       *gorm.DB
-	registry *ThemeAssetRegistry
-	eventBus *events.EventBus
+	db               *gorm.DB
+	registry         *ThemeAssetRegistry
+	eventBus         *events.EventBus
+	SettingsRegistry *ThemeSettingsRegistry
 }

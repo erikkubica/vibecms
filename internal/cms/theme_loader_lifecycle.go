@@ -22,9 +22,10 @@ import (
 // NewThemeLoader creates a new ThemeLoader.
 func NewThemeLoader(db *gorm.DB, registry *ThemeAssetRegistry, eventBus *events.EventBus) *ThemeLoader {
 	return &ThemeLoader{
-		db:       db,
-		registry: registry,
-		eventBus: eventBus,
+		db:               db,
+		registry:         registry,
+		eventBus:         eventBus,
+		SettingsRegistry: NewThemeSettingsRegistry(),
 	}
 }
 
@@ -98,6 +99,12 @@ func (tl *ThemeLoader) LoadTheme(themeDir string) error {
 
 	// Upsert theme record in the themes table.
 	tl.upsertThemeRecord(manifest, themeDir)
+
+	// Snapshot settings pages into the in-memory registry. Slug derived
+	// the same way as upsertThemeRecord so admin/Tengo lookups by active
+	// theme slug match the DB row.
+	themeSlug := strings.ToLower(strings.ReplaceAll(manifest.Name, " ", "-"))
+	tl.SettingsRegistry.SetActive(themeSlug, LoadSettingsPages(themeDir, manifest))
 
 	log.Printf("theme loaded: %s (%d layouts, %d partials, %d blocks, %d styles, %d scripts)",
 		manifest.Name, len(manifest.Layouts), len(manifest.Partials), len(manifest.Blocks),

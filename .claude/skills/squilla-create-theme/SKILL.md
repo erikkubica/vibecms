@@ -49,6 +49,111 @@ Reach for this skill when **the answer to "where does this UI live?" is "in a th
 
 The reference theme is `themes/hello-vietnam/` — 25 blocks, six demo pages, all the patterns. When in doubt, open it.
 
+## Silent failure modes (read this BEFORE writing any Tengo)
+
+Squilla used to swallow these silently. Most are now fail-loud (warnings in
+`docker compose logs app`, or hard rejection at theme load). Read them once
+so you don't have to debug them.
+
+### The asymmetry cheatsheet
+
+| Where | Wrapping key | Field-key style | Options style | Term value |
+|---|---|---|---|---|
+| `nodes.create({...})` (top level) | **`fields_data:`** | n/a (your own keys) | n/a | `{slug, name}` object |
+| Inside `blocks_data: [{type, ...}]` | **`fields:`** | n/a | n/a | `{slug, name}` object |
+| `block.json` `field_schema` | n/a | **`key:`** | **`["a","b"]`** strings only | `term_node_type` required |
+| `nodetypes.register({field_schema:[...]})` | n/a | **`name:`** | strings or `{value,label}` ok | same |
+
+**Mismatching `fields:` vs `fields_data:` was the #1 silent data drop.** The
+runtime now logs a warning when it sees the wrong one — watch the app logs
+during seed runs.
+
+**Object options on a `select` field in block.json** are now rejected at
+theme load with a hard error. They used to crash the admin with React error
+#31 and silently fail to register the block.
+
+### Other failure modes that now log warnings
+
+- **`type: "term"` field schema entry without `term_node_type:`** — hydration
+  silently returns nothing. The CMS now logs at register time. In block.json,
+  the theme loader hard-rejects the block.
+- **Settings keys keep their dots** in the DB (`squilla.brand.version`).
+  Templates that try `.app.settings.squilla.brand.version` get an empty
+  result silently. Use `index $s "key"` or — better — `mustSetting`:
+
+```html
+{{- $s := .app.settings -}}
+<p>Version: {{ mustSetting $s "squilla.brand.version" }}</p>
+```
+
+  `mustSetting` errors loudly when the key is missing/empty. `index` returns
+  empty silently. Reach for `mustSetting` whenever the value is
+  required for the page to make sense.
+- **`{{ filter "name" }}` with no value arg** throws "wrong number of args".
+  For input-less filters, pass `(dict)`:
+  ```html
+  {{ $things := filter "list_things" (dict) }}
+  ```
+- **Default fallbacks like `{{ or .x "Default" }}` mask data bugs.** Don't
+  use them. Let empty fields render empty so the bug is loud.
+
+### Tengo language gotchas
+
+- `error` is a reserved selector. **`log.error("…")` is a parse error.**
+  Use `log.warn(…)`, `log.info(…)`, or the alias `log.err(…)`.
+- `is_string`, `is_undefined`, `is_error` are Tengo built-ins — use them
+  for type checks, including on optional map keys.
+- Tengo imports are relative without extension: `import("./setup/foo")`
+  resolves `scripts/setup/foo.tengo`. Each module needs `export {…}`.
+- A bare top-level `return` in a filter terminates the script before
+  setting `response`. Use `if/else` branches and let the script fall
+  through.
+
+### Theme HTTP routes mount under a prefix
+
+`routes.register("GET", "/docs", "./routes/docs")` ends up at
+**`/api/theme/docs`**, NOT `/docs`. Themes cannot shadow public node
+routes. To redirect a public path either:
+
+- Point a menu link at the destination URL directly (skipping the page slug
+  resolution), or
+- Use an extension `public_route` (extensions are not prefixed).
+
+### Caches: when do file changes show up?
+
+| Change | What to do |
+|---|---|
+| Edit `view.html` (block) | Re-activate the theme: `core.theme.activate` |
+| Edit `block.json` `field_schema` | Re-activate. The `content_hash` gates resync — if your edit didn't change the hash, force it (see "Useful queries"). |
+| Edit `layouts/*.html` or `partials/*.html` | Re-activate. Layouts/partials are loaded into the renderer cache at activation. |
+| `core.settings.set("homepage_node_id", …)` | Now publishes `setting.updated` and busts the cache. Older builds required a re-activate. |
+| `core.theme.deploy({body_base64})` | `theme.json` MUST declare `slug:` (regex `[A-Za-z0-9_-]+`). Local `make theme` works without it because the directory name is the slug; the deploy tool requires the field explicitly. |
+
+### Dev-mode iteration loop
+
+Set `SQUILLA_DEV_MODE=true` in your dev environment. Seeds receive a
+top-level `dev_mode` boolean. Use it to branch to overwrite-on-reseed for
+fast iteration. Production stays safe (idempotent skip-if-exists) because
+the env var is unset.
+
+```tengo
+nodes := import("core/nodes")
+
+ensure_or_replace_home := func() {
+    res := nodes.query({ node_type: "page", slug: "home", limit: 1 })
+    if res.total > 0 && dev_mode {
+        nodes.delete(res.nodes[0].id)
+        res = { total: 0, nodes: [] }
+    }
+    if res.total == 0 {
+        return nodes.create({ ... }).id
+    }
+    return res.nodes[0].id
+}
+```
+
+Without `dev_mode`, the same seed is the safe production-idempotent form.
+
 ## The #1 gotcha: layout vs partial vs block context
 
 **These three template types see different data.** Conflating them is the most common bug.
@@ -241,6 +346,122 @@ The most common mismatches. Full table in `themes/README.md` §6.
 
 **Trap:** in Tengo schemas the field key is `name`; in `block.json` schemas it's `key`. Different parsers, same field types. See §6 + §8.1.
 
+## Term-typed field lifecycle
+
+Term fields (a constrained pick from a taxonomy) cause more confusion than
+any other field type. The lifecycle, end to end:
+
+1. **Theme registers the taxonomy with `node_types`:**
+   ```tengo
+   taxonomies := import("core/taxonomies")
+   taxonomies.register({
+       slug: "doc_section",
+       label: "Doc Section",
+       label_plural: "Doc Sections",
+       hierarchical: false,
+       node_types: ["documentation"]
+   })
+   ```
+   To **attach** an existing taxonomy (e.g. core's `category`) to a custom
+   node type, **re-register it** with the desired `node_types: [...]` —
+   without re-registering, the post-edit form has no selector.
+
+2. **Theme creates terms with `node_type` set:**
+   ```tengo
+   terms := import("core/terms")
+   terms.create({
+       node_type: "documentation",
+       taxonomy:  "doc_section",
+       slug:      "getting-started",
+       name:      "Getting Started"
+   })
+   ```
+   The DB unique key is `(node_type, taxonomy, slug)`. Without
+   `node_type`, the term won't hydrate when used in a per-node field.
+
+3. **Field schema declares `term_node_type`:**
+   ```json
+   { "key": "section", "type": "term",
+     "taxonomy": "doc_section",
+     "term_node_type": "documentation" }
+   ```
+   Without `term_node_type`, the loader logs a warning and hydration
+   silently won't match.
+
+4. **Store the value as an OBJECT, not a bare slug:**
+   ```tengo
+   nodes.create({
+       node_type: "documentation",
+       title: "…", slug: "intro", status: "published",
+       fields_data: {
+           section: { slug: "getting-started", name: "Getting Started" }
+       }
+   })
+   ```
+   The admin's term-field component requires the object form to
+   pre-select. The hydrator accepts either, but bare strings break the
+   admin edit flow.
+
+5. **Templates handle BOTH shapes** (string slug OR hydrated map):
+   ```html
+   {{- $sec := .node.fields.section -}}
+   {{- $secLabel := "" -}}
+   {{- if $sec -}}
+     {{- with $sec.name }}{{ $secLabel = . }}{{ end -}}
+     {{- if not $secLabel -}}{{- with $sec.slug }}{{ $secLabel = . }}{{ end -}}{{- end -}}
+     {{- if not $secLabel -}}{{- $secLabel = $sec -}}{{- end -}}
+   {{- end -}}
+   ```
+
+### Real taxonomies (admin "Taxonomies" tab + tax_query)
+
+For taxonomies you want to surface in the admin's "Taxonomies" tab and
+query via `tax_query` (e.g. `category` on `post`), use the **`taxonomies:`**
+key on the node, NOT `fields_data`:
+
+```tengo
+nodes.create({
+    node_type:  "post",
+    title:      "Hello",
+    slug:       "hello",
+    status:     "published",
+    taxonomies: { category: ["engineering"] },     // real taxonomy
+    fields_data: { excerpt: "…", read_time: "5 min" } // term-typed schema fields
+})
+```
+
+`taxonomies:` lands in `content_nodes.taxonomies` (JSONB).
+`fields_data:` term-typed entries are constrained pickers — they share
+storage with regular per-node fields.
+
+## Filter registration
+
+Tengo files in `scripts/filters/` are auto-loaded as importable modules but
+**not** as named filter handlers. Register them explicitly in your setup
+script:
+
+```tengo
+filters := import("core/filters")
+filters.add("list_docs", "./filters/list_docs")
+filters.add("doc_neighbors", "./filters/doc_neighbors")
+```
+
+Then templates can call them:
+```html
+{{ $docs := filter "list_docs" (dict "section" "getting-started") }}
+```
+
+Remember: `filter "name"` with no value argument throws — pass `(dict)` for
+filters that take no input.
+
+## Block slug prefixing
+
+Prefix every theme block slug (e.g. `sq-hero`, `mytheme-cta`,
+`hv-popular-trips`). Last-write wins per slug, so collisions with
+extension-registered blocks (notably `cb-*` from the content-blocks
+extension) or other themes' blocks are silent. Prefixing is hygiene, not
+optional.
+
 ## Top 5 bugs (and how to dodge them)
 
 | Bug | Cause | Fix |
@@ -333,3 +554,40 @@ docker compose restart app
 6. Use the forms-extension handshake instead of hand-rolled forms.
 
 When in doubt, open `themes/hello-vietnam/`. Every pattern in this skill has a working example there.
+
+## Production-readiness checklist
+
+Before declaring the theme done, **run the automated checklist tool**:
+
+```
+core.theme.checklist({ slug: "<your-theme-slug>" })
+```
+
+It walks `themes/<slug>/` on disk and reports `pass | fail` for:
+
+- `theme.json` exists, parses, has `slug`, has a default layout.
+- Every `block.json` `field_schema` uses `key:` (not `name:`).
+- Every `select`/`radio` field has plain string options.
+- Every `term`-typed field has `term_node_type` and `taxonomy`.
+- No `log.error(` in seed scripts (it's a Tengo parse error).
+- No suspect top-level `fields:` literal in scripts that call
+  `nodes.create`/`nodes.update`.
+- Block slug prefixing.
+
+Read **`docs/theme-checklist.md`** for the full list — including the
+manual checks that only a human or a browser-driving agent can verify
+(admin pre-selects the right values, public homepage looks right,
+re-activation is idempotent). Run the automated tool first, then walk
+the manual list.
+
+Don't claim done until both pass. This is the difference between a
+theme that one-shots and one that needs a debugging session.
+
+## Update log
+
+This skill was rewritten after a real-world theme port (`themes/squilla`)
+hit ~40 silent failures. The retrospective lives in
+`docs/theme-build-notes.md`. Most of those gotchas are now fail-loud:
+warnings in the app log on misuse, hard rejection at theme load for
+schema-level bugs. If you encounter a new silent failure, add it to
+that document and propose a fail-loud fix.

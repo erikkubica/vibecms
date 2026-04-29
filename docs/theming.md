@@ -1341,3 +1341,134 @@ log.info("Agency Starter theme loaded!")
 ---
 
 This completes the Squilla theming reference. For questions about the Tengo scripting API, see `docs/scripting_api.md`. For admin UI customization, see `docs/admin_ui.md`.
+
+---
+
+## Appendix A — Common silent-failure modes
+
+A real-world theme port (`docs/theme-build-notes.md`) catalogued ~40
+silent failures. Most are now fail-loud — log warnings or hard rejection
+at theme load. This appendix is a quick-scan reference. The MCP tool
+`core.guide` also returns a machine-readable `gotchas` array covering
+the same content.
+
+### Data-shape asymmetries (the silent data-loss family)
+
+| Where | Required key | Wrong (silent) | Note |
+|---|---|---|---|
+| `nodes.create({...})` top level | `fields_data:` | `fields:` | Now logs a warning on misuse. |
+| Block inside `blocks_data: [{type, ...}]` | `fields:` | `fields_data:` | Now logs a warning on misuse. |
+| `block.json` `field_schema` entry | `key:` | `name:` | Theme loader now hard-rejects. |
+| `nodetypes.register({field_schema:[...]})` | `name:` | `key:` | Auto-falls back to `key` for compatibility but stay consistent. |
+| `block.json` `select`/`radio` options | `["a","b"]` | `[{value,label}]` | Theme loader now hard-rejects (used to crash admin with React #31). |
+| `term`-typed schema entry | `term_node_type:` set | omitted | Logs a warning at register time; hydration won't match. |
+| Term-typed field value | `{slug, name}` object | bare slug string | Admin can't pre-select bare strings; templates handle both. |
+| Real taxonomy on a node | `taxonomies: { tax: [slugs] }` | `fields_data: { tax: [...] }` | The taxonomies tab and `tax_query` only see the `taxonomies` JSONB column. |
+| Settings template lookup | `index $s "key.with.dots"` or `mustSetting $s "k"` | `.app.settings.key.with.dots` | Settings keys keep their dots — Go templates can't dot-traverse them. |
+
+### Fail-loud helpers
+
+- **`mustSetting $settings "<key>"`** — errors loudly when a required
+  setting is missing or empty. Use for any setting your template can't
+  render correctly without.
+- **`setting $settings "<key>"`** — graceful: returns "" on miss. Use
+  for optional settings only.
+
+### Tengo language gotchas
+
+- `log.error("…")` is a **parse error** — `error` is a reserved selector.
+  Use `log.warn(…)`, `log.info(…)`, or the alias `log.err(…)`.
+- `is_string`, `is_undefined`, `is_error` are built-ins. Use them on
+  optional map keys (no exception thrown for missing key).
+- Tengo imports are relative without extension: `import("./setup/foo")`.
+  Each module needs `export {…}`.
+- A bare top-level `return` inside a filter terminates the script.
+  Wrap in `if/else` so `response =` is set first.
+
+### Cache & lifecycle
+
+| Change | What invalidates the cache |
+|---|---|
+| Edit `view.html` / `block.json` | Re-activate the theme (or wait for `content_hash` resync to detect file changes). |
+| Edit `layouts/*.html` / `partials/*.html` | Re-activate. Layouts/partials only re-read at activation. |
+| `core.settings.set(...)` | Now publishes `setting.updated` and busts the in-process settings cache. |
+| `core.theme.activate` | Busts everything: layouts, partials, blocks, settings. |
+
+### Theme HTTP routes
+
+`routes.register("GET", "/docs", "./routes/docs")` mounts the handler at
+**`/api/theme/docs`** — NOT at `/docs`. Themes cannot shadow public node
+routes. To redirect a bare path, point a menu link directly at the
+destination, or use an extension `public_route` (extensions are not
+prefixed).
+
+### Filter usage
+
+`{{ filter "name" }}` (no value arg) throws `"wrong number of args"`.
+For input-less filters pass an empty dict:
+```html
+{{ $things := filter "list_things" (dict) }}
+```
+
+Filters defined in `scripts/filters/*.tengo` are auto-loaded as importable
+modules but **not** registered as named filter handlers — register
+explicitly:
+```tengo
+filters := import("core/filters")
+filters.add("list_docs", "./filters/list_docs")
+```
+
+### Dev-mode iteration
+
+Set `SQUILLA_DEV_MODE=true` in dev environments. Seeds receive a
+top-level `dev_mode` boolean. Branch on it to overwrite-on-reseed for
+fast iteration; production stays idempotent because the env var is unset:
+
+```tengo
+res := nodes.query({ node_type: "page", slug: "home", limit: 1 })
+if res.total > 0 && dev_mode {
+    nodes.delete(res.nodes[0].id)
+    res = { total: 0 }
+}
+if res.total == 0 {
+    nodes.create({ ... })
+}
+```
+
+### Production-readiness checklist
+
+- Run `core.theme.checklist({ slug: "<slug>" })` for automated structural
+  checks (theme.json validity, schemas, slug prefixing, Tengo gotchas).
+- Walk `docs/theme-checklist.md` for the manual checks (admin UX,
+  public render, idempotency).
+- Don't claim done until both pass.
+
+## Appendix B — Template function reference (verified whitelist)
+
+| Function | Purpose |
+|---|---|
+| `safeHTML s` | Bypass HTML escaping. Use only on trusted strings or `event` results. |
+| `safeURL s` | Bypass URL escaping. |
+| `raw s` | Same as `safeHTML`. |
+| `dict k1 v1 k2 v2 ...` | Build a map literal. |
+| `list a b c ...` | Build a slice. |
+| `seq n` | Range `[0..n-1]`. |
+| `mod a b` / `add a b` / `sub a b` | Integer math. |
+| `json v` | Pretty-print v as JSON. |
+| `lastWord s` / `beforeLastWord s` | String helpers. |
+| `split sep s` | Split into a slice. |
+| `image_url url size` | Cached/optimized image URL. |
+| `image_srcset url size1 size2 ...` | Responsive `srcset`. |
+| `filter name value` | Run a registered Tengo filter (2 args required). |
+| `event name ctx ...` | Fire an event; collect HTML responses. |
+| `deref v` | Dereference `*string`/`*int` → bare value. |
+| `renderLayoutBlock slug` | Render a partial (layout/partial scope only). |
+| `setting settings key` | Settings lookup with empty-on-miss fallback. |
+| `mustSetting settings key` | Settings lookup that errors on miss/empty. |
+
+Notably **absent** from the funcmap (these are Go template built-ins, used
+without a leading function name): `eq`, `ne`, `lt`, `gt`, `and`, `or`,
+`not`, `index`, `len`, `range`, `with`, `if`, `printf`. Common helpers
+that don't exist in Squilla: `trimPrefix`, `hasPrefix`, `default`. If you
+reach for one of those, write the logic inline or move it to a Tengo
+filter.

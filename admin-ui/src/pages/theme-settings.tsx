@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { SidebarCard } from "@/components/ui/sidebar-card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import CustomFieldInput from "@/components/ui/custom-field-input";
 import { toast } from "sonner";
 import {
@@ -198,54 +206,49 @@ export function ThemeSettingsPage() {
             </Card>
           </div>
 
-          {/* Sidebar — Save + per-page language select */}
+          {/* Sidebar — Publish-style card matching the node editor */}
           <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-            <Card className="rounded-xl border border-slate-200 shadow-sm">
-              <CardContent className="space-y-3 p-4">
-                <Button
-                  onClick={handleSave}
-                  disabled={saving || !hasChanges}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium"
-                >
-                  {saving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
-
-                {languages.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="theme-settings-locale"
-                      className="text-xs font-medium text-slate-600"
-                    >
-                      Language
-                    </Label>
-                    <select
-                      id="theme-settings-locale"
-                      value={pageLocale}
-                      onChange={(e) => setPageLocale(e.target.value)}
-                      className="block h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                    >
-                      <option value="all">All languages (shared)</option>
+            <SidebarCard title="Publish">
+              {languages.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-slate-500">
+                    Language
+                  </Label>
+                  <Select value={pageLocale} onValueChange={setPageLocale}>
+                    <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All languages (shared)</SelectItem>
                       {languages.map((lang) => (
-                        <option key={lang.code} value={lang.code}>
+                        <SelectItem key={lang.code} value={lang.code}>
                           {lang.flag ? `${lang.flag} ` : ""}
                           {lang.name || lang.code}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                    <p className="text-[11px] leading-snug text-slate-500">
-                      {hasTranslatable
-                        ? "Translatable fields on this page store a separate value per language. Pick the language to view or edit. Defaults to the admin header language."
-                        : "No fields on this page are translatable — the language picker has no effect here. Themes mark fields with \"translatable\": true to opt in."}
-                    </p>
-                  </div>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] leading-snug text-slate-500">
+                    {hasTranslatable
+                      ? "Translatable fields store a separate value per language. Defaults to the admin header language."
+                      : "No fields here are marked translatable, so the language pick is a no-op."}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                onClick={handleSave}
+                disabled={saving || !hasChanges}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-lg font-medium"
+              >
+                {saving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
                 )}
-              </CardContent>
-            </Card>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </SidebarCard>
           </aside>
         </div>
       </div>

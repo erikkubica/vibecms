@@ -166,6 +166,30 @@ func guideRecipes(topic string) []map[string]any {
 			"notes": "Subscribe to node_type.{created,updated,deleted} and taxonomy.{created,updated,deleted}, plus extension.activated, theme.activated and their deactivated counterparts.",
 		},
 		{
+			"goal":  "Wire SEO meta tags into a theme's <head>",
+			"topic": "themes",
+			"steps": []string{
+				"Open every layout in themes/<slug>/layouts/*.html",
+				"Add `{{.app.head_meta}}` inside <head>, AFTER any hand-written <title> / <meta name=description> and BEFORE the head_styles loop",
+				"Strip any hand-rolled <meta property=\"og:*\"> or <meta name=\"twitter:*\"> tags — the kernel emits them now and yours will duplicate",
+				"Verify in /admin/site-settings → SEO that defaults (default OG image, og_site_name, twitter_handle, robots_index) are populated",
+				"curl -s http://localhost/<slug> | grep -i 'og:' — confirm tags appear",
+			},
+			"notes": "head_meta resolution order: per-node SEO (node.seo.meta_title etc.) → site-wide defaults (Site Settings → SEO) → node title/excerpt + featured_image. og:image auto-uses featured_image when seo.og_image is empty. Translations emit hreflang alternates automatically. Robots: when seo_robots_index='false', noindex,nofollow lands in both X-Robots-Tag header AND <meta name=robots>. 404 pages force noindex regardless of the site-wide setting.",
+		},
+		{
+			"goal":  "Ship a custom 404 page with the theme",
+			"topic": "themes",
+			"steps": []string{
+				"Create themes/<slug>/layouts/404.html — a normal layout that renders {{.node.blocks_html}} (the kernel-supplied 404 content lands there)",
+				"Register it in theme.json: `{ \"slug\": \"404\", \"file\": \"404.html\", \"name\": \"Not Found\" }`",
+				"Drop `{{.app.head_meta}}` into <head> (forced noindex,nofollow on 404s)",
+				"core.theme.activate(<slug>) — picks up the new layout",
+				"curl -i http://localhost/this-page-does-not-exist — verify status 404 and themed body",
+			},
+			"notes": "Reserved slug \"404\" is recognized first; legacy alias \"error\" is also accepted (squilla theme's existing layouts/error.html keeps working). When neither is registered, the default layout handles 404 responses. The synthesized not-found body lives in {{.node.blocks_html}} — same data shape as a regular page, so a 404 layout is usually just your default chrome with blocks_html inside it.",
+		},
+		{
 			"goal":  "Build a theme end-to-end (cold-boot, AI one-shot)",
 			"topic": "themes",
 			"steps": []string{
@@ -422,9 +446,20 @@ func themeStandards() map[string]any {
 			"{{ split sep s }} / {{ lastWord s }} / {{ beforeLastWord s }} — string helpers.",
 		},
 		"context_scoping": map[string]string{
-			"layout":  "Sees full .node (id, title, slug, fields, blocks_html, taxonomies, ...), .app (head_styles, foot_scripts, settings, menus, current_lang, theme_url, ...), .user (logged_in, role, ...).",
+			"layout":  "Sees full .node (id, title, slug, fields, blocks_html, taxonomies, ...), .app (head_styles, foot_scripts, head_meta, block_styles, block_scripts, settings, menus, current_lang, theme_url, ...), .user (logged_in, role, ...).",
 			"partial": "Same as layout, plus .partial map populated from any partial-level field_schema.",
 			"block":   "Sees ONLY the block's own field values at root, e.g. {{ .heading }}, {{ .items }}. Cannot reach .app or .node. To pull node data into a block, use {{ filter \"list_nodes\" ... }} or {{ filter \"get_node\" ... }}.",
+		},
+		"head_checklist": map[string]any{
+			"intent":  "Every layout that wraps a public page must drop these into <head> so SEO chrome and per-block assets render correctly.",
+			"snippet": "<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>{{ if and .node.seo .node.seo.meta_title }}{{ .node.seo.meta_title }}{{ else }}{{ .node.title }}{{ end }}</title>\n  {{.app.head_meta}}\n  {{- range .app.head_styles -}}<link rel=\"stylesheet\" href=\"{{.}}\">{{- end -}}\n  {{.app.block_styles}}\n</head>",
+			"head_meta": "Pre-built canonical/og:*/twitter:*/robots/hreflang block. Per-node SEO wins; site-wide defaults from Site Settings → SEO fill the gaps; node title/excerpt and featured_image are the final fallback. og:image auto-uses the node's featured_image when seo.og_image is empty. Translations emit hreflang alternates automatically. DO NOT hand-roll og:* / twitter:* tags in your layout — they'll duplicate what the kernel already emits.",
+			"head_styles":   "Theme + extension <link rel=stylesheet> URLs. Always render with the {{ range }} loop above.",
+			"block_styles":  "Per-block scoped CSS for blocks present on this page (built from blocks/<slug>/style.css).",
+		},
+		"reserved_layout_slugs": map[string]string{
+			"404": "Theme-supplied Page Not Found layout. Register `{ \"slug\": \"404\", \"file\": \"404.html\" }` in theme.json to opt in. The synthesized 404 content lands in `{{.node.blocks_html}}` so a typical 404 layout is your default chrome with blocks_html inside it. head_meta still flows through (with noindex,nofollow forced for 404s). When neither `404` nor the legacy alias `error` is registered, the default layout handles missing pages.",
+			"error": "Legacy alias for 404. Recognized for backward compatibility (e.g. squilla theme's existing layouts/error.html); new themes should use `404`.",
 		},
 		"core_rules": []map[string]any{
 			{"id": "1", "title": "Every block is a complete content type.", "description": "block.json declares every field its view.html reads. Every field has a value in test_data. Every field has a help line."},
@@ -439,6 +474,8 @@ func themeStandards() map[string]any {
 			{"id": "10", "title": "safeHTML only on fields you trust.", "description": "Prefer Go's auto-escaping. Mark HTML-bearing fields explicitly in block.json's help. safeHTML on user-controlled strings is XSS."},
 			{"id": "11", "title": "Block-scoped CSS goes in blocks/<slug>/style.css.", "description": "Site-wide CSS goes in assets/styles/theme.css. Don't dump <style> blocks inside view.html."},
 			{"id": "12", "title": "No dead schema fields.", "description": "If you remove a field from view.html, remove it from block.json, the templates/*.json, and the theme.tengo seed. Schema and template must agree."},
+			{"id": "13", "title": "Drop {{.app.head_meta}} into every layout's <head>.", "description": "The kernel composes canonical/og:*/twitter:*/robots/hreflang once per render. Layouts must surface it — without {{.app.head_meta}}, social previews and search engines see only your hand-written <title>/<meta name=description>. Do NOT hand-roll og:* tags; they will duplicate the kernel's output."},
+			{"id": "14", "title": "Reserve layout slug \"404\" for missing pages.", "description": "Register `{ \"slug\": \"404\", \"file\": \"404.html\" }` (or legacy alias \"error\") in theme.json. Public renderer auto-uses it for 404 responses. Synthesized 404 content lands in {{.node.blocks_html}}. Falls back to the default layout when absent."},
 		},
 		"examples": map[string]string{
 			"theme.json": `{

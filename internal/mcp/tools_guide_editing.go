@@ -68,13 +68,27 @@ func editingPlaybook() map[string]any {
 			"After every write: call core.render.node_preview(id) — confirm the HTML is not empty and contains expected text.",
 			"Before publishing UI claims in user docs: open the live admin (or playwright-cli) and inspect — never extrapolate from 'how every CMS works'.",
 		},
+		"site_wide_seo": map[string]any{
+			"surface": "/admin/site-settings — Site Settings page, SEO card. Edit via PUT /admin/api/settings.",
+			"keys": map[string]string{
+				"seo_default_meta_title":       "Used as <title> / og:title / twitter:title fallback when a node's seo.meta_title is empty.",
+				"seo_default_meta_description": "Fallback for <meta name=description>, og:description, twitter:description.",
+				"seo_default_og_image":         "Fallback for og:image / twitter:image when a node has no featured_image and no seo.og_image. 1200×630 recommended. Absolute URL.",
+				"seo_og_site_name":             "Emitted as og:site_name. Falls back to site_name when blank.",
+				"seo_twitter_handle":           "Emitted as twitter:site for cards. @ prefix added automatically if omitted.",
+				"seo_robots_index":             "'true' (default) allows indexing; 'false' emits both X-Robots-Tag: noindex,nofollow header AND <meta name=robots> on every public page. Use during staging.",
+			},
+			"emission_requires": "Layouts must include `{{.app.head_meta}}` in <head> for SEO meta to render. Bundled themes (squilla, default, hello-vietnam, curriculum-vitae) already do.",
+		},
+		"theme_layouts_reserved": map[string]string{
+			"404":   "Page Not Found layout. Theme opts in via theme.json layouts[]. Synthesized 404 body lands in {{.node.blocks_html}}. head_meta forces noindex,nofollow on 404s.",
+			"error": "Legacy alias for 404. Backward-compat only — squilla theme uses this slug.",
+		},
 		"open_gaps_known_to_kernel": []string{
 			"No core.node.update_many — patch nodes one at a time when normalizing missing layout_slug across a node-type.",
 			"node-type-level default layouts are not auto-applied; layout_slug must be set explicitly on each node.",
 			"PNG compression level is not configurable in admin (image optimizer settings expose JPEG / WebP only).",
-			"Media library uploads are images-only today; video / audio / document support is roadmap.",
 			"Per-language admin switcher is in flux — verify reads/writes scope correctly when authoring across locales.",
-			"Site-wide SEO settings page (/admin/settings/seo) is not implemented yet; per-node SEO is the only stable surface.",
 			"Form builder is schema + custom HTML (no visual builder); see forms-extension docs.",
 		},
 	}

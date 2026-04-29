@@ -141,10 +141,13 @@ Every theme starts here. Every layout, partial, block, template, asset, style, a
   // Layouts — Go html/template files in layouts/.
   // is_default flags the layout used when a node has no explicit layout pinned.
   // Add "supports_blocks": false to lock a layout to fixed-content nodes (no block editor).
+  // Reserved slugs: "404" (or legacy "error") — picked up automatically for
+  // Page Not Found responses. Falls back to the default layout when absent.
   "layouts": [
     { "slug": "default", "name": "Default Layout", "file": "default.html", "is_default": true },
     { "slug": "trip",    "name": "Trip Detail",    "file": "trip.html" },
-    { "slug": "legal",   "name": "Legal / Doc",    "file": "legal.html" }
+    { "slug": "legal",   "name": "Legal / Doc",    "file": "legal.html" },
+    { "slug": "404",     "name": "Not Found",      "file": "404.html" }
   ],
 
   // Partials — reusable layout fragments. Live in partials/. Rendered with
@@ -196,6 +199,7 @@ Every theme starts here. Every layout, partial, block, template, asset, style, a
 | `scripts[].deps` | optional | Other handles that must load first. Topologically sorted. |
 | `layouts[].is_default` | optional | Exactly one layout should be default. |
 | `layouts[].supports_blocks` | optional | Default `true`. Set `false` for chrome-only layouts. |
+| `layouts[].slug == "404"` | optional | Reserved. Used for Page Not Found responses. `"error"` is accepted as a legacy alias. Falls back to the default layout. |
 | `blocks[].dir` | optional | Defaults to slug. Override only if folder name differs. |
 | `assets[].key` | ✓ | Must match `^[a-z0-9_-]+$` — referenced in `theme-asset:<key>`. |
 
@@ -230,6 +234,9 @@ These three template types **see different data**. Conflating them is the #1 cau
 .app {
     head_styles []   // resolved theme + extension CSS URLs
     foot_scripts []  // resolved theme + extension JS URLs
+    head_meta        // pre-built SEO <meta>/<link> block (canonical, og:*, twitter:*,
+                     //  robots, hreflang). DROP IT INTO YOUR <head> WITH `{{.app.head_meta}}`.
+                     //  Per-node SEO wins; site_settings supply fallbacks.
     block_styles     // pre-built <style data-block="…"> tags for blocks on this page
     block_scripts    // pre-built <script data-block="…"> tags
     settings {…}     // map[string]string — every site setting, including custom hv.* keys
@@ -271,6 +278,61 @@ A block view's data is the block's `fields` map. **That's it.** From `hv-popular
 Note the dual usage:
 - `.heading`, `.limit` — the **block's own** fields, at root.
 - `$trips[i].fields_data` — when iterating nodes returned by `filter "list_nodes"`, the field data lives under `fields_data` (the raw DB column name). This is **different** from `.node.fields` in a layout. Two paths, two key names — by design, but worth knowing.
+
+---
+
+### Layout `<head>` checklist
+
+Every layout that wraps a public page should drop these lines in `<head>` so the
+kernel-composed SEO chrome and theme/extension assets land where they belong:
+
+```html
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if and .node.seo .node.seo.meta_title }}{{ .node.seo.meta_title }}{{ else }}{{ .node.title }}{{ end }}</title>
+
+  {{.app.head_meta}}                                   {{/* canonical, og:*, twitter:*, hreflang, robots */}}
+
+  {{- range .app.head_styles -}}
+    <link rel="stylesheet" href="{{.}}">
+  {{- end -}}
+  {{.app.block_styles}}                                {{/* per-block scoped CSS for blocks on this page */}}
+</head>
+```
+
+`head_meta` is computed once per render in the kernel — it pulls per-node SEO
+first (`.node.seo.meta_title`, `.node.seo.meta_description`, `.node.seo.og_image`),
+falls back to site-wide defaults from `Site Settings → SEO` (`seo_default_meta_title`,
+`seo_default_meta_description`, `seo_default_og_image`, `seo_og_site_name`,
+`seo_twitter_handle`, `seo_robots_index`), and finally to the node's title /
+excerpt and the featured image. `og:image` automatically uses the node's
+`featured_image` when no explicit `og_image` is set. Translations on the node
+emit `<link rel="alternate" hreflang="…">` automatically.
+
+**Don't** hand-roll `<meta property="og:*">` tags in your layout — anything you
+write there will duplicate what the kernel already emitted. If you need a
+single override, set the per-node SEO field instead.
+
+### `404.html` — theme-supplied Page Not Found
+
+Register a layout with slug `"404"` (or the legacy alias `"error"`) in your
+`theme.json` and the public renderer will use it for missing-page responses
+automatically. The synthesized 404 content lands in `{{.node.blocks_html}}`
+just like any other layout's body, so a typical 404 layout is just your
+default chrome with `blocks_html` rendered inside it. `head_meta` still
+flows through (with `noindex,nofollow` forced for 404s regardless of the
+site-wide setting). When neither `404` nor `error` is registered the
+default layout is used.
+
+```json
+{
+  "layouts": [
+    { "slug": "default", "file": "default.html", "is_default": true },
+    { "slug": "404",     "file": "404.html",     "name": "Not Found" }
+  ]
+}
+```
 
 ---
 

@@ -227,7 +227,6 @@ export function SettingsForm({
                   <SelectContent>
                     {languages.map((lang) => (
                       <SelectItem key={lang.code} value={lang.code}>
-                        {lang.flag ? `${lang.flag} ` : ""}
                         {lang.name || lang.code}
                       </SelectItem>
                     ))}

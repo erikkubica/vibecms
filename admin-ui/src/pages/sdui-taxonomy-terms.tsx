@@ -19,12 +19,14 @@ export function SduiTaxonomyTermsPage() {
   const sort = searchParams.get("sort");
   const order = searchParams.get("order");
   const page = searchParams.get("page");
+  const language = searchParams.get("language");
   if (search) params.search = search;
   if (sort) params.sort = sort;
   const per_page = searchParams.get("per_page");
   if (per_page) params.per_page = per_page;
   if (order) params.order = order;
   if (page) params.page = page;
+  if (language) params.language = language;
 
   const {
     data: layout,

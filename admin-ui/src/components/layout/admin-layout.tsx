@@ -760,7 +760,6 @@ function AdminLayoutInner() {
                     onClick={() => setCurrentCode(lang.code)}
                     className={currentCode === lang.code ? "bg-indigo-50 text-indigo-700" : ""}
                   >
-                    <span className="mr-2">{lang.flag}</span>
                     {lang.name}
                   </DropdownMenuItem>
                 ))}

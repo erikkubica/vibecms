@@ -1,6 +1,7 @@
 package cms
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -50,6 +51,13 @@ func (h *NodeTypeHandler) List(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "LIST_FAILED", "Failed to list node types")
 	}
 
+	// Same merge as Get — the node editor's taxonomy sidebar reads from
+	// this list response, so theme/extension-registered taxonomies need to
+	// land here too, not just on the single-node-type GET.
+	for i := range nodeTypes {
+		mergeRegisteredTaxonomies(h.svc.DB(), &nodeTypes[i])
+	}
+
 	return api.Paginated(c, nodeTypes, total, page, perPage)
 }
 
@@ -68,7 +76,61 @@ func (h *NodeTypeHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusInternalServerError, "FETCH_FAILED", "Failed to fetch node type")
 	}
 
+	// Merge taxonomies registered through the standalone `taxonomies` table
+	// (theme/extension registrations land here with field_schema, hierarchy
+	// flags, etc.) into the JSONB list the editor reads. Without this, a
+	// theme-registered taxonomy like `doc_section` shows up in the sidebar
+	// nav but is missing from the node-type's Taxonomies tab.
+	mergeRegisteredTaxonomies(h.svc.DB(), nt)
+
 	return api.Success(c, nt)
+}
+
+// mergeRegisteredTaxonomies pulls every row from the `taxonomies` table
+// whose node_types array contains nt.Slug and folds it into nt.Taxonomies
+// (the JSONB list the editor renders). Existing entries with the same slug
+// are preserved so any node-type-local overrides win; only missing rows are
+// appended.
+func mergeRegisteredTaxonomies(db *gorm.DB, nt *models.NodeType) {
+	if db == nil || nt == nil {
+		return
+	}
+	var rows []models.Taxonomy
+	if err := db.Where("? = ANY (node_types)", nt.Slug).Find(&rows).Error; err != nil {
+		return
+	}
+	if len(rows) == 0 {
+		return
+	}
+
+	type taxEntry struct {
+		Slug        string `json:"slug"`
+		Label       string `json:"label"`
+		LabelPlural string `json:"label_plural,omitempty"`
+		Multiple    bool   `json:"multiple,omitempty"`
+	}
+	var existing []taxEntry
+	if len(nt.Taxonomies) > 0 {
+		_ = json.Unmarshal([]byte(nt.Taxonomies), &existing)
+	}
+	have := make(map[string]struct{}, len(existing))
+	for _, e := range existing {
+		have[e.Slug] = struct{}{}
+	}
+	for _, r := range rows {
+		if _, ok := have[r.Slug]; ok {
+			continue
+		}
+		existing = append(existing, taxEntry{
+			Slug:        r.Slug,
+			Label:       r.Label,
+			LabelPlural: r.LabelPlural,
+			Multiple:    !r.Hierarchical,
+		})
+	}
+	if b, err := json.Marshal(existing); err == nil {
+		nt.Taxonomies = models.JSONB(b)
+	}
 }
 
 // createNodeTypeRequest represents the JSON body for creating a node type.

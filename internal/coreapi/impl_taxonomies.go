@@ -194,11 +194,16 @@ func (c *coreImpl) GetTerm(ctx context.Context, id uint) (*TaxonomyTerm, error) 
 
 func (c *coreImpl) CreateTerm(ctx context.Context, term *TaxonomyTerm) (*TaxonomyTerm, error) {
 	m := &models.TaxonomyTerm{
-		NodeType:    term.NodeType,
-		Taxonomy:    term.Taxonomy,
-		Slug:        term.Slug,
-		Name:        term.Name,
-		Description: term.Description,
+		NodeType:           term.NodeType,
+		Taxonomy:           term.Taxonomy,
+		LanguageCode:       term.LanguageCode,
+		TranslationGroupID: term.TranslationGroupID,
+		Slug:               term.Slug,
+		Name:               term.Name,
+		Description:        term.Description,
+	}
+	if m.LanguageCode == "" {
+		m.LanguageCode = c.defaultLocale(ctx)
 	}
 	if term.ParentID != nil {
 		pid := int(*term.ParentID)
@@ -266,15 +271,17 @@ func taxonomyFromModel(m *models.Taxonomy) *Taxonomy {
 
 func termFromModel(m *models.TaxonomyTerm) *TaxonomyTerm {
 	t := &TaxonomyTerm{
-		ID:          uint(m.ID),
-		NodeType:    m.NodeType,
-		Taxonomy:    m.Taxonomy,
-		Slug:        m.Slug,
-		Name:        m.Name,
-		Description: m.Description,
-		Count:       m.Count,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+		ID:                 uint(m.ID),
+		NodeType:           m.NodeType,
+		Taxonomy:           m.Taxonomy,
+		LanguageCode:       m.LanguageCode,
+		TranslationGroupID: m.TranslationGroupID,
+		Slug:               m.Slug,
+		Name:               m.Name,
+		Description:        m.Description,
+		Count:              m.Count,
+		CreatedAt:          m.CreatedAt,
+		UpdatedAt:          m.UpdatedAt,
 	}
 	if m.ParentID != nil {
 		pid := uint(*m.ParentID)

@@ -549,7 +549,7 @@ export default function LayoutBlockEditorPage() {
                     <SelectItem value="all">All Languages</SelectItem>
                     {languages.map((lang) => (
                       <SelectItem key={lang.id} value={String(lang.id)}>
-                        {lang.flag} {lang.name}
+                        {lang.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

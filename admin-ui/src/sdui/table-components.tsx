@@ -53,6 +53,7 @@ interface TaxonomyTermRow {
   slug: string;
   description?: string;
   count: number;
+  language_code?: string;
   editPath: string;
 }
 
@@ -235,7 +236,7 @@ export function PageHeader({
                   key={lang.code}
                   value={lang.id != null ? String(lang.id) : lang.code}
                 >
-                  {lang.flag} {lang.name}
+                  {lang.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -320,7 +321,7 @@ export const SearchToolbar = memo(
                   key={lang.code}
                   value={lang.id != null ? String(lang.id) : lang.code}
                 >
-                  {lang.flag} {lang.name}
+                  {lang.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -735,6 +736,7 @@ export function TaxonomyTermsTable({
               </button>
             </Th>
             <Th width={200}>Slug</Th>
+            <Th width={70}>Lang</Th>
             <Th width={80} align="center">
               <button
                 type="button"
@@ -767,6 +769,20 @@ export function TaxonomyTermsTable({
               </Td>
               <Td className="font-mono text-[12px] text-slate-500">
                 {term.slug}
+              </Td>
+              <Td className="text-[12px]">
+                {term.language_code ? (
+                  <span className="inline-flex items-center gap-1">
+                    {LANG_FLAGS[term.language_code] && (
+                      <span aria-hidden>{LANG_FLAGS[term.language_code]}</span>
+                    )}
+                    <span className="font-medium uppercase text-slate-600">
+                      {term.language_code}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400">—</span>
+                )}
               </Td>
               <Td align="center">
                 <a

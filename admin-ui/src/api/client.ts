@@ -349,6 +349,8 @@ export interface TaxonomyTerm {
   id: number;
   node_type: string;
   taxonomy: string;
+  language_code: string;
+  translation_group_id?: string;
   slug: string;
   name: string;
   description: string;
@@ -359,8 +361,20 @@ export interface TaxonomyTerm {
   updated_at: string;
 }
 
-export async function listTerms(nodeType: string, taxonomy: string): Promise<TaxonomyTerm[]> {
-  const res = await api<ApiResponse<TaxonomyTerm[]>>(`/admin/api/terms/${nodeType}/${taxonomy}`);
+export async function listTerms(
+  nodeType: string,
+  taxonomy: string,
+  opts?: { language_code?: string },
+): Promise<TaxonomyTerm[]> {
+  // Pass language as a query param so the call doesn't depend on the
+  // admin's current header language. Callers that want every locale (e.g.
+  // an audit view) pass language_code: "all".
+  const qs = opts?.language_code
+    ? `?language_code=${encodeURIComponent(opts.language_code)}`
+    : "";
+  const res = await api<ApiResponse<TaxonomyTerm[]>>(
+    `/admin/api/terms/${nodeType}/${taxonomy}${qs}`,
+  );
   return res.data;
 }
 
@@ -389,6 +403,22 @@ export async function deleteTerm(id: number): Promise<void> {
   await api(`/admin/api/terms/${id}`, {
     method: "DELETE",
   });
+}
+
+export async function getTermTranslations(id: number): Promise<TaxonomyTerm[]> {
+  const res = await api<ApiResponse<TaxonomyTerm[]>>(`/admin/api/terms/${id}/translations`);
+  return res.data;
+}
+
+export async function createTermTranslation(
+  id: number,
+  data: { language_code: string },
+): Promise<TaxonomyTerm> {
+  const res = await api<ApiResponse<TaxonomyTerm>>(`/admin/api/terms/${id}/translations`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return res.data;
 }
 
 export async function listTaxonomyTerms(nodeType: string, taxonomy: string): Promise<string[]> {

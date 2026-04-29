@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { SidebarCard } from "@/components/ui/sidebar-card";
 import {
   Dialog,
   DialogContent,
@@ -26,12 +27,22 @@ import {
   updateTerm,
   deleteTerm,
   getTaxonomy,
+  getTermTranslations,
+  createTermTranslation,
   type TaxonomyTerm,
   type Taxonomy,
 } from "@/api/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import CustomFieldInput from "@/components/ui/custom-field-input";
 import { usePageMeta } from "@/components/layout/page-meta";
+import { useAdminLanguage } from "@/hooks/use-admin-language";
 
 function slugify(text: string) {
   return text
@@ -62,8 +73,13 @@ export default function TermEditorPage() {
   const [description, setDescription] = useState("");
   const [fieldsData, setFieldsData] = useState<Record<string, any>>({});
   const [taxonomy, setTaxonomy] = useState<Taxonomy | null>(null);
+  const [languageCode, setLanguageCode] = useState<string>("");
+  const [translations, setTranslations] = useState<TaxonomyTerm[]>([]);
+  const [creatingTranslation, setCreatingTranslation] = useState(false);
 
   const [autoSlug, setAutoSlug] = useState(!isEdit);
+
+  const { languages, currentCode } = useAdminLanguage();
 
   usePageMeta([
     "Taxonomies",
@@ -85,7 +101,17 @@ export default function TermEditorPage() {
           setSlug(term.slug);
           setDescription(term.description || "");
           setFieldsData(term.fields_data || {});
+          setLanguageCode(term.language_code);
           setAutoSlug(false);
+          // Translations are best-effort: if the endpoint fails (or no
+          // siblings exist) we just show an empty panel.
+          getTermTranslations(Number(id))
+            .then(setTranslations)
+            .catch(() => setTranslations([]));
+        } else {
+          // Create flow: default to the admin's current language so the
+          // term lands in whatever locale the operator is editing in.
+          setLanguageCode(currentCode);
         }
       } catch {
         toast.error("Failed to load data");
@@ -96,7 +122,7 @@ export default function TermEditorPage() {
     };
 
     loadData();
-  }, [isEdit, id, taxSlug, navigate]);
+  }, [isEdit, id, taxSlug, navigate, currentCode]);
 
   const handleNameChange = (val: string) => {
     setName(val);
@@ -121,6 +147,7 @@ export default function TermEditorPage() {
       slug,
       description,
       fields_data: fieldsData,
+      language_code: languageCode || currentCode,
     };
 
     setSaving(true);
@@ -137,6 +164,20 @@ export default function TermEditorPage() {
       toast.error(err.message || "Failed to save term");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateTranslation = async (langCode: string) => {
+    if (!id) return;
+    setCreatingTranslation(true);
+    try {
+      const created = await createTermTranslation(Number(id), { language_code: langCode });
+      toast.success(`Translation created in ${langCode}`);
+      navigate(`/admin/content/${nodeType}/taxonomies/${taxSlug}/${created.id}/edit`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create translation");
+    } finally {
+      setCreatingTranslation(false);
     }
   };
 
@@ -167,9 +208,9 @@ export default function TermEditorPage() {
 
   return (
     <>
-    <form onSubmit={handleSave} className="grid gap-6 lg:grid-cols-3">
+    <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       {/* Main content */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="space-y-4 min-w-0">
         {/* Compact pill header */}
         <div
           className="flex items-center gap-1.5"
@@ -275,41 +316,118 @@ export default function TermEditorPage() {
       </div>
 
       {/* Sidebar */}
-      <div className="space-y-6">
-        <Card>
-          <SectionHeader title="Publish" />
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500">
-                <Tag className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-medium text-slate-800">{taxLabel}</p>
-                <p className="text-[11px] text-slate-400">{nodeType} taxonomy</p>
-              </div>
+      <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+        <SidebarCard title="Publish">
+          <div className="flex items-center gap-2 text-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500">
+              <Tag className="h-4 w-4" />
             </div>
+            <div>
+              <p className="font-medium text-slate-800">{taxLabel}</p>
+              <p className="text-[11px] text-slate-400">{nodeType} taxonomy</p>
+            </div>
+          </div>
+
+          {/* Language is editable in both create and edit modes — slug
+              uniqueness is per-language so a relabel only fails if another
+              term in the target language already owns this slug. To clone
+              into an additional language without losing the original, use
+              the Translations card below instead. */}
+          {languages.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-slate-500">Language</Label>
+              <Select value={languageCode} onValueChange={setLanguageCode}>
+                <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name || lang.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+            disabled={saving}
+          >
+            {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+            {saving ? "Saving..." : "Save Term"}
+          </Button>
+          {isEdit && (
             <Button
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm h-9 text-sm"
-              disabled={saving}
+              type="button"
+              variant="outline"
+              className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
+              onClick={() => setShowDeleteDialog(true)}
             >
-              {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-              {saving ? "Saving..." : "Save Term"}
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete
             </Button>
-            {isEdit && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full bg-red-50 text-red-700 border-red-200 hover:bg-red-100 rounded-lg font-medium h-8 text-xs"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                Delete
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </SidebarCard>
+
+        {/* Translations — visible only after the term is persisted. Each
+            row links to the sibling's edit page. The trailing select offers
+            languages that don't yet have a translation. */}
+        {isEdit && languages.length > 1 && (
+          <SidebarCard title="Translations">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 rounded-md bg-indigo-50 border border-indigo-100 px-3 py-2">
+                <span className="text-xs font-medium text-indigo-700 flex-1 truncate">
+                  {languages.find((l) => l.code === languageCode)?.name || languageCode}
+                </span>
+                <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">
+                  Current
+                </span>
+              </div>
+              {translations.map((t) => (
+                <Link
+                  key={t.id}
+                  to={`/admin/content/${nodeType}/taxonomies/${taxSlug}/${t.id}/edit`}
+                  className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="text-xs font-medium text-slate-700 flex-1 truncate">
+                    {languages.find((l) => l.code === t.language_code)?.name || t.language_code}
+                  </span>
+                </Link>
+              ))}
+            </div>
+            {(() => {
+              const taken = new Set([languageCode, ...translations.map((t) => t.language_code)]);
+              const remaining = languages.filter((l) => !taken.has(l.code));
+              if (remaining.length === 0) return null;
+              return (
+                <Select
+                  value=""
+                  onValueChange={(v) => v && handleCreateTranslation(v)}
+                  disabled={creatingTranslation}
+                >
+                  <SelectTrigger className="h-9 rounded-lg border-slate-300 text-sm">
+                    <SelectValue
+                      placeholder={
+                        creatingTranslation ? "Creating…" : "+ Add translation"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {remaining.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.name || lang.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            })()}
+          </SidebarCard>
+        )}
+      </aside>
     </form>
 
       {/* Delete Confirmation */}

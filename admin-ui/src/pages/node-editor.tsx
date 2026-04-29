@@ -66,6 +66,7 @@ import {
   createNodeTranslation,
   searchNodes,
   listTerms,
+  createTerm,
   getLayoutPartials,
   type ContentNode,
   type NodeType,
@@ -298,16 +299,21 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
       .catch(() => setTranslations([]));
   }, [id, isEdit]);
 
-  // Fetch available terms for each taxonomy defined on the node type
+  // Fetch available terms for each taxonomy defined on the node type.
+  // Scope to the node's own language — a `de` post must only see `de`
+  // terms, otherwise typing "Com" on a German post wouldn't match the
+  // existing English "Computers" term and the picker would offer to create
+  // a duplicate.
   useEffect(() => {
     if (!nodeTypeDef?.taxonomies) return;
+    if (!languageCode) return;
     const taxDefs = nodeTypeDef.taxonomies as Array<{slug: string; label: string; multiple?: boolean}>;
     taxDefs.forEach(tax => {
-      listTerms(nodeTypeProp, tax.slug)
+      listTerms(nodeTypeProp, tax.slug, { language_code: languageCode })
         .then(terms => setAvailableTerms(prev => ({ ...prev, [tax.slug]: terms })))
         .catch(() => {});
     });
-  }, [nodeTypeDef, nodeTypeProp]);
+  }, [nodeTypeDef, nodeTypeProp, languageCode]);
 
   async function handleCreateTranslation(langCode: string) {
     if (!id) return;
@@ -928,6 +934,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                                     field={field}
                                     value={block.fields[field.key]}
                                     onChange={(val) => updateBlockField(index, field.key, val)}
+                                    languageCode={languageCode}
                                   />
                                 </div>
                               );
@@ -1044,6 +1051,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                           field={field}
                           value={fieldsData[field.key]}
                           onChange={(val) => updateFieldValue(field.key, val)}
+                          languageCode={languageCode}
                         />
                       </div>
                     );
@@ -1141,6 +1149,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                                 },
                               }));
                             }}
+                            languageCode={languageCode}
                           />
                         </div>
                       );
@@ -1182,7 +1191,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                     <SelectContent>
                       {languages.map((lang) => (
                         <SelectItem key={lang.code} value={lang.code}>
-                          {lang.flag} {lang.name}
+                          {lang.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1459,8 +1468,27 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                                 type="button"
                                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-emerald-50 transition-colors border-t border-slate-100"
                                 onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => {
+                                onClick={async () => {
                                   const val = searchValue.trim();
+                                  // Persist a real taxonomy_terms row in the node's
+                                  // language so the term appears in the term list
+                                  // and other nodes can reuse it. Pre-existing rows
+                                  // surface SLUG_CONFLICT — fall back to selecting
+                                  // the name without creating a duplicate row.
+                                  try {
+                                    const created = await createTerm(nodeTypeProp, tax.slug, {
+                                      name: val,
+                                      language_code: languageCode,
+                                    });
+                                    setAvailableTerms(prev => ({
+                                      ...prev,
+                                      [tax.slug]: [...(prev[tax.slug] || []), created],
+                                    }));
+                                  } catch {
+                                    // Non-fatal: a row may already exist in another
+                                    // language scope. The selection below still
+                                    // wires the name onto the node.
+                                  }
                                   if (!selectedTerms.includes(val)) {
                                     if (!tax.multiple && selectedTerms.length > 0) {
                                       setTaxonomies({ ...taxonomies, [tax.slug]: [val] });

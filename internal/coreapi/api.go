@@ -407,15 +407,17 @@ type TaxonomyInput struct {
 }
 
 type TaxonomyTerm struct {
-	ID          uint                   `json:"id"`
-	NodeType    string                 `json:"node_type"`
-	Taxonomy    string                 `json:"taxonomy"`
-	Slug        string                 `json:"slug"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	ParentID    *uint                  `json:"parent_id,omitempty"`
-	Count       int                    `json:"count"`
-	FieldsData  map[string]interface{} `json:"fields_data,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID                 uint                   `json:"id"`
+	NodeType           string                 `json:"node_type"`
+	Taxonomy           string                 `json:"taxonomy"`
+	LanguageCode       string                 `json:"language_code"`
+	TranslationGroupID *string                `json:"translation_group_id,omitempty"`
+	Slug               string                 `json:"slug"`
+	Name               string                 `json:"name"`
+	Description        string                 `json:"description"`
+	ParentID           *uint                  `json:"parent_id,omitempty"`
+	Count              int                    `json:"count"`
+	FieldsData         map[string]interface{} `json:"fields_data,omitempty"`
+	CreatedAt          time.Time              `json:"created_at"`
+	UpdatedAt          time.Time              `json:"updated_at"`
 }

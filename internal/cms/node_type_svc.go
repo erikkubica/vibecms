@@ -22,6 +22,11 @@ func NewNodeTypeService(db *gorm.DB, eventBus *events.EventBus) *NodeTypeService
 	return &NodeTypeService{db: db, eventBus: eventBus}
 }
 
+// DB exposes the underlying GORM connection for handlers that need to run
+// auxiliary queries (e.g. merging the standalone taxonomies table into a
+// node type response).
+func (s *NodeTypeService) DB() *gorm.DB { return s.db }
+
 func (s *NodeTypeService) emit(action string, id int, slug string) {
 	if s.eventBus == nil {
 		return

@@ -557,8 +557,7 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
                 >
                   {languages.map((lang) => (
                     <option key={lang.code} value={lang.code}>
-                      {lang.flag ? `${lang.flag} ` : ""}
-                      {lang.code}
+                      {lang.name || lang.code}
                     </option>
                   ))}
                 </select>

@@ -5,8 +5,27 @@ import (
 	"fmt"
 	"strconv"
 
+	"gorm.io/gorm"
+
 	"squilla/internal/models"
 )
+
+// buildLanguageList shapes active languages into the wire format the
+// SearchToolbar expects. Shared between node list and term list so the
+// language filter dropdown looks identical in both places.
+func buildLanguageList(db *gorm.DB) []map[string]interface{} {
+	var languages []models.Language
+	db.Where("is_active = ?", true).Order("sort_order ASC, name ASC").Find(&languages)
+	out := make([]map[string]interface{}, 0, len(languages))
+	for _, lang := range languages {
+		out = append(out, map[string]interface{}{
+			"code": lang.Code,
+			"name": lang.Name,
+			"flag": lang.Flag,
+		})
+	}
+	return out
+}
 
 // nodeListLayout renders /admin/{pages|posts|content/<type>}.
 // Counts per status come from a separate raw query (rather than
@@ -324,6 +343,11 @@ func (e *Engine) taxonomyTermsLayout(params map[string]string) *LayoutNode {
 	if termSearch != "" {
 		termQuery = termQuery.Where("name ILIKE ? OR slug ILIKE ?", "%"+termSearch+"%", "%"+termSearch+"%")
 	}
+	// Optional language filter — same convention as the node list. "all"
+	// disables the filter so operators can audit every translation.
+	if lang := params["language"]; lang != "" && lang != "all" {
+		termQuery = termQuery.Where("language_code = ?", lang)
+	}
 
 	var termTotal int64
 	termQuery.Count(&termTotal)
@@ -337,12 +361,13 @@ func (e *Engine) taxonomyTermsLayout(params map[string]string) *LayoutNode {
 	for _, t := range terms {
 		editPath := fmt.Sprintf("/admin/content/%s/taxonomies/%s/%d/edit", nodeTypeSlug, taxonomySlug, t.ID)
 		rows = append(rows, map[string]interface{}{
-			"id":          t.ID,
-			"name":        t.Name,
-			"slug":        t.Slug,
-			"description": t.Description,
-			"count":       t.Count,
-			"editPath":    editPath,
+			"id":            t.ID,
+			"name":          t.Name,
+			"slug":          t.Slug,
+			"description":   t.Description,
+			"count":         t.Count,
+			"language_code": t.LanguageCode,
+			"editPath":      editPath,
 		})
 	}
 
@@ -373,6 +398,8 @@ func (e *Engine) taxonomyTermsLayout(params map[string]string) *LayoutNode {
 				Type: "SearchToolbar",
 				Props: map[string]interface{}{
 					"searchPlaceholder": "Search terms…",
+					"languages":         buildLanguageList(e.db),
+					"activeLanguage":    params["language"],
 				},
 			},
 			{

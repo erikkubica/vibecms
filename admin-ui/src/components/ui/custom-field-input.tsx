@@ -358,10 +358,12 @@ function TermSelectorInput({
   field,
   value,
   onChange,
+  languageCode,
 }: {
   field: NodeTypeField;
   value: unknown;
   onChange: (val: unknown) => void;
+  languageCode?: string;
 }) {
   const [terms, setTerms] = useState<TaxonomyTerm[]>([]);
   const [loading, setLoading] = useState(false);
@@ -372,11 +374,14 @@ function TermSelectorInput({
   useEffect(() => {
     if (!taxonomy || !termNodeType) return;
     setLoading(true);
-    listTerms(termNodeType, taxonomy)
+    // Scope to the parent node's language so a `de` doc node only sees `de`
+    // doc_section terms (and so newly-created terms appear immediately
+    // without being filtered out by the admin-header language).
+    listTerms(termNodeType, taxonomy, languageCode ? { language_code: languageCode } : undefined)
       .then((t) => setTerms(t))
       .catch(() => setTerms([]))
       .finally(() => setLoading(false));
-  }, [taxonomy, termNodeType]);
+  }, [taxonomy, termNodeType, languageCode]);
 
   // Resolve a partial term reference (e.g. {slug} or {name}) against loaded terms.
   function resolveTerm(v: unknown): TaxonomyTerm | null {
@@ -662,10 +667,15 @@ function CustomFieldInput({
   field,
   value,
   onChange,
+  languageCode,
 }: {
   field: NodeTypeField;
   value: unknown;
   onChange: (val: unknown) => void;
+  // Optional language scope for taxonomy-aware fields (e.g. term selector).
+  // When omitted the underlying list calls fall back to the admin's current
+  // header language.
+  languageCode?: string;
 }) {
   const { getFieldComponent, loading: extensionsLoading } = useExtensions();
   const extField = getFieldComponent(field.type);
@@ -795,7 +805,7 @@ function CustomFieldInput({
     case "repeater":
       return <RepeaterFieldInput field={field} value={value as unknown[] | null} onChange={onChange} />;
     case "term":
-      return <TermSelectorInput field={field} value={value} onChange={onChange} />;
+      return <TermSelectorInput field={field} value={value} onChange={onChange} languageCode={languageCode} />;
     case "node":
       return <NodeSelectorInput field={field} value={value} onChange={onChange} />;
     case "richtext":

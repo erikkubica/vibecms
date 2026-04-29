@@ -1,0 +1,7 @@
+{
+  "name": "General",
+  "description": "Site-wide theme settings.",
+  "fields": [
+    { "key": "tagline", "label": "Tagline", "type": "text", "default": "Welcome" }
+  ]
+}

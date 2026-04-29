@@ -27,6 +27,20 @@ type ThemeManifest struct {
 	Templates   []ThemeTemplateDef   `json:"templates"`
 	Assets      []ThemeMediaAssetDef `json:"assets"`
 	ImageSizes  []ThemeImageSizeDef  `json:"image_sizes"`
+	// SettingsPages declares per-page setting schemas. Each entry references
+	// a JSON file (relative to the theme directory) that follows the standard
+	// field-schema format. Optional — themes without settings UI omit this.
+	SettingsPages []ThemeSettingsPageDef `json:"settings_pages,omitempty"`
+}
+
+// ThemeSettingsPageDef declares a single settings page in theme.json.
+// The actual field schema lives in the referenced JSON file so theme.json
+// stays compact when many pages are declared.
+type ThemeSettingsPageDef struct {
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+	File string `json:"file"`
+	Icon string `json:"icon,omitempty"`
 }
 
 // ThemeImageSizeDef declares a named image size the theme depends on

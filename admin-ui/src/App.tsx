@@ -55,7 +55,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  return <>{children}</>;
+  // Provide the admin-language context to every authenticated route so the
+  // header switcher and the X-Admin-Language fetch wrapper share one source.
+  return <AdminLanguageProvider>{children}</AdminLanguageProvider>;
 }
 
 function NodeAccessGuard({
@@ -168,11 +170,9 @@ function AppRoutes() {
         path="/admin/ext/:slug/*"
         element={
           <ProtectedRoute>
-            <AdminLanguageProvider>
-              <SduiAdminShell>
-                <ExtensionPageLoader />
-              </SduiAdminShell>
-            </AdminLanguageProvider>
+            <SduiAdminShell>
+              <ExtensionPageLoader />
+            </SduiAdminShell>
           </ProtectedRoute>
         }
       />

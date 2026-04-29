@@ -87,6 +87,22 @@ func (c *GRPCHostClient) GetSettings(ctx context.Context, prefix string) (map[st
 	return resp.Settings, nil
 }
 
+// Locale-aware variants. Until the plugin proto carries a language_code field
+// these delegate to the non-Loc versions so existing extensions keep working
+// against the new core. Locale-sensitive plugins must be updated alongside a
+// proto change in a follow-up.
+func (c *GRPCHostClient) GetSettingLoc(ctx context.Context, key, _ string) (string, error) {
+	return c.GetSetting(ctx, key)
+}
+
+func (c *GRPCHostClient) SetSettingLoc(ctx context.Context, key, _, value string) error {
+	return c.SetSetting(ctx, key, value)
+}
+
+func (c *GRPCHostClient) GetSettingsLoc(ctx context.Context, prefix, _ string) (map[string]string, error) {
+	return c.GetSettings(ctx, prefix)
+}
+
 // --- Events ---
 
 func (c *GRPCHostClient) Emit(ctx context.Context, action string, payload map[string]any) error {

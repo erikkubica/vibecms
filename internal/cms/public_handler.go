@@ -138,7 +138,7 @@ func (h *PublicHandler) HomePage(c *fiber.Ctx) error {
 			if err := h.db.Where("id = ? AND status = ?", homepageID, "published").First(&node).Error; err == nil {
 				blocks := parseBlocks(node.BlocksData)
 				h.resolveAssetRefsInBlocks(blocks)
-				renderedBlocks := h.renderBlocksBatch(blocks)
+				renderedBlocks := h.renderBlocksBatch(blocks, node.LanguageCode)
 
 				// Layout-based rendering
 				html, _, renderErr := h.renderNodeWithLayout(c, &node, blocks, renderedBlocks, user)
@@ -203,7 +203,7 @@ func (h *PublicHandler) PageByFullURL(c *fiber.Ctx) error {
 
 	blocks := parseBlocks(node.BlocksData)
 	h.resolveAssetRefsInBlocks(blocks)
-	renderedBlocks := h.renderBlocksBatch(blocks)
+	renderedBlocks := h.renderBlocksBatch(blocks, node.LanguageCode)
 
 	// Layout-based rendering
 	html, _, renderErr := h.renderNodeWithLayout(c, node, blocks, renderedBlocks, user)

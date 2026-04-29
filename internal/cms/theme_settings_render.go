@@ -18,6 +18,7 @@ var logThemeSettingsLoadError = func(err error) {
 // implicitly.
 type settingsReader interface {
 	GetSettings(ctx context.Context, prefix string) (map[string]string, error)
+	GetSettingsLoc(ctx context.Context, prefix, locale string) (map[string]string, error)
 }
 
 // BuildThemeSettingsContext returns a nested map[pageSlug]map[fieldKey]any
@@ -33,6 +34,19 @@ func BuildThemeSettingsContext(
 	registry *ThemeSettingsRegistry,
 	api settingsReader,
 ) (map[string]map[string]any, error) {
+	return BuildThemeSettingsContextForLocale(ctx, registry, api, "")
+}
+
+// BuildThemeSettingsContextForLocale is the locale-aware variant. Translatable
+// fields resolve to (key, locale) with fallback to (key, ""); non-translatable
+// fields always resolve at the shared row. An empty locale returns the shared
+// row directly for every field.
+func BuildThemeSettingsContextForLocale(
+	ctx context.Context,
+	registry *ThemeSettingsRegistry,
+	api settingsReader,
+	locale string,
+) (map[string]map[string]any, error) {
 	out := map[string]map[string]any{}
 	if registry == nil {
 		return out, nil
@@ -43,7 +57,8 @@ func BuildThemeSettingsContext(
 		return out, nil
 	}
 
-	raw, err := api.GetSettings(ctx, ThemePrefix(slug))
+	prefix := ThemePrefix(slug)
+	raw, err := api.GetSettingsLoc(ctx, prefix, locale)
 	if err != nil {
 		return nil, err
 	}
@@ -63,11 +78,14 @@ func BuildThemeSettingsContext(
 // semantics: errors are logged and an empty (non-nil) map is returned, so a
 // settings read failure never aborts page rendering. Returns an empty map
 // when the registry/API are nil (e.g. preview/test paths).
-func (h *PublicHandler) loadThemeSettingsForRender(ctx context.Context) map[string]map[string]any {
+//
+// locale should be the request's language code (e.g. "en", "vi"). Translatable
+// fields resolve to that locale; non-translatable fields share a single value.
+func (h *PublicHandler) loadThemeSettingsForRender(ctx context.Context, locale string) map[string]map[string]any {
 	if h.themeSettingsRegistry == nil || h.themeSettingsAPI == nil {
 		return map[string]map[string]any{}
 	}
-	ts, err := BuildThemeSettingsContext(ctx, h.themeSettingsRegistry, h.themeSettingsAPI)
+	ts, err := BuildThemeSettingsContextForLocale(ctx, h.themeSettingsRegistry, h.themeSettingsAPI, locale)
 	if err != nil {
 		// Soft-fail: log and continue with an empty map. Templates already
 		// need to handle missing values defensively (with/if), so an empty

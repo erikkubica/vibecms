@@ -50,10 +50,10 @@ func (h *PublicHandler) getBlockType(slug string) (models.BlockType, bool) {
 }
 
 // renderBlocks renders each block's HTML template with its field values.
-func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
+func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}, locale string) []string {
 	// Load theme settings once per call so the GetSettings round-trip
 	// happens exactly once, not once per block.
-	ts := h.loadThemeSettingsForRender(context.Background())
+	ts := h.loadThemeSettingsForRender(context.Background(), locale)
 
 	var rendered []string
 	for _, block := range blocks {
@@ -135,7 +135,7 @@ func (h *PublicHandler) renderBlocks(blocks []map[string]interface{}) []string {
 }
 
 // renderBlocksBatch is the optimized version that performs batch node hydration.
-func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}) []string {
+func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}, locale string) []string {
 	var rendered []string
 	if len(blocks) == 0 {
 		return rendered
@@ -143,7 +143,7 @@ func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}) []str
 
 	// Load theme settings once per page render so the GetSettings round-trip
 	// happens exactly once, regardless of how many blocks we render.
-	ts := h.loadThemeSettingsForRender(context.Background())
+	ts := h.loadThemeSettingsForRender(context.Background(), locale)
 
 	// Step 1: Collect all node IDs across all blocks
 	allNodeIDs := make(map[int]bool)

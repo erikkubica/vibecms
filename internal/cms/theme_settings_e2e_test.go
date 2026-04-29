@@ -36,6 +36,12 @@ func (f *fakeRoundtripAPI) GetSettings(_ context.Context, prefix string) (map[st
 	}
 	return out, nil
 }
+func (f *fakeRoundtripAPI) GetSettingsLoc(ctx context.Context, prefix, _ string) (map[string]string, error) {
+	return f.GetSettings(ctx, prefix)
+}
+func (f *fakeRoundtripAPI) SetSettingLoc(ctx context.Context, key, _, value string) error {
+	return f.SetSetting(ctx, key, value)
+}
 
 // TestThemeSettings_LoadSaveRender_RoundTrip wires loader → registry → admin
 // HTTP → render-context together to prove the layers integrate. No DB, no

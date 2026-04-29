@@ -66,7 +66,7 @@ func (h *PublicHandler) renderNodeWithLayout(c *fiber.Ctx, node *models.ContentN
 		App:           appData,
 		Node:          nodeData,
 		User:          buildUserData(user),
-		ThemeSettings: h.loadThemeSettingsForRender(c.Context()),
+		ThemeSettings: h.loadThemeSettingsForRender(c.Context(), node.LanguageCode),
 	}
 
 	// Build block resolver
@@ -322,7 +322,7 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 		App:           appData,
 		Node:          nodeData,
 		User:          buildUserData(user),
-		ThemeSettings: h.loadThemeSettingsForRender(c.Context()),
+		ThemeSettings: h.loadThemeSettingsForRender(c.Context(), defaultLang.Code),
 	}
 
 	blockResolver := func(slug string) (string, error) {
@@ -385,7 +385,7 @@ func (h *PublicHandler) RenderWithLayout(c *fiber.Ctx, title string, innerHTML t
 		App:           appData,
 		Node:          nodeData,
 		User:          buildUserData(user),
-		ThemeSettings: h.loadThemeSettingsForRender(c.Context()),
+		ThemeSettings: h.loadThemeSettingsForRender(c.Context(), nodeData.LanguageCode),
 	}
 
 	blockResolver := func(slug string) (string, error) {

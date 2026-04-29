@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBoot } from "../hooks/use-boot";
 import { useAuth } from "../hooks/use-auth";
-import { getThemeSettingsPages } from "../api/client";
+import { useAdminLanguage } from "../hooks/use-admin-language";
+import { getThemeSettingsPages, clearCache } from "../api/client";
 import type { NavItem } from "./types";
 import * as Lucide from "lucide-react";
 import {
@@ -15,7 +16,10 @@ import {
   ExternalLink,
   Home,
   Bell,
+  RefreshCw,
+  Globe,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Icon resolution — look up any icon name against the full lucide-react
@@ -336,11 +340,37 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
   const location = useLocation();
   const { user, logout } = useAuth();
   const { data: boot } = useBoot();
+  const { languages, currentCode, setCurrentCode } = useAdminLanguage();
+  const queryClient = useQueryClient();
+  const [clearingCache, setClearingCache] = useState(false);
   const { data: themePages } = useQuery({
-    queryKey: ["theme-settings-pages"],
+    queryKey: ["theme-settings-pages", currentCode],
     queryFn: getThemeSettingsPages,
     staleTime: 60_000,
   });
+
+  const handleClearCache = useCallback(async () => {
+    setClearingCache(true);
+    try {
+      await clearCache();
+      toast.success("All caches cleared");
+    } catch {
+      toast.error("Failed to clear caches");
+    } finally {
+      setClearingCache(false);
+    }
+  }, []);
+
+  const handleLanguageChange = useCallback(
+    (code: string) => {
+      setCurrentCode(code);
+      // Invalidate every query so locale-aware fetches refresh under the new
+      // X-Admin-Language header. queryClient.invalidateQueries() with no key
+      // marks every cached query stale.
+      queryClient.invalidateQueries();
+    },
+    [setCurrentCode, queryClient],
+  );
 
   const breadcrumbs = useMemo(
     () => computeBreadcrumbs(location.pathname),
@@ -512,6 +542,44 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Admin language selector — controls the locale used by every
+                locale-aware setting (theme settings + site settings). "All"
+                writes to the shared row that applies regardless of language. */}
+            {languages.length > 0 && (
+              <label className="hidden h-7 items-center gap-1.5 rounded-md border border-slate-200 pl-2 pr-1 text-xs font-medium text-slate-600 sm:flex">
+                <Globe size={12} className="text-slate-500" />
+                <select
+                  value={currentCode}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  className="bg-transparent pr-1 text-xs font-medium text-slate-700 outline-none"
+                  aria-label="Admin language"
+                >
+                  <option value="all">All languages</option>
+                  {languages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.flag ? `${lang.flag} ` : ""}
+                      {lang.code}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {/* Clear cache — invalidates the public-render layout/asset
+                caches; useful after editing templates or activating themes. */}
+            <button
+              onClick={handleClearCache}
+              disabled={clearingCache}
+              className="hidden h-7 items-center gap-1.5 rounded-md border border-slate-200 px-2.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 sm:flex"
+              title="Clear all caches"
+            >
+              <RefreshCw
+                size={12}
+                className={clearingCache ? "animate-spin" : ""}
+              />
+              {clearingCache ? "Clearing..." : "Clear Cache"}
+            </button>
+
             {/* Visit site */}
             <button
               onClick={() => window.open("/", "_blank")}

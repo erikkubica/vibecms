@@ -68,12 +68,25 @@ class ApiClientError extends Error {
   }
 }
 
+// adminLangHeader reads the admin's currently-selected language code from
+// localStorage (mirrors AdminLanguageProvider's STORAGE_KEY) so every API
+// request carries it. Locale-aware backend handlers (theme-settings and any
+// future settings endpoints) use it to scope reads/writes. "all" or empty
+// becomes the empty string, which the backend treats as the fallback row.
+function adminLangHeader(): string {
+  if (typeof localStorage === "undefined") return "";
+  const code = localStorage.getItem("squilla_admin_lang") || "";
+  return code === "all" ? "" : code;
+}
+
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
+  const lang = adminLangHeader();
   const res = await fetch(path, {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(lang ? { "X-Admin-Language": lang } : {}),
       ...options?.headers,
     },
   });

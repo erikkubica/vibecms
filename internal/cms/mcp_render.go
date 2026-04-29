@@ -23,7 +23,7 @@ func (h *PublicHandler) RenderBlockPreview(blockType string, fields map[string]i
 		"type":   blockType,
 		"fields": fields,
 	}
-	out := h.renderBlocksBatch([]map[string]interface{}{block})
+	out := h.renderBlocksBatch([]map[string]interface{}{block}, "")
 	if len(out) == 0 {
 		return "", fmt.Errorf("render returned no output for block %q", blockType)
 	}
@@ -33,7 +33,7 @@ func (h *PublicHandler) RenderBlockPreview(blockType string, fields map[string]i
 // RenderBlocksPreview renders a series of inline block specs into an HTML
 // fragment (concatenated). Each block is a map with keys "type" and "fields".
 func (h *PublicHandler) RenderBlocksPreview(blocks []map[string]interface{}) (string, error) {
-	out := h.renderBlocksBatch(blocks)
+	out := h.renderBlocksBatch(blocks, "")
 	return strings.Join(out, "\n"), nil
 }
 
@@ -65,7 +65,7 @@ func (h *PublicHandler) RenderLayoutPreview(layoutSlug string, blocks []map[stri
 		return "", fmt.Errorf("layout %q not found", layoutSlug)
 	}
 
-	renderedBlocks := h.renderBlocksBatch(blocks)
+	renderedBlocks := h.renderBlocksBatch(blocks, languageCode)
 	blocksHTML := strings.Join(renderedBlocks, "\n")
 
 	settings := h.loadSiteSettings()
@@ -111,7 +111,7 @@ func (h *PublicHandler) RenderNodePreview(nodeID uint) (string, error) {
 	}
 
 	blocks := parseBlocks(node.BlocksData)
-	renderedBlocks := h.renderBlocksBatch(blocks)
+	renderedBlocks := h.renderBlocksBatch(blocks, node.LanguageCode)
 
 	// Reuse the main render path but pass nil for Fiber ctx and nil user —
 	// renderNodeWithLayout reads from c only via currentUser which we skip.

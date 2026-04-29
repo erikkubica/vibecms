@@ -32,6 +32,10 @@ func (f *fakeSettingsReader) GetSettings(_ context.Context, prefix string) (map[
 	return out, nil
 }
 
+func (f *fakeSettingsReader) GetSettingsLoc(ctx context.Context, prefix, _ string) (map[string]string, error) {
+	return f.GetSettings(ctx, prefix)
+}
+
 func TestBuildThemeSettingsContext_Empty(t *testing.T) {
 	reg := NewThemeSettingsRegistry()
 	got, err := BuildThemeSettingsContext(context.Background(), reg, newFakeReader())

@@ -103,6 +103,18 @@ func (s *stubCoreAPI) GetSettings(_ context.Context, _ string) (map[string]strin
 	s.record("GetSettings")
 	return nil, nil
 }
+func (s *stubCoreAPI) GetSettingLoc(_ context.Context, _, _ string) (string, error) {
+	s.record("GetSettingLoc")
+	return "", nil
+}
+func (s *stubCoreAPI) SetSettingLoc(_ context.Context, _, _, _ string) error {
+	s.record("SetSettingLoc")
+	return nil
+}
+func (s *stubCoreAPI) GetSettingsLoc(_ context.Context, _, _ string) (map[string]string, error) {
+	s.record("GetSettingsLoc")
+	return nil, nil
+}
 
 // --- Events ---
 func (s *stubCoreAPI) Emit(_ context.Context, _ string, _ map[string]any) error {

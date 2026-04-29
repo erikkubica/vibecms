@@ -23,6 +23,14 @@ type settingsAPI interface {
 	GetSetting(ctx context.Context, key string) (string, error)
 	GetSettings(ctx context.Context, prefix string) (map[string]string, error)
 	SetSetting(ctx context.Context, key, value string) error
+	GetSettingsLoc(ctx context.Context, prefix, locale string) (map[string]string, error)
+	SetSettingLoc(ctx context.Context, key, locale, value string) error
+}
+
+// adminLocale extracts the admin's currently-selected language from the
+// X-Admin-Language header. Empty string means "fallback / all languages".
+func adminLocale(c *fiber.Ctx) string {
+	return string(c.Request().Header.Peek("X-Admin-Language"))
 }
 
 // ThemeSettingsHandler exposes admin HTTP endpoints for the active theme's
@@ -88,11 +96,12 @@ type listResponse struct {
 // loader's Raw blob or expose Config as raw map keys mixed with reserved
 // keys — clients see a clean { key, label, type, default, config } object.
 type fieldDTO struct {
-	Key     string          `json:"key"`
-	Label   string          `json:"label"`
-	Type    string          `json:"type"`
-	Default json.RawMessage `json:"default,omitempty"`
-	Config  map[string]any  `json:"config,omitempty"`
+	Key          string          `json:"key"`
+	Label        string          `json:"label"`
+	Type         string          `json:"type"`
+	Default      json.RawMessage `json:"default,omitempty"`
+	Translatable bool            `json:"translatable,omitempty"`
+	Config       map[string]any  `json:"config,omitempty"`
 }
 
 // pageDTO is the full page schema returned by Get.
@@ -158,9 +167,12 @@ func (h *ThemeSettingsHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusNotFound, "PAGE_NOT_FOUND", "Settings page not declared by active theme")
 	}
 
-	// Single bulk read for the whole theme — keys come back without the
-	// theme prefix, so map lookup is "<page>:<field>".
-	rawAll, err := h.coreAPI.GetSettings(c.Context(), ThemePrefix(themeSlug))
+	// Single bulk read scoped to the admin's current language. The Loc
+	// variant returns each key resolved for that locale, falling back to the
+	// shared row when no per-locale value exists. Non-translatable fields
+	// always live at the shared row, so they come through unchanged.
+	locale := adminLocale(c)
+	rawAll, err := h.coreAPI.GetSettingsLoc(c.Context(), ThemePrefix(themeSlug), locale)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
 	}
@@ -203,6 +215,7 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 	// which fans out to subscribers like sitemap-generator that fully rebuild
 	// on each event — N parallel rebuilds row-lock site_settings and time
 	// out at 25s, killing the process.
+	adminLoc := adminLocale(c)
 	for _, field := range page.Fields {
 		raw, present := body.Values[field.Key]
 		if !present {
@@ -211,6 +224,13 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 		stored, err := encodeForStorage(field.Type, raw)
 		if err != nil {
 			return api.Error(c, fiber.StatusBadRequest, "ENCODE_FAILED", "Failed to encode field value")
+		}
+		// Translatable fields land in the admin's current locale; everything
+		// else lives at the shared row regardless of UI selection. An empty
+		// adminLoc collapses to the shared row in either case.
+		fieldLoc := ""
+		if field.Translatable {
+			fieldLoc = adminLoc
 		}
 		key := SettingKey(themeSlug, page.Slug, field.Key)
 		// Production path: direct GORM write (db != nil). Tests pass db=nil
@@ -225,12 +245,13 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 				toStore = enc
 			}
 			v := toStore
-			setting := models.SiteSetting{Key: key, Value: &v}
-			if err := h.db.Where("\"key\" = ?", key).Assign(setting).FirstOrCreate(&setting).Error; err != nil {
+			setting := models.SiteSetting{Key: key, LanguageCode: fieldLoc, Value: &v}
+			if err := h.db.Where("\"key\" = ? AND language_code = ?", key, fieldLoc).
+				Assign(setting).FirstOrCreate(&setting).Error; err != nil {
 				return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist theme setting")
 			}
 		} else {
-			if err := h.coreAPI.SetSetting(c.Context(), key, stored); err != nil {
+			if err := h.coreAPI.SetSettingLoc(c.Context(), key, fieldLoc, stored); err != nil {
 				return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist theme setting")
 			}
 		}
@@ -254,11 +275,12 @@ func toPageDTO(p ThemeSettingsPage) pageDTO {
 	fields := make([]fieldDTO, 0, len(p.Fields))
 	for _, f := range p.Fields {
 		fields = append(fields, fieldDTO{
-			Key:     f.Key,
-			Label:   f.Label,
-			Type:    f.Type,
-			Default: f.Default,
-			Config:  f.Config,
+			Key:          f.Key,
+			Label:        f.Label,
+			Type:         f.Type,
+			Default:      f.Default,
+			Translatable: f.Translatable,
+			Config:       f.Config,
 		})
 	}
 	return pageDTO{

@@ -33,6 +33,12 @@ type CoreAPI interface {
 	GetSetting(ctx context.Context, key string) (string, error)
 	SetSetting(ctx context.Context, key, value string) error
 	GetSettings(ctx context.Context, prefix string) (map[string]string, error)
+	// Locale-aware variants. Pass "" for locale to read/write the fallback
+	// row that applies across all languages. GetSettingLoc / GetSettingsLoc
+	// fall back to "" when no per-locale row exists.
+	GetSettingLoc(ctx context.Context, key, locale string) (string, error)
+	SetSettingLoc(ctx context.Context, key, locale, value string) error
+	GetSettingsLoc(ctx context.Context, prefix, locale string) (map[string]string, error)
 
 	// Events
 	Emit(ctx context.Context, action string, payload map[string]any) error

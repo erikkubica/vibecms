@@ -166,6 +166,27 @@ func (g *capabilityGuard) GetSettings(ctx context.Context, prefix string) (map[s
 	return g.inner.GetSettings(ctx, prefix)
 }
 
+func (g *capabilityGuard) GetSettingLoc(ctx context.Context, key, locale string) (string, error) {
+	if err := checkCapability(ctx, "settings:read"); err != nil {
+		return "", err
+	}
+	return g.inner.GetSettingLoc(ctx, key, locale)
+}
+
+func (g *capabilityGuard) SetSettingLoc(ctx context.Context, key, locale, value string) error {
+	if err := checkCapability(ctx, "settings:write"); err != nil {
+		return err
+	}
+	return g.inner.SetSettingLoc(ctx, key, locale, value)
+}
+
+func (g *capabilityGuard) GetSettingsLoc(ctx context.Context, prefix, locale string) (map[string]string, error) {
+	if err := checkCapability(ctx, "settings:read"); err != nil {
+		return nil, err
+	}
+	return g.inner.GetSettingsLoc(ctx, prefix, locale)
+}
+
 // --- Events ---
 
 func (g *capabilityGuard) Emit(ctx context.Context, action string, payload map[string]any) error {

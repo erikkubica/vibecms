@@ -41,6 +41,16 @@ func (f *fakeCoreAPI) GetSettings(_ context.Context, prefix string) (map[string]
 	return out, nil
 }
 
+// Locale-aware fakes: tests don't exercise per-locale storage yet, so the
+// shared map is used for both. Sufficient for the existing handler tests.
+func (f *fakeCoreAPI) GetSettingsLoc(ctx context.Context, prefix, _ string) (map[string]string, error) {
+	return f.GetSettings(ctx, prefix)
+}
+
+func (f *fakeCoreAPI) SetSettingLoc(ctx context.Context, key, _, value string) error {
+	return f.SetSetting(ctx, key, value)
+}
+
 // newTestApp wires the handler onto a Fiber app WITHOUT the auth middleware,
 // so tests can exercise route logic without faking session context. Auth
 // wiring is covered by the E2E smoke test in Task 11.

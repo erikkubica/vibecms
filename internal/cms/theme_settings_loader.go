@@ -31,6 +31,10 @@ type ThemeSettingsField struct {
 	Label   string          `json:"label"`
 	Type    string          `json:"type"`
 	Default json.RawMessage `json:"default,omitempty"`
+	// Translatable opts the field into per-locale storage. When false (the
+	// default) the value is shared across all languages. When true, reads
+	// scope to the admin's current language with fallback to the shared row.
+	Translatable bool `json:"translatable,omitempty"`
 
 	Config map[string]any  `json:"-"`
 	Raw    json.RawMessage `json:"-"`
@@ -95,10 +99,11 @@ func loadSettingsPage(themeDir string, def ThemeSettingsPageDef) (ThemeSettingsP
 // reservedFieldKeys are the field-schema keys core knows about; everything
 // else in the raw object is funneled into Config for renderer use.
 var reservedFieldKeys = map[string]struct{}{
-	"key":     {},
-	"label":   {},
-	"type":    {},
-	"default": {},
+	"key":          {},
+	"label":        {},
+	"type":         {},
+	"default":      {},
+	"translatable": {},
 }
 
 func parseSettingsFields(pageSlug string, raw []json.RawMessage) []ThemeSettingsField {

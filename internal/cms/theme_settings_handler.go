@@ -3,6 +3,7 @@ package cms
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -168,19 +169,35 @@ func (h *ThemeSettingsHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusNotFound, "PAGE_NOT_FOUND", "Settings page not declared by active theme")
 	}
 
-	// Two bulk reads: one scoped to the admin's locale (translatable
-	// fields) and one scoped to the empty locale (global fields). Both
-	// hit GetSettingsLoc with the same prefix; the second call asks for
-	// "" so the resolver returns only language_code='' rows. We then
-	// pick per-field based on the field's translatable flag.
+	// Translatable fields read via GetSettingsLoc with locale fallback to
+	// the default language. Non-translatable fields read the
+	// language_code='' row directly — GetSettingsLoc rewrites empty
+	// locale to the default-language row, which is not what we want for
+	// "global, applies to every language" storage. The direct DB query
+	// targets language_code='' explicitly.
 	locale := adminLocale(c)
 	rawAll, err := h.coreAPI.GetSettingsLoc(c.Context(), ThemePrefix(themeSlug), locale)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
 	}
-	rawGlobal, err := h.coreAPI.GetSettingsLoc(c.Context(), ThemePrefix(themeSlug), "")
-	if err != nil {
-		return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
+	rawGlobal := map[string]string{}
+	if h.db != nil {
+		var rows []models.SiteSetting
+		if err := h.db.WithContext(c.Context()).
+			Where("\"key\" LIKE ? AND language_code = ''", ThemePrefix(themeSlug)+"%").
+			Find(&rows).Error; err != nil {
+			return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
+		}
+		for _, r := range rows {
+			v := ""
+			if r.Value != nil {
+				v = *r.Value
+			}
+			// Strip the theme prefix so keys match the page:field shape
+			// the existing rawAll map uses.
+			trimmed := strings.TrimPrefix(r.Key, ThemePrefix(themeSlug))
+			rawGlobal[trimmed] = v
+		}
 	}
 	values := make(map[string]valueDTO, len(page.Fields))
 	for _, field := range page.Fields {

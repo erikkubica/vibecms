@@ -21,6 +21,17 @@ type settingsReader interface {
 	GetSettingsLoc(ctx context.Context, prefix, locale string) (map[string]string, error)
 }
 
+// globalSettingsReader is an optional capability — settingsReader
+// implementations that can return rows specifically at language_code=''
+// (the "global / applies to every language" sentinel) implement this.
+// Without it the render path can't distinguish "no row for this locale"
+// from "row exists but only at language_code=''", which is exactly the
+// case for non-translatable theme settings. coreImpl provides this
+// method; the gRPC client doesn't (extensions always read per-locale).
+type globalSettingsReader interface {
+	GetSettingsGlobal(ctx context.Context, prefix string) (map[string]string, error)
+}
+
 // BuildThemeSettingsContext returns a nested map[pageSlug]map[fieldKey]any
 // for the active theme. Every declared field gets exactly one entry, with
 // values coerced to their typed runtime form and incompatible values
@@ -62,11 +73,29 @@ func BuildThemeSettingsContextForLocale(
 	if err != nil {
 		return nil, err
 	}
+	// Non-translatable fields live at language_code='' and aren't
+	// returned by GetSettingsLoc (which falls back to the default
+	// locale, not the empty-locale row). Fetch them separately when
+	// the reader supports it; without this branch the squilla theme
+	// renders with empty header pill / CTA / footer copy after a save,
+	// even though the admin page shows the saved values.
+	var globals map[string]string
+	if gr, ok := api.(globalSettingsReader); ok {
+		globals, err = gr.GetSettingsGlobal(ctx, prefix)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	for _, p := range pages {
 		page := make(map[string]any, len(p.Fields))
 		for _, f := range p.Fields {
-			stored := raw[p.Slug+":"+f.Key]
+			var stored string
+			if f.IsTranslatable() {
+				stored = raw[p.Slug+":"+f.Key]
+			} else if globals != nil {
+				stored = globals[p.Slug+":"+f.Key]
+			}
 			page[f.Key] = CoerceWithDefault(f, stored).Value
 		}
 		out[p.Slug] = page

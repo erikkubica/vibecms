@@ -160,6 +160,36 @@ func (c *coreImpl) GetSettings(ctx context.Context, prefix string) (map[string]s
 	return c.GetSettingsLoc(ctx, prefix, "")
 }
 
+// GetSettingsGlobal returns the language_code='' rows under the given
+// prefix — the "applies to every language" sentinel used by
+// non-translatable theme/site settings. Distinct from GetSettingsLoc(_,
+// "") which rewrites empty locale to the default-language row and then
+// falls back through it. Callers needing the global row specifically
+// (theme render path, etc.) reach for this.
+func (c *coreImpl) GetSettingsGlobal(ctx context.Context, prefix string) (map[string]string, error) {
+	q := c.db.WithContext(ctx).Model(&models.SiteSetting{}).Where("language_code = ?", "")
+	if prefix != "" {
+		q = q.Where("\"key\" LIKE ?", prefix+"%")
+	}
+	var rows []models.SiteSetting
+	if err := q.Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("coreapi GetSettingsGlobal: %w", err)
+	}
+	out := make(map[string]string, len(rows))
+	for _, r := range rows {
+		v := ""
+		if r.Value != nil {
+			v = *r.Value
+		}
+		key := r.Key
+		if prefix != "" {
+			key = key[len(prefix):]
+		}
+		out[key] = v
+	}
+	return out, nil
+}
+
 // GetSettingsLoc returns settings matching an optional prefix, with per-key
 // fallback semantics: each key returns its (key, locale) value if present,
 // otherwise the default-language row if present, otherwise nothing. The

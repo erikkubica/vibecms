@@ -98,6 +98,29 @@ func (a *dbSettingsAPI) SetSettingLoc(ctx context.Context, key, locale, value st
 	return a.db.WithContext(ctx).Save(&row).Error
 }
 
+// GetSettingsGlobal mirrors coreImpl.GetSettingsGlobal so the
+// globalSettingsReader type assertion in BuildThemeSettingsContextForLocale
+// succeeds in tests that exercise the public render path.
+func (a *dbSettingsAPI) GetSettingsGlobal(ctx context.Context, prefix string) (map[string]string, error) {
+	q := a.db.WithContext(ctx).Model(&models.SiteSetting{}).Where("language_code = ?", "")
+	if prefix != "" {
+		q = q.Where("\"key\" LIKE ?", prefix+"%")
+	}
+	var rows []models.SiteSetting
+	if err := q.Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := map[string]string{}
+	for _, r := range rows {
+		v := ""
+		if r.Value != nil {
+			v = *r.Value
+		}
+		out[strings.TrimPrefix(r.Key, prefix)] = v
+	}
+	return out, nil
+}
+
 func (a *dbSettingsAPI) defaultLocale(ctx context.Context) string {
 	var code string
 	_ = a.db.WithContext(ctx).Table("languages").Select("code").Where("is_default = ?", true).Limit(1).Scan(&code).Error

@@ -4,7 +4,7 @@
   "description": "Three-column hero — left: yellow star mark; center: name tag, big H1 with accent dot, lede; right: contact key/value list. A bottom strip of stat highlights below.",
   "category": "curriculum-vitae",
   "field_schema": [
-    { "key": "name_tag", "label": "Mono name tag", "type": "text", "help": "Short mono label above the name (e.g. // available · 25 €/h · b2b)." },
+    { "key": "name_tag", "label": "Mono name tag", "type": "text", "help": "Short mono label above the name (e.g. // available · b2b)." },
     { "key": "name", "label": "Name", "type": "text", "help": "Single-line H1 — kept on one line at desktop." },
     { "key": "sub", "label": "Subhead", "type": "textarea", "help": "1–2 sentences placed under the name." },
     { "key": "side_items", "label": "Right column key/value", "type": "repeater", "help": "Each row renders as <mono>label</mono> + value (optional URL).",
@@ -16,28 +16,28 @@
     },
     { "key": "strip_items", "label": "Stat strip", "type": "repeater", "help": "Highlights below the hero. Bold count + label.",
       "sub_fields": [
-        { "key": "count", "label": "Bold count", "type": "text", "help": "e.g. 10+, 140+, 0." },
+        { "key": "count", "label": "Bold count", "type": "text", "help": "e.g. 10+, 100+, 0." },
         { "key": "label", "label": "Label",      "type": "text", "help": "e.g. years, projects shipped." }
       ]
     }
   ],
   "test_data": {
-    "name_tag": "// available · 25 €/h · b2b",
-    "name": "Erik Kubica",
-    "sub": "Senior full-stack dev who spent a decade making PHP behave — now wiring AI, MCP and agents on top of it.",
+    "name_tag": "// available · b2b",
+    "name": "Jane Developer",
+    "sub": "Senior full-stack dev. A decade of shipping production code — now wiring AI, MCP and agents on top of it.",
     "side_items": [
-      { "label": "loc",   "value": "Vietnam · Slovakia (EU)", "url": "" },
-      { "label": "hrs",   "value": "SEA / EU timezones", "url": "" },
-      { "label": "since", "value": "10+ yrs · 140+ projects", "url": "" },
-      { "label": "mail",  "value": "erik.kubica@gmail.com", "url": "mailto:erik.kubica@gmail.com" },
-      { "label": "tel",   "value": "+421 908 766 133", "url": "https://wa.me/421908766133" }
+      { "label": "loc",   "value": "Remote · Worldwide", "url": "" },
+      { "label": "hrs",   "value": "Flexible / async-friendly", "url": "" },
+      { "label": "since", "value": "10+ yrs · 100+ projects", "url": "" },
+      { "label": "mail",  "value": "hello@example.com", "url": "mailto:hello@example.com" },
+      { "label": "tel",   "value": "+1 555 0100", "url": "tel:+15550100" }
     ],
     "strip_items": [
       { "count": "10+",  "label": "years" },
-      { "count": "140+", "label": "projects shipped" },
-      { "count": "130+", "label": "WordPress sites" },
-      { "count": "7",    "label": "React apps" },
-      { "count": "4",    "label": "Symfony APIs" },
+      { "count": "100+", "label": "projects shipped" },
+      { "count": "60+",  "label": "production sites" },
+      { "count": "12",   "label": "frontends" },
+      { "count": "8",    "label": "backend APIs" },
       { "count": "0",    "label": "shortcuts" }
     ]
   }

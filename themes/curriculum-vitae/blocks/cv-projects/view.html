@@ -16,11 +16,24 @@
     <article class="proj-card{{ if eq $size "big" }} big{{ end }}">
       {{ if eq $size "grid" }}
       <div class="proj-thumb grid" aria-hidden="true">
-        {{ range $i := seq 12 }}<span class="mini"></span>{{ end }}
+        {{- $imgs := .grid_images -}}
+        {{- range $i := seq 12 -}}
+          {{- $hasIdx := and $imgs (lt $i (len $imgs)) -}}
+          {{- if $hasIdx -}}
+            {{- $entry := index $imgs $i -}}
+            {{- if and $entry.image $entry.image.url -}}
+              <span class="mini" style="background-image:url('{{ $entry.image.url }}');background-size:cover;background-position:center;"></span>
+            {{- else -}}<span class="mini"></span>{{- end -}}
+          {{- else -}}<span class="mini"></span>{{- end -}}
+        {{- end }}
         <span class="grid-label">{{ $first2 }}</span>
       </div>
       {{ else }}
-      <div class="proj-thumb" aria-hidden="true"><span>{{ $first2 }}</span></div>
+        {{ if and .image .image.url }}
+        <div class="proj-thumb has-image" aria-hidden="true" style="background-image:url('{{ .image.url }}');background-size:cover;background-position:center;"></div>
+        {{ else }}
+        <div class="proj-thumb" aria-hidden="true"><span>{{ $first2 }}</span></div>
+        {{ end }}
       {{ end }}
       {{ with .name }}<h3>{{ . }}</h3>{{ end }}
       {{ with .blurb }}<p>{{ . }}</p>{{ end }}

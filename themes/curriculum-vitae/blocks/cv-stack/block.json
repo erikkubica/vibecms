@@ -18,7 +18,7 @@
     { "key": "lang_label", "label": "Languages eyebrow", "type": "text", "help": "Mono label before language list." },
     { "key": "languages", "label": "Languages", "type": "repeater",
       "sub_fields": [
-        { "key": "code",  "label": "Code", "type": "text", "help": "e.g. SK, EN, HU." },
+        { "key": "code",  "label": "Code", "type": "text", "help": "ISO-style language code, e.g. EN, ES, DE." },
         { "key": "level", "label": "Level", "type": "text", "help": "e.g. native, fluent." }
       ]
     }
@@ -32,16 +32,15 @@
       { "name": "AI / Agents",     "rows": "MCP || Building servers + clients\nClaude / GPT / Gemini || Production\nLangGraph / custom orchestration || Production\npgvector / Qdrant || Production\nCursor / Claude Code || Daily driver" },
       { "name": "Backend",         "rows": "PHP || 13+ yrs · Expert\nSymfony || 8+ yrs · Advanced\nNode.js || Intermediate\nJava / Spring Boot || Intermediate" },
       { "name": "Frontend",        "rows": "JavaScript || 10+ yrs · Expert\nReact || 5+ yrs · Advanced\nNext.js || 3+ yrs · Advanced\nTypeScript || Advanced" },
-      { "name": "CMS / Commerce",  "rows": "WordPress || 130+ sites · Expert\nWooCommerce || Advanced\nMagento 1.9 & 2 || 3 stores" },
+      { "name": "CMS / Commerce",  "rows": "WordPress || 60+ sites · Expert\nWooCommerce || Advanced\nMagento 1.9 & 2 || Multiple stores" },
       { "name": "Data / DevOps",   "rows": "MySQL || 10+ yrs\nPostgreSQL || Advanced\nDocker || Daily\nKubernetes || Intermediate" },
       { "name": "Testing / QA",    "rows": "Jest || Advanced\nPHPUnit || Advanced\nStorybook || Intermediate\nTDD || Advanced" }
     ],
     "lang_label": "languages",
     "languages": [
-      { "code": "SK", "level": "native" },
-      { "code": "EN", "level": "fluent" },
-      { "code": "HU", "level": "fluent" },
-      { "code": "CZ", "level": "fluent" }
+      { "code": "EN", "level": "native" },
+      { "code": "ES", "level": "advanced" },
+      { "code": "DE", "level": "conversational" }
     ]
   }
 }

@@ -17,10 +17,10 @@
     "section_id": "contact",
     "eyebrow": "06 · contact",
     "heading": "Need someone who'll write it once,<br/>write it well, and not ghost you?",
-    "primary_label": "erik.kubica@gmail.com",
-    "primary_url":   "mailto:erik.kubica@gmail.com",
-    "secondary_label": "WhatsApp · +421 908 766 133",
-    "secondary_url":   "https://wa.me/421908766133",
-    "fineprint": "EU B2B · 25 €/h · SEA & EU hours · usually replies within a day"
+    "primary_label": "hello@example.com",
+    "primary_url":   "mailto:hello@example.com",
+    "secondary_label": "+1 555 0100",
+    "secondary_url":   "tel:+15550100",
+    "fineprint": "B2B · async-friendly · usually replies within a day"
   }
 }

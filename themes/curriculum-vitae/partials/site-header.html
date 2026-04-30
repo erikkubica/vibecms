@@ -1,7 +1,7 @@
 {{- $s := .app.settings -}}
-{{- $brand := or (index $s "cv.brand") "erik-kubica.dev" -}}
+{{- $brand := or (index $s "cv.brand") "your-domain.example" -}}
 {{- $cta_label := or (index $s "cv.nav_cta_label") "available" -}}
-{{- $cta_url := or (index $s "cv.nav_cta_url") "mailto:erik.kubica@gmail.com" -}}
+{{- $cta_url := or (index $s "cv.nav_cta_url") "mailto:hello@example.com" -}}
 {{- $accent := or (index $s "cv.accent") "#DA251D" -}}
 {{- $menu := index .app.menus "main-nav" -}}
 <nav class="nav">

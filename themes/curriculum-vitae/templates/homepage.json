@@ -3,22 +3,22 @@
   "description": "Single-page CV — hero, about, now/AI, stack, experience, projects, contact.",
   "blocks": [
     { "type": "cv-hero", "fields": {
-      "name_tag": "// available · 25 €/h · b2b",
-      "name": "Erik Kubica",
-      "sub": "Senior full-stack dev who spent a decade making PHP behave — now wiring AI, MCP and agents on top of it.",
+      "name_tag": "// available · b2b",
+      "name": "Jane Developer",
+      "sub": "Senior full-stack dev. A decade of shipping production code — now wiring AI, MCP and agents on top of it.",
       "side_items": [
-        { "label": "loc",   "value": "Vietnam · Slovakia (EU)", "url": "" },
-        { "label": "hrs",   "value": "SEA / EU timezones",      "url": "" },
-        { "label": "since", "value": "10+ yrs · 140+ projects", "url": "" },
-        { "label": "mail",  "value": "erik.kubica@gmail.com",   "url": "mailto:erik.kubica@gmail.com" },
-        { "label": "tel",   "value": "+421 908 766 133",        "url": "https://wa.me/421908766133" }
+        { "label": "loc",   "value": "Remote · Worldwide",        "url": "" },
+        { "label": "hrs",   "value": "Flexible / async-friendly", "url": "" },
+        { "label": "since", "value": "10+ yrs · 100+ projects",   "url": "" },
+        { "label": "mail",  "value": "hello@example.com",         "url": "mailto:hello@example.com" },
+        { "label": "tel",   "value": "+1 555 0100",               "url": "tel:+15550100" }
       ],
       "strip_items": [
         { "count": "10+",  "label": "years" },
-        { "count": "140+", "label": "projects shipped" },
-        { "count": "130+", "label": "WordPress sites" },
-        { "count": "7",    "label": "React apps" },
-        { "count": "4",    "label": "Symfony APIs" },
+        { "count": "100+", "label": "projects shipped" },
+        { "count": "60+",  "label": "production sites" },
+        { "count": "12",   "label": "frontends" },
+        { "count": "8",    "label": "backend APIs" },
         { "count": "0",    "label": "shortcuts" }
       ]
     } },
@@ -26,34 +26,34 @@
       "section_id": "about",
       "eyebrow": "01 · about",
       "heading": "Builds things that don't fall over six months later.",
-      "lede": "Ten-plus years of writing the kind of code you can come back to. PHP / Symfony / WordPress at the core, React and Next.js on top, and for the last while: a serious push into AI — MCP servers, agent workflows, retrieval, the works.",
+      "lede": "Ten-plus years of writing the kind of code you can come back to. Backend frameworks at the core, modern frontends on top, and for the last while: a serious push into AI — MCP servers, agent workflows, retrieval, the works.",
       "day_job_label": "day job",
-      "day_job_text": "Bridging real business stuff with real engineering. I came out of commerce, so I get why the deadline matters and why the invoice has to be right. Then I write the API.",
+      "day_job_text": "Bridging real business stuff with real engineering. Started in commerce, so I get why the deadline matters and why the invoice has to be right. Then I write the API.",
       "client_label": "note for clients",
-      "client_text": "Based in Vietnam, but a fully registered Slovak (EU) freelance contractor with EU tax residency. Standard B2B invoicing, no weirdness. Available across SEA and EU hours.",
+      "client_text": "Independent contractor with proper paperwork. Standard B2B invoicing, no weirdness. Comfortable across multiple time zones, async-friendly by default.",
       "off_label": "off-hours",
       "off_items": [
-        { "icon": "laptop", "text": "Vibecoding until 4 a.m. — me, the cursor, and one too many tabs open." },
-        { "icon": "beer",   "text": "Bia Hà Nội on the little blue stool, watching scooters honk past." },
-        { "icon": "tv",     "text": "Anime, Star Trek, and arguing about which Captain is best (it's Picard)." }
+        { "icon": "laptop", "text": "Late-night side projects — me, the cursor, and one too many tabs open." },
+        { "icon": "beer",   "text": "A quiet bar, a notebook, and the city outside the window." },
+        { "icon": "tv",     "text": "Old sci-fi shows and arguing about which captain is best." }
       ]
     } },
     { "type": "cv-now", "fields": {
       "section_id": "now",
       "eyebrow": "02 · now",
       "heading": "AI-native, on top of a stack that already works.",
-      "sub": "The last decade was PHP, Symfony, WordPress, React. The next one is all of that <em>plus</em> agents, MCP and LLMs doing real work — not demos.",
+      "sub": "The last decade was solid backends, classic CMSes and modern frontends. The next one is all of that <em>plus</em> agents, MCP and LLMs doing real work — not demos.",
       "items": [
         { "label": "MCP servers",     "body": "Build and ship Model Context Protocol servers that plug company data, internal APIs and tooling into Claude / Cursor / agent runtimes. The bridge between LLMs and the messy real world.", "tags": "MCP, TypeScript, Python, Claude" },
         { "label": "Agent workflows", "body": "Multi-step agents for support, ops, content and code review. Tool use, guardrails, evals, human-in-the-loop. Boring on purpose — they have to actually work on Monday morning.", "tags": "Agents, Tool use, Evals" },
-        { "label": "RAG + search",    "body": "Hybrid retrieval over PDFs, ticketing systems, CRMs and 130+ legacy WordPress installs. Postgres + pgvector when sane, dedicated vector DBs when not.", "tags": "pgvector, Embeddings, Hybrid search" },
-        { "label": "LLM in PHP",      "body": "Yes, really. Symfony + LLM gateways, streaming responses into WooCommerce, content pipelines for WordPress at scale. AI on top of the stack you already paid for.", "tags": "Symfony, WordPress, OpenAI, Anthropic" }
+        { "label": "RAG + search",    "body": "Hybrid retrieval over PDFs, ticketing systems, CRMs and large legacy CMS installs. Postgres + pgvector when sane, dedicated vector DBs when not.", "tags": "pgvector, Embeddings, Hybrid search" },
+        { "label": "LLM in legacy stacks", "body": "Yes, really. Backend frameworks + LLM gateways, streaming responses into commerce platforms, content pipelines for legacy CMSes at scale. AI on top of the stack you already paid for.", "tags": "Symfony, WordPress, OpenAI, Anthropic" }
       ],
       "side_intro": "// what this looks like in practice",
       "side_items": [
-        { "text": "An MCP server that lets Claude hit your Symfony admin API directly." },
+        { "text": "An MCP server that lets Claude hit your admin API directly." },
         { "text": "A support agent that reads tickets, drafts replies, tags them, and shuts up when it isn't sure." },
-        { "text": "A WordPress plugin that uses an LLM for content ops without leaking your data." },
+        { "text": "A CMS plugin that uses an LLM for content ops without leaking your data." },
         { "text": "RAG over a decade of project docs so the next dev doesn't start from zero." }
       ]
     } },
@@ -63,19 +63,18 @@
       "heading": "What I actually use.",
       "sub": "Not every logo in existence — just the things I reach for on a Tuesday.",
       "groups": [
-        { "name": "AI / Agents",     "rows": "MCP || Building servers + clients\nClaude / GPT / Gemini || Production\nLangGraph / custom orchestration || Production\npgvector / Qdrant || Production\nCursor / Claude Code || Daily driver" },
-        { "name": "Backend",         "rows": "PHP || 13+ yrs · Expert\nSymfony || 8+ yrs · Advanced\nNode.js || Intermediate\nJava / Spring Boot || Intermediate" },
-        { "name": "Frontend",        "rows": "JavaScript || 10+ yrs · Expert\nReact || 5+ yrs · Advanced\nNext.js || 3+ yrs · Advanced\nTypeScript || Advanced" },
-        { "name": "CMS / Commerce",  "rows": "WordPress || 130+ sites · Expert\nWooCommerce || Advanced\nMagento 1.9 & 2 || 3 stores" },
-        { "name": "Data / DevOps",   "rows": "MySQL || 10+ yrs\nPostgreSQL || Advanced\nDocker || Daily\nKubernetes || Intermediate" },
-        { "name": "Testing / QA",    "rows": "Jest || Advanced\nPHPUnit || Advanced\nStorybook || Intermediate\nTDD || Advanced" }
+        { "name": "AI / Agents",    "rows": "MCP || Building servers + clients\nClaude / GPT / Gemini || Production\nLangGraph / custom orchestration || Production\npgvector / Qdrant || Production\nCursor / Claude Code || Daily driver" },
+        { "name": "Backend",        "rows": "PHP || 13+ yrs · Expert\nSymfony || 8+ yrs · Advanced\nNode.js || Intermediate\nJava / Spring Boot || Intermediate" },
+        { "name": "Frontend",       "rows": "JavaScript || 10+ yrs · Expert\nReact || 5+ yrs · Advanced\nNext.js || 3+ yrs · Advanced\nTypeScript || Advanced" },
+        { "name": "CMS / Commerce", "rows": "WordPress || 60+ sites · Expert\nWooCommerce || Advanced\nMagento 1.9 & 2 || Multiple stores" },
+        { "name": "Data / DevOps",  "rows": "MySQL || 10+ yrs\nPostgreSQL || Advanced\nDocker || Daily\nKubernetes || Intermediate" },
+        { "name": "Testing / QA",   "rows": "Jest || Advanced\nPHPUnit || Advanced\nStorybook || Intermediate\nTDD || Advanced" }
       ],
       "lang_label": "languages",
       "languages": [
-        { "code": "SK", "level": "native" },
-        { "code": "EN", "level": "fluent" },
-        { "code": "HU", "level": "fluent" },
-        { "code": "CZ", "level": "fluent" }
+        { "code": "EN", "level": "native" },
+        { "code": "ES", "level": "advanced" },
+        { "code": "DE", "level": "conversational" }
       ]
     } },
     { "type": "cv-experience", "fields": {
@@ -83,12 +82,12 @@
       "eyebrow": "04 · experience",
       "heading": "A straight line, mostly.",
       "items": [
-        { "range": "2015 — now",   "role": "Senior PHP Developer · AI lead", "org": "GALTON Brands s.r.o. (ex ZoneMedia)",
-          "body": "Lead backend + the new AI track. Turn static designs into data-driven apps, design REST APIs, optimize databases, and lately — wire MCP servers and agent workflows into the existing Symfony / WordPress stack so the team actually uses them.",
-          "bullets": "130+ WordPress sites\n7 React apps\n4 Symfony APIs\nAI / MCP integration across the stack" },
-        { "range": "2014 — 2015",  "role": "IT all-rounder",       "org": "TvarPlast s.r.o.",      "body": "Sysadmin, web dev and the person you call when nothing prints. Manufacturing IT.", "bullets": "" },
-        { "range": "~2014",         "role": "Web developer",        "org": "CMMS s.r.o.",           "body": "Built the company site on Symfony. Clean PHP, no shortcuts.", "bullets": "" },
-        { "range": "~2013",         "role": "Software collaborator","org": "Soft-Tech EU s.r.o.",   "body": "Java EE + GWT solution for Suzuki Kft. Enterprise automotive software.", "bullets": "" }
+        { "range": "2015 — now",  "role": "Senior Developer · AI lead", "org": "Acme Studio Ltd.",
+          "body": "Lead backend + the new AI track. Turn static designs into data-driven apps, design REST APIs, optimize databases, and lately — wire MCP servers and agent workflows into the existing stack so the team actually uses them.",
+          "bullets": "60+ production sites\n12 frontends\n8 backend APIs\nAI / MCP integration across the stack" },
+        { "range": "2014 — 2015", "role": "IT all-rounder",      "org": "Northwind Manufacturing", "body": "Sysadmin, web dev and the person you call when nothing prints. Manufacturing IT.", "bullets": "" },
+        { "range": "~2014",        "role": "Web developer",        "org": "Initech s.r.o.",          "body": "Built the company site on a backend framework. Clean code, no shortcuts.", "bullets": "" },
+        { "range": "~2013",        "role": "Software collaborator","org": "Globex EU s.r.o.",        "body": "Java EE + GWT solution for an automotive industry client. Enterprise software.", "bullets": "" }
       ]
     } },
     { "type": "cv-projects", "fields": {
@@ -96,23 +95,23 @@
       "eyebrow": "05 · projects",
       "heading": "Selected work.",
       "items": [
-        { "name": "Hospital Booking System",        "blurb": "Backend API + reservation system for a major hospital. Complex scheduling, patient management, real security requirements. Shipped on Kubernetes with a proper CI/CD pipeline.", "tags": "Next.js, Symfony, Kubernetes, ArgoCD, Vault", "size": "big" },
-        { "name": "Europarl Multimedia Centre",     "blurb": "Frontend for the European Parliament's media platform. Multilingual, high-traffic, lots of streaming. The kind of place where things have to just work.", "tags": "Next.js, React, Jest, Storybook", "size": "big" },
-        { "name": "Plastic Surgery Clinic System",  "blurb": "Full-stack booking + patient management with secure medical data handling.", "tags": "React, Symfony, MySQL", "size": "small" },
-        { "name": "Mystery Shopping Platform",      "blurb": "Task management, reporting and analytics for a mystery shopping company.", "tags": "React, Symfony, REST API", "size": "small" },
-        { "name": "Foxconn Intranet Mobile App",    "blurb": "Cross-platform internal app for company comms and employee management.", "tags": "Flutter, Dart, REST API", "size": "small" },
-        { "name": "130+ WordPress & 3 Magento stores", "blurb": "The biggest chunk of the last decade. Custom themes, custom plugins, performance work on commercial sites that have to convert.", "tags": "WordPress, WooCommerce, Magento, PHP", "size": "grid" }
+        { "name": "Hospital booking system",          "blurb": "Backend API + reservation system for a hospital network. Complex scheduling, patient management, real security requirements. Shipped on Kubernetes with a proper CI/CD pipeline.", "tags": "Next.js, Symfony, Kubernetes, ArgoCD, Vault", "size": "big" },
+        { "name": "Public-sector media platform",     "blurb": "Frontend for a high-traffic, multilingual public-sector media platform. Streaming, accessibility, the kind of place where things have to just work.", "tags": "Next.js, React, Jest, Storybook", "size": "big" },
+        { "name": "Aesthetic clinic system",          "blurb": "Full-stack booking + patient management with secure medical data handling.", "tags": "React, Symfony, MySQL", "size": "small" },
+        { "name": "Mystery shopping platform",        "blurb": "Task management, reporting and analytics for a mystery shopping company.", "tags": "React, Symfony, REST API", "size": "small" },
+        { "name": "Manufacturing intranet mobile app","blurb": "Cross-platform internal app for company comms and employee management at a large manufacturer.", "tags": "Flutter, Dart, REST API", "size": "small" },
+        { "name": "60+ WordPress & multiple Magento stores", "blurb": "The biggest chunk of the last decade. Custom themes, custom plugins, performance work on commercial sites that have to convert.", "tags": "WordPress, WooCommerce, Magento, PHP", "size": "grid" }
       ]
     } },
     { "type": "cv-contact", "fields": {
       "section_id": "contact",
       "eyebrow": "06 · contact",
       "heading": "Need someone who'll write it once,<br/>write it well, and not ghost you?",
-      "primary_label": "erik.kubica@gmail.com",
-      "primary_url":   "mailto:erik.kubica@gmail.com",
-      "secondary_label": "WhatsApp · +421 908 766 133",
-      "secondary_url":   "https://wa.me/421908766133",
-      "fineprint": "EU B2B · 25 €/h · SEA & EU hours · usually replies within a day"
+      "primary_label": "hello@example.com",
+      "primary_url":   "mailto:hello@example.com",
+      "secondary_label": "+1 555 0100",
+      "secondary_url":   "tel:+15550100",
+      "fineprint": "B2B · async-friendly · usually replies within a day"
     } }
   ]
 }

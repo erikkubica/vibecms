@@ -25,30 +25,30 @@
     "items": [
       {
         "range": "2015 — now",
-        "role": "Senior PHP Developer · AI lead",
-        "org": "GALTON Brands s.r.o. (ex ZoneMedia)",
-        "body": "Lead backend + the new AI track. Turn static designs into data-driven apps, design REST APIs, optimize databases, and lately — wire MCP servers and agent workflows into the existing Symfony / WordPress stack so the team actually uses them.",
-        "bullets": "130+ WordPress sites\n7 React apps\n4 Symfony APIs\nAI / MCP integration across the stack"
+        "role": "Senior Developer · AI lead",
+        "org": "Acme Studio Ltd.",
+        "body": "Lead backend + the new AI track. Turn static designs into data-driven apps, design REST APIs, optimize databases, and lately — wire MCP servers and agent workflows into the existing stack so the team actually uses them.",
+        "bullets": "60+ production sites\n12 frontends\n8 backend APIs\nAI / MCP integration across the stack"
       },
       {
         "range": "2014 — 2015",
         "role": "IT all-rounder",
-        "org": "TvarPlast s.r.o.",
+        "org": "Northwind Manufacturing",
         "body": "Sysadmin, web dev and the person you call when nothing prints. Manufacturing IT.",
         "bullets": ""
       },
       {
         "range": "~2014",
         "role": "Web developer",
-        "org": "CMMS s.r.o.",
-        "body": "Built the company site on Symfony. Clean PHP, no shortcuts.",
+        "org": "Initech s.r.o.",
+        "body": "Built the company site on a backend framework. Clean code, no shortcuts.",
         "bullets": ""
       },
       {
         "range": "~2013",
         "role": "Software collaborator",
-        "org": "Soft-Tech EU s.r.o.",
-        "body": "Java EE + GWT solution for Suzuki Kft. Enterprise automotive software.",
+        "org": "Globex EU s.r.o.",
+        "body": "Java EE + GWT solution for an automotive industry client. Enterprise software.",
         "bullets": ""
       }
     ]

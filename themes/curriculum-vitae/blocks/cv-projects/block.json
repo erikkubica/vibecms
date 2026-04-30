@@ -1,7 +1,7 @@
 {
   "slug": "cv-projects",
   "name": "CV Projects",
-  "description": "Section 05 — projects. 3-column responsive grid of project cards. Each card has a generated thumbnail (diagonal pattern by default, mosaic grid for size 'grid'), a title, a blurb, and chip tags. Big-size cards span all 3 columns and use a 16:10 thumb.",
+  "description": "Section 05 — projects. 3-column responsive grid of project cards. Each card has a generated thumbnail (diagonal pattern by default, mosaic grid for size 'grid'), a title, a blurb, and chip tags. Big-size cards span all 3 columns and use a 16:10 thumb. Grid-size cards render up to 12 images in a mosaic; missing slots fall back to coloured placeholders so the layout stays balanced even when partially populated.",
   "category": "curriculum-vitae",
   "field_schema": [
     { "key": "section_id", "label": "Anchor id", "type": "text" },
@@ -14,7 +14,18 @@
         { "key": "tags",  "label": "Tags",         "type": "text", "help": "Comma + space separated." },
         { "key": "size",  "label": "Card size",    "type": "select",
           "options": ["small", "big", "grid"],
-          "help": "small = 1/3 col, big = full row + 16:10 thumb, grid = mosaic-tile thumb." }
+          "help": "small = 1/3 col, big = full row + 16:10 thumb, grid = mosaic-tile thumb." },
+        { "key": "image", "label": "Card thumbnail", "type": "image",
+          "help": "Optional. Replaces the synthetic two-word preview on small / big cards. Ignored when card size = grid (use Grid mosaic images instead)." },
+        {
+          "key": "grid_images",
+          "label": "Grid mosaic images",
+          "type": "repeater",
+          "help": "Only used when card size = grid. Add up to 12 images; the grid renders 4 × 3 tiles. Fewer than 12 is fine — empty slots fall back to plain coloured placeholders.",
+          "sub_fields": [
+            { "key": "image", "label": "Image", "type": "image" }
+          ]
+        }
       ]
     }
   ],
@@ -23,12 +34,12 @@
     "eyebrow": "05 · projects",
     "heading": "Selected work.",
     "items": [
-      { "name": "Hospital Booking System",   "blurb": "Backend API + reservation system for a major hospital. Complex scheduling, patient management, real security requirements. Shipped on Kubernetes with a proper CI/CD pipeline.", "tags": "Next.js, Symfony, Kubernetes, ArgoCD, Vault", "size": "big" },
-      { "name": "Europarl Multimedia Centre","blurb": "Frontend for the European Parliament's media platform. Multilingual, high-traffic, lots of streaming. The kind of place where things have to just work.", "tags": "Next.js, React, Jest, Storybook", "size": "big" },
-      { "name": "Plastic Surgery Clinic System", "blurb": "Full-stack booking + patient management with secure medical data handling.", "tags": "React, Symfony, MySQL", "size": "small" },
-      { "name": "Mystery Shopping Platform", "blurb": "Task management, reporting and analytics for a mystery shopping company.", "tags": "React, Symfony, REST API", "size": "small" },
-      { "name": "Foxconn Intranet Mobile App","blurb": "Cross-platform internal app for company comms and employee management.", "tags": "Flutter, Dart, REST API", "size": "small" },
-      { "name": "130+ WordPress & 3 Magento stores", "blurb": "The biggest chunk of the last decade. Custom themes, custom plugins, performance work on commercial sites that have to convert.", "tags": "WordPress, WooCommerce, Magento, PHP", "size": "grid" }
+      { "name": "Hospital booking system",          "blurb": "Backend API + reservation system for a hospital network. Complex scheduling, patient management, real security requirements. Shipped on Kubernetes with a proper CI/CD pipeline.", "tags": "Next.js, Symfony, Kubernetes, ArgoCD, Vault", "size": "big" },
+      { "name": "Public-sector media platform",     "blurb": "Frontend for a high-traffic, multilingual public-sector media platform. Streaming, accessibility, the kind of place where things have to just work.", "tags": "Next.js, React, Jest, Storybook", "size": "big" },
+      { "name": "Aesthetic clinic system",          "blurb": "Full-stack booking + patient management with secure medical data handling.", "tags": "React, Symfony, MySQL", "size": "small" },
+      { "name": "Mystery shopping platform",        "blurb": "Task management, reporting and analytics for a mystery shopping company.", "tags": "React, Symfony, REST API", "size": "small" },
+      { "name": "Manufacturing intranet mobile app","blurb": "Cross-platform internal app for company comms and employee management at a large manufacturer.", "tags": "Flutter, Dart, REST API", "size": "small" },
+      { "name": "60+ WordPress & multiple Magento stores", "blurb": "The biggest chunk of the last decade. Custom themes, custom plugins, performance work on commercial sites that have to convert.", "tags": "WordPress, WooCommerce, Magento, PHP", "size": "grid" }
     ]
   }
 }

@@ -369,24 +369,6 @@ a { color: inherit; }
   position: relative;
   overflow: hidden;
 }
-.proj-thumb.grid .mini::before {
-  content: "";
-  position: absolute;
-  left: 18%; right: 18%;
-  top: 22%; height: 3px;
-  background: var(--ink);
-  opacity: 0.45;
-  border-radius: 1px;
-}
-.proj-thumb.grid .mini::after {
-  content: "";
-  position: absolute;
-  left: 18%; right: 36%;
-  bottom: 24%; height: 2px;
-  background: var(--muted);
-  opacity: 0.6;
-  border-radius: 1px;
-}
 .proj-thumb.grid .mini:nth-child(3n+1) {
   background: linear-gradient(135deg, color-mix(in oklch, var(--accent-2) 30%, var(--bg)) 0%, var(--bg) 60%);
 }

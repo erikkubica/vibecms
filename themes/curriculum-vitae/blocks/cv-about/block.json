@@ -17,7 +17,7 @@
       "sub_fields": [
         { "key": "icon", "label": "Icon", "type": "select",
           "options": ["laptop", "beer", "tv"],
-          "help": "laptop = vibecoding, beer = bia hà nội, tv = anime / star trek." },
+          "help": "laptop = work / coding, beer = drink / unwind, tv = watch / read." },
         { "key": "text", "label": "Line", "type": "text", "help": "One-liner shown beside the icon tile." }
       ]
     }
@@ -26,16 +26,16 @@
     "section_id": "about",
     "eyebrow": "01 · about",
     "heading": "Builds things that don't fall over six months later.",
-    "lede": "Ten-plus years of writing the kind of code you can come back to. PHP / Symfony / WordPress at the core, React and Next.js on top, and for the last while: a serious push into AI — MCP servers, agent workflows, retrieval, the works.",
+    "lede": "Ten-plus years of writing the kind of code you can come back to. Backend frameworks at the core, modern frontends on top, and for the last while: a serious push into AI — MCP servers, agent workflows, retrieval, the works.",
     "day_job_label": "day job",
-    "day_job_text": "Bridging real business stuff with real engineering. I came out of commerce, so I get why the deadline matters and why the invoice has to be right. Then I write the API.",
+    "day_job_text": "Bridging real business stuff with real engineering. Started in commerce, so I get why the deadline matters and why the invoice has to be right. Then I write the API.",
     "client_label": "note for clients",
-    "client_text": "Based in Vietnam, but a fully registered Slovak (EU) freelance contractor with EU tax residency. Standard B2B invoicing, no weirdness. Available across SEA and EU hours.",
+    "client_text": "Independent contractor with proper paperwork. Standard B2B invoicing, no weirdness. Comfortable across multiple time zones, async-friendly by default.",
     "off_label": "off-hours",
     "off_items": [
-      { "icon": "laptop", "text": "Vibecoding until 4 a.m. — me, the cursor, and one too many tabs open." },
-      { "icon": "beer",   "text": "Bia Hà Nội on the little blue stool, watching scooters honk past." },
-      { "icon": "tv",     "text": "Anime, Star Trek, and arguing about which Captain is best (it's Picard)." }
+      { "icon": "laptop", "text": "Late-night side projects — me, the cursor, and one too many tabs open." },
+      { "icon": "beer",   "text": "A quiet bar, a notebook, and the city outside the window." },
+      { "icon": "tv",     "text": "Old sci-fi shows and arguing about which captain is best." }
     ]
   }
 }

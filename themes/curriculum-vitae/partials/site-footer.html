@@ -1,6 +1,6 @@
 {{- $s := .app.settings -}}
 {{- $year := or (index $s "cv.copyright_year") "2026" -}}
-{{- $owner := or (index $s "cv.copyright_owner") "Erik Kubica" -}}
+{{- $owner := or (index $s "cv.copyright_owner") "Jane Developer" -}}
 {{- $line := or (index $s "cv.footer_line") "built with too much coffee · zero shortcuts" -}}
 <footer class="foot">
   <div><span class="mono">© {{ $year }} {{ $owner }}</span></div>

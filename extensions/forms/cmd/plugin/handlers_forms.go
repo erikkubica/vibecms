@@ -120,6 +120,17 @@ func (p *FormsPlugin) handleCreateForm(ctx context.Context, req *pb.PluginHTTPRe
 		return jsonError(400, "INVALID_JSON", err.Error()), nil
 	}
 
+	// FormEditor initialises created_at / updated_at as empty strings in
+	// React state and POSTs the whole form, including those keys. Postgres
+	// rejects "" for timestamp columns ("invalid input syntax for type
+	// timestamp with time zone"), so strip server-managed fields here. The
+	// DB will populate them via DEFAULT now().
+	delete(data, "id")
+	delete(data, "created_at")
+	delete(data, "updated_at")
+	delete(data, "submission_count")
+	delete(data, "last_submission_at")
+
 	if resp := validateFormFields(ctx, p.host, data, 0); resp != nil {
 		return resp, nil
 	}
@@ -144,9 +155,14 @@ func (p *FormsPlugin) handleUpdateForm(ctx context.Context, id uint, body []byte
 	if err := json.Unmarshal(body, &data); err != nil {
 		return jsonError(400, "INVALID_JSON", err.Error()), nil
 	}
-	// Remove protected fields
+	// Remove protected / computed fields. submission_count and
+	// last_submission_at are computed at read time by normalizeForm —
+	// they're not real columns on the forms table, so DataUpdate would
+	// 500 if they reached the SQL layer.
 	delete(data, "id")
 	delete(data, "created_at")
+	delete(data, "submission_count")
+	delete(data, "last_submission_at")
 
 	if resp := validateFormFields(ctx, p.host, data, id); resp != nil {
 		return resp, nil

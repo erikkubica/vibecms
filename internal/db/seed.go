@@ -210,8 +210,10 @@ func Seed(db *gorm.DB) error {
 	db.Exec(`INSERT INTO site_settings (key, value, updated_at) VALUES ('site_name', 'Squilla', NOW()) ON CONFLICT (key) DO NOTHING`)
 	db.Exec(`INSERT INTO site_settings (key, value, updated_at) VALUES ('site_url', 'http://localhost:8099', NOW()) ON CONFLICT (key) DO NOTHING`)
 	// Public registration is closed by default. Operators flip this to "true"
-	// in the admin to allow self-registration (creates `member` role users).
-	db.Exec(`INSERT INTO site_settings (key, value, updated_at) VALUES ('allow_registration', 'false', NOW()) ON CONFLICT (key) DO NOTHING`)
+	// in Admin → Security → Settings to allow self-registration. Stored under
+	// language_code='' — registration is a global capability, not per-locale.
+	db.Exec(`INSERT INTO site_settings (key, language_code, value, updated_at) VALUES ('allow_registration', '', 'false', NOW()) ON CONFLICT (key, language_code) DO NOTHING`)
+	db.Exec(`INSERT INTO site_settings (key, language_code, value, updated_at) VALUES ('default_registration_role', '', 'member', NOW()) ON CONFLICT (key, language_code) DO NOTHING`)
 
 	// Assign default layout_slug to all seeded nodes that don't have one.
 	// This avoids extra fallback lookups on every render and ensures nodes

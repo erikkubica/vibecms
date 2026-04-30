@@ -27,6 +27,7 @@ import (
 	"squilla/internal/scripting"
 	"squilla/internal/sdui"
 	"squilla/internal/secrets"
+	"squilla/internal/settings"
 	pb "squilla/pkg/plugin/coreapipb"
 
 	"github.com/gofiber/fiber/v2"
@@ -223,6 +224,18 @@ func main() {
 	healthHandler := api.NewHealthHandler(database)
 	roleHandler := rbac.NewRoleHandler(database, eventBus)
 	settingsHandler := cms.NewSettingsHandler(database, eventBus, secretsSvc)
+
+	// Schema-driven settings registry. Core registers built-ins (security,
+	// site.general, site.seo, site.advanced) here at boot; extensions
+	// register their own schemas at activation, themes at theme-load.
+	// The legacy /admin/api/settings endpoint above is unchanged — this
+	// is the schema-aware layer mounted alongside it under
+	// /admin/api/settings/schemas.
+	settingsRegistry := settings.NewRegistry()
+	settings.RegisterBuiltins(settingsRegistry)
+	settingsStore := settings.NewStore(database, secretsSvc)
+	settingsSchemaHandler := settings.NewHandler(settingsRegistry, settingsStore, database, eventBus)
+
 	pageAuthHandler := auth.NewPageAuthHandler(database, sessionSvc, eventBus)
 
 	// SDUI handlers — boot manifest, layout trees, and SSE events.
@@ -288,6 +301,14 @@ func main() {
 	extLoader.ScanAndRegister()
 	extLoader.LoadBlocksForActiveExtensions(themeAssets)
 
+	// Wire extension settings schemas into the registry. Subscribe before
+	// ReplayActive so any in-flight activations during boot are caught;
+	// ReplayActive then registers schemas for extensions already active
+	// from previous runs.
+	settingsBridge := cms.NewExtensionSettingsBridge(extLoader, settingsRegistry, eventBus)
+	settingsBridge.Subscribe()
+	settingsBridge.ReplayActive()
+
 	// Drop-in watchers — eliminate the "drop a folder + restart" step. We
 	// only watch the data dirs because image-bundled dirs don't change at
 	// runtime (they're baked into the image). New theme/extension folders
@@ -351,6 +372,7 @@ func main() {
 	taxonomyHandler.RegisterRoutes(adminAPI)
 	termHandler.RegisterRoutes(adminAPI)
 	settingsHandler.RegisterRoutes(adminAPI)
+	settingsSchemaHandler.RegisterRoutes(adminAPI)
 	cacheHandler := cms.NewCacheHandler(publicHandler, eventBus)
 	cacheHandler.RegisterRoutes(adminAPI)
 	themeHandler.RegisterRoutes(adminAPI)

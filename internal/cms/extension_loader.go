@@ -114,6 +114,13 @@ type ExtensionManifest struct {
 	Plugins        []PluginManifestEntry    `json:"plugins"`
 	AdminUI        *AdminUIManifest         `json:"admin_ui"`
 	SettingsSchema map[string]SettingsField `json:"settings_schema"`
+	// Settings is the rich, schema-driven settings declaration. Each entry
+	// is a complete settings.Schema (sections + fields with translatable
+	// flags). Registered into the in-process settings registry on
+	// activation, unregistered on deactivation. The schema ID is namespaced
+	// to "ext.<slug>.<id>" by the activation bridge so two extensions can
+	// declare schemas with the same local ID without collision.
+	Settings []json.RawMessage `json:"settings"`
 	Blocks         []ThemeBlockDef          `json:"blocks"`
 	Templates      []ThemeTemplateDef       `json:"templates"`
 	Layouts        []ThemeLayoutDef         `json:"layouts"`

@@ -19,64 +19,27 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  getSiteSettings,
-  updateSiteSettings,
   clearCache,
   getNodes,
   getRoles,
+  getSettingsSchema,
+  saveSettingsSchema,
   type ContentNode,
   type Role,
+  type SettingsSchema,
+  type SettingsSchemaField,
 } from "@/api/client";
 import { iconMap } from "./sdui-components";
 
-// SettingsForm renders a server-described settings page. The Go kernel emits
-// a schema (sections + fields) and this component handles the load/save loop.
-// The same component backs site settings, extension settings, theme settings —
-// everything that's "load some settings, render a form, save the diff."
-
-export interface SettingsFieldDef {
-  key: string;
-  label: string;
-  type: "text" | "textarea" | "node_select" | "toggle" | "role_select";
-  placeholder?: string;
-  help?: string;
-  /** Inline warning rendered in an amber callout below the help line. Use
-   *  for settings that have non-obvious cross-cutting behaviour (e.g.
-   *  per-language toggles where OFF on one language doesn't affect
-   *  others). */
-  warning?: string;
-  rows?: number;
-  font_mono?: boolean;
-  // node_select-specific
-  node_type?: string;
-  empty_label?: string;
-  // toggle-specific. Settings are stored as strings, so we map the
-  // boolean state back to two configurable string values.
-  true_value?: string;
-  false_value?: string;
-  default?: string;
-}
-
-export interface SettingsSectionDef {
-  title: string;
-  icon?: string;
-  description?: string;
-  full_width?: boolean;
-  fields: SettingsFieldDef[];
-}
-
-export interface SettingsFormProps {
-  title?: string;
-  description?: string;
-  schema: SettingsSectionDef[];
-  show_clear_cache?: boolean;
-  /** When true, the form reads/writes the language-agnostic row of
-   *  site_settings (language_code=''). The Publish-card language picker is
-   *  hidden and the API receives `X-Admin-Language: *`. Use for settings
-   *  whose behaviour can't sensibly differ per locale (security policy,
-   *  global feature flags, etc.). */
-  language_agnostic?: boolean;
-}
+// SchemaSettings is the schema-driven counterpart of SettingsForm. The
+// React component is purely a renderer — the schema (sections, fields,
+// per-field translatable flag) comes from the server. One mixed page can
+// have translatable fields (per-language) alongside global fields
+// (language_code='') with the framework routing storage transparently.
+//
+// SDUI emits { type: "SchemaSettings", props: { schema_id, show_clear_cache } }.
+// The component fetches the schema + current values for the admin's
+// locale and posts diffs back to /admin/api/settings/schemas/<id>.
 
 const ICON_COLORS: Record<string, string> = {
   Globe: "text-indigo-500",
@@ -84,6 +47,7 @@ const ICON_COLORS: Record<string, string> = {
   FileText: "text-amber-500",
   Code: "text-amber-500",
   Settings: "text-slate-500",
+  Shield: "text-rose-500",
 };
 
 function renderIcon(name: string | undefined) {
@@ -94,13 +58,17 @@ function renderIcon(name: string | undefined) {
   return <Icon className={`h-4 w-4 ${color}`} />;
 }
 
-export function SettingsForm({
-  title = "Settings",
-  description,
-  schema,
+export interface SchemaSettingsProps {
+  schema_id: string;
+  show_clear_cache?: boolean;
+}
+
+export function SchemaSettings({
+  schema_id,
   show_clear_cache = false,
-  language_agnostic = false,
-}: SettingsFormProps) {
+}: SchemaSettingsProps) {
+  const { languages, currentCode } = useAdminLanguage();
+  const [schema, setSchema] = useState<SettingsSchema | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [original, setOriginal] = useState<Record<string, string>>({});
   const [pages, setPages] = useState<ContentNode[]>([]);
@@ -108,65 +76,70 @@ export function SettingsForm({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const { languages, currentCode } = useAdminLanguage();
-  // Per-form language override. Defaults to and follows the admin header
-  // language; the in-form selector below pins a different value if the
-  // operator wants to edit a specific language without affecting the rest
-  // of the admin. For language-agnostic forms the locale is forced to "*"
-  // so the API stores/reads the empty-locale row regardless of which
-  // language the admin happens to be editing in.
-  const [pageLocale, setPageLocale] = useState<string>(
-    language_agnostic ? "*" : currentCode,
-  );
+  // pageLocale only matters when at least one field is translatable.
+  // For all-global schemas the picker is hidden and saves omit the
+  // locale header (server falls back to '' for non-translatable rows
+  // regardless).
+  const [pageLocale, setPageLocale] = useState<string>(currentCode);
   useEffect(() => {
-    if (!language_agnostic) setPageLocale(currentCode);
-  }, [currentCode, language_agnostic]);
-
-  const needsPages = schema.some((s) => s.fields.some((f) => f.type === "node_select"));
-  const needsRoles = schema.some((s) => s.fields.some((f) => f.type === "role_select"));
+    setPageLocale(currentCode);
+  }, [currentCode]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const promises: Promise<unknown>[] = [getSiteSettings(pageLocale)];
+      const env = await getSettingsSchema(schema_id, pageLocale);
+      const needsPages = env.schema.sections.some((s) =>
+        s.fields.some((f) => f.type === "node_select"),
+      );
+      const needsRoles = env.schema.sections.some((s) =>
+        s.fields.some((f) => f.type === "role_select"),
+      );
+      const sidePromises: Promise<unknown>[] = [];
       if (needsPages) {
-        promises.push(getNodes({ page: 1, per_page: 200, status: "published" }));
+        sidePromises.push(getNodes({ page: 1, per_page: 200, status: "published" }));
       } else {
-        promises.push(Promise.resolve(undefined));
+        sidePromises.push(Promise.resolve(undefined));
       }
-      if (needsRoles) {
-        promises.push(getRoles());
-      } else {
-        promises.push(Promise.resolve(undefined));
-      }
-      const [settings, pagesRes, rolesRes] = await Promise.all(promises) as [
-        Record<string, string>,
+      if (needsRoles) sidePromises.push(getRoles());
+      else sidePromises.push(Promise.resolve(undefined));
+
+      const [pagesRes, rolesRes] = (await Promise.all(sidePromises)) as [
         { data: ContentNode[] } | undefined,
         Role[] | undefined,
       ];
 
+      // Initialise every key the schema declares so onChange handlers
+      // never produce undefined → controlled-input warnings.
       const initial: Record<string, string> = {};
-      for (const section of schema) {
-        for (const field of section.fields) {
-          initial[field.key] = settings[field.key] ?? "";
+      for (const sec of env.schema.sections) {
+        for (const f of sec.fields) {
+          initial[f.key] = env.values[f.key] ?? f.default ?? "";
         }
       }
+      setSchema(env.schema);
       setValues(initial);
       setOriginal(initial);
       if (pagesRes) setPages(pagesRes.data);
       if (rolesRes) setRoles(rolesRes);
-    } catch {
-      toast.error("Failed to load settings");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to load settings";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [schema, needsPages, needsRoles, pageLocale]);
+  }, [schema_id, pageLocale]);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
+  const hasTranslatable = schema?.sections.some((s) =>
+    s.fields.some((f) => f.translatable),
+  ) ?? false;
+
   async function handleSave() {
+    if (!schema) return;
     setSaving(true);
     try {
       const diff: Record<string, string> = {};
@@ -177,11 +150,17 @@ export function SettingsForm({
         toast.info("No changes to save");
         return;
       }
-      await updateSiteSettings(diff, pageLocale);
+      // Only forward the locale when the schema actually has
+      // translatable fields. For all-global schemas the server doesn't
+      // need it and forwarding it would tie an unrelated header to
+      // the request.
+      const localeArg = hasTranslatable ? pageLocale : undefined;
+      await saveSettingsSchema(schema.id, diff, localeArg);
       setOriginal({ ...values });
       toast.success("Settings saved");
-    } catch {
-      toast.error("Failed to save settings");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save settings";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -199,9 +178,7 @@ export function SettingsForm({
     }
   }
 
-  const hasChanges = JSON.stringify(values) !== JSON.stringify(original);
-
-  if (loading) {
+  if (loading || !schema) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
@@ -209,20 +186,20 @@ export function SettingsForm({
     );
   }
 
+  const hasChanges = JSON.stringify(values) !== JSON.stringify(original);
+
   return (
     <div className="space-y-4">
-      {/* Title row — spans the full width above the 2-col grid. */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-        {description && (
-          <p className="text-sm text-slate-500 mt-0.5">{description}</p>
+        <h1 className="text-2xl font-bold text-slate-900">{schema.title}</h1>
+        {schema.description && (
+          <p className="text-sm text-slate-500 mt-0.5">{schema.description}</p>
         )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* Main content — section cards */}
         <div className="space-y-4 min-w-0">
-          {schema.map((section, idx) => (
+          {schema.sections.map((section, idx) => (
             <Card
               key={idx}
               className="rounded-xl border border-slate-200 shadow-sm"
@@ -234,13 +211,16 @@ export function SettingsForm({
                 )}
                 <div className="space-y-4">
                   {section.fields.map((field) => (
-                    <SettingsField
+                    <SchemaField
                       key={field.key}
                       field={field}
-                      value={values[field.key] || ""}
+                      value={values[field.key] ?? ""}
                       pages={pages}
                       roles={roles}
-                      onChange={(v) => setValues((prev) => ({ ...prev, [field.key]: v }))}
+                      hasTranslatable={hasTranslatable}
+                      onChange={(v) =>
+                        setValues((prev) => ({ ...prev, [field.key]: v }))
+                      }
                     />
                   ))}
                 </div>
@@ -249,10 +229,9 @@ export function SettingsForm({
           ))}
         </div>
 
-        {/* Sidebar — Publish-style card matching the node editor */}
         <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
           <SidebarCard title="Publish">
-            {!language_agnostic && languages.length > 0 && (
+            {hasTranslatable && languages.length > 0 && (
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-slate-500">
                   Language
@@ -263,10 +242,15 @@ export function SettingsForm({
                   onChange={setPageLocale}
                 />
                 <p className="text-[11px] leading-snug text-slate-500">
-                  Each setting stores a separate value per language. Languages
-                  without an override read from the default language.
+                  Translatable fields store a separate value per language.
+                  Fields marked “Global” apply to every language.
                 </p>
               </div>
+            )}
+            {!hasTranslatable && (
+              <p className="text-[11px] leading-snug text-slate-500">
+                These settings apply to every language.
+              </p>
             )}
 
             <Button
@@ -296,25 +280,42 @@ export function SettingsForm({
   );
 }
 
-function SettingsField({
+function SchemaField({
   field,
   value,
   pages,
   roles,
+  hasTranslatable,
   onChange,
 }: {
-  field: SettingsFieldDef;
+  field: SettingsSchemaField;
   value: string;
   pages: ContentNode[];
   roles: Role[];
+  hasTranslatable: boolean;
   onChange: (v: string) => void;
 }) {
   const inputClasses =
     "rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
 
+  // Only surface the Global badge on mixed pages — on all-global
+  // schemas the sidebar copy already covers it and a row of badges
+  // becomes noise.
+  const showGlobalBadge = hasTranslatable && !field.translatable;
+
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
+      <div className="flex items-center gap-2">
+        <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
+        {showGlobalBadge && (
+          <span
+            className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200"
+            title="This field applies to every language"
+          >
+            Global
+          </span>
+        )}
+      </div>
       {field.type === "text" && (
         <Input
           placeholder={field.placeholder}
@@ -376,6 +377,20 @@ function SettingsField({
             {roles.map((r) => (
               <SelectItem key={r.id} value={r.slug}>
                 {r.name} ({r.slug})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      {field.type === "select" && (
+        <Select value={value || ""} onValueChange={onChange}>
+          <SelectTrigger className={inputClasses}>
+            <SelectValue placeholder={field.placeholder ?? "Select..."} />
+          </SelectTrigger>
+          <SelectContent>
+            {(field.options ?? []).map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
               </SelectItem>
             ))}
           </SelectContent>

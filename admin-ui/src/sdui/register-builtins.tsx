@@ -20,6 +20,7 @@ import { GenericListTable } from "./generic-list-table";
 import { ThemesGrid } from "./themes-grid";
 import { ExtensionsGrid } from "./extensions-grid";
 import { SettingsForm } from "./settings-form";
+import { SchemaSettings } from "./schema-settings";
 
 // ---------------------------------------------------------------------------
 // Layout primitives — thin wrappers that map SDUI props to real DOM/React.
@@ -562,5 +563,7 @@ export function registerBuiltinComponents() {
 
     // Settings (SDUI-driven form)
     SettingsForm,
+    // Settings (registry-driven generic form)
+    SchemaSettings,
   });
 }

@@ -33,6 +33,7 @@ import { SduiLanguagesPage } from "@/pages/sdui-languages";
 import { SduiUsersPage } from "@/pages/sdui-users";
 import { SduiRolesPage } from "@/pages/sdui-roles";
 import { SduiMcpTokensPage } from "@/pages/sdui-mcp-tokens";
+import { SduiSecuritySettingsPage } from "@/pages/sdui-security-settings";
 import LoginPage from "@/pages/login";
 import { SduiAdminShell } from "@/sdui/admin-shell";
 import { AdminLanguageProvider } from "@/hooks/use-admin-language";
@@ -173,6 +174,7 @@ function AppRoutes() {
       <Route path="/admin/security/roles/new" element={<ProtectedRoute><SduiRoleEditorPage /></ProtectedRoute>} />
       <Route path="/admin/security/roles/:id/edit" element={<ProtectedRoute><SduiRoleEditorPage /></ProtectedRoute>} />
       <Route path="/admin/security/mcp-tokens" element={<ProtectedRoute><SduiMcpTokensPage /></ProtectedRoute>} />
+      <Route path="/admin/security/settings" element={<ProtectedRoute><SduiSecuritySettingsPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<Navigate to="/admin/security/users" replace />} />
       <Route path="/admin/users/new" element={<Navigate to="/admin/security/users/new" replace />} />
       <Route path="/admin/users/:id/edit" element={<ProtectedRoute><SduiUserEditorPage /></ProtectedRoute>} />

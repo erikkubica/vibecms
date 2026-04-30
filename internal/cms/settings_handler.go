@@ -54,7 +54,9 @@ func (h *SettingsHandler) List(c *fiber.Ctx) error {
 
 	// Resolve per-key with locale fallback: prefer the admin's current
 	// language; fall back to the default language for keys that haven't
-	// been overridden in that locale yet.
+	// been overridden in that locale yet. The sentinel "*" means
+	// language-agnostic — read only the empty-locale row, used by
+	// settings that intentionally span every language (e.g. security).
 	locale := string(c.Request().Header.Peek("X-Admin-Language"))
 	def := h.defaultLanguageCode()
 	if locale == "" {
@@ -66,6 +68,8 @@ func (h *SettingsHandler) List(c *fiber.Ctx) error {
 		q = q.Where("key LIKE ?", prefix+"%")
 	}
 	switch {
+	case locale == "*":
+		q = q.Where("language_code = ?", "")
 	case locale == "" && def == "":
 		// No languages seeded yet — return empty rather than dump every
 		// row regardless of language.
@@ -133,12 +137,19 @@ func (h *SettingsHandler) BulkUpdate(c *fiber.Ctx) error {
 	// language has been seeded — in that case we skip the write rather than
 	// stash data under "".
 	locale := string(c.Request().Header.Peek("X-Admin-Language"))
-	if locale == "" {
-		locale = h.defaultLanguageCode()
-	}
-	if locale == "" {
-		return api.Error(c, fiber.StatusBadRequest, "NO_LANGUAGE",
-			"No language is configured; create a default language before saving settings")
+	if locale == "*" {
+		// Language-agnostic write — store under the empty-locale row so
+		// reads with any locale see the same value. Used by settings whose
+		// behaviour can't sensibly differ per language (security, etc.).
+		locale = ""
+	} else {
+		if locale == "" {
+			locale = h.defaultLanguageCode()
+		}
+		if locale == "" {
+			return api.Error(c, fiber.StatusBadRequest, "NO_LANGUAGE",
+				"No language is configured; create a default language before saving settings")
+		}
 	}
 
 	for key, value := range body {

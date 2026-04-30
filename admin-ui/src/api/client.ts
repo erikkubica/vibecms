@@ -617,7 +617,88 @@ export async function updateSiteSettings(
 // ordering — the helper is trivial.
 function siteSettingsLocaleHeader(locale?: string): Record<string, string> {
   if (!locale || locale === "all") return {};
+  // "*" is a sentinel meaning language-agnostic — passed straight through
+  // so the server reads/writes the empty-locale row regardless of which
+  // language the admin is editing in.
   return { "X-Admin-Language": locale };
+}
+
+// ---------------------------------------------------------------------------
+// Schema-driven settings (registry) — see internal/settings/.
+// Each schema is one settings surface (security, site.general, ext.<slug>,
+// …). Per-field translatable flag drives storage routing server-side; the
+// admin UI just sends the locale header and a flat values map.
+// ---------------------------------------------------------------------------
+
+export interface SettingsSchemaOption {
+  value: string;
+  label: string;
+}
+
+export interface SettingsSchemaField {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "toggle" | "node_select" | "role_select" | "select";
+  translatable: boolean;
+  default?: string;
+  placeholder?: string;
+  help?: string;
+  warning?: string;
+  rows?: number;
+  font_mono?: boolean;
+  true_value?: string;
+  false_value?: string;
+  node_type?: string;
+  empty_label?: string;
+  options?: SettingsSchemaOption[];
+}
+
+export interface SettingsSchemaSection {
+  title: string;
+  icon?: string;
+  description?: string;
+  full_width?: boolean;
+  fields: SettingsSchemaField[];
+}
+
+export interface SettingsSchema {
+  id: string;
+  title: string;
+  description?: string;
+  capability?: string;
+  sections: SettingsSchemaSection[];
+}
+
+export interface SettingsSchemaEnvelope {
+  schema: SettingsSchema;
+  values: Record<string, string>;
+  locale: string;
+}
+
+export async function getSettingsSchema(
+  id: string,
+  locale?: string,
+): Promise<SettingsSchemaEnvelope> {
+  const res = await api<ApiResponse<SettingsSchemaEnvelope>>(
+    `/admin/api/settings/schemas/${encodeURIComponent(id)}`,
+    { headers: siteSettingsLocaleHeader(locale) },
+  );
+  return res.data;
+}
+
+export async function saveSettingsSchema(
+  id: string,
+  values: Record<string, string>,
+  locale?: string,
+): Promise<void> {
+  await api<ApiResponse<{ message: string }>>(
+    `/admin/api/settings/schemas/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ values }),
+      headers: siteSettingsLocaleHeader(locale),
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------

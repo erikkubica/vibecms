@@ -88,14 +88,32 @@ func (h *PageAuthHandler) isLoggedIn(c *fiber.Ctx) bool {
 
 // registrationAllowed returns true when site_settings.allow_registration
 // is exactly "true". Default is closed: any other value (missing row,
-// "false", "0", "") returns false.
+// "false", "0", "") returns false. Reads the language-agnostic row
+// (language_code='') — registration is a global capability, not a
+// per-locale one.
 func registrationAllowed(db *gorm.DB) bool {
 	var value string
-	row := db.Raw("SELECT value FROM site_settings WHERE key = ?", "allow_registration").Row()
+	row := db.Raw("SELECT value FROM site_settings WHERE key = ? AND language_code = ''", "allow_registration").Row()
 	if err := row.Scan(&value); err != nil {
 		return false
 	}
 	return strings.EqualFold(strings.TrimSpace(value), "true")
+}
+
+// defaultRegistrationRoleSlug returns the slug of the role assigned to
+// self-registered users. Reads site_settings.default_registration_role
+// (language-agnostic). Falls back to "member" — the safe minimum-privilege
+// role seeded in every install.
+func defaultRegistrationRoleSlug(db *gorm.DB) string {
+	var value string
+	row := db.Raw("SELECT value FROM site_settings WHERE key = ? AND language_code = ''", "default_registration_role").Row()
+	if err := row.Scan(&value); err != nil {
+		return "member"
+	}
+	if v := strings.TrimSpace(value); v != "" {
+		return v
+	}
+	return "member"
 }
 
 // --- POST handlers ---
@@ -219,20 +237,31 @@ func (h *PageAuthHandler) ProcessRegister(c *fiber.Ctx) error {
 		return c.Redirect("/register", fiber.StatusFound)
 	}
 
-	// Public registration creates `member` role users — no admin_access,
-	// read-only on content. Operators who want richer roles for new
-	// signups can change the role afterwards via the admin UI.
-	var memberRole models.Role
-	if err := h.db.Where("slug = ?", "member").First(&memberRole).Error; err != nil {
-		log.Printf("failed to find member role: %v", err)
-		setFlash(c, "An unexpected error occurred.", "error")
-		return c.Redirect("/register", fiber.StatusFound)
+	// Role for self-registered users is configurable via
+	// site_settings.default_registration_role (Admin → Security → Settings).
+	// Falls back to "member" — minimum-privilege, no admin_access — when
+	// the setting is unset or points at a missing role.
+	roleSlug := defaultRegistrationRoleSlug(h.db)
+	var defaultRole models.Role
+	if err := h.db.Where("slug = ?", roleSlug).First(&defaultRole).Error; err != nil {
+		if roleSlug != "member" {
+			log.Printf("default_registration_role=%q not found, falling back to member: %v", roleSlug, err)
+			if err := h.db.Where("slug = ?", "member").First(&defaultRole).Error; err != nil {
+				log.Printf("failed to find member role: %v", err)
+				setFlash(c, "An unexpected error occurred.", "error")
+				return c.Redirect("/register", fiber.StatusFound)
+			}
+		} else {
+			log.Printf("failed to find member role: %v", err)
+			setFlash(c, "An unexpected error occurred.", "error")
+			return c.Redirect("/register", fiber.StatusFound)
+		}
 	}
 
 	user := models.User{
 		Email:        email,
 		PasswordHash: string(hash),
-		RoleID:       memberRole.ID,
+		RoleID:       defaultRole.ID,
 		FullName:     &fullName,
 	}
 	if err := h.db.Create(&user).Error; err != nil {

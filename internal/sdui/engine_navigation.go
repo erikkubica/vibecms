@@ -291,6 +291,7 @@ func (e *Engine) buildNavigation(user *models.User, nodeTypes []models.NodeType,
 			{ID: "nav-security-users", Label: "Users", Icon: "Users", Path: "/admin/security/users"},
 			{ID: "nav-security-roles", Label: "Roles", Icon: "Shield", Path: "/admin/security/roles"},
 			{ID: "nav-security-mcp-tokens", Label: "MCP Tokens", Icon: "Key", Path: "/admin/security/mcp-tokens"},
+			{ID: "nav-security-settings", Label: "Settings", Icon: "Settings", Path: "/admin/security/settings"},
 		},
 	})
 	nav = append(nav, extSettings...)

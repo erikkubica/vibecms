@@ -189,6 +189,8 @@ func (e *Engine) GenerateLayout(pageSlug string, params map[string]string, userN
 		layout = e.siteSettingsSEOLayout()
 	case "site-settings-advanced":
 		layout = e.siteSettingsAdvancedLayout()
+	case "security-settings":
+		layout = e.securitySettingsLayout()
 	default:
 		layout = e.defaultLayout(pageSlug)
 	}

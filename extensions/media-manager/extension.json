@@ -11,6 +11,7 @@
         "media:delete",
         "data:read",
         "data:write",
+        "data:delete",
         "files:write",
         "files:delete",
         "settings:read",

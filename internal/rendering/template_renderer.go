@@ -67,6 +67,30 @@ type TemplateRenderer struct {
 	// Empty disables size transforms (helpers passthrough). See
 	// media_funcs.go for the rationale and migration plan.
 	imageURLPrefix string
+	// assetResolver resolves "theme-asset:<key>" /
+	// "extension-asset:<slug>:<key>" strings to public URLs. Wired by
+	// main.go from the ThemeAssetRegistry. Returns "" if unresolved.
+	assetResolver func(uri string) string
+}
+
+// SetAssetResolver wires a function that turns theme-asset: / extension-asset:
+// URIs into real public URLs. image_url / image_srcset call it before
+// applying size transforms so the URL-context sanitiser in html/template
+// never sees an unknown scheme.
+func (r *TemplateRenderer) SetAssetResolver(fn func(uri string) string) {
+	r.mu.Lock()
+	r.assetResolver = fn
+	r.mu.Unlock()
+}
+
+func (r *TemplateRenderer) resolveAsset(uri string) string {
+	r.mu.RLock()
+	fn := r.assetResolver
+	r.mu.RUnlock()
+	if fn == nil {
+		return ""
+	}
+	return fn(uri)
 }
 
 // SetImageURLPrefix overrides the prefix used by the image_url /
@@ -259,8 +283,22 @@ func NewTemplateRenderer(templateDir string, isDev bool) *TemplateRenderer {
 			}
 			return out
 		},
-		"image_url": func(originalURL string, sizeName string) string {
-			return imageURL(r.imagePrefixSnapshot(), originalURL, sizeName)
+		// image_url returns template.URL (already-trusted) so Go's
+		// html/template URL sanitiser does NOT rewrite unknown-scheme
+		// strings to "#ZgotmplZ". theme-asset: / extension-asset: URIs are
+		// resolved through the registered assetResolver before the size
+		// transform applies — when the resolver returns "" we pass the URI
+		// through (still as template.URL) so the surrounding template can
+		// notice the broken value via a non-empty src that 404s, rather
+		// than the masked #ZgotmplZ.
+		"image_url": func(originalURL string, sizeName string) template.URL {
+			resolved := originalURL
+			if strings.HasPrefix(originalURL, "theme-asset:") || strings.HasPrefix(originalURL, "extension-asset:") {
+				if u := r.resolveAsset(originalURL); u != "" {
+					resolved = u
+				}
+			}
+			return template.URL(imageURL(r.imagePrefixSnapshot(), resolved, sizeName))
 		},
 		// setting returns settings[key] or "" if missing. Use when a missing
 		// key is acceptable (optional flags, soft-coded copy).

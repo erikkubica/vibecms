@@ -285,16 +285,38 @@ func (h *PublicHandler) renderBlocksBatch(blocks []map[string]interface{}, local
 
 		tmplCacheKey := "block:" + blockType + ":" + tmplContent
 		var buf bytes.Buffer
-		err := h.renderer.RenderParsed(&buf, tmplCacheKey, tmplContent, fields, mergeFuncMaps(template.FuncMap{
-			"safeHTML": func(s interface{}) template.HTML {
-				return template.HTML(fmt.Sprintf("%v", s))
-			},
-			"safeURL": func(s interface{}) template.URL {
-				return template.URL(fmt.Sprintf("%v", s))
-			},
-		}, themeSettingsFuncs(ts)))
+		// Wrap RenderParsed in a recover so a panicking template helper
+		// (e.g. nil pointer in a custom funcMap entry) becomes a visible
+		// HTML comment rather than a silent dropped section. The recovered
+		// value is fed back through the same error path below.
+		var err error
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("panic: %v", r)
+				}
+			}()
+			err = h.renderer.RenderParsed(&buf, tmplCacheKey, tmplContent, fields, mergeFuncMaps(template.FuncMap{
+				"safeHTML": func(s interface{}) template.HTML {
+					return template.HTML(fmt.Sprintf("%v", s))
+				},
+				"safeURL": func(s interface{}) template.URL {
+					return template.URL(fmt.Sprintf("%v", s))
+				},
+			}, themeSettingsFuncs(ts)))
+		}()
 		if err != nil {
+			// Don't silently drop the block — emit an HTML comment so the
+			// gap is visible to a developer reading the page source. The
+			// public visitor sees nothing (comments aren't rendered).
+			// Without this, a broken template helper produces a missing
+			// section that's invisible until you compare to the preview path.
 			log.Printf("WARN: block template render error [%s]: %v", blockType, err)
+			rendered = append(rendered, fmt.Sprintf(
+				"<!-- block error: %s — %s -->",
+				template.HTMLEscapeString(blockType),
+				template.HTMLEscapeString(err.Error()),
+			))
 			continue
 		}
 

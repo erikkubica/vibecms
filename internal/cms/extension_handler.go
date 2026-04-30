@@ -271,6 +271,15 @@ func (h *ExtensionHandler) HotActivate(slug string) error {
 	}
 	var manifest ExtensionManifest
 	_ = json.Unmarshal(ext.Manifest, &manifest)
+	// Validate admin_ui.entry resolves to a real file under the extension dir.
+	// A typo here silently breaks the SPA shell's import map for this extension
+	// — fail loudly so the operator sees the problem at activation time.
+	if manifest.AdminUI != nil && manifest.AdminUI.Entry != "" {
+		entryPath := filepath.Join(ext.Path, manifest.AdminUI.Entry)
+		if _, statErr := os.Stat(entryPath); statErr != nil {
+			log.Printf("[extensions] WARNING: admin_ui.entry %q for extension %q does not resolve to a file (%s) — admin UI for this extension will not load. Check extension.json.", manifest.AdminUI.Entry, slug, statErr)
+		}
+	}
 	caps := manifest.CapabilityMap()
 	owned := manifest.OwnedTablesMap()
 	if h.scriptLoader != nil {
@@ -383,35 +392,49 @@ func (h *ExtensionHandler) Deactivate(c *fiber.Ctx) error {
 // Delete handles DELETE /extensions/:slug — removes extension files and DB record.
 func (h *ExtensionHandler) Delete(c *fiber.Ctx) error {
 	slug := c.Params("slug")
+	if err := h.DeleteBySlug(slug); err != nil {
+		switch err.Error() {
+		case "NOT_FOUND":
+			return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Extension not found")
+		case "STILL_ACTIVE":
+			return api.Error(c, fiber.StatusBadRequest, "STILL_ACTIVE", "Deactivate extension before deleting")
+		default:
+			return api.Error(c, fiber.StatusInternalServerError, "DELETE_FAILED", err.Error())
+		}
+	}
+	return api.Success(c, fiber.Map{"message": "Extension deleted"})
+}
 
-	// Check if extension exists and is not active
+// DeleteBySlug performs the same destructive operation as the HTTP Delete
+// handler without a Fiber context. Returns sentinel error strings
+// "NOT_FOUND" or "STILL_ACTIVE" so callers (HTTP, MCP) can map to their own
+// response shapes. Any other error is a real I/O / DB failure.
+//
+// Only the data-dir copy is wiped; the bundled image directory is read-only
+// by intent. The next ScanAndRegister will re-register the bundled extension
+// as a fresh inactive entry, so "delete" effectively means "uninstall the
+// operator override and fall back to the bundled version" rather than
+// "obliterate forever".
+func (h *ExtensionHandler) DeleteBySlug(slug string) error {
 	var ext models.Extension
 	if err := h.db.Where("slug = ?", slug).First(&ext).Error; err != nil {
-		return api.Error(c, fiber.StatusNotFound, "NOT_FOUND", "Extension not found")
+		return fmt.Errorf("NOT_FOUND")
 	}
 	if ext.IsActive {
-		return api.Error(c, fiber.StatusBadRequest, "STILL_ACTIVE", "Deactivate extension before deleting")
+		return fmt.Errorf("STILL_ACTIVE")
 	}
 
-	// Remove extension block types
 	if h.assetRegistry != nil {
 		h.loader.UnloadExtensionBlocks(slug, h.assetRegistry)
 	}
 
-	// Remove files. Only the data-dir copy is wiped; the bundled image
-	// directory is read-only by intent. The next ScanAndRegister will
-	// re-register the bundled extension as a fresh inactive entry, so
-	// "delete" effectively means "uninstall the operator override and fall
-	// back to the bundled version" rather than "obliterate forever".
 	extDir := filepath.Join(h.loader.dataDir, slug)
 	if err := os.RemoveAll(extDir); err != nil {
 		log.Printf("WARN: failed to remove extension dir %s: %v", extDir, err)
 	}
 
-	// Remove from DB
 	h.db.Where("slug = ?", slug).Delete(&models.Extension{})
-
-	return api.Success(c, fiber.Map{"message": "Extension deleted"})
+	return nil
 }
 
 // isValidSettingsKey checks that a settings key contains only safe characters.

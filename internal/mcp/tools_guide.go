@@ -78,6 +78,36 @@ func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, 
 			snap["sections_by_node_type"] = sections
 		}
 	}
+	// Block types — slug+label only. Heavy fields (field_schema, html_template,
+	// block_css/js, test_data) stay behind explicit core.block_types.get calls.
+	if s.deps.BlockTypeSvc != nil {
+		if list, err := s.deps.BlockTypeSvc.ListAll(); err == nil {
+			out := make([]map[string]any, 0, len(list))
+			for _, bt := range list {
+				out = append(out, map[string]any{
+					"slug":   bt.Slug,
+					"label":  bt.Label,
+					"source": bt.Source,
+				})
+			}
+			snap["block_types"] = out
+		}
+	}
+	// Layouts — slug+name only. Use core.layout.get(id) for the template body.
+	if s.deps.LayoutSvc != nil {
+		if rows, _, err := s.deps.LayoutSvc.List(nil, "", 1, 200); err == nil {
+			out := make([]map[string]any, 0, len(rows))
+			for _, l := range rows {
+				out = append(out, map[string]any{
+					"id":     l.ID,
+					"slug":   l.Slug,
+					"name":   l.Name,
+					"source": l.Source,
+				})
+			}
+			snap["layouts"] = out
+		}
+	}
 	out["snapshot"] = snap
 
 	// Tool index — flat list of every registered tool with its one-line

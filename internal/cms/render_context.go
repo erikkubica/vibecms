@@ -341,9 +341,13 @@ func (rc *RenderContext) menuItemsToMaps(items []models.MenuItem, nodeMap map[in
 				url = fullURL
 			}
 		}
+		// Both `title` and `label` are emitted: input via menus.upsert uses
+		// `label`, but the render shape historically only exposed `title`.
+		// Emit both so templates that read either key work.
 		m := map[string]interface{}{
 			"id":        item.ID,
 			"title":     item.Title,
+			"label":     item.Title,
 			"item_type": item.ItemType,
 			"url":       url,
 			"target":    item.Target,

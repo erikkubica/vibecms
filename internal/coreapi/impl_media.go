@@ -7,7 +7,7 @@ import (
 
 func (c *coreImpl) UploadMedia(ctx context.Context, req MediaUploadRequest) (*MediaFile, error) {
 	if c.mediaSvc == nil {
-		return nil, NewInternal("media service not configured")
+		return nil, NewInternal("media service not wired into CoreAPI (mediaSvc is nil at coreImpl construction). Check cmd/squilla/main.go: NewCoreImpl must receive a non-nil *cms.MediaService.")
 	}
 
 	mf, err := c.mediaSvc.Upload(req.Body, req.Filename, req.MimeType, 0)

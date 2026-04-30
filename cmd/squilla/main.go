@@ -179,6 +179,18 @@ func main() {
 		renderer.SetImageURLPrefix(*imgPrefixSetting.Value)
 	}
 
+	// Asset URI resolver — turns "theme-asset:<key>" /
+	// "extension-asset:<slug>:<key>" into real URLs at template-render time
+	// so {{ image_url .photo "" }} doesn't get sanitised to "#ZgotmplZ" when
+	// a theme passes through a raw asset URI.
+	renderer.SetAssetResolver(func(uri string) string {
+		lookup := cms.LoadActiveAssetLookupExported(database)
+		if row, ok := cms.ResolveAssetURI(uri, lookup); ok {
+			return row
+		}
+		return ""
+	})
+
 	// Email services.
 	emailRuleSvc := email.NewRuleService(database)
 	emailLogSvc := email.NewLogService(database)
@@ -251,7 +263,15 @@ func main() {
 	// extension plugins (gRPC) and theme/extension scripts (Tengo) see.
 	// The guard reads CallerInfo from context and denies any non-internal
 	// caller that lacks the required capability declared in extension.json.
-	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, nil, nodeTypeSvc, emailDispatcher, app, secretsSvc)
+	// MediaService backs core.media.* MCP tools and the CoreAPI media methods
+	// for callers that go through CoreAPI directly (Tengo via the guarded
+	// adapter, internal seed paths, MCP). The media-manager extension owns the
+	// admin UI / public optimization pipeline via its own gRPC HTTP routes;
+	// this service is the bare-bones path that doesn't depend on the extension
+	// being active. Both write to the same `media_files` table and the same
+	// `storage/media` directory served by `app.Static("/media", ...)` below.
+	mediaSvc := cms.NewMediaService(database, "storage/media")
+	coreAPI := coreapi.NewCoreImpl(database, eventBus, contentSvc, menuSvc, mediaSvc, nodeTypeSvc, emailDispatcher, app, secretsSvc)
 	guardedAPI := coreapi.NewCapabilityGuard(coreAPI)
 	themeSettingsHandler := cms.NewThemeSettingsHandler(themeLoader.SettingsRegistry, coreAPI, database, secretsSvc, eventBus)
 

@@ -100,4 +100,28 @@ func (s *Server) registerDeployTools() {
 			"restart_required": false,
 		}, nil
 	})
+
+	s.addTool(mcp.NewTool("core.extension.delete",
+		mcp.WithDescription("Delete an extension by slug. Wipes the data-dir copy (extensions/<slug> on disk) and removes the database row. Bundled extensions in the read-only image dir are not touched — the next scan re-registers them as fresh inactive entries, so this is effectively 'uninstall the operator override'.\n\nPrecondition: the extension MUST be inactive. Call core.extension.deactivate(slug) first; this tool will not auto-deactivate."),
+		mcp.WithString("slug", mcp.Required(), mcp.Description("Extension slug to delete")),
+	), "full", func(ctx context.Context, args map[string]any) (any, error) {
+		if extHandler == nil {
+			return nil, fmt.Errorf("extension handler not wired")
+		}
+		slug := stringArg(args, "slug")
+		if slug == "" {
+			return nil, fmt.Errorf("slug is required")
+		}
+		if err := extHandler.DeleteBySlug(slug); err != nil {
+			switch err.Error() {
+			case "NOT_FOUND":
+				return nil, fmt.Errorf("extension %q not found", slug)
+			case "STILL_ACTIVE":
+				return nil, fmt.Errorf("extension %q is active — call core.extension.deactivate first", slug)
+			default:
+				return nil, err
+			}
+		}
+		return map[string]any{"ok": true, "slug": slug}, nil
+	})
 }

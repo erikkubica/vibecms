@@ -335,6 +335,20 @@ func runThemeChecklist(slug, themeDir string) map[string]any {
 
 var slugRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
+// looksLikeMediaKey reports whether a field key is shaped like it should
+// hold media. Used to flag text/textarea fields that almost certainly
+// should be image/media/file/gallery — the #1 way AI authors lose data
+// (storing a media object as a string of "[object Object]").
+func looksLikeMediaKey(key string) bool {
+	k := strings.ToLower(key)
+	for _, suffix := range []string{"photo", "image", "img", "media", "gallery", "thumbnail", "thumb", "avatar", "logo", "icon", "picture", "banner"} {
+		if k == suffix || strings.HasSuffix(k, "_"+suffix) || strings.HasPrefix(k, suffix+"_") {
+			return true
+		}
+	}
+	return false
+}
+
 func walkBlockSchema(blockSlug, parentPath string, fields []any) []string {
 	out := []string{}
 	for _, raw := range fields {
@@ -354,6 +368,14 @@ func walkBlockSchema(blockSlug, parentPath string, fields []any) []string {
 			path = parentPath + "." + key
 		}
 		typ, _ := f["type"].(string)
+		// Heuristic: media-shaped key paired with a plain-text type is
+		// almost always a mistake. The author (often AI) declared the
+		// wrong type, then dumped a JSON object into it, which the admin
+		// stringifies to "[object Object]". Surface as a warn so it's
+		// visible without blocking the build.
+		if (typ == "text" || typ == "textarea") && looksLikeMediaKey(key) {
+			out = append(out, fmt.Sprintf("block %q field %q has media-shaped key but type=%q — almost certainly a mistake. Use type=image / media / file / gallery so the admin renders the right input and templates can read .url/.alt.", blockSlug, path, typ))
+		}
 		switch typ {
 		case "select", "radio":
 			if opts, ok := f["options"].([]any); ok {

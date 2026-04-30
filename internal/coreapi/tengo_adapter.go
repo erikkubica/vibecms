@@ -43,7 +43,7 @@ func RegisterModules(modules *tengo.ModuleMap, api CoreAPI, caller CallerInfo, r
 	modules.AddBuiltinModule("core/routes", routesModule(cb))
 	modules.AddBuiltinModule("core/filters", filtersModule(cb))
 	modules.AddBuiltinModule("core/http", httpFetchModule(api, ctx))
-	modules.AddBuiltinModule("core/log", logModule(api, ctx))
+	modules.AddBuiltinModule("core/log", logModule(api, ctx, caller))
 	modules.AddBuiltinModule("core/nodetypes", nodeTypesModule(api, ctx))
 	modules.AddBuiltinModule("core/taxonomies", taxonomiesModule(api, ctx))
 	modules.AddBuiltinModule("core/terms", termsModule(api, ctx))

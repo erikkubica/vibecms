@@ -24,7 +24,7 @@ func (s *Server) registerNodeTools() {
 	})
 
 	s.addTool(mcp.NewTool("core.node.query",
-		mcp.WithDescription("Search/list content nodes with filters. Returns {nodes, total}. Always paginate: default limit 25, max 200."),
+		mcp.WithDescription("Search/list content nodes with filters. Returns {nodes, total}. Always paginate: default limit 25, max 200.\n\nDiscovery calls rarely need the full payload. Use `fields_only=true` (or pass `select`) to drop the heavy fields (blocks_data, fields_data, seo_settings, translations, taxonomies) and keep tool-result tokens small."),
 		mcp.WithString("node_type", mcp.Description("Filter by node type slug (e.g. 'blog_post')")),
 		mcp.WithString("status", mcp.Description("Filter by status: 'draft' | 'published'")),
 		mcp.WithString("language_code", mcp.Description("Filter by language (e.g. 'en')")),
@@ -33,6 +33,8 @@ func (s *Server) registerNodeTools() {
 		mcp.WithString("order_by", mcp.Description("e.g. 'created_at DESC'")),
 		mcp.WithNumber("limit", mcp.Description("Default 25, max 200")),
 		mcp.WithNumber("offset"),
+		mcp.WithBoolean("fields_only", mcp.Description("Default false. When true, omits blocks_data, fields_data, seo_settings, translations, taxonomies — keeps id/slug/title/status/full_url/timestamps. Use for discovery/listing.")),
+		mcp.WithArray("select", mcp.Description("Optional list of field names to include (e.g. ['id','slug','title']). When set, takes precedence over fields_only and limits the response to exactly these keys plus 'id'.")),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
 		q := coreapi.NodeQuery{
 			NodeType:     stringArg(args, "node_type"),
@@ -44,7 +46,11 @@ func (s *Server) registerNodeTools() {
 			Limit:        clampLimit(intArg(args, "limit")),
 			Offset:       intArg(args, "offset"),
 		}
-		return api.QueryNodes(ctx, q)
+		list, err := api.QueryNodes(ctx, q)
+		if err != nil {
+			return nil, err
+		}
+		return projectNodeList(list, args), nil
 	})
 
 	s.addTool(mcp.NewTool("core.node.create",
@@ -70,7 +76,7 @@ func (s *Server) registerNodeTools() {
 	})
 
 	s.addTool(mcp.NewTool("core.node.update",
-		mcp.WithDescription("Update an existing node by ID. Provide only the fields you want to change; omitted fields keep their current values."),
+		mcp.WithDescription("Update an existing node by ID. Provide only the fields you want to change; omitted fields keep their current values.\n\nFor bulk doc-style writes pass return_node=false to skip the ~7 KB echo and get {ok:true, id} instead."),
 		mcp.WithNumber("id", mcp.Required()),
 		mcp.WithString("title"),
 		mcp.WithString("slug"),
@@ -81,6 +87,7 @@ func (s *Server) registerNodeTools() {
 		mcp.WithObject("fields_data"),
 		mcp.WithObject("seo_settings"),
 		mcp.WithObject("featured_image"),
+		mcp.WithBoolean("return_node", mcp.Description("Default true: returns the updated node + warnings. Pass false for {ok:true, id} — useful for bulk writes to keep tool-result tokens small.")),
 	), "content", func(ctx context.Context, args map[string]any) (any, error) {
 		id := uintArg(args, "id")
 		if id == 0 {
@@ -91,7 +98,70 @@ func (s *Server) registerNodeTools() {
 		if err != nil {
 			return nil, err
 		}
+		// return_node defaults to true (back-compat). Only opt-out when the
+		// arg is explicitly present and false.
+		if v, ok := args["return_node"]; ok {
+			if b, okb := v.(bool); okb && !b {
+				return map[string]any{"ok": true, "id": id}, nil
+			}
+		}
 		return wrapNodeResult(node, input), nil
+	})
+
+	s.addTool(mcp.NewTool("core.node.upsert",
+		mcp.WithDescription("Create or update a node by (node_type, slug, language_code). Returns {node, created:bool}. Idempotent — safe to call repeatedly with the same payload, e.g. for documentation pushes / seed loops where you don't want to query-then-branch.\n\nUse when: you want one tool call to land a node by slug regardless of whether it exists.\nDO NOT use when: you have a numeric ID — use core.node.update directly. You're creating a brand-new node and don't yet have a slug — use core.node.create."),
+		mcp.WithString("node_type", mcp.Required()),
+		mcp.WithString("language_code", mcp.Required(), mcp.Description("e.g. 'en'")),
+		mcp.WithString("slug", mcp.Required(), mcp.Description("Identity key for the upsert lookup")),
+		mcp.WithString("title", mcp.Required()),
+		mcp.WithString("status", mcp.DefaultString("draft"), mcp.Enum("draft", "published")),
+		mcp.WithString("excerpt"),
+		mcp.WithString("layout_slug"),
+		mcp.WithArray("blocks_data"),
+		mcp.WithObject("fields_data"),
+		mcp.WithObject("seo_settings"),
+		mcp.WithObject("featured_image"),
+		mcp.WithBoolean("return_node", mcp.Description("Default true: returns the node + warnings. Pass false for {ok:true, id, created} — useful for bulk writes.")),
+	), "content", func(ctx context.Context, args map[string]any) (any, error) {
+		input := nodeInputFromArgs(args)
+		if input.NodeType == "" || input.Slug == "" {
+			return nil, fmt.Errorf("node_type and slug are required")
+		}
+		if input.LanguageCode == "" {
+			input.LanguageCode = "en"
+		}
+		// Look for an existing node with the same (node_type, slug,
+		// language_code). Match the same identity tuple used by content
+		// service slug-collision rules.
+		existing, err := api.QueryNodes(ctx, coreapi.NodeQuery{
+			NodeType:     input.NodeType,
+			Slug:         input.Slug,
+			LanguageCode: input.LanguageCode,
+			Limit:        1,
+		})
+		if err != nil {
+			return nil, err
+		}
+		var (
+			node    *coreapi.Node
+			created bool
+		)
+		if existing != nil && len(existing.Nodes) > 0 {
+			node, err = api.UpdateNode(ctx, existing.Nodes[0].ID, input)
+		} else {
+			created = true
+			node, err = api.CreateNode(ctx, input)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if v, ok := args["return_node"]; ok {
+			if b, okb := v.(bool); okb && !b {
+				return map[string]any{"ok": true, "id": node.ID, "created": created}, nil
+			}
+		}
+		out := wrapNodeResult(node, input)
+		return map[string]any{"node": out, "created": created}, nil
 	})
 
 	s.addTool(mcp.NewTool("core.node.update_many",
@@ -377,7 +447,110 @@ func nodeAuthoringWarnings(node *coreapi.Node, input coreapi.NodeInput) []map[st
 		add("excerpt", "info", "missing — list/index views will show no summary. Consider deriving from the first paragraph.")
 	}
 
+	// Detect the classic "AI seeded JSON into a text field" mistake:
+	// fields_data carries an object/array value under a key that doesn't
+	// look like it should hold media. Without this hint, the admin renders
+	// "[object Object]" with no obvious cause. Heuristic only — we don't
+	// reach the schema from here. Media-shaped keys (photo, image, gallery,
+	// ...) are skipped because they're probably correctly typed as image /
+	// media in the schema. Non-media-shaped keys with object values are
+	// the real red flag. The theme checklist catches the schema-side
+	// mistake; this catches the data-side one.
+	for k, v := range input.FieldsData {
+		switch v.(type) {
+		case map[string]any, []any:
+			if looksLikeMediaKey(k) {
+				continue // matches media-shaped key — likely correct image/media field
+			}
+			add("fields_data."+k, "warn",
+				"non-string value stored on a key that doesn't look media-shaped. If this field is declared text/textarea in the node type schema, the admin will render '[object Object]'. Either change the schema's field type to image/media/file/gallery, or store a string here.")
+		}
+	}
+
 	return w
+}
+
+// projectNodeList post-processes a NodeList for the `select` / `fields_only`
+// args, keeping the tool-result token cost low for discovery calls. Returns
+// the original list when no projection is requested. When projecting we
+// materialise nodes as map[string]any so the JSON encoder emits exactly the
+// requested keys without struct-tag omitempty surprises.
+func projectNodeList(list *coreapi.NodeList, args map[string]any) any {
+	if list == nil {
+		return list
+	}
+	var keep map[string]bool
+	if raw, ok := args["select"]; ok {
+		if arr, okArr := jsonFieldDecode(raw).([]any); okArr && len(arr) > 0 {
+			keep = map[string]bool{"id": true}
+			for _, v := range arr {
+				if s, okS := v.(string); okS && s != "" {
+					keep[s] = true
+				}
+			}
+		}
+	}
+	fieldsOnly := false
+	if v, ok := args["fields_only"]; ok {
+		if b, okb := v.(bool); okb {
+			fieldsOnly = b
+		}
+	}
+	if keep == nil && !fieldsOnly {
+		return list
+	}
+
+	heavy := map[string]bool{
+		"blocks_data":   true,
+		"fields_data":   true,
+		"seo_settings":  true,
+		"translations":  true,
+		"taxonomies":    true,
+		"featured_image": true,
+	}
+
+	out := make([]map[string]any, 0, len(list.Nodes))
+	for _, n := range list.Nodes {
+		full := nodeToMap(n)
+		if keep != nil {
+			row := make(map[string]any, len(keep))
+			for k := range keep {
+				if v, ok := full[k]; ok {
+					row[k] = v
+				}
+			}
+			out = append(out, row)
+			continue
+		}
+		// fields_only=true: drop heavy fields, keep everything else.
+		row := make(map[string]any, len(full))
+		for k, v := range full {
+			if heavy[k] {
+				continue
+			}
+			row[k] = v
+		}
+		out = append(out, row)
+	}
+	return map[string]any{"nodes": out, "total": list.Total}
+}
+
+// nodeToMap returns a JSON-shape map of a Node by round-tripping through
+// json.Marshal — keeps the projection in sync with the wire shape without
+// duplicating the field list.
+func nodeToMap(n *coreapi.Node) map[string]any {
+	if n == nil {
+		return nil
+	}
+	b, err := json.Marshal(n)
+	if err != nil {
+		return nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil
+	}
+	return m
 }
 
 // jsonFieldDecode unwraps a JSON-encoded string back into its decoded value.

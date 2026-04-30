@@ -178,6 +178,24 @@ func ResolveThemeAssetRefs(value any, lookup AssetLookup) any {
 	return value
 }
 
+// LoadActiveAssetLookupExported is the exported form of loadActiveAssetLookup
+// for callers outside the cms package (the rendering layer needs to resolve
+// theme-asset: URIs at template-render time).
+func LoadActiveAssetLookupExported(db *gorm.DB) AssetLookup {
+	return loadActiveAssetLookup(db)
+}
+
+// ResolveAssetURI maps a "theme-asset:<key>" / "extension-asset:<slug>:<key>"
+// URI to its real public URL using the given lookup. Returns "", false when
+// the URI is malformed or the asset isn't registered.
+func ResolveAssetURI(uri string, lookup AssetLookup) (string, bool) {
+	row, ok := resolveRefString(uri, lookup)
+	if !ok {
+		return "", false
+	}
+	return row.URL, true
+}
+
 // resolveRefString tries both the theme and extension patterns against a
 // string value and returns the matched row if found.
 func resolveRefString(s string, lookup AssetLookup) (mediaAssetRow, bool) {

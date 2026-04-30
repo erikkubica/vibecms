@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"squilla/internal/cms/field_types"
 	"squilla/internal/models"
 
 	"gorm.io/gorm"
@@ -291,8 +292,15 @@ func validateBlockFieldsRecursive(blockSlug, parentPath string, fields []map[str
 		key, _ := f["key"].(string)
 		if key == "" {
 			if name, ok := f["name"].(string); ok && name != "" {
-				return fmt.Errorf("block %q field schema: use `key:` (not `name:`) — block.json readers expect `key`. Offending field: %q",
+				// Accept `name:` as a deprecated alias for `key:` — some
+				// theme/block authors come from the Tengo nodetype convention
+				// where `name` is the canonical field. Mirror it into `key`
+				// so the rest of the load + admin renderer sees a consistent
+				// shape, and warn so the author migrates.
+				log.Printf("WARN: block %q field schema uses deprecated `name:` (=%q) — block.json should use `key:`. Mirroring into `key` for back-compat.",
 					blockSlug, name)
+				f["key"] = name
+				key = name
 			}
 		}
 		path := key
@@ -300,6 +308,17 @@ func validateBlockFieldsRecursive(blockSlug, parentPath string, fields []map[str
 			path = parentPath + "." + key
 		}
 		typ, _ := f["type"].(string)
+		// Validate type against the kernel field-type registry. Extension-
+		// contributed types (image/file/gallery from media-manager, etc.)
+		// are not in the builtin list — log a warning rather than fail so a
+		// theme that uses an extension-provided type still registers when
+		// that extension is active. Common typos surface here:
+		//   "boolean" → use "toggle", "dropdown" → use "select",
+		//   "wysiwyg" → use "richtext".
+		if typ != "" && !field_types.IsBuiltin(typ) {
+			log.Printf("WARN: block %q field %q type=%q is not a built-in field type. If this is provided by an extension (e.g. image/file/gallery from media-manager), ensure that extension is active. Common typos: boolean→toggle, dropdown→select, wysiwyg→richtext.",
+				blockSlug, path, typ)
+		}
 		switch typ {
 		case "select", "radio":
 			if opts, ok := f["options"].([]any); ok {

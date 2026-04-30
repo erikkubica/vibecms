@@ -8,6 +8,7 @@
     "capabilities": [
         "data:read",
         "data:write",
+        "data:delete",
         "settings:read",
         "settings:write",
         "events:subscribe",

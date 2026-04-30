@@ -251,7 +251,7 @@ func httpFetchModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 	}
 }
 
-func logModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
+func logModule(api CoreAPI, ctx context.Context, caller CallerInfo) map[string]tengo.Object {
 	makeLogger := func(level string) tengo.CallableFunc {
 		return func(args ...tengo.Object) (tengo.Object, error) {
 			if len(args) < 1 {
@@ -274,12 +274,40 @@ func logModule(api CoreAPI, ctx context.Context) map[string]tengo.Object {
 	// We register both names: `log.err` is the reachable alias for scripts.
 	// (Direct API callers — gRPC, internal Go — still use the `error` name.)
 	errFn := makeLogger("error")
+
+	// caller_info() returns the script's runtime identity — slug, kind
+	// (theme/extension/internal), and the granted capability set. Lets
+	// scripts self-introspect what they're allowed to do without the author
+	// having to read the manifest. Returns:
+	//   {"slug":"my-ext","kind":"extension","capabilities":["data:read",...]}
+	callerInfoFn := func(args ...tengo.Object) (tengo.Object, error) {
+		caps := make([]tengo.Object, 0, len(caller.Capabilities))
+		for cap, on := range caller.Capabilities {
+			if on {
+				caps = append(caps, &tengo.String{Value: cap})
+			}
+		}
+		owned := make([]tengo.Object, 0, len(caller.OwnedTables))
+		for tbl, on := range caller.OwnedTables {
+			if on {
+				owned = append(owned, &tengo.String{Value: tbl})
+			}
+		}
+		return &tengo.Map{Value: map[string]tengo.Object{
+			"slug":         &tengo.String{Value: caller.Slug},
+			"kind":         &tengo.String{Value: caller.Type},
+			"capabilities": &tengo.Array{Value: caps},
+			"owned_tables": &tengo.Array{Value: owned},
+		}}, nil
+	}
+
 	return map[string]tengo.Object{
-		"info":  &tengo.UserFunction{Name: "info", Value: makeLogger("info")},
-		"warn":  &tengo.UserFunction{Name: "warn", Value: makeLogger("warn")},
-		"error": &tengo.UserFunction{Name: "error", Value: errFn},
-		"err":   &tengo.UserFunction{Name: "err", Value: errFn},
-		"debug": &tengo.UserFunction{Name: "debug", Value: makeLogger("debug")},
+		"info":        &tengo.UserFunction{Name: "info", Value: makeLogger("info")},
+		"warn":        &tengo.UserFunction{Name: "warn", Value: makeLogger("warn")},
+		"error":       &tengo.UserFunction{Name: "error", Value: errFn},
+		"err":         &tengo.UserFunction{Name: "err", Value: errFn},
+		"debug":       &tengo.UserFunction{Name: "debug", Value: makeLogger("debug")},
+		"caller_info": &tengo.UserFunction{Name: "caller_info", Value: callerInfoFn},
 	}
 }
 

@@ -14,6 +14,21 @@ type FieldTypeDef struct {
 	Icon        string `json:"icon"`
 }
 
+// IsBuiltin reports whether typ matches a known kernel field type. Used by
+// validators that need to flag unknown types declared in theme.json /
+// block.json / nodetype field schemas — common typos like "boolean" (vs
+// "toggle"), "wysiwyg" (vs "richtext"), "dropdown" (vs "select"). Extension-
+// contributed types live outside this check; callers that have access to the
+// extension registry should layer their own check on top.
+func IsBuiltin(typ string) bool {
+	for _, def := range Builtin() {
+		if def.Type == typ {
+			return true
+		}
+	}
+	return false
+}
+
 // Builtin returns the 20 field types that ship with the Squilla kernel.
 // Extensions can contribute additional types through their admin_ui.field_types
 // manifest entry.

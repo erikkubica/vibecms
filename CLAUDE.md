@@ -115,6 +115,7 @@ Core proxies `/admin/api/ext/{slug}/*` → plugin's `HandleHTTPRequest` RPC. Plu
 - **Naming:** `snake_case` for Go files, `.html` for templates, `.tgo` for Tengo scripts. Template variables use `snake_case`.
 - **Performance:** Atomic operations for hot-swapped config maps and cache. Sub-50ms TTFB for public pages.
 - **Docker:** Multi-stage build: Node (admin SPA + extension UIs) → Go (binary + plugin binaries) → Alpine runtime.
+- **Binary uploads via MCP:** MCP tools that take binaries bigger than ~5 MB SHOULD provide an `_init`/`_finalize` pair alongside the inline-base64 form. Init returns a presigned URL + token, the client PUTs the bytes to `/api/uploads/<token>` (token IS the auth), then finalize routes through the same install pipeline as the legacy `body_base64` tool. See `docs/extension_api.md#9-presigned-uploads-large-binaries`.
 
 ## Documentation
 

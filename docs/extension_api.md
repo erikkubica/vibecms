@@ -453,3 +453,50 @@ The install pipeline enforces every check needed to accept untrusted archives:
 | The theme/extension already lives under `themes/` or `extensions/` and you just need to register it | `core.theme.rescan` / `core.extension.rescan` (no upload, no swap) |
 | You want to publish a new version through CI | Commit to git + redeploy the container; the on-disk drop-in watcher handles registration |
 | You're iterating on a theme during local dev | `npm run dev` with a host-mounted volume — the watcher picks up changes without an MCP round-trip |
+
+## 9. Presigned uploads (large binaries)
+
+For binaries above ~5 MB, the base64-in-JSON envelope is wasteful (33 % bandwidth overhead, full file held in the JSON parser, host-side body limit drama). The MCP server exposes a three-step presigned-upload flow that takes the bytes out of the JSON-RPC envelope entirely:
+
+```
+1. core.<kind>.upload_init { filename?, mime_type? }
+   → { upload_url, upload_token, expires_at, max_bytes }
+
+2. PUT <upload_url>          (raw binary body, no Authorization header)
+   ← { size, sha256 }
+
+3. core.<kind>.upload_finalize { upload_token, sha256? }
+   → same shape as the legacy core.<kind>.{upload,deploy}
+```
+
+Available `<kind>` values: `media` (50 MB default cap), `theme` (200 MB), `extension` (200 MB). Caps are env-tunable via `SQUILLA_MEDIA_MAX_MB`, `SQUILLA_THEME_MAX_MB`, `SQUILLA_EXTENSION_MAX_MB`.
+
+### Properties
+
+- **Token IS the auth.** The PUT route is unauthenticated — no session, no bearer header. The unguessable 64-char token in the URL is the entire access-control story. Single-use, ~15 min TTL, scoped to one kind, bound to the user who issued the init.
+- **Streamed to disk.** The PUT handler streams the body straight to `data/pending/<token>.bin` while computing SHA-256 on the fly. Bytes never sit in memory in a single allocation.
+- **SHA-256 returned by PUT.** Clients can compare the value against their own hash and pass it back to `_finalize` for end-to-end corruption detection.
+- **Cleanup ticker.** A background sweep every 5 minutes deletes pending/uploaded rows past `expires_at` along with their temp files.
+- **Backwards compatible.** The legacy `core.media.upload`, `core.theme.deploy`, and `core.extension.deploy` tools keep working with `body_base64` — the small-payload path (favicons, tiny extensions) still gets the round-trip win.
+
+### Curl example (theme deploy)
+
+```bash
+INIT=$(mcp-cli squilla/core.theme.deploy_init '{}')
+URL=$(echo "$INIT" | jq -r '.upload_url')
+TOK=$(echo "$INIT" | jq -r '.upload_token')
+
+curl --upload-file my-theme.zip "$URL"
+
+mcp-cli squilla/core.theme.deploy_finalize "{\"upload_token\":\"$TOK\",\"activate\":true}"
+```
+
+### Error codes (PUT route)
+
+| Status | Cause |
+|--------|-------|
+| 404 | Unknown token |
+| 410 | Token expired |
+| 409 | Already uploaded (single-use) or upload in progress (race) |
+| 413 | Body exceeded `max_bytes` |
+

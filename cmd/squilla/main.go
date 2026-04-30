@@ -28,9 +28,11 @@ import (
 	"squilla/internal/sdui"
 	"squilla/internal/secrets"
 	"squilla/internal/settings"
+	"squilla/internal/uploads"
 	pb "squilla/pkg/plugin/coreapipb"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -405,6 +407,20 @@ func main() {
 	// Daily sweep of mcp_audit_log older than mcp_audit_retention_days
 	// (default 90). Each MCP tool call writes a row, so this can grow fast.
 	mcpServer.StartAuditCleanupLoop(bgCtx, 24*time.Hour)
+
+	// Presigned-upload mechanism: core.<kind>.upload_init issues a token,
+	// the client PUTs the binary to /api/uploads/<token>, then
+	// core.<kind>.upload_finalize finishes the job. Mounted as a raw
+	// http.Handler via Fiber's adaptor so we stream straight to disk and
+	// bypass Fiber's body buffering / global BodyLimit. Token IS the auth.
+	uploadStore, err := uploads.NewStore(database, "data/pending")
+	if err != nil {
+		log.Fatalf("uploads store init failed: %v", err)
+	}
+	uploadHandler := uploads.NewHandler(uploadStore)
+	app.All("/api/uploads/:token", adaptor.HTTPHandler(uploadHandler))
+	uploads.StartCleanupLoop(bgCtx, uploadStore, 5*time.Minute)
+	mcpServer.SetUploadStore(uploadStore)
 
 	// Plugin manager for gRPC extension plugins.
 	// Plugins receive the capability-guarded CoreAPI — every method call from

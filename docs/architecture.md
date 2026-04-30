@@ -276,6 +276,16 @@ Mounted at `/mcp` with permissive CORS (no cookies — bearer-token auth only). 
 
 Every tool call writes `(token_id, tool, args_hash, status, error_code, duration_ms)` to `mcp_audit_log`. Daily retention sweep keeps the table bounded (commit `eb0c1eb`).
 
+### 5.3 Presigned uploads
+
+Binaries above ~5 MB don't fit comfortably in the JSON-RPC envelope (base64 inflation, JSON-parser memory pressure, host-side body limits). For media, theme, and extension uploads the MCP server exposes a three-step flow:
+
+1. `core.<kind>.upload_init` issues a row in `pending_uploads` and returns `{upload_url, upload_token, expires_at, max_bytes}`.
+2. The client `PUT`s the binary to `/api/uploads/<token>` — a Fiber-bypassing raw `http.Handler` mounted at the kernel level. The token IS the auth; no session, no bearer header. Body is streamed straight to `data/pending/<token>.bin` while SHA-256 is computed on the fly.
+3. `core.<kind>.upload_finalize` validates kind + (optional) sha, hands the temp file to the same install pipeline as the legacy `_upload`/`_deploy` tool, and marks the row finalized.
+
+Tokens are single-use, 15-minute TTL, scoped to one kind, bound to the issuing user. A background ticker sweeps expired-not-finalized rows + their temp files every 5 minutes. Legacy `body_base64` tools stay — useful for tiny payloads where 3 round-trips beat 33 % bandwidth.
+
 ---
 
 ## 6. VDUS (Server-Driven UI)

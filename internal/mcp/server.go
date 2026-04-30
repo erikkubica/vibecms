@@ -18,6 +18,7 @@ import (
 	"squilla/internal/cms"
 	"squilla/internal/coreapi"
 	"squilla/internal/rendering"
+	"squilla/internal/uploads"
 )
 
 // Deps holds the dependencies MCP tools need. Assembled once at boot.
@@ -35,6 +36,10 @@ type Deps struct {
 	LayoutSvc        *cms.LayoutService
 	PublicHandler    *cms.PublicHandler
 	PluginManager    *cms.PluginManager
+	UploadStore      *uploads.Store
+	// UploadBaseURL is the absolute base used when building upload_url values
+	// returned from upload_init. Falls back to env SQUILLA_PUBLIC_URL when empty.
+	UploadBaseURL string
 }
 
 // Server is the MCP adapter. One instance per process; mounted on Fiber at /mcp.
@@ -100,6 +105,7 @@ func New(deps Deps) *Server {
 	s.registerCoreTools()
 	s.registerSystemTools()
 	s.registerDeployTools()
+	s.registerUploadTools()
 	s.registerRenderTools()
 	s.registerGuideTools()
 	s.registerThemeChecklistTool()
@@ -123,6 +129,13 @@ func (s *Server) SetExtensionHandler(h *cms.ExtensionHandler) {
 // share one upload code path with optimisation, validation, and WebP).
 func (s *Server) SetPluginManager(pm *cms.PluginManager) {
 	s.deps.PluginManager = pm
+}
+
+// SetUploadStore wires the presigned-upload store after construction. The
+// upload route and store live alongside MCP but are constructed from main.go
+// because they need the same DB handle and a background ctx.
+func (s *Server) SetUploadStore(store *uploads.Store) {
+	s.deps.UploadStore = store
 }
 
 func (s *Server) Mount(app *fiber.App) {

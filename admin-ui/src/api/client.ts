@@ -721,6 +721,7 @@ export interface ThemeSettingsField {
   label: string;
   type: string;
   default?: unknown;
+  translatable: boolean;
   config?: Record<string, unknown>;
 }
 

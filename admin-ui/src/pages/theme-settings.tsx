@@ -166,9 +166,26 @@ export function ThemeSettingsPage() {
                     v && v.compatible === false && v.raw !== "";
                   return (
                     <div key={originalField.key} className="space-y-2">
-                      <Label htmlFor={`tf-${originalField.key}`}>
-                        {originalField.label}
-                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`tf-${originalField.key}`}>
+                          {originalField.label}
+                        </Label>
+                        {originalField.translatable ? (
+                          <span
+                            className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200"
+                            title="This field stores a separate value per language"
+                          >
+                            Translatable
+                          </span>
+                        ) : (
+                          <span
+                            className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200"
+                            title="This field applies to every language"
+                          >
+                            Global
+                          </span>
+                        )}
+                      </div>
                       <CustomFieldInput
                         field={field}
                         value={values[originalField.key]}

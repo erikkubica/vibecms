@@ -31,9 +31,24 @@ type ThemeSettingsField struct {
 	Label   string          `json:"label"`
 	Type    string          `json:"type"`
 	Default json.RawMessage `json:"default,omitempty"`
+	// Translatable controls per-language storage routing. When unset
+	// (nil) the legacy default of true applies — every theme setting
+	// has been per-language since v0.1, and changing the default
+	// silently would re-route every operator's existing values.
+	// Themes opt non-translatable fields out by setting this false.
+	Translatable *bool `json:"translatable,omitempty"`
 
 	Config map[string]any  `json:"-"`
 	Raw    json.RawMessage `json:"-"`
+}
+
+// IsTranslatable returns the effective translatability with the legacy
+// default (true) applied when the manifest left it unset.
+func (f ThemeSettingsField) IsTranslatable() bool {
+	if f.Translatable == nil {
+		return true
+	}
+	return *f.Translatable
 }
 
 type themeSettingsPageFile struct {
@@ -95,10 +110,11 @@ func loadSettingsPage(themeDir string, def ThemeSettingsPageDef) (ThemeSettingsP
 // reservedFieldKeys are the field-schema keys core knows about; everything
 // else in the raw object is funneled into Config for renderer use.
 var reservedFieldKeys = map[string]struct{}{
-	"key":     {},
-	"label":   {},
-	"type":    {},
-	"default": {},
+	"key":          {},
+	"label":        {},
+	"type":         {},
+	"default":      {},
+	"translatable": {},
 }
 
 func parseSettingsFields(pageSlug string, raw []json.RawMessage) []ThemeSettingsField {

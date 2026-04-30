@@ -97,11 +97,12 @@ type listResponse struct {
 // loader's Raw blob or expose Config as raw map keys mixed with reserved
 // keys — clients see a clean { key, label, type, default, config } object.
 type fieldDTO struct {
-	Key     string          `json:"key"`
-	Label   string          `json:"label"`
-	Type    string          `json:"type"`
-	Default json.RawMessage `json:"default,omitempty"`
-	Config  map[string]any  `json:"config,omitempty"`
+	Key          string          `json:"key"`
+	Label        string          `json:"label"`
+	Type         string          `json:"type"`
+	Default      json.RawMessage `json:"default,omitempty"`
+	Translatable bool            `json:"translatable"`
+	Config       map[string]any  `json:"config,omitempty"`
 }
 
 // pageDTO is the full page schema returned by Get.
@@ -167,17 +168,28 @@ func (h *ThemeSettingsHandler) Get(c *fiber.Ctx) error {
 		return api.Error(c, fiber.StatusNotFound, "PAGE_NOT_FOUND", "Settings page not declared by active theme")
 	}
 
-	// Single bulk read scoped to the admin's current language. The Loc
-	// variant returns each key resolved for that locale, falling back to the
-	// default-language row when no per-locale value exists.
+	// Two bulk reads: one scoped to the admin's locale (translatable
+	// fields) and one scoped to the empty locale (global fields). Both
+	// hit GetSettingsLoc with the same prefix; the second call asks for
+	// "" so the resolver returns only language_code='' rows. We then
+	// pick per-field based on the field's translatable flag.
 	locale := adminLocale(c)
 	rawAll, err := h.coreAPI.GetSettingsLoc(c.Context(), ThemePrefix(themeSlug), locale)
 	if err != nil {
 		return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
 	}
+	rawGlobal, err := h.coreAPI.GetSettingsLoc(c.Context(), ThemePrefix(themeSlug), "")
+	if err != nil {
+		return api.Error(c, fiber.StatusInternalServerError, "READ_FAILED", "Failed to read theme settings")
+	}
 	values := make(map[string]valueDTO, len(page.Fields))
 	for _, field := range page.Fields {
-		raw := rawAll[page.Slug+":"+field.Key]
+		var raw string
+		if field.IsTranslatable() {
+			raw = rawAll[page.Slug+":"+field.Key]
+		} else {
+			raw = rawGlobal[page.Slug+":"+field.Key]
+		}
 		res := CoerceWithDefault(field, raw)
 		values[field.Key] = valueDTO{Value: res.Value, Compatible: res.Compatible, Raw: res.Raw}
 	}
@@ -233,6 +245,13 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 			return api.Error(c, fiber.StatusBadRequest, "ENCODE_FAILED", "Failed to encode field value")
 		}
 		key := SettingKey(themeSlug, page.Slug, field.Key)
+		// Per-field locale routing: translatable fields land in the
+		// admin's locale, non-translatable in language_code='' so
+		// every locale reads the same value.
+		writeLoc := fieldLoc
+		if !field.IsTranslatable() {
+			writeLoc = ""
+		}
 		// Production path: direct GORM write (db != nil). Tests pass db=nil
 		// and exercise the SetSetting fallback so they stay DB-free.
 		if h.db != nil {
@@ -245,7 +264,7 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 				toStore = enc
 			}
 			v := toStore
-			row := models.SiteSetting{Key: key, LanguageCode: fieldLoc, Value: &v}
+			row := models.SiteSetting{Key: key, LanguageCode: writeLoc, Value: &v}
 			if err := h.db.Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "key"}, {Name: "language_code"}},
 				DoUpdates: clause.AssignmentColumns([]string{"value", "updated_at"}),
@@ -253,7 +272,7 @@ func (h *ThemeSettingsHandler) Save(c *fiber.Ctx) error {
 				return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist theme setting")
 			}
 		} else {
-			if err := h.coreAPI.SetSettingLoc(c.Context(), key, fieldLoc, stored); err != nil {
+			if err := h.coreAPI.SetSettingLoc(c.Context(), key, writeLoc, stored); err != nil {
 				return api.Error(c, fiber.StatusInternalServerError, "WRITE_FAILED", "Failed to persist theme setting")
 			}
 		}
@@ -277,11 +296,12 @@ func toPageDTO(p ThemeSettingsPage) pageDTO {
 	fields := make([]fieldDTO, 0, len(p.Fields))
 	for _, f := range p.Fields {
 		fields = append(fields, fieldDTO{
-			Key:     f.Key,
-			Label:   f.Label,
-			Type:    f.Type,
-			Default: f.Default,
-			Config:  f.Config,
+			Key:          f.Key,
+			Label:        f.Label,
+			Type:         f.Type,
+			Default:      f.Default,
+			Translatable: f.IsTranslatable(),
+			Config:       f.Config,
 		})
 	}
 	return pageDTO{

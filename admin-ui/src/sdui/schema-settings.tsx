@@ -217,7 +217,6 @@ export function SchemaSettings({
                       value={values[field.key] ?? ""}
                       pages={pages}
                       roles={roles}
-                      hasTranslatable={hasTranslatable}
                       onChange={(v) =>
                         setValues((prev) => ({ ...prev, [field.key]: v }))
                       }
@@ -285,29 +284,34 @@ function SchemaField({
   value,
   pages,
   roles,
-  hasTranslatable,
   onChange,
 }: {
   field: SettingsSchemaField;
   value: string;
   pages: ContentNode[];
   roles: Role[];
-  hasTranslatable: boolean;
   onChange: (v: string) => void;
 }) {
   const inputClasses =
     "rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
 
-  // Only surface the Global badge on mixed pages — on all-global
-  // schemas the sidebar copy already covers it and a row of badges
-  // becomes noise.
-  const showGlobalBadge = hasTranslatable && !field.translatable;
-
+  // Always render translatability — operators repeatedly asked "did
+  // it actually take effect?" and an absent badge isn't proof. On
+  // all-global schemas the sidebar still says so up top; the badge
+  // is redundant there but cheap, and it removes any "did the flag
+  // wire through?" doubt.
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
         <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
-        {showGlobalBadge && (
+        {field.translatable ? (
+          <span
+            className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200"
+            title="This field stores a separate value per language"
+          >
+            Translatable
+          </span>
+        ) : (
           <span
             className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200"
             title="This field applies to every language"

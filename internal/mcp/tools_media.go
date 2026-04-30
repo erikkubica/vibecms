@@ -4,16 +4,86 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"mime"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"path"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"squilla/internal/coreapi"
+	pb "squilla/pkg/plugin/proto"
 )
+
+// mediaManagerSlug is the extension slug we proxy media uploads through so
+// MCP and the admin UI share one upload pipeline (validation, normalisation,
+// WebP, optimiser settings, owner tagging, etc.). Falls back to the kernel
+// cms.MediaService path when the extension isn't active.
+const mediaManagerSlug = "media-manager"
+
+// uploadViaMediaManager proxies (filename, mime_type, body) through the
+// media-manager extension's POST /upload handler — the same code path the
+// admin UI uses. Returns nil, nil when the extension is unavailable so the
+// caller can fall through to the kernel fallback.
+func (s *Server) uploadViaMediaManager(ctx context.Context, filename, mimeType string, body []byte) (map[string]any, error) {
+	if s.deps.PluginManager == nil {
+		return nil, nil
+	}
+	client := s.deps.PluginManager.GetClient(mediaManagerSlug)
+	if client == nil {
+		return nil, nil
+	}
+
+	// Build a multipart body with one "file" field — matches what the
+	// admin UI's <input type="file"> form submits.
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	hdr := make(textproto.MIMEHeader)
+	hdr.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, filename))
+	if mimeType != "" {
+		hdr.Set("Content-Type", mimeType)
+	}
+	part, err := mw.CreatePart(hdr)
+	if err != nil {
+		return nil, fmt.Errorf("multipart create: %w", err)
+	}
+	if _, err := part.Write(body); err != nil {
+		return nil, fmt.Errorf("multipart write: %w", err)
+	}
+	if err := mw.Close(); err != nil {
+		return nil, fmt.Errorf("multipart close: %w", err)
+	}
+
+	req := &pb.PluginHTTPRequest{
+		Method:      "POST",
+		Path:        "/upload",
+		Headers:     map[string]string{"Content-Type": mw.FormDataContentType()},
+		Body:        buf.Bytes(),
+		QueryParams: map[string]string{},
+		PathParams:  map[string]string{"slug": mediaManagerSlug, "path": "upload"},
+	}
+	resp, err := client.HandleHTTPRequest(req)
+	if err != nil {
+		return nil, fmt.Errorf("media-manager upload: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("media-manager returned status %d: %s", resp.StatusCode, string(resp.Body))
+	}
+	var out map[string]any
+	if err := json.Unmarshal(resp.Body, &out); err != nil {
+		return nil, fmt.Errorf("media-manager response not JSON: %w", err)
+	}
+	// media-manager wraps single-object responses as {"data": {...}} — unwrap
+	// for the MCP caller so the shape stays {id, url, ...}.
+	if data, ok := out["data"].(map[string]any); ok {
+		return data, nil
+	}
+	return out, nil
+}
 
 func (s *Server) registerMediaTools() {
 	api := s.deps.CoreAPI
@@ -41,7 +111,7 @@ func (s *Server) registerMediaTools() {
 	})
 
 	s.addTool(mcp.NewTool("core.media.upload",
-		mcp.WithDescription("Upload a media file (image, video, doc) and register it in the media library. Returns {id, url, slug, ...} — reference by slug in theme-portable content.\n\nUse when: attaching an image/file to a node, hero, gallery, etc.\nDO NOT use when: storing arbitrary files with no URL/DB record — use core.files.store. Importing a theme-packaged asset — theme activation handles that automatically.\n\nBody must be base64-encoded. Max size limits apply per storage backend."),
+		mcp.WithDescription("Upload a media file (image, video, doc) and register it in the media library. Returns {id, url, slug, ...} — reference by slug in theme-portable content.\n\nUse when: attaching an image/file to a node, hero, gallery, etc.\nDO NOT use when: storing arbitrary files with no URL/DB record — use core.files.store. Importing a theme-packaged asset — theme activation handles that automatically.\n\nBody must be base64-encoded. When the media-manager extension is active, the upload routes through the same /upload handler as the admin UI (image normalisation, WebP, original backup, optimiser settings) — MCP uploads are functionally identical to manual uploads, not a parallel pipeline."),
 		mcp.WithString("filename", mcp.Required()),
 		mcp.WithString("mime_type", mcp.Required()),
 		mcp.WithString("body_base64", mcp.Required(), mcp.Description("base64-encoded file body")),
@@ -50,9 +120,19 @@ func (s *Server) registerMediaTools() {
 		if err != nil {
 			return nil, fmt.Errorf("decode body_base64: %w", err)
 		}
+		filename := stringArg(args, "filename")
+		mimeType := stringArg(args, "mime_type")
+		// Prefer the extension path so optimiser / WebP / original backup
+		// flows fire identically to a manual upload. Fall through to the
+		// kernel fallback only when the extension is inactive.
+		if out, err := s.uploadViaMediaManager(ctx, filename, mimeType, raw); err != nil {
+			return nil, err
+		} else if out != nil {
+			return out, nil
+		}
 		return api.UploadMedia(ctx, coreapi.MediaUploadRequest{
-			Filename: stringArg(args, "filename"),
-			MimeType: stringArg(args, "mime_type"),
+			Filename: filename,
+			MimeType: mimeType,
 			Body:     bytes.NewReader(raw),
 		})
 	})
@@ -112,6 +192,13 @@ func (s *Server) registerMediaTools() {
 			mimeType = "application/octet-stream"
 		}
 
+		// Same proxy strategy as core.media.upload — go through media-manager
+		// so the imported URL gets the same normalisation as a manual upload.
+		if out, err := s.uploadViaMediaManager(ctx, filename, mimeType, buf.Bytes()); err != nil {
+			return nil, err
+		} else if out != nil {
+			return out, nil
+		}
 		return api.UploadMedia(ctx, coreapi.MediaUploadRequest{
 			Filename: filename,
 			MimeType: mimeType,

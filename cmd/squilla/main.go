@@ -473,6 +473,7 @@ func main() {
 	extHandler.SetThemeLoader(themeLoader)
 	extHandler.RegisterRoutes(adminAPI)
 	mcpServer.SetExtensionHandler(extHandler)
+	mcpServer.SetPluginManager(pluginManager)
 
 	// Theme deploy webhook (public, authenticated by secret).
 	themeHandler.RegisterWebhook(app)

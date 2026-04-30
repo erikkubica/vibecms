@@ -37,8 +37,16 @@ func (s *MediaService) Upload(file io.Reader, originalName string, mimeType stri
 	ext := filepath.Ext(originalName)
 	storedName := uuid.New().String() + ext
 
-	relPath := filepath.Join(dateDir, storedName)
-	fullDir := filepath.Join(s.storageDir, dateDir)
+	// Store path WITH the "media/" prefix so it matches the media-manager
+	// extension's convention. media-manager resolves files via
+	// filepath.Join("storage", row.path) for optimize / re-optimize /
+	// restore — without this prefix, a kernel-uploaded row points at
+	// storage/<date>/<file> while the actual file is at storage/media/
+	// <date>/<file>, producing a confusing "source image not found" while
+	// the public URL still serves fine. storageDir is the filesystem root
+	// (e.g. "storage"); the "media/" segment lives inside the stored path.
+	relPath := filepath.Join("media", dateDir, storedName)
+	fullDir := filepath.Join(s.storageDir, "media", dateDir)
 
 	if err := os.MkdirAll(fullDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create storage directory: %w", err)

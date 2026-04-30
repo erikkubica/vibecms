@@ -34,6 +34,7 @@ type Deps struct {
 	BlockTypeSvc     *cms.BlockTypeService
 	LayoutSvc        *cms.LayoutService
 	PublicHandler    *cms.PublicHandler
+	PluginManager    *cms.PluginManager
 }
 
 // Server is the MCP adapter. One instance per process; mounted on Fiber at /mcp.
@@ -114,6 +115,14 @@ func New(deps Deps) *Server {
 // on PluginManager, which depends on infrastructure set up later).
 func (s *Server) SetExtensionHandler(h *cms.ExtensionHandler) {
 	s.deps.ExtensionHandler = h
+}
+
+// SetPluginManager wires the PluginManager after construction so MCP tools
+// can proxy through to extension gRPC plugins (e.g. core.media.upload routes
+// through the media-manager extension's /upload handler so MCP and admin UI
+// share one upload code path with optimisation, validation, and WebP).
+func (s *Server) SetPluginManager(pm *cms.PluginManager) {
+	s.deps.PluginManager = pm
 }
 
 func (s *Server) Mount(app *fiber.App) {

@@ -307,14 +307,12 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 	settings := h.loadSiteSettings()
 	menus := h.renderCtx.LoadMenus(defaultLangID)
 
-	// Build 404 content
-	notFoundHTML := `<div class="text-center py-24">
-		<h1 class="text-6xl font-extrabold text-slate-200 mb-4">404</h1>
-		<h2 class="text-2xl font-bold text-slate-700 mb-2">Page Not Found</h2>
-		<p class="text-slate-500 mb-8">The page you are looking for does not exist or has been removed.</p>
-		<a href="/" class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Back to Home</a>
-	</div>`
-
+	// 404 content is owned by the theme: the layout registered under slug
+	// "404" / "error" decides the markup. We pass an empty BlocksHTML and
+	// NodeType="404" so themes can branch on .node.node_type if a single
+	// layout serves multiple node types. Themes with no 404 layout fall
+	// back to the default layout — they should render a sensible empty
+	// state when blocks_html is empty.
 	appData := h.renderCtx.BuildAppData(settings, languages, defaultLang, []string{})
 	appData.Menus = menus
 
@@ -322,10 +320,10 @@ func (h *PublicHandler) render404WithLayout(c *fiber.Ctx) (string, bool) {
 		Title:        "Page Not Found",
 		Slug:         "404",
 		FullURL:      c.Path(),
-		BlocksHTML:   template.HTML(notFoundHTML),
+		BlocksHTML:   template.HTML(""),
 		Fields:       make(map[string]interface{}),
 		SEO:          map[string]interface{}{"title": "Page Not Found"},
-		NodeType:     "page",
+		NodeType:     "404",
 		LanguageCode: defaultLang.Code,
 	}
 	// Synthesize a ContentNode for BuildHeadMeta so 404s emit the same

@@ -195,6 +195,36 @@ func runThemeChecklist(slug, themeDir string) map[string]any {
 		})
 	}
 
+	// 1a-bis. theme should ship a 404 / error layout. Core no longer renders
+	// a hardcoded fallback (would clash with theme styling) — when the theme
+	// owns no 404 layout, missing pages render through the default layout
+	// with empty blocks_html, which usually shows as a blank main area.
+	// Surface a warning so theme devs make a conscious choice.
+	hasNotFoundLayout := false
+	for _, l := range layouts {
+		lm, ok := l.(map[string]any)
+		if !ok {
+			continue
+		}
+		slug, _ := lm["slug"].(string)
+		if slug == "404" || slug == "error" {
+			hasNotFoundLayout = true
+			break
+		}
+	}
+	if hasNotFoundLayout {
+		checks = append(checks, checklistItem{
+			ID: "theme.json.notfound_layout", Severity: "pass", Pass: true,
+			Message: "404/error layout registered — theme owns the missing-page UI",
+		})
+	} else {
+		checks = append(checks, checklistItem{
+			ID: "theme.json.notfound_layout", Severity: "warning", Pass: false,
+			Message: "no layout with slug \"404\" or \"error\" — missing pages fall back to the default layout with empty blocks_html (usually a blank main area). Register `{ \"slug\": \"404\", \"file\": \"404.html\" }` and ship a themed 404 page.",
+			File:    themeJSONPath,
+		})
+	}
+
 	// 1b. settings_pages[] declared files exist + parse + carry valid fields.
 	// Soft-fail at runtime (the loader logs & skips bad pages), but for an
 	// authoring-time check we want to surface every issue so the agent fixes

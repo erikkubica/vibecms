@@ -447,13 +447,25 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
         style={{ width: sidebarWidth, background: "var(--sb-bg)" }}
       >
         {/* Logo header */}
-        <div className="flex h-12 shrink-0 items-center border-b px-4" style={{borderColor: "var(--sb-border)"}}>
-          <div className="flex items-center gap-2.5">
-            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-xs font-bold text-white" style={{background: "var(--accent)"}}>
-              V
+        <div className="flex shrink-0 items-center" style={{ height: 48, padding: "0 14px" }}>
+          <div className="flex items-center" style={{ gap: 10 }}>
+            <div
+              className="grid shrink-0 place-items-center"
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 6,
+                background: "var(--accent)",
+                color: "var(--accent-fg)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            >
+              S
             </div>
             {!collapsed && (
-              <span className="text-sm font-semibold text-white tracking-tight">
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--sb-fg-active)", letterSpacing: "-0.02em" }}>
                 Squilla
               </span>
             )}

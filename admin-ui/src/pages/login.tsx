@@ -33,11 +33,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
-      <Card className="w-full max-w-md rounded-2xl border border-border/50 bg-card shadow-xl">
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--app-bg)" }}>
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <span className="text-lg font-bold text-white">V</span>
+          <div
+            className="mx-auto mb-4 flex h-12 w-12 items-center justify-center"
+            style={{
+              borderRadius: 10,
+              background: "var(--accent)",
+              color: "var(--accent-fg)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 18,
+              fontWeight: 600,
+            }}
+          >
+            S
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
             Squilla

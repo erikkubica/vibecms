@@ -1,3 +1,7 @@
+/* Fonts — Geist + Geist Mono, the v2 typeface system. Must precede other
+   statements per CSS spec, so this @import sits at the very top. */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+
 @import "tailwindcss";
 @source "../src/**/*.{ts,tsx}";
 @source "../node_modules/@radix-ui/**/*.{js,jsx}";
@@ -12,9 +16,6 @@
    up by the main stylesheet — otherwise the class silently has no
    effect because no rule was generated for it. */
 @source "../../extensions/*/admin-ui/src/**/*.{ts,tsx}";
-
-/* Fonts — Geist + Geist Mono, the v2 typeface system */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
 
 @theme {
   --color-background: var(--app-bg);

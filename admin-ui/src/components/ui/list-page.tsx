@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Eye, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ListPageShell({ children }: { children: ReactNode }) {
-  return <div className="w-full" style={{ paddingBottom: 32, maxWidth: 1200, margin: "0 auto" }}>{children}</div>;
+  return <div className="w-full" style={{ paddingBottom: 32 }}>{children}</div>;
 }
 
 interface ListHeaderProps {

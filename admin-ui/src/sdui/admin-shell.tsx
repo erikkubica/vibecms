@@ -646,7 +646,9 @@ export function SduiAdminShell({ children, mainClassName }: SduiAdminShellProps)
         </header>
 
         {/* Page content */}
-        <main className={mainClassName ?? "flex-1 overflow-y-auto p-5"}>{children}</main>
+        <main className={mainClassName ?? "flex-1 overflow-y-auto"} style={{ padding: "18px 22px 40px" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>{children}</div>
+        </main>
       </div>
     </div>
   );

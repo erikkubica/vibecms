@@ -1,5 +1,45 @@
 import { useState, useEffect, memo } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
+
+/**
+ * Derive a friendly page title from the URL when the SDUI engine doesn't pass one.
+ * /admin/block-types → "Block Types"
+ * /admin/security/users → "Users"
+ * /admin/settings/site/general → "General"
+ */
+const _routeLabels: Record<string, string> = {
+  "block-types": "Block Types",
+  "content-types": "Content Types",
+  "layout-blocks": "Layout Blocks",
+  "mcp-tokens": "MCP Tokens",
+  taxonomies: "Taxonomies",
+  templates: "Templates",
+  layouts: "Layouts",
+  themes: "Themes",
+  extensions: "Extensions",
+  menus: "Menus",
+  users: "Users",
+  roles: "Roles",
+  languages: "Languages",
+  general: "General",
+  seo: "SEO",
+  robots: "Robots",
+  advanced: "Advanced",
+  settings: "Settings",
+  pages: "Pages",
+  posts: "Posts",
+  dashboard: "Dashboard",
+};
+
+function deriveTitleFromPath(pathname: string): string {
+  const parts = pathname.replace(/^\/admin\/?/, "").split("/").filter(Boolean);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const seg = parts[i];
+    if (/^\d+$/.test(seg) || seg === "edit" || seg === "new") continue;
+    return _routeLabels[seg] || seg.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return "";
+}
 import {
   ArrowLeft,
   ArrowDown,
@@ -129,6 +169,7 @@ export function PageHeader({
 }) {
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
+  const location = useLocation();
 
   const totalCount =
     tabs && tabs.length > 0
@@ -136,12 +177,13 @@ export function PageHeader({
         tabs.reduce((acc, t) => acc + (t.count ?? 0), 0)
       : undefined;
 
-  const titleStr = title ? title.charAt(0).toUpperCase() + title.slice(1) : "";
+  const resolvedTitle = title || deriveTitleFromPath(location.pathname);
+  const titleStr = resolvedTitle ? resolvedTitle.charAt(0).toUpperCase() + resolvedTitle.slice(1) : "";
 
   return (
     <>
       {/* Title row — H1 + count + actions, sits above the connected list card */}
-      {(title || newPath || onNew || backPath || onBack) && (
+      {(resolvedTitle || newPath || onNew || backPath || onBack) && (
         <div className="flex items-end justify-between" style={{ gap: 16, marginBottom: 14 }}>
           <h1
             className="flex items-center"

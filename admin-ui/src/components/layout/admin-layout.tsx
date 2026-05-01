@@ -841,7 +841,9 @@ function AdminLayoutInner() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto" style={{ padding: "18px 22px 40px" }}>
-          <Outlet />
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

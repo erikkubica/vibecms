@@ -48,4 +48,4 @@ themes/*/
 
 # Operator-installed themes and extensions — bind-mounted at /app/data in
 # docker-compose. Per-deploy state, never committed.
-data/
+data/admin-ui/src.zip

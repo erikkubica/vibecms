@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
-  ArrowLeft,
   Save,
   Globe,
   Trash2,
@@ -14,11 +13,9 @@ import {
   X,
   LayoutTemplate,
   Square,
-  ExternalLink,
   Eye,
   Code as CodeIcon,
   Tag,
-  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +26,9 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
+import { Titlebar } from "@/components/ui/titlebar";
+import { SaveBar } from "@/components/ui/save-bar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import CustomFieldInput from "@/components/ui/custom-field-input";
-import BlockPicker, { BLOCK_ICON_MAP } from "@/components/ui/block-picker";
+import BlockPicker from "@/components/ui/block-picker";
 import { usePageMeta } from "@/components/layout/page-meta";
 import { toast } from "sonner";
 import {
@@ -121,6 +121,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [autoSlug, setAutoSlug] = useState(!isEdit);
+  const [activeTab, setActiveTab] = useState<"blocks" | "excerpt" | "seo" | "custom">("blocks");
 
   // Languages
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -476,12 +477,6 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
     return blockTypes.find((bt) => bt.slug === blockTypeSlug);
   }
 
-  function getBlockIcon(blockTypeSlug: string): LucideIcon {
-    const bt = getBlockTypeDef(blockTypeSlug);
-    if (bt?.icon && BLOCK_ICON_MAP[bt.icon]) return BLOCK_ICON_MAP[bt.icon];
-    return Square;
-  }
-
   function getBlockLabel(blockTypeSlug: string): string {
     const bt = getBlockTypeDef(blockTypeSlug);
     return bt?.label || blockTypeSlug;
@@ -759,136 +754,72 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
       <form onSubmit={(e) => handleSave(e)} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Main content */}
         <div className="space-y-4 min-w-0">
-          {/* Inline Title + Slug + ID + View header row */}
-          <div
-            className="flex items-center gap-1.5"
-            style={{
-              padding: 6,
-              background: "var(--card-bg)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-lg)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
-              <Link to={basePath} title={`Back to ${label}s`}>
-                <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
-              </Link>
-            </Button>
-            <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
-              <span
-                className="shrink-0 uppercase"
-                style={{
-                  fontSize: 10.5,
-                  fontWeight: 600,
-                  color: "var(--fg-muted)",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                Title
-              </span>
-              <input
-                id="title"
-                placeholder={`Enter ${label.toLowerCase()} title`}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="flex-1 min-w-0 bg-transparent outline-none"
-                style={{
-                  border: "none",
-                  padding: "6px 4px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "var(--fg)",
-                }}
-              />
-            </div>
-            <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
-            <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
-              <span
-                className="shrink-0"
-                style={{
-                  fontSize: 11,
-                  color: "var(--fg-subtle)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                /{langSlug ? `${langSlug}/` : ""}
-                {urlPrefix ? `${urlPrefix}/` : ""}
-                {parentNode ? `${parentNode.slug}/` : ""}
-              </span>
-              <input
-                id="slug"
-                placeholder="url-slug"
-                value={slug}
-                onChange={(e) => {
-                  setAutoSlug(false);
-                  setSlug(e.target.value);
-                }}
-                disabled={autoSlug}
-                required
-                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
-                style={{
-                  border: "none",
-                  padding: "6px 0",
-                  fontSize: 12.5,
-                  color: "var(--fg)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              />
-              <button
-                type="button"
-                className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
-                style={{
-                  color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
-                  background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
-                  border: "1px solid var(--border)",
-                  letterSpacing: "0.04em",
-                }}
-                onClick={() => setAutoSlug(!autoSlug)}
-                title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate slug from title"}
-              >
-                {autoSlug ? "Auto" : "Edit"}
-              </button>
-            </div>
-            {isEdit && (
-              <Badge
-                variant="secondary"
-                className="shrink-0 font-mono"
-                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
-              >
-                ID {id}
-              </Badge>
-            )}
-            {isEdit && originalNode && status === "published" && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-[12px] shrink-0"
-                asChild
-              >
-                <a href={originalNode.full_url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-1 h-3 w-3" />
-                  View
-                </a>
-              </Button>
-            )}
-          </div>
+          {/* Titlebar — title segment + slug segment + ID/View */}
+          <Titlebar
+            title={title}
+            onTitleChange={setTitle}
+            titlePlaceholder={`Enter ${label.toLowerCase()} title`}
+            slug={slug}
+            onSlugChange={(v) => { setAutoSlug(false); setSlug(v); }}
+            slugPrefix={`/${langSlug ? `${langSlug}/` : ""}${urlPrefix ? `${urlPrefix}/` : ""}${parentNode ? `${parentNode.slug}/` : ""}`}
+            autoSlug={autoSlug}
+            onAutoSlugToggle={() => setAutoSlug(!autoSlug)}
+            id={isEdit ? id : undefined}
+            viewHref={isEdit && originalNode && status === "published" ? originalNode.full_url : undefined}
+            onBack={() => navigate(basePath)}
+          />
 
           {/* Visual Block Editor */}
-          {blocksEnabled && (
-          <div>
+          {/* Unified tabs card — Blocks / Excerpt / SEO / Custom Fields */}
+          <Card>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+              <TabsList style={{ paddingLeft: 16, paddingRight: 16 }}>
+                {blocksEnabled && (
+                  <TabsTrigger value="blocks">
+                    Blocks
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        padding: "1px 5px",
+                        borderRadius: 8,
+                        marginLeft: 6,
+                        background: activeTab === "blocks" ? "var(--accent-mid)" : "var(--sub-bg)",
+                        color: activeTab === "blocks" ? "var(--accent-strong)" : "var(--fg-muted)",
+                      }}
+                    >
+                      {blocks.length}
+                    </span>
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="excerpt">Excerpt</TabsTrigger>
+                <TabsTrigger value="seo">SEO</TabsTrigger>
+                <TabsTrigger value="custom">
+                  Custom Fields
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      fontWeight: 500,
+                      padding: "1px 5px",
+                      borderRadius: 8,
+                      marginLeft: 6,
+                      background: activeTab === "custom" ? "var(--accent-mid)" : "var(--sub-bg)",
+                      color: activeTab === "custom" ? "var(--accent-strong)" : "var(--fg-muted)",
+                    }}
+                  >
+                    {customFields.length}
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+
+              {blocksEnabled && (
+              <TabsContent value="blocks" style={{ padding: "14px 16px 18px" }}>
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold" style={{ fontSize: 14, color: "var(--fg)" }}>Blocks</h2>
-                <Badge
-                  variant="secondary"
-                  style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
-                >
-                  {blocks.length}
-                </Badge>
-              </div>
+              <span style={{ fontSize: 12, color: "var(--fg-muted)", letterSpacing: "-0.005em" }}>
+                Drag, expand, or remove blocks. Changes are saved on Save.
+              </span>
               <Button
                 type="button"
                 variant="outline"
@@ -897,7 +828,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                 onClick={openLoadTemplate}
               >
                 <LayoutTemplate className="mr-1.5 h-3.5 w-3.5" />
-                Load from Template
+                Load template
               </Button>
             </div>
             <div className="space-y-3">
@@ -911,7 +842,6 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
 
               {blocks.map((block, index) => {
                 const blockTypeDef = getBlockTypeDef(block.type);
-                const BlockIcon = getBlockIcon(block.type);
                 const isCollapsed = collapsedBlocks.has(index);
                 const blockFields = blockTypeDef?.field_schema || [];
 
@@ -919,105 +849,129 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                 return (
                   <div
                     key={index}
-                    className="overflow-hidden"
                     style={{
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-lg)",
-                      background: "var(--card-bg)",
+                      borderTop: index === 0 ? "none" : "1px solid var(--divider)",
                     }}
                   >
-                    {/* Block header */}
+                    {/* Block header — flat row, no bg, no border. Active state via type weight. */}
                     <div
-                      className="flex items-center gap-2 cursor-pointer select-none"
+                      className="flex items-center cursor-pointer select-none"
                       style={{
-                        padding: "8px 10px",
-                        background: "var(--sub-bg)",
-                        borderBottom: isCollapsed ? "none" : "1px solid var(--border)",
+                        gap: 8,
+                        padding: "11px 12px",
+                        margin: "0 -8px",
+                        borderRadius: 6,
+                        background: !isCollapsed ? "transparent" : undefined,
+                        transition: "background 0.1s",
                       }}
                       onClick={() => toggleBlockCollapse(index)}
+                      onMouseEnter={(e) => { if (isCollapsed) e.currentTarget.style.background = "var(--hover-bg)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                     >
+                      <span
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ color: "var(--fg-hint)", cursor: "grab", flexShrink: 0, opacity: 0.55, display: "inline-flex" }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+                          <circle cx="9" cy="6" r="1.2" fill="currentColor" />
+                          <circle cx="9" cy="12" r="1.2" fill="currentColor" />
+                          <circle cx="9" cy="18" r="1.2" fill="currentColor" />
+                          <circle cx="15" cy="6" r="1.2" fill="currentColor" />
+                          <circle cx="15" cy="12" r="1.2" fill="currentColor" />
+                          <circle cx="15" cy="18" r="1.2" fill="currentColor" />
+                        </svg>
+                      </span>
                       <ChevronDown
+                        size={11}
                         className="shrink-0 transition-transform"
-                        size={12}
                         style={{
-                          color: "var(--fg-muted)",
+                          color: "var(--fg-subtle)",
                           transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
                         }}
                       />
-                      <BlockIcon size={14} style={{ color: "var(--fg-muted)" }} className="shrink-0" />
                       <span
-                        className="font-semibold"
-                        style={{ fontSize: 12.5, color: "var(--fg)" }}
+                        style={{
+                          fontSize: 13,
+                          fontWeight: isCollapsed ? 500 : 600,
+                          color: "var(--fg)",
+                          letterSpacing: "-0.01em",
+                        }}
                       >
                         {getBlockLabel(block.type)}
                       </span>
-                      <span
-                        className="font-mono"
-                        style={{ fontSize: 11, color: "var(--fg-muted)" }}
-                      >
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-subtle)" }}>
                         {block.type}
                       </span>
                       {typeCategory && typeCategory !== block.type && (
-                        <Badge
-                          variant="secondary"
+                        <span
                           style={{
                             fontSize: 10,
-                            background: "color-mix(in oklab, var(--accent) 10%, transparent)",
-                            color: "var(--accent-strong)",
-                            border: "1px solid color-mix(in oklab, var(--accent) 20%, transparent)",
+                            fontWeight: 500,
+                            fontFamily: "var(--font-mono)",
+                            padding: "1.5px 6px",
+                            borderRadius: 3,
+                            background: !isCollapsed ? "var(--accent-weak)" : "var(--sub-bg)",
+                            color: !isCollapsed ? "var(--accent-strong)" : "var(--fg-muted)",
+                            textTransform: "lowercase",
+                            letterSpacing: "0.02em",
                           }}
                         >
                           {typeCategory}
-                        </Badge>
+                        </span>
                       )}
-                      <div className="flex-1" />
-                      <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--fg-subtle)", marginLeft: 4 }}>
+                        · {blockFields.length} {blockFields.length === 1 ? "field" : "fields"}
+                      </span>
+                      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 1 }} onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => moveBlock(index, "up")}
                           disabled={index === 0}
-                          className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
-                          style={{ color: "var(--fg-muted)" }}
+                          style={{ width: 26, height: 26, borderRadius: 5, display: "grid", placeItems: "center", color: "var(--fg-subtle)", background: "transparent", border: "none", cursor: index === 0 ? "default" : "pointer", opacity: index === 0 ? 0.3 : 1, transition: "background 0.1s" }}
+                          onMouseEnter={(e) => { if (index !== 0) { e.currentTarget.style.background = "rgba(0,0,0,0.05)"; e.currentTarget.style.color = "var(--fg)"; } }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-subtle)"; }}
                           title="Move up"
                         >
-                          <ChevronUp className="h-3.5 w-3.5" />
+                          <ChevronUp size={13} />
                         </button>
                         <button
                           type="button"
                           onClick={() => moveBlock(index, "down")}
                           disabled={index === blocks.length - 1}
-                          className="p-1 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5"
-                          style={{ color: "var(--fg-muted)" }}
+                          style={{ width: 26, height: 26, borderRadius: 5, display: "grid", placeItems: "center", color: "var(--fg-subtle)", background: "transparent", border: "none", cursor: index === blocks.length - 1 ? "default" : "pointer", opacity: index === blocks.length - 1 ? 0.3 : 1, transition: "background 0.1s" }}
+                          onMouseEnter={(e) => { if (index !== blocks.length - 1) { e.currentTarget.style.background = "rgba(0,0,0,0.05)"; e.currentTarget.style.color = "var(--fg)"; } }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-subtle)"; }}
                           title="Move down"
                         >
-                          <ChevronDown className="h-3.5 w-3.5" />
+                          <ChevronDown size={13} />
                         </button>
                         <button
                           type="button"
                           onClick={() => removeBlock(index)}
-                          className="p-1 rounded hover:opacity-80"
-                          style={{ color: "var(--danger)" }}
+                          style={{ width: 26, height: 26, borderRadius: 5, display: "grid", placeItems: "center", color: "var(--fg-subtle)", background: "transparent", border: "none", cursor: "pointer", transition: "background 0.1s, color 0.1s" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-subtle)"; }}
                           title="Delete block"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X size={13} />
                         </button>
                       </div>
                     </div>
 
                     {/* Block fields */}
                     {!isCollapsed && (
-                      <div style={{ padding: "12px 14px 14px" }} className="space-y-3">
+                      <div style={{ padding: "4px 12px 16px" }} className="space-y-3">
                         {blockTypeDef?.description && (
                           <div
                             style={{
-                              fontSize: 12,
+                              fontSize: 11.5,
                               color: "var(--fg-muted)",
-                              padding: "8px 10px",
+                              padding: "10px 12px",
                               background: "var(--sub-bg)",
-                              border: "1px solid var(--border)",
-                              borderLeft: "2px solid var(--accent)",
-                              borderRadius: "var(--radius)",
-                              lineHeight: 1.5,
+                              borderRadius: 7,
+                              lineHeight: 1.55,
+                              fontStyle: "italic",
+                              marginBottom: 12,
                             }}
                           >
                             {blockTypeDef.description}
@@ -1028,22 +982,28 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                             This block type has no fields defined.
                           </p>
                         ) : (
-                          <div className="flex flex-wrap" style={{ gap: "12px 14px" }}>
+                          <div className="flex flex-wrap" style={{ gap: "11px 14px" }}>
                             {blockFields.map((field) => {
                               const w = getFieldWidth(field);
+                              const fieldKey = field.key;
                               return (
                                 <div
                                   key={field.key}
-                                  className="space-y-1.5 min-w-0"
+                                  className="min-w-0 flex flex-col"
                                   style={{
                                     flex: `0 0 calc(${w}% - 14px)`,
                                     maxWidth: `calc(${w}% - 14px)`,
+                                    gap: 5,
                                   }}
                                 >
-                                  <Label className="font-medium" style={{ fontSize: 12, color: "var(--fg-2)" }}>
+                                  <Label className="flex items-center" style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.005em", gap: 5 }}>
                                     {field.label}
-                                    {field.required && <span className="ml-1" style={{ color: "var(--danger)" }}>*</span>}
+                                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--fg-subtle)", fontWeight: 400, marginLeft: 4 }}>{fieldKey}</span>
+                                    {field.required && <span style={{ color: "var(--danger)" }}>*</span>}
                                   </Label>
+                                  {(field as { hint?: string }).hint && (
+                                    <span style={{ fontSize: 11.5, color: "var(--fg-muted)", lineHeight: 1.45 }}>{(field as { hint?: string }).hint}</span>
+                                  )}
                                   <CustomFieldInput
                                     field={field}
                                     value={block.fields[field.key]}
@@ -1125,55 +1085,114 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                 )}
               </div>
             </div>
-          </div>
-          )}
+              </TabsContent>
+              )}
 
-          {/* Excerpt */}
-          <Card>
-            <SectionHeader title="Excerpt" />
-            <CardContent className="space-y-2">
-              <Textarea
-                placeholder="Enter a short summary or teaser..."
-                value={excerpt}
-                onChange={(e) => setExcerpt(e.target.value)}
-                rows={3}
-                className="resize-none"
-              />
-              <p style={{ fontSize: 11, color: "var(--fg-muted)" }}>Short description used in cards and search results. If empty, it may be auto-generated from content.</p>
-            </CardContent>
-          </Card>
-
-          {/* Custom Fields */}
-          {customFields.length > 0 && (
-            <Card>
-              <SectionHeader title="Custom Fields" />
-              <CardContent>
-                <div className="flex flex-wrap" style={{ gap: "16px 14px" }}>
-                  {customFields.map((field) => {
-                    const w = getFieldWidth(field);
-                    return (
-                      <div
-                        key={field.key}
-                        className="space-y-2 min-w-0"
-                        style={{ flex: `0 0 calc(${w}% - 14px)`, maxWidth: `calc(${w}% - 14px)` }}
-                      >
-                        <Label className="text-sm font-medium text-foreground">
-                          {field.label}
-                          {field.required && <span className="ml-1" style={{ color: "var(--danger)" }}>*</span>}
-                        </Label>
-                        <CustomFieldInput
-                          field={field}
-                          value={fieldsData[field.key]}
-                          onChange={(val) => updateFieldValue(field.key, val)}
-                          languageCode={languageCode}
-                        />
-                      </div>
-                    );
-                  })}
+              <TabsContent value="excerpt" style={{ padding: "14px 16px 18px" }}>
+                <div className="space-y-2">
+                  <Label style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.005em" }}>Excerpt</Label>
+                  <p style={{ fontSize: 11.5, color: "var(--fg-muted)", lineHeight: 1.45 }}>
+                    Short description used in cards and search results. If empty, may be auto-generated.
+                  </p>
+                  <Textarea
+                    placeholder="Enter a short summary or teaser…"
+                    value={excerpt}
+                    onChange={(e) => setExcerpt(e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                    style={{ marginTop: 4 }}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </TabsContent>
+
+              <TabsContent value="seo" style={{ padding: "14px 16px 18px" }}>
+                <div className="flex flex-col" style={{ gap: 14 }}>
+                  <div className="space-y-1.5">
+                    <Label style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.005em" }}>SEO title</Label>
+                    <p style={{ fontSize: 11.5, color: "var(--fg-muted)", lineHeight: 1.45 }}>
+                      Overrides the page title in search results
+                    </p>
+                    <Input
+                      placeholder={title || "Leave blank to use page title"}
+                      value={seoTitle}
+                      onChange={(e) => setSeoTitle(e.target.value)}
+                      style={{ marginTop: 4 }}
+                    />
+                    <p className="text-[11px]" style={{ color: "var(--fg-subtle)" }}>
+                      {seoTitle.length || 0}/60 — Leave empty to use page title
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.005em" }}>Meta description</Label>
+                    <p style={{ fontSize: 11.5, color: "var(--fg-muted)", lineHeight: 1.45 }}>
+                      Shown in search results and link previews
+                    </p>
+                    <Textarea
+                      placeholder="Enter a meta description…"
+                      value={seoDescription}
+                      onChange={(e) => setSeoDescription(e.target.value)}
+                      rows={3}
+                      className="resize-none"
+                      style={{ marginTop: 4 }}
+                    />
+                    <p className="text-[11px]" style={{ color: "var(--fg-subtle)" }}>
+                      {seoDescription.length || 0}/160 recommended
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-lg p-3"
+                    style={{ background: "var(--sub-bg)", border: "1px solid var(--border)" }}
+                  >
+                    <p className="text-[11px] mb-1" style={{ color: "var(--fg-subtle)" }}>Search preview</p>
+                    <p className="text-sm font-medium truncate" style={{ color: "var(--accent-strong)" }}>
+                      {seoTitle || title || "Page Title"}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: "var(--success)" }}>
+                      {typeof window !== "undefined" ? window.location.origin : ""}
+                      {originalNode?.full_url || "/"}
+                    </p>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                      {seoDescription || "No description set. Search engines will use page content."}
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="custom" style={{ padding: "14px 16px 18px" }}>
+                {customFields.length === 0 ? (
+                  <div style={{ color: "var(--fg-muted)", fontSize: 12.5, padding: "26px 0", textAlign: "center" }}>
+                    No custom fields defined for this content type.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap" style={{ gap: "16px 14px" }}>
+                    {customFields.map((field) => {
+                      const w = getFieldWidth(field);
+                      const fieldKey = field.key || field.name;
+                      return (
+                        <div
+                          key={field.key}
+                          className="space-y-1.5 min-w-0"
+                          style={{ flex: `0 0 calc(${w}% - 14px)`, maxWidth: `calc(${w}% - 14px)` }}
+                        >
+                          <Label className="flex items-center" style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.005em", gap: 5 }}>
+                            {field.label}
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--fg-subtle)", fontWeight: 400, marginLeft: 4 }}>{fieldKey}</span>
+                            {field.required && <span style={{ color: "var(--danger)" }}>*</span>}
+                          </Label>
+                          <CustomFieldInput
+                            field={field}
+                            value={fieldsData[field.key]}
+                            onChange={(val) => updateFieldValue(field.key, val)}
+                            languageCode={languageCode}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </Card>
 
           {/* Layout Partial Fields */}
           {layoutPartials.map((partial) => {
@@ -1274,12 +1293,75 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
             </div>
             );
           })}
+
+          {/* Sticky save bar */}
+          <SaveBar
+            info={
+              originalNode?.updated_at ? (
+                <>
+                  <ChevronDown size={12} style={{ display: "none" }} />
+                  Last updated {new Date(originalNode.updated_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </>
+              ) : (
+                <>Unsaved draft</>
+              )
+            }
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => navigate(basePath)}
+              disabled={saving}
+            >
+              Discard
+            </Button>
+            {originalNode && status === "published" && (
+              <Button type="button" variant="outline" asChild>
+                <a href={originalNode.full_url} target="_blank" rel="noopener noreferrer">
+                  <Eye className="mr-1.5 h-3.5 w-3.5" />
+                  Preview
+                </a>
+              </Button>
+            )}
+            <Button type="submit" disabled={saving}>
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </SaveBar>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
           <Card>
-            <SectionHeader title="Publish" />
+            <SectionHeader
+              title="Publish"
+              actions={
+                <span
+                  className="inline-flex items-center"
+                  style={{
+                    gap: 5,
+                    padding: "2.5px 8px",
+                    borderRadius: 11,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    letterSpacing: "-0.003em",
+                    color: status === "published" ? "var(--success)" : status === "draft" ? "var(--fg-muted)" : "var(--warning)",
+                    background: status === "published" ? "var(--success-bg)" : status === "draft" ? "var(--sub-bg)" : "var(--warning-bg)",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: status === "published" ? "var(--success)" : status === "draft" ? "var(--fg-subtle)" : "var(--warning)",
+                      boxShadow: status === "published" ? "0 0 0 2px color-mix(in oklab, var(--success) 22%, transparent)" : undefined,
+                    }}
+                  />
+                  {status === "published" ? "Published" : status === "draft" ? "Draft" : status[0].toUpperCase() + status.slice(1)}
+                </span>
+              }
+            />
             <CardContent className="space-y-4">
               {/* Status + Language row */}
               <div className="grid grid-cols-2 gap-3">
@@ -1744,55 +1826,6 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
             </Card>
           )}
 
-          {/* SEO Settings */}
-          <Card>
-            <SectionHeader title="SEO" />
-            <CardContent className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    Meta Title
-                  </Label>
-                  <Input
-                    placeholder={title || "Page title"}
-                    value={seoTitle}
-                    onChange={(e) => setSeoTitle(e.target.value)}
-                    className="h-9 rounded-lg text-sm"
-                  />
-                  <p className="text-[11px]" style={{ color: "var(--fg-subtle)" }}>
-                    {seoTitle.length || 0}/60 — Leave empty to use page title
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    Meta Description
-                  </Label>
-                  <Textarea
-                    placeholder="Brief description for search engines..."
-                    value={seoDescription}
-                    onChange={(e) => setSeoDescription(e.target.value)}
-                    rows={3}
-                    className="rounded-lg text-sm resize-none"
-                  />
-                  <p className="text-[11px]" style={{ color: "var(--fg-subtle)" }}>
-                    {seoDescription.length || 0}/160 recommended
-                  </p>
-                </div>
-                {/* Preview */}
-                <div className="rounded-lg border border-border bg-muted p-3">
-                  <p className="text-[11px] mb-1" style={{ color: "var(--fg-subtle)" }}>Search preview</p>
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--accent-strong)" }}>
-                    {seoTitle || title || "Page Title"}
-                  </p>
-                  <p className="text-xs truncate" style={{ color: "var(--success)" }}>
-                    {typeof window !== "undefined" ? window.location.origin : ""}
-                    {originalNode?.full_url || "/"}
-                  </p>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                    {seoDescription || "No description set. Search engines will use page content."}
-                  </p>
-                </div>
-              </CardContent>
-          </Card>
         </div>
       </form>
 

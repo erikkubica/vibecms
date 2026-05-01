@@ -406,7 +406,7 @@
     border: none !important;
     border-bottom: 1px solid var(--divider) !important;
     border-radius: 0 !important;
-    padding: 0 !important;
+    padding: 0 16px !important;
     height: auto !important;
     min-height: 0 !important;
     gap: 0 !important;

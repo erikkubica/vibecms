@@ -572,7 +572,7 @@ export function ListFooter({
       style={{
         padding: "10px 14px",
         borderTop: "1px solid var(--divider)",
-        background: "var(--sub-bg)",
+        background: "transparent",
       }}
     >
       <div className="flex items-center" style={{ gap: 12, fontSize: 12, color: "var(--fg-muted)" }}>
@@ -695,9 +695,8 @@ export function EmptyState({
       className="flex flex-col items-center justify-center"
       style={{
         gap: 8,
-        padding: "44px 0",
-        background: "var(--sub-bg)",
-        borderRadius: "var(--radius-lg)",
+        padding: "60px 0",
+        background: "transparent",
         color: "var(--fg-subtle)",
       }}
     >

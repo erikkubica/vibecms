@@ -1120,8 +1120,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                 )}
               </div>
 
-              {/* Raw JSON collapsible */}
-              <Separator />
+              {/* Raw JSON collapsible — sep-label style: mono uppercase tiny text with flanking dividers */}
               <div>
                 <button
                   type="button"
@@ -1131,13 +1130,29 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
                     }
                     setShowRawJson(!showRawJson);
                   }}
-                  className="flex items-center gap-2 text-xs text-muted-foreground transition-colors"
+                  className="flex items-center cursor-pointer w-full"
+                  style={{
+                    gap: 8,
+                    margin: "8px 0 4px",
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    fontSize: 11,
+                    fontWeight: 500,
+                    fontFamily: "var(--font-mono)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    color: "var(--fg-muted)",
+                    transition: "color 0.12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg-2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-muted)")}
                 >
-                  <CodeIcon className="h-3.5 w-3.5" />
-                  <span>Advanced: Raw JSON</span>
-                  <ChevronRight
-                    className={`h-3 w-3 transition-transform ${showRawJson ? "rotate-90" : ""}`}
-                  />
+                  <span style={{ flex: 1, height: 1, background: "var(--divider)" }} />
+                  <CodeIcon size={11} />
+                  <span>Raw JSON</span>
+                  <ChevronRight size={9} style={{ transform: showRawJson ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }} />
+                  <span style={{ flex: 1, height: 1, background: "var(--divider)" }} />
                 </button>
                 {showRawJson && (
                   <div className="mt-3 space-y-2">

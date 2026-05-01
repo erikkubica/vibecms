@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   Save,
   Trash2,
   Loader2,
@@ -21,6 +20,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Titlebar } from "@/components/ui/titlebar";
+import { MetaRow, MetaList } from "@/components/ui/meta-row";
 import {
   Dialog,
   DialogContent,

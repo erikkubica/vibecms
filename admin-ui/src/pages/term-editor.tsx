@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
-  ArrowLeft,
   Save,
   Trash2,
   Loader2,
@@ -41,6 +40,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LanguageSelect, LanguageLabel } from "@/components/ui/language-select";
+import { Titlebar } from "@/components/ui/titlebar";
+import { MetaRow, MetaList } from "@/components/ui/meta-row";
 import { toast } from "sonner";
 import CustomFieldInput from "@/components/ui/custom-field-input";
 import { usePageMeta } from "@/components/layout/page-meta";
@@ -80,6 +81,7 @@ export default function TermEditorPage() {
   const [creatingTranslation, setCreatingTranslation] = useState(false);
   const [parentId, setParentId] = useState<number | null>(null);
   const [siblingTerms, setSiblingTerms] = useState<TaxonomyTerm[]>([]);
+  const [originalTerm, setOriginalTerm] = useState<TaxonomyTerm | null>(null);
 
   const [autoSlug, setAutoSlug] = useState(!isEdit);
 
@@ -105,6 +107,7 @@ export default function TermEditorPage() {
         let effectiveLang = currentCode;
         if (isEdit && id) {
           const term = await getTerm(Number(id));
+          setOriginalTerm(term);
           setName(term.name);
           setSlug(term.slug);
           setDescription(term.description || "");
@@ -252,69 +255,19 @@ export default function TermEditorPage() {
     <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       {/* Main content */}
       <div className="space-y-4 min-w-0">
-        {/* Compact pill header */}
-        <div
-          className="flex items-center gap-1.5"
-          style={{
-            padding: 6,
-            background: "var(--card-bg)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-lg)",
-            boxShadow: "var(--shadow-sm)",
-          }}
-        >
-          <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
-            <Link to={`/admin/content/${nodeType}/taxonomies/${taxSlug}`} title={`Back to ${taxLabel}`}>
-              <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
-            </Link>
-          </Button>
-
-          <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
-            <span
-              className="shrink-0 uppercase"
-              style={{ fontSize: 10.5, fontWeight: 600, color: "var(--fg-muted)", letterSpacing: "0.06em" }}
-            >
-              Name
-            </span>
-            <input
-              placeholder={`Enter ${taxLabel?.toLowerCase()} name`}
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              required
-              className="flex-1 min-w-0 bg-transparent outline-none"
-              style={{ border: "none", padding: "6px 4px", fontSize: 14, fontWeight: 500, color: "var(--fg)" }}
-            />
-          </div>
-
-          <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
-
-          <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
-            <span className="shrink-0" style={{ fontSize: 11, color: "var(--fg-subtle)", fontFamily: "var(--font-mono)" }}>/</span>
-            <input
-              placeholder="auto-generated"
-              value={slug}
-              onChange={(e) => { setAutoSlug(false); setSlug(slugify(e.target.value)); }}
-              disabled={autoSlug}
-              required
-              className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
-              style={{ border: "none", padding: "6px 0", fontSize: 12.5, color: "var(--fg)", fontFamily: "var(--font-mono)" }}
-            />
-            <button
-              type="button"
-              className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
-              style={{
-                color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
-                background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
-                border: "1px solid var(--border)",
-                letterSpacing: "0.04em",
-              }}
-              onClick={() => setAutoSlug(!autoSlug)}
-              title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate from name"}
-            >
-              {autoSlug ? "Auto" : "Edit"}
-            </button>
-          </div>
-        </div>
+        <Titlebar
+          title={name}
+          onTitleChange={handleNameChange}
+          titleLabel="Name"
+          titlePlaceholder={`Enter ${taxLabel?.toLowerCase()} name`}
+          slug={slug}
+          onSlugChange={(v) => { setAutoSlug(false); setSlug(slugify(v)); }}
+          slugPrefix="/"
+          autoSlug={autoSlug}
+          onAutoSlugToggle={() => setAutoSlug(!autoSlug)}
+          id={isEdit && id ? Number(id) : undefined}
+          onBack={() => navigate(`/admin/content/${nodeType}/taxonomies/${taxSlug}`)}
+        />
 
         {/* Description */}
         <Card>
@@ -412,7 +365,7 @@ export default function TermEditorPage() {
 
           <Button
             type="submit"
-            className="w-full bg-primary text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+            className="w-full"
             disabled={saving}
           >
             {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
@@ -421,13 +374,23 @@ export default function TermEditorPage() {
           {isEdit && (
             <Button
               type="button"
-              variant="outline"
-              className="w-full hover: rounded-lg font-medium h-8 text-xs" style={{background: "var(--danger-bg)", borderColor: "var(--danger-border)", color: "var(--danger)"}}
+              variant="ghost"
+              className="w-full"
+              style={{ color: "var(--danger)" }}
               onClick={() => setShowDeleteDialog(true)}
             >
               <Trash2 className="mr-1.5 h-3.5 w-3.5" />
               Delete
             </Button>
+          )}
+          {isEdit && originalTerm && (
+            <>
+              <div style={{ height: 1, background: "var(--divider)", margin: "4px 0" }} />
+              <MetaList>
+                {originalTerm.created_at && <MetaRow label="Created" value={new Date(originalTerm.created_at).toLocaleDateString("en-GB")} />}
+                {originalTerm.updated_at && <MetaRow label="Updated" value={new Date(originalTerm.updated_at).toLocaleDateString("en-GB")} />}
+              </MetaList>
+            </>
           )}
         </SidebarCard>
 

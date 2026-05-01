@@ -3,15 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   Save,
   Loader2,
-  ArrowLeft,
   Globe,
   Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Titlebar } from "@/components/ui/titlebar";
+import { MetaRow, MetaList } from "@/components/ui/meta-row";
 import { toast } from "sonner";
 import { usePageMeta } from "@/components/layout/page-meta";
 import {
@@ -20,11 +20,11 @@ import {
   updateMenu,
   replaceMenuItems,
   getLanguages,
+  type Menu,
   type MenuItem,
   type Language,
 } from "@/api/client";
 import MenuTree, { generateTempId } from "@/components/menu-tree";
-import { Link } from "react-router-dom";
 
 function slugify(text: string): string {
   return text
@@ -66,6 +66,7 @@ export default function MenuEditorPage() {
   const [version, setVersion] = useState(1);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+  const [originalMenu, setOriginalMenu] = useState<Menu | null>(null);
 
   usePageMeta([
     "Menus",
@@ -77,6 +78,7 @@ export default function MenuEditorPage() {
     setLoading(true);
     try {
       const menu = await getMenu(id);
+      setOriginalMenu(menu);
       setName(menu.name);
       setSlug(menu.slug);
       setSlugTouched(true);
@@ -203,90 +205,22 @@ export default function MenuEditorPage() {
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       {/* Main content */}
       <div className="space-y-4 min-w-0">
-        {/* Compact pill header */}
-        <div
-          className="flex items-center gap-1.5"
-          style={{
-            padding: 6,
-            background: "var(--card-bg)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-lg)",
-            boxShadow: "var(--shadow-sm)",
+        <Titlebar
+          title={name}
+          onTitleChange={handleNameChange}
+          titleLabel="Name"
+          titlePlaceholder="Menu name"
+          slug={slug}
+          onSlugChange={(v) => { setSlugTouched(true); setSlug(v); }}
+          slugPrefix="/"
+          autoSlug={!slugTouched}
+          onAutoSlugToggle={() => {
+            if (slugTouched) setSlug(slugify(name));
+            setSlugTouched(!slugTouched);
           }}
-        >
-          <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
-            <Link to="/admin/menus" title="Back to Menus">
-              <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
-            </Link>
-          </Button>
-
-          {/* Name field */}
-          <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
-            <span
-              className="shrink-0 uppercase"
-              style={{ fontSize: 10.5, fontWeight: 600, color: "var(--fg-muted)", letterSpacing: "0.06em" }}
-            >
-              Name
-            </span>
-            <input
-              placeholder="Menu name"
-              value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
-              required
-              className="flex-1 min-w-0 bg-transparent outline-none"
-              style={{ border: "none", padding: "6px 4px", fontSize: 14, fontWeight: 500, color: "var(--fg)" }}
-            />
-          </div>
-
-          <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
-
-          {/* Slug field */}
-          <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
-            <span
-              className="shrink-0"
-              style={{ fontSize: 11, color: "var(--fg-subtle)", fontFamily: "var(--font-mono)" }}
-            >
-              /
-            </span>
-            <input
-              placeholder="menu-slug"
-              value={slug}
-              onChange={(e) => { setSlugTouched(true); setSlug(e.target.value); }}
-              disabled={!slugTouched}
-              required
-              className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
-              style={{ border: "none", padding: "6px 0", fontSize: 12.5, color: "var(--fg)", fontFamily: "var(--font-mono)" }}
-            />
-            <button
-              type="button"
-              className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
-              style={{
-                color: !slugTouched ? "var(--accent)" : "var(--fg-muted)",
-                background: !slugTouched ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
-                border: "1px solid var(--border)",
-                letterSpacing: "0.04em",
-              }}
-              onClick={() => {
-                if (slugTouched) setSlug(slugify(name));
-                setSlugTouched(!slugTouched);
-              }}
-              title={!slugTouched ? "Click to edit slug manually" : "Click to auto-generate from name"}
-            >
-              {!slugTouched ? "Auto" : "Edit"}
-            </button>
-          </div>
-
-          {/* Version badge */}
-          {!isNew && (
-            <Badge
-              variant="secondary"
-              className="shrink-0 font-mono"
-              style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
-            >
-              v{version}
-            </Badge>
-          )}
-        </div>
+          id={!isNew ? id : undefined}
+          onBack={() => navigate("/admin/menus")}
+        />
 
         <MenuTree items={menuItems} onChange={setMenuItems} autoEditId={lastAddedId} />
 
@@ -336,11 +270,21 @@ export default function MenuEditorPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-primary text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+              className="w-full"
             >
               {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
               {saving ? "Saving..." : "Save Menu"}
             </Button>
+            {!isNew && originalMenu && (
+              <>
+                <div style={{ height: 1, background: "var(--divider)", margin: "4px 0" }} />
+                <MetaList>
+                  <MetaRow label="Version" value={`v${version}`} />
+                  {originalMenu.created_at && <MetaRow label="Created" value={new Date(originalMenu.created_at).toLocaleDateString("en-GB")} />}
+                  {originalMenu.updated_at && <MetaRow label="Updated" value={new Date(originalMenu.updated_at).toLocaleDateString("en-GB")} />}
+                </MetaList>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

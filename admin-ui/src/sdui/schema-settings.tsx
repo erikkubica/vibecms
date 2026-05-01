@@ -228,50 +228,50 @@ export function SchemaSettings({
           ))}
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+        <aside className="lg:sticky lg:top-4 lg:self-start" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <SidebarCard title="Publish">
-            {hasTranslatable && languages.length > 0 && (
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">
-                  Language
-                </Label>
-                <LanguageSelect
-                  languages={languages}
-                  value={pageLocale}
-                  onChange={setPageLocale}
-                />
-                <p className="text-[11px] leading-snug text-muted-foreground">
-                  Translatable fields store a separate value per language.
-                  Fields marked “Global” apply to every language.
-                </p>
-              </div>
-            )}
-            {!hasTranslatable && (
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                These settings apply to every language.
-              </p>
-            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              {hasTranslatable && languages.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <Label style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", letterSpacing: "-0.005em" }}>Language</Label>
+                  <LanguageSelect
+                    languages={languages}
+                    value={pageLocale}
+                    onChange={setPageLocale}
+                  />
+                  <span style={{ fontSize: 11.5, color: "var(--fg-muted)", lineHeight: 1.45, letterSpacing: "-0.005em" }}>
+                    Translatable fields store a separate value per language. Fields marked “Global” apply to every language.
+                  </span>
+                </div>
+              ) : (
+                <span style={{ fontSize: 11.5, color: "var(--fg-muted)", lineHeight: 1.45, letterSpacing: "-0.005em" }}>
+                  These settings apply to every language.
+                </span>
+              )}
 
-            <Button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
-              className="w-full bg-primary hover:bg-primary/90 text-white shadow-sm rounded-lg font-medium"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
+              <hr style={{ border: "none", borderTop: "1px solid var(--divider)", margin: "4px 0" }} />
 
-            {show_clear_cache && (
               <Button
-                variant="outline"
-                onClick={handleClearCache}
-                disabled={clearing}
-                className="w-full rounded-lg font-medium"
+                onClick={handleSave}
+                disabled={saving || !hasChanges}
+                className="w-full"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${clearing ? "animate-spin" : ""}`} />
-                {clearing ? "Clearing..." : "Clear Cache"}
+                <Save className="mr-1.5 h-3.5 w-3.5" />
+                {saving ? "Saving…" : "Save changes"}
               </Button>
-            )}
+
+              {show_clear_cache && (
+                <Button
+                  variant="outline"
+                  onClick={handleClearCache}
+                  disabled={clearing}
+                  className="w-full"
+                >
+                  <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${clearing ? "animate-spin" : ""}`} />
+                  {clearing ? "Clearing…" : "Clear cache"}
+                </Button>
+              )}
+            </div>
           </SidebarCard>
         </aside>
       </div>

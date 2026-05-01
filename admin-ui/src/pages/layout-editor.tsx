@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   Save,
   Trash2,
   Loader2,
@@ -26,6 +25,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Titlebar } from "@/components/ui/titlebar";
+import { MetaRow, MetaList } from "@/components/ui/meta-row";
 import {
   Select,
   SelectContent,
@@ -244,98 +245,19 @@ export default function LayoutEditorPage() {
       <form onSubmit={handleSave} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Main content */}
         <div className="space-y-4 min-w-0">
-          {/* Title + Slug pill */}
-          <div
-            className="flex items-center gap-1.5"
-            style={{
-              padding: 6,
-              background: "var(--card-bg)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-lg)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <Button variant="ghost" size="icon" asChild className="h-7 w-7 shrink-0">
-              <Link to="/admin/layouts" title="Back to Layouts">
-                <ArrowLeft className="h-3.5 w-3.5" style={{ color: "var(--fg-muted)" }} />
-              </Link>
-            </Button>
-            <div className="flex items-center gap-1.5 flex-[1_1_60%] min-w-0 px-1">
-              <span
-                className="shrink-0 uppercase"
-                style={{
-                  fontSize: 10.5,
-                  fontWeight: 600,
-                  color: "var(--fg-muted)",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                Name
-              </span>
-              <input
-                placeholder="Main Layout"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isManaged}
-                required
-                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
-                style={{
-                  border: "none",
-                  padding: "6px 4px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "var(--fg)",
-                }}
-              />
-            </div>
-            <div className="w-px h-5 shrink-0" style={{ background: "var(--border)" }} />
-            <div className="flex items-center gap-1 flex-[1_1_40%] min-w-0 px-1">
-              <span
-                className="shrink-0"
-                style={{
-                  fontSize: 11,
-                  color: "var(--fg-subtle)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
-                slug:
-              </span>
-              <input
-                placeholder="main-layout"
-                value={slug}
-                onChange={(e) => {
-                  setAutoSlug(false);
-                  setSlug(e.target.value);
-                }}
-                disabled={isManaged || autoSlug}
-                required
-                className="flex-1 min-w-0 bg-transparent outline-none disabled:opacity-60"
-                style={{
-                  border: "none",
-                  padding: "6px 0",
-                  fontSize: 12.5,
-                  color: "var(--fg)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              />
-              {!isManaged && (
-                <button
-                  type="button"
-                  className="shrink-0 px-1.5 py-0.5 rounded text-[10.5px] font-medium uppercase"
-                  style={{
-                    color: autoSlug ? "var(--accent)" : "var(--fg-muted)",
-                    background: autoSlug ? "color-mix(in oklab, var(--accent) 12%, transparent)" : "var(--sub-bg)",
-                    border: "1px solid var(--border)",
-                    letterSpacing: "0.04em",
-                  }}
-                  onClick={() => setAutoSlug(!autoSlug)}
-                  title={autoSlug ? "Click to edit slug manually" : "Click to auto-generate slug from name"}
-                >
-                  {autoSlug ? "Auto" : "Edit"}
-                </button>
-              )}
-            </div>
-            {isManaged && (
+          <Titlebar
+            title={name}
+            onTitleChange={setName}
+            titleLabel="Name"
+            titlePlaceholder="Main Layout"
+            slug={slug}
+            onSlugChange={isManaged ? undefined : (v) => { setAutoSlug(false); setSlug(v); }}
+            slugPrefix=""
+            autoSlug={autoSlug}
+            onAutoSlugToggle={isManaged ? undefined : () => setAutoSlug(!autoSlug)}
+            id={isEdit && id ? Number(id) : undefined}
+            onBack={() => navigate("/admin/layouts")}
+            actions={isManaged ? (
               <Badge
                 className="shrink-0"
                 style={{
@@ -347,17 +269,8 @@ export default function LayoutEditorPage() {
               >
                 {source === "theme" ? (themeName || "Theme") : "Extension"}
               </Badge>
-            )}
-            {isEdit && (
-              <Badge
-                variant="secondary"
-                className="shrink-0 font-mono"
-                style={{ fontSize: 10.5, background: "var(--sub-bg)", color: "var(--fg-muted)", border: "1px solid var(--border)" }}
-              >
-                ID {id}
-              </Badge>
-            )}
-          </div>
+            ) : undefined}
+          />
 
           {/* Tabs */}
           <Tabs defaultValue="template" className="w-full">
@@ -467,7 +380,7 @@ export default function LayoutEditorPage() {
               ) : (
                 <Button
                   type="submit"
-                  className="w-full bg-primary text-white font-medium rounded-lg shadow-sm h-9 text-sm"
+                  className="w-full"
                   disabled={saving}
                 >
                   <Save className="mr-1.5 h-3.5 w-3.5" />
@@ -480,8 +393,9 @@ export default function LayoutEditorPage() {
                   <Separator />
                   <Button
                     type="button"
-                    variant="outline"
-                    className="w-full hover: rounded-lg font-medium h-8 text-xs" style={{background: "var(--danger-bg)", borderColor: "var(--danger-border)", color: "var(--danger)"}}
+                    variant="ghost"
+                    className="w-full"
+                    style={{ color: "var(--danger)" }}
                     onClick={() => setShowDelete(true)}
                   >
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" />
@@ -492,25 +406,12 @@ export default function LayoutEditorPage() {
 
               {isEdit && originalLayout && (
                 <>
-                  <Separator />
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs" style={{color: "var(--fg-subtle)"}}>
-                    <div className="flex justify-between">
-                      <span>Source</span>
-                      <span className="text-muted-foreground capitalize">{source}</span>
-                    </div>
-                    {originalLayout.created_at && (
-                      <div className="flex justify-between">
-                        <span>Created</span>
-                        <span className="text-muted-foreground">{new Date(originalLayout.created_at).toLocaleDateString("en-GB")}</span>
-                      </div>
-                    )}
-                    {originalLayout.updated_at && (
-                      <div className="flex justify-between">
-                        <span>Updated</span>
-                        <span className="text-muted-foreground">{new Date(originalLayout.updated_at).toLocaleDateString("en-GB")}</span>
-                      </div>
-                    )}
-                  </div>
+                  <div style={{ height: 1, background: "var(--divider)", margin: "4px 0" }} />
+                  <MetaList>
+                    <MetaRow label="Source" value={<span className="capitalize">{source}</span>} />
+                    {originalLayout.created_at && <MetaRow label="Created" value={new Date(originalLayout.created_at).toLocaleDateString("en-GB")} />}
+                    {originalLayout.updated_at && <MetaRow label="Updated" value={new Date(originalLayout.updated_at).toLocaleDateString("en-GB")} />}
+                  </MetaList>
                 </>
               )}
             </CardContent>

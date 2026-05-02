@@ -118,11 +118,24 @@ func (s *Server) buildGuide(ctx context.Context, topic string, verbose bool) (ma
 // guideSnapshot collects the live CMS state — same in every mode. Best-effort:
 // any failure becomes a missing key rather than a hard error so the static
 // parts of the guide always come back.
+//
+// IMPORTANT: every projection here is a SUMMARY shape, not the full record.
+// The guide must stay token-cheap regardless of how content-heavy the site
+// gets — a single page with 7 blocks of fields_data was enough to push the
+// whole response past the per-tool dump threshold (52 KB on a real install
+// versus 14 KB on a fresh one). Reach for core.node.get / core.theme.get /
+// core.block_types.get when full records are actually needed.
 func (s *Server) guideSnapshot(ctx context.Context) map[string]any {
 	snap := map[string]any{}
 	if s.deps.ThemeMgmtSvc != nil {
-		if t, err := s.deps.ThemeMgmtSvc.GetActive(); err == nil {
-			snap["active_theme"] = t
+		if t, err := s.deps.ThemeMgmtSvc.GetActive(); err == nil && t != nil {
+			snap["active_theme"] = map[string]any{
+				"id":      t.ID,
+				"slug":    t.Slug,
+				"name":    t.Name,
+				"version": t.Version,
+				"author":  t.Author,
+			}
 		}
 	}
 	if s.deps.CoreAPI != nil {
@@ -137,8 +150,28 @@ func (s *Server) guideSnapshot(ctx context.Context) map[string]any {
 			}
 			snap["node_types"] = summary
 		}
-		if q, err := s.deps.CoreAPI.QueryNodes(ctx, coreapi.NodeQuery{Limit: 5, OrderBy: "updated_at DESC"}); err == nil {
-			snap["recent_nodes"] = q
+		if q, err := s.deps.CoreAPI.QueryNodes(ctx, coreapi.NodeQuery{Limit: 5, OrderBy: "updated_at DESC"}); err == nil && q != nil {
+			recent := make([]map[string]any, 0, len(q.Nodes))
+			for _, n := range q.Nodes {
+				if n == nil {
+					continue
+				}
+				recent = append(recent, map[string]any{
+					"id":            n.ID,
+					"slug":          n.Slug,
+					"title":         n.Title,
+					"node_type":     n.NodeType,
+					"status":        n.Status,
+					"language_code": n.LanguageCode,
+					"full_url":      n.FullURL,
+					"updated_at":    n.UpdatedAt,
+				})
+			}
+			snap["recent_nodes"] = map[string]any{
+				"nodes": recent,
+				"total": q.Total,
+				"hint":  "Summary only. Use core.node.get(id) for full blocks_data / fields_data / seo_settings.",
+			}
 		}
 		if sections, err := s.collectNodeSections(ctx); err == nil && len(sections) > 0 {
 			snap["sections_by_node_type"] = sections

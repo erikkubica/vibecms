@@ -1,6 +1,23 @@
 # Squilla Database Schema
 
-Authoritative reference for the PostgreSQL schema, derived directly from the GORM models in `internal/models/`. The schema is managed by 38 embedded SQL migrations in `internal/db/migrations/` (`0001_initial_schema.sql` … `0037_password_reset_tokens.sql`); GORM is **not** used for auto-migrate. To add or modify a table, write a new migration file — see `core_dev_guide.md` §3.4.
+Authoritative reference for the PostgreSQL schema, derived directly from the GORM models in `internal/models/`. The schema is managed by 43 embedded SQL migrations in `internal/db/migrations/` (`0001_initial_schema.sql` … `0043_languages_world_seed.sql`); GORM is **not** used for auto-migrate. To add or modify a table, write a new migration file — see `core_dev_guide.md` §3.4.
+
+**Kernel/extensions boundary (commit `7e49268`):** Email and media tables that
+predate the boundary refactor have moved out of the core migration set into
+their owning extension's migration directory. Specifically:
+
+- `email_templates`, `email_layouts`, `email_rules`, `email_logs`,
+  `system_actions` are now owned by `extensions/email-manager/migrations/`.
+- `media_files` columns and `media_image_sizes` are owned by
+  `extensions/media-manager/migrations/`.
+
+The migration files originally under `internal/db/migrations/` for those
+tables (`0015_media_files.sql`, `0020_email_layouts.sql`,
+`0034_media_files_asset_metadata.sql`, parts of `0009_roles_actions_email.sql`
+and `0010_email_template_language.sql`) have been deleted. Existing installs
+keep the tables (extension migrations are `IF NOT EXISTS`-guarded); fresh
+installs get them on first activation of the owning extension. See
+`docs/extension_api.md` §10 (Migration Ownership Transfer) for the pattern.
 
 PostgreSQL 16+ is required. JSONB columns use GIN indexes where queried. Soft deletes use GORM's `gorm.DeletedAt`.
 
@@ -167,7 +184,12 @@ The atomic unit of CMS content. Every page, post, product, etc. is a row here.
 Indexes: GIN on `blocks_data`, partial unique on `full_url WHERE deleted_at IS NULL`, B-tree on `(status, language_code)`, `(parent_id)`, `(language_id)`, `(deleted_at)`.
 
 ### `content_node_revisions`
-Point-in-time snapshots created on every UpdateNode.
+Point-in-time **full** snapshots created on every UpdateNode. Migration
+`0041_node_revisions_full_snapshot.sql` widened the original blocks+SEO
+snapshot to capture every editable field, so a restore can recreate title,
+slug, status, language, layout, excerpt, featured image, custom fields, and
+taxonomy assignments — not just the block tree. Pre-0041 rows keep their
+existing two columns and the new ones default to empty/zero.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -175,8 +197,23 @@ Point-in-time snapshots created on every UpdateNode.
 | `node_id` | INT NOT NULL | FK → `content_nodes.id` |
 | `blocks_snapshot` | JSONB NOT NULL | |
 | `seo_snapshot` | JSONB NOT NULL | |
+| `title` | TEXT NOT NULL DEFAULT '' | Added 0041 |
+| `slug` | TEXT NOT NULL DEFAULT '' | Added 0041 |
+| `status` | VARCHAR(20) NOT NULL DEFAULT 'draft' | Added 0041 |
+| `language_code` | VARCHAR(10) NOT NULL DEFAULT 'en' | Added 0041 |
+| `layout_slug` | TEXT NULL | Added 0041 |
+| `excerpt` | TEXT NOT NULL DEFAULT '' | Added 0041 |
+| `featured_image` | JSONB NOT NULL DEFAULT '{}' | Added 0041 |
+| `fields_snapshot` | JSONB NOT NULL DEFAULT '{}' | Added 0041 — custom fields_data |
+| `taxonomies_snapshot` | JSONB NOT NULL DEFAULT '{}' | Added 0041 |
+| `version_number` | INT NOT NULL DEFAULT 0 | Added 0041 — node `version` at snapshot time |
 | `created_by` | INT NULL | FK → `users.id`; null for MCP/extension/system callers |
 | `created_at` | TIMESTAMPTZ | Daily retention sweep keeps 50 most-recent revisions per node |
+
+**Index:** `idx_node_revisions_node_created` on `(node_id, created_at DESC)`.
+
+The admin "Revisions" sidebar tab and `core.node.revisions` /
+`core.node.revision_restore` MCP tools both read this table.
 
 ### `node_types`
 Custom content types beyond `page`/`post`.
@@ -360,7 +397,12 @@ Tree of menu entries, hierarchical via `parent_id`.
 ## Media
 
 ### `media_files`
-Uploaded assets. Real handlers live in the `media-manager` extension; the kernel exposes only `MediaFile` model + `CoreAPI.UploadMedia`/`Get`/`Query`/`Delete`.
+Uploaded assets. Owned by the `media-manager` extension since commit
+`7e49268`. The kernel `MediaFile` model is gone; `core.media.*` calls now
+route through whichever plugin declares `provides:["media-provider"]` —
+`media-manager` is the bundled provider but operators can hot-swap an
+S3/R2/Cloudinary extension. Schema lives in
+`extensions/media-manager/migrations/`.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -380,6 +422,12 @@ Image sizes (`media_image_sizes`) and asset metadata are owned by the `media-man
 ---
 
 ## Email
+
+> **Owned by `email-manager` extension since commit `7e49268`.** The kernel
+> no longer creates these tables — the extension does, via
+> `extensions/email-manager/migrations/002_email_tables.sql`. Existing
+> installs already have them; the extension migration is idempotent. The
+> kernel `models/email_*.go` files were removed at the same time.
 
 ### `email_templates`
 Reusable subject + body templates rendered with `html/template`.
@@ -564,6 +612,32 @@ Per-tool-call audit trail. Daily retention sweep (commit `eb0c1eb`).
 
 Indexes: `(token_id, created_at DESC)`, `(tool, created_at DESC)`.
 
+### `pending_uploads`
+Single-row state machine for the three-step presigned-upload flow used by
+`core.<kind>.upload_init` → `PUT /api/uploads/<token>` →
+`core.<kind>.upload_finalize`. The token IS the auth for the PUT route, so
+high entropy + a short TTL + atomic state transitions are the entire
+security story. Added by migration `0042_pending_uploads.sql`. See
+`docs/extension_api.md` §9 (Presigned uploads) for the client contract.
+
+| Column | Type | Notes |
+|---|---|---|
+| `token` | VARCHAR(64) PK | Unguessable, single-use |
+| `kind` | VARCHAR(16) NOT NULL | `media`, `theme`, `extension` |
+| `user_id` | BIGINT NOT NULL | Issuer; the row is bound to them |
+| `filename` | TEXT NOT NULL DEFAULT '' | Optional hint from `_init` |
+| `mime_type` | TEXT NOT NULL DEFAULT '' | Optional hint from `_init` |
+| `max_bytes` | BIGINT NOT NULL | Per-kind cap (env-tunable: `SQUILLA_MEDIA_MAX_MB`, `SQUILLA_THEME_MAX_MB`, `SQUILLA_EXTENSION_MAX_MB`) |
+| `state` | VARCHAR(16) NOT NULL DEFAULT 'pending' | `pending` → `uploaded` → `finalized` |
+| `size_bytes` | BIGINT NULL | Set by PUT |
+| `sha256` | CHAR(64) NULL | Set by PUT, may be re-checked at finalize |
+| `temp_path` | TEXT NULL | `data/pending/<token>.bin` |
+| `created_at`, `expires_at`, `finalized_at` | TIMESTAMPTZ | ~15 min TTL |
+
+Index: `idx_pending_uploads_state_expires` on `(state, expires_at)`. A
+background ticker every 5 minutes deletes expired-not-finalized rows along
+with their temp files (`internal/uploads/cleanup.go`).
+
 ---
 
 ## Migration Catalog
@@ -578,19 +652,19 @@ Indexes: `(token_id, created_at DESC)`, `(tool, created_at DESC)`.
 | `0006_block_html_templates.sql` | `block_types.html_template` |
 | `0007_block_test_data.sql` | `block_types.test_data` |
 | `0008_layouts_menus.sql` | layouts, layout_blocks, menus, menu_items |
-| `0009_roles_actions_email.sql` | roles, system_actions, email_rules, email_templates, email_logs |
-| `0010_email_template_language.sql` | language fallback for email templates |
+| `0009_roles_actions_email.sql` | roles, system_actions (email tables now owned by email-manager extension) |
+| `0010_email_template_language.sql` | language fallback for email templates (email tables now owned by email-manager extension) |
 | `0011_themes.sql` | themes |
 | `0012_extensions.sql` | extensions |
 | `0012_template_source.sql` | `templates.source`, `theme_name` |
 | `0013_default_lang_hide_prefix.sql` | `languages.hide_prefix` |
 | `0014_extension_manifest.sql` | `extensions.manifest` JSONB |
-| `0015_media_files.sql` | media_files |
+| `0015_media_files.sql` | *(deleted in commit `7e49268`)* — media_files now owned by media-manager extension migrations |
 | `0016_add_manage_content_capability.sql` | seed admin role with `manage_content` |
 | `0017_extension_migrations.sql` | extension_migrations |
 | `0018_activate_builtin_extensions.sql` | activate media-manager + email-manager + sitemap-generator + smtp-provider + resend-provider |
 | `0019_block_type_cache_output.sql` | `block_types.cache_output` |
-| `0020_email_layouts.sql` | email_layouts |
+| `0020_email_layouts.sql` | *(deleted in commit `7e49268`)* — email_layouts now owned by email-manager extension migrations |
 | `0021_block_type_content_hash.sql` | `block_types.content_hash` |
 | `0022_single_active_theme.sql` | partial unique on `themes.is_active` |
 | `0023_node_standard_fields.sql` | featured_image, excerpt, taxonomies on content_nodes |
@@ -604,10 +678,16 @@ Indexes: `(token_id, created_at DESC)`, `(tool, created_at DESC)`.
 | `0031_slug_refs.sql` | `media_files.slug`, `content_nodes.layout_slug` |
 | `0032_supports_blocks.sql` | `node_types.supports_blocks`, `layouts.supports_blocks` |
 | `0033_activate_forms_extension.sql` | activate forms |
-| `0034_media_files_asset_metadata.sql` | media_files asset metadata |
+| `0034_media_files_asset_metadata.sql` | *(deleted in commit `7e49268`)* — media-manager extension owns this now |
 | `0035_builtin_node_type_labels.sql` | seed labels |
 | `0036_default_layout_seed_source.sql` | mark default layout source |
 | `0037_password_reset_tokens.sql` | password_reset_tokens |
+| `0038_site_settings_language_code.sql` | per-language storage on `site_settings` (composite PK `(key, language_code)`) |
+| `0039_site_settings_default_locale.sql` | drop the `''` "shared sentinel" — backfill leftover rows to the default-language code |
+| `0040_taxonomy_terms_i18n.sql` | per-language storage on `taxonomy_terms` (`language_code`, `translation_group_id`, slug uniqueness scoped per language) |
+| `0041_node_revisions_full_snapshot.sql` | widen `content_node_revisions` to capture title, slug, status, language, layout, excerpt, featured_image, fields, taxonomies, version |
+| `0042_pending_uploads.sql` | `pending_uploads` table powering the presigned `core.<kind>.upload_{init,finalize}` flow |
+| `0043_languages_world_seed.sql` | seed ~60 world languages (only English active by default; existing rows untouched) |
 
 Migrations are idempotent (`IF NOT EXISTS`, `IF EXISTS`, `ON CONFLICT DO NOTHING`) and run in numeric order. There is no rollback infrastructure — every migration must be designed so a failed deploy can be hand-rolled back.
 
@@ -615,13 +695,14 @@ Migrations are idempotent (`IF NOT EXISTS`, `IF EXISTS`, `ON CONFLICT DO NOTHING
 
 ## Extension-Owned Tables
 
-Extensions ship their own SQL migrations and own their own tables. The kernel does **not** know these schemas. Examples:
+Extensions ship their own SQL migrations and own their own tables. The kernel does **not** know these schemas.
 
 | Extension | Tables |
 |---|---|
 | `forms` | forms, form_submissions, form_webhook_logs |
-| `email-manager` | (uses core email_* tables) |
-| `media-manager` | media_image_sizes (sibling to core's `media_files`), media optimization queue |
+| `email-manager` | email_templates, email_layouts, email_rules, email_logs (migrated out of core in commit `7e49268`) |
+| `media-manager` | media_files, media_image_sizes, media optimization queue (migrated out of core in commit `7e49268`) |
+| `seo-extension` | (uses kernel `site_settings` only — no extension tables) |
 | `sitemap-generator` | sitemap snapshots |
 
-Extensions access only their declared `data_owned_tables` (manifest), enforced by the per-table ACL (commit `654dae5`).
+Extensions access only their declared `data_owned_tables` (manifest), enforced by the per-table ACL (commit `654dae5`). The migration ownership transfer pattern used to move email/media tables out of core is documented in `docs/extension_api.md` §10.

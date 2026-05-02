@@ -115,6 +115,9 @@ Core proxies `/admin/api/ext/{slug}/*` → plugin's `HandleHTTPRequest` RPC. Plu
 - **Performance:** Atomic operations for hot-swapped config maps and cache. Sub-50ms TTFB for public pages.
 - **Docker:** Multi-stage build: Node (admin SPA + extension UIs) → Go (binary + plugin binaries) → Alpine runtime.
 - **Binary uploads via MCP:** MCP tools that take binaries bigger than ~5 MB SHOULD provide an `_init`/`_finalize` pair alongside the inline-base64 form. Init returns a presigned URL + token, the client PUTs the bytes to `/api/uploads/<token>` (token IS the auth), then finalize routes through the same install pipeline as the legacy `body_base64` tool. See `docs/extension_api.md#9-presigned-uploads-large-binaries`.
+- **404 from themes:** the kernel does not own the 404 page. The public catch-all looks up a layout with the reserved slug `404` from the active theme. If absent, a minimal hardcoded fallback renders. See `themes/README.md` for the layout contract.
+- **Settings are schema-driven and per-language:** `internal/settings/builtin.go` declares the kernel-owned schema (general / SEO / advanced / languages / security groups). Each field has a `Translatable` flag. The store reads/writes per-locale rows with default-language fallback. Extensions register their own settings groups via `Registry.RegisterGroup`.
+- **Recovery CLI:** `squilla reset-password <email> <new-password>` is a sub-command of the binary, callable without a running server, for cases where the email-based reset flow is unavailable (no email provider configured, broken admin UI, etc.). Lives in `cmd/squilla/main.go` pre-config CLI dispatch.
 
 ## Documentation
 

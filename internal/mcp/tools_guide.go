@@ -2,6 +2,8 @@ package mcp
 
 import (
 	"context"
+	"sort"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -12,44 +14,111 @@ import (
 // rest of the MCP surface. The goal is to collapse the cold-start problem: one
 // call returns a goal→tool decision tree plus current CMS state, so the model
 // does not burn 10 discovery calls before it does useful work.
+//
+// Token budget: the default response is engineered to fit in <8 k tokens so
+// 125–250 k context models don't blow the per-tool dump threshold. Drilling
+// into a topic returns ~10–15 k tokens of focused content; verbose=true is
+// the escape hatch that returns the full ~30 k-token reference dump.
 func (s *Server) registerGuideTools() {
 	s.addTool(mcp.NewTool("core.guide",
-		mcp.WithDescription("META. Call this first when you're new to Squilla or unsure which tool to reach for. Returns a goal→tool decision tree (recipes for common journeys) plus a live snapshot of CMS state (active theme, counts, node types, recent nodes). Replaces ~10 discovery calls. Optional topic narrows the response: 'pages' | 'editing' | 'blocks' | 'themes' | 'taxonomies' | 'media' | 'extensions'. The full list is always returned in available_topics on the response."),
-		mcp.WithString("topic", mcp.Description("Optional: narrow the response to one domain. See available_topics on the response for the full set.")),
+		mcp.WithDescription("META — call FIRST. Returns a token-compact menu by default: available_topics, recipe goals (no notes), gotcha topic-keys (no summaries), tools_by_domain (names only), data_shapes, conventions, snapshot. Use { topic:'<topic>' } to drill into a single domain (full recipes + relevant gotchas + tool descriptions). Use { verbose:true } only when you need the entire reference dump (~30 k tokens). Topics: pages | editing | blocks | themes | taxonomies | media | extensions."),
+		mcp.WithString("topic", mcp.Description("Narrow to one domain. See available_topics on the menu response.")),
+		mcp.WithBoolean("verbose", mcp.Description("Return the full reference dump (recipes, gotchas, editing_playbook, every tool description). Default false to stay token-light.")),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
-		return s.buildGuide(ctx, stringArg(args, "topic"))
+		return s.buildGuide(ctx, stringArg(args, "topic"), boolArg(args, "verbose"))
 	})
 
 	s.addTool(mcp.NewTool("core.theme.standards",
-		mcp.WithDescription("Returns the official Squilla theme development standards. Use this to validate theme structure, block definitions (Rule 1.5), and field schemas (Rule 1.6). Always call this before creating or refactoring theme components."),
+		mcp.WithDescription("Squilla theme standards: structure, rules, capabilities, lifecycle. Compact by default; pass { verbose:true } for full template examples (theme.json/block.json/view.html/theme.tengo embedded source)."),
+		mcp.WithBoolean("verbose", mcp.Description("Include full template examples and seeding patterns. Default false.")),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
-		return themeStandards(), nil
+		return themeStandards(boolArg(args, "verbose")), nil
 	})
 
 	s.addTool(mcp.NewTool("core.extension.standards",
-		mcp.WithDescription("Returns the official Squilla extension development standards (manifest schema, capabilities, gRPC plugin lifecycle, admin-UI micro-frontend rules, list-page primitives, SDUI sidebar wiring, lifecycle events). Always call this before creating or refactoring an extension."),
+		mcp.WithDescription("Squilla extension standards: manifest, capabilities, gRPC lifecycle, admin-UI rules, design-system primitives, lifecycle events. Compact by default; pass { verbose:true } for the full reference."),
+		mcp.WithBoolean("verbose", mcp.Description("Include full reference (event_modes detail, sdui_reactivity, hot_deploy recipes, etc.). Default false.")),
 	), "read", func(ctx context.Context, args map[string]any) (any, error) {
-		return extensionStandards(), nil
+		return extensionStandards(boolArg(args, "verbose")), nil
 	})
 }
 
-// buildGuide assembles the static decision tree alongside a cheap live snapshot
-// of the CMS so the AI client has both "what can I do" and "what exists right
-// now" in a single payload.
-func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, error) {
-	out := map[string]any{
-		"version":          "1",
-		"namespace":        "core.<domain>.<verb>",
-		"recipes":          guideRecipes(topic),
-		"data_shapes":      guideShapes(),
-		"conventions":      guideConventions(),
-		"gotchas":          guideGotchas(),
-		"available_topics": guideTopics(),
-		"editing_playbook": editingPlaybook(),
+// buildGuide assembles the response in one of three modes:
+//
+//   - verbose=true        — full reference dump (recipes, gotchas, playbook,
+//                           every tool description). ~30 k tokens.
+//   - topic=<name>        — focused: full recipes + relevant gotchas +
+//                           editing_playbook (when topic=='editing') + tools
+//                           for that topic's domains. ~10–15 k tokens.
+//   - default (no args)   — compact menu: topic list, recipe goals only,
+//                           gotcha topic keys only, tool names grouped by
+//                           domain, snapshot. <8 k tokens.
+//
+// The compact menu is engineered so a 125–250 k context model can call
+// core.guide in the first turn without triggering a per-tool token dump.
+func (s *Server) buildGuide(ctx context.Context, topic string, verbose bool) (map[string]any, error) {
+	snap := s.guideSnapshot(ctx)
+
+	// Verbose escape hatch — return the full reference (legacy behavior).
+	if verbose {
+		return map[string]any{
+			"version":          "1",
+			"mode":             "verbose",
+			"namespace":        "core.<domain>.<verb>",
+			"recipes":          guideRecipes(""),
+			"data_shapes":      guideShapes(),
+			"conventions":      guideConventions(),
+			"gotchas":          guideGotchas(),
+			"available_topics": guideTopics(),
+			"editing_playbook": editingPlaybook(),
+			"snapshot":         snap,
+			"tool_index":       s.toolIndex(),
+		}, nil
 	}
 
-	// Live snapshot — best-effort. Any failure becomes a note rather than a
-	// hard error so the static parts of the guide are always returned.
+	// Topic mode — focused content for one domain.
+	if topic != "" {
+		out := map[string]any{
+			"version":          "1",
+			"mode":             "topic",
+			"topic":            topic,
+			"namespace":        "core.<domain>.<verb>",
+			"recipes":          guideRecipes(topic),
+			"gotchas":          gotchasForTopic(topic),
+			"data_shapes":      guideShapes(),
+			"conventions":      guideConventions(),
+			"available_topics": guideTopics(),
+			"snapshot":         snap,
+			"tools":            s.toolsForTopic(topic),
+			"hint":             "Pass verbose:true for the full reference dump. Call core.guide() with no args for the compact menu.",
+		}
+		if topic == "editing" {
+			out["editing_playbook"] = editingPlaybook()
+		}
+		return out, nil
+	}
+
+	// Default — compact menu. Goal: fit in <8 k tokens so the AI can call
+	// this first without burning a turn on a token-dumped response.
+	return map[string]any{
+		"version":   "1",
+		"mode":      "menu",
+		"namespace": "core.<domain>.<verb>",
+		"available_topics": guideTopics(),
+		"recipe_index": guideRecipeIndex(""),
+		"gotcha_topics": guideGotchaKeys(),
+		"data_shapes":   guideShapes(),
+		"conventions":   guideConventions(),
+		"snapshot":      snap,
+		"tools_by_domain": s.toolsByDomain(),
+		"next_step": "Call core.guide({topic:'<topic>'}) for full recipes + gotchas + tool descriptions in that domain. Use verbose:true only for the full dump (~30 k tokens).",
+	}, nil
+}
+
+// guideSnapshot collects the live CMS state — same in every mode. Best-effort:
+// any failure becomes a missing key rather than a hard error so the static
+// parts of the guide always come back.
+func (s *Server) guideSnapshot(ctx context.Context) map[string]any {
 	snap := map[string]any{}
 	if s.deps.ThemeMgmtSvc != nil {
 		if t, err := s.deps.ThemeMgmtSvc.GetActive(); err == nil {
@@ -71,15 +140,10 @@ func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, 
 		if q, err := s.deps.CoreAPI.QueryNodes(ctx, coreapi.NodeQuery{Limit: 5, OrderBy: "updated_at DESC"}); err == nil {
 			snap["recent_nodes"] = q
 		}
-		// Sections per node-type — derived from fields_data.section.{slug,name}
-		// across existing nodes. Surfaces the otherwise-invisible "what
-		// docs/category sections already exist?" question raised by AI authors.
 		if sections, err := s.collectNodeSections(ctx); err == nil && len(sections) > 0 {
 			snap["sections_by_node_type"] = sections
 		}
 	}
-	// Block types — slug+label only. Heavy fields (field_schema, html_template,
-	// block_css/js, test_data) stay behind explicit core.block_types.get calls.
 	if s.deps.BlockTypeSvc != nil {
 		if list, err := s.deps.BlockTypeSvc.ListAll(); err == nil {
 			out := make([]map[string]any, 0, len(list))
@@ -93,7 +157,6 @@ func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, 
 			snap["block_types"] = out
 		}
 	}
-	// Layouts — slug+name only. Use core.layout.get(id) for the template body.
 	if s.deps.LayoutSvc != nil {
 		if rows, _, err := s.deps.LayoutSvc.List(nil, "", 1, 200); err == nil {
 			out := make([]map[string]any, 0, len(rows))
@@ -108,17 +171,107 @@ func (s *Server) buildGuide(ctx context.Context, topic string) (map[string]any, 
 			snap["layouts"] = out
 		}
 	}
-	out["snapshot"] = snap
+	return snap
+}
 
-	// Tool index — flat list of every registered tool with its one-line
-	// description. Useful when the AI wants a quick sanity check against the
-	// recipes rather than a full capabilities dump.
-	out["tool_index"] = s.toolIndex()
-
-	if topic != "" {
-		out["topic"] = topic
+// guideRecipeIndex returns just goal+topic+steps from each recipe (no notes).
+// Used by the compact menu so the AI can see what's available without paying
+// the prose cost. The AI drills in via core.guide({topic:...}) for full notes.
+func guideRecipeIndex(topic string) []map[string]any {
+	all := guideRecipes(topic)
+	out := make([]map[string]any, 0, len(all))
+	for _, r := range all {
+		out = append(out, map[string]any{
+			"goal":  r["goal"],
+			"topic": r["topic"],
+			"steps": r["steps"],
+		})
 	}
-	return out, nil
+	return out
+}
+
+// guideGotchaKeys returns just the topic key of each gotcha. Used by the
+// compact menu — the AI can topic-drill via core.guide({topic:'<topic>'}) to
+// get full summaries for that area, or call verbose:true for everything.
+func guideGotchaKeys() []string {
+	all := guideGotchas()
+	out := make([]string, 0, len(all))
+	for _, g := range all {
+		if k, ok := g["topic"].(string); ok {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// gotchasForTopic returns gotchas relevant to a topic. Most gotchas are
+// cross-cutting — we return all of them in topic mode because their summaries
+// are short and the cross-domain ones (settings_per_language, presigned_uploads,
+// kernel_extensions_boundary, …) are worth surfacing on every topic call.
+// Compact menu mode excludes them entirely; the AI sees only the keys.
+func gotchasForTopic(topic string) []map[string]any {
+	return guideGotchas()
+}
+
+// toolDomain extracts "X" from "core.X.Y" (or "core.X" for two-part names).
+// Returns "" for malformed names.
+func toolDomain(name string) string {
+	parts := strings.Split(name, ".")
+	if len(parts) < 2 || parts[0] != "core" {
+		return ""
+	}
+	return parts[1]
+}
+
+// toolsByDomain returns {domain: [tool-names...]} — names only, no descriptions.
+// This replaces the verbose tool_index in the compact menu. ~95 tool names is
+// roughly 1 k tokens versus 5–6 k for the full descriptions.
+func (s *Server) toolsByDomain() map[string][]string {
+	out := map[string][]string{}
+	for _, t := range s.toolCatalog {
+		d := toolDomain(t.Name)
+		if d == "" {
+			continue
+		}
+		out[d] = append(out[d], t.Name)
+	}
+	for k := range out {
+		sort.Strings(out[k])
+	}
+	return out
+}
+
+// topicToolDomains maps a recipe topic to the tool-name domains relevant to it.
+// Used by toolsForTopic to scope the tool listing in topic mode.
+var topicToolDomains = map[string][]string{
+	"pages":      {"node", "nodetype", "render", "layout", "media", "term", "taxonomy"},
+	"editing":    {"node", "nodetype", "render", "layout", "term", "taxonomy", "settings", "media"},
+	"blocks":     {"block_types", "render"},
+	"themes":     {"theme", "layout", "block_types", "render", "settings", "menu"},
+	"taxonomies": {"taxonomy", "term", "nodetype", "node"},
+	"media":      {"media", "files"},
+	"extensions": {"extension", "settings", "data", "events", "filters"},
+}
+
+// toolsForTopic returns full tool descriptions for the domains relevant to
+// the topic. The AI gets exactly the verbs it needs without trawling all 95.
+func (s *Server) toolsForTopic(topic string) []toolCatalogEntry {
+	wanted, ok := topicToolDomains[topic]
+	if !ok {
+		// Unknown topic — return everything so the AI still gets useful info.
+		return s.toolCatalog
+	}
+	wantedSet := map[string]bool{}
+	for _, d := range wanted {
+		wantedSet[d] = true
+	}
+	out := make([]toolCatalogEntry, 0, len(s.toolCatalog))
+	for _, t := range s.toolCatalog {
+		if wantedSet[toolDomain(t.Name)] {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func guideRecipes(topic string) []map[string]any {
@@ -157,13 +310,13 @@ func guideRecipes(topic string) []map[string]any {
 			"goal":  "Tag content with a new taxonomy",
 			"topic": "taxonomies",
 			"steps": []string{"core.taxonomy.create", "core.term.create", "core.node.update"},
-			"notes": "term field values are objects {slug, name}, not bare strings. Terms are per-language (rows carry language_code; default = site's default language when omitted). To localize an existing term across languages call POST /admin/api/terms/<id>/translations with {language_code:'<code>'} — source and clone share a translation_group_id UUID. Slug uniqueness is per (node_type, taxonomy, slug, language_code), so the same slug can exist across languages.",
+			"notes": "Term field values are objects {slug, name}, never bare strings. Terms are per-language (rows carry language_code; defaults to site default). Translate via POST /admin/api/terms/<id>/translations {language_code:'<code>'} — source+clone share translation_group_id UUID. Uniqueness: (node_type, taxonomy, slug, language_code).",
 		},
 		{
 			"goal":  "Wire up an extension (media manager, email, etc.)",
 			"topic": "extensions",
 			"steps": []string{"core.extension.list", "core.extension.activate"},
-			"notes": "Activation is hot: HotActivate spawns the plugin gRPC subprocess, runs migrations, loads scripts, registers blocks. No app/container restart. Dropping a new extension directory onto disk (docker cp, volume mount, git pull) is picked up automatically by the fs watcher; call core.extension.rescan from CI/ops if you want an explicit trigger. restart_required is always false today; the flag is reserved.",
+			"notes": "Activation is hot: HotActivate spawns plugin subprocess, runs migrations, loads scripts, registers blocks — no restart. Dropping a new extension dir on disk (docker cp / volume / git pull) is auto-picked by the fs watcher; core.extension.rescan is the explicit trigger for CI/ops. restart_required always false (reserved flag).",
 		},
 		{
 			"goal":  "Upload and attach media",
@@ -205,7 +358,7 @@ func guideRecipes(topic string) []map[string]any {
 				"Verify in /admin/site-settings → SEO that defaults (default OG image, og_site_name, twitter_handle, robots_index) are populated",
 				"curl -s http://localhost/<slug> | grep -i 'og:' — confirm tags appear",
 			},
-			"notes": "head_meta resolution order: per-node SEO (node.seo.meta_title etc.) → site-wide defaults (Site Settings → SEO) → node title/excerpt + featured_image. og:image auto-uses featured_image when seo.og_image is empty. Translations emit hreflang alternates automatically. Robots: when seo_robots_index='false', noindex,nofollow lands in both X-Robots-Tag header AND <meta name=robots>. 404 pages force noindex regardless of the site-wide setting.",
+			"notes": "head_meta resolution: per-node seo → site-wide defaults → node title/excerpt+featured_image. og:image auto-uses featured_image when seo.og_image is empty. Translations emit hreflang automatically. seo_robots_index='false' → noindex,nofollow in both X-Robots-Tag header and <meta name=robots>. 404s force noindex regardless.",
 		},
 		{
 			"goal":  "Ship a custom 404 page with the theme",
@@ -217,7 +370,7 @@ func guideRecipes(topic string) []map[string]any {
 				"core.theme.activate(<slug>) — picks up the new layout",
 				"curl -i http://localhost/this-page-does-not-exist — verify status 404 and themed body",
 			},
-			"notes": "Reserved slug \"404\" is recognized first; legacy alias \"error\" is also accepted (squilla theme's existing layouts/error.html keeps working). When neither is registered, the default layout handles 404 responses. The synthesized not-found body lives in {{.node.blocks_html}} — same data shape as a regular page, so a 404 layout is usually just your default chrome with blocks_html inside it.",
+			"notes": "Slug `404` recognized first; legacy alias `error` also accepted. Neither registered → default layout handles 404s. Synthesized not-found body lives in {{.node.blocks_html}} (same shape as a regular page).",
 		},
 		{
 			"goal":  "Build a theme end-to-end (cold-boot, AI one-shot)",
@@ -234,7 +387,7 @@ func guideRecipes(topic string) []map[string]any {
 				"core.theme.standards (run again — verify no warnings)",
 				"GET / (curl/playwright — confirm public render returns 200, not empty)",
 			},
-			"notes": "ASYMMETRIES TO INTERNALIZE: (1) node level uses fields_data, blocks inside blocks_data use fields. (2) block.json uses key:, nodetypes.register uses name:. (3) select options are PLAIN STRINGS, never {value,label}. (4) term-typed fields need term_node_type in schema and store as {slug, name} object. (5) Settings keys keep their dots — templates use `index $s \"squilla.brand.version\"` or `mustSetting`. (6) Theme HTTP routes mount at /api/theme/<path>, not /<path>. (7) `dev_mode` global in seeds (true when SQUILLA_DEV_MODE=true) — branch to overwrite-on-reseed for fast iteration.",
+			"notes": "Asymmetries to internalize: (1) node→fields_data, block→fields. (2) block.json field key=`key`, nodetypes.register=`name`. (3) select options = plain strings, never {value,label}. (4) term fields: schema needs term_node_type; values stored as {slug,name}. (5) Settings keys keep dots — `index $s \"k.v\"` or mustSetting. (6) Theme HTTP routes mount at /api/theme/<path>. (7) `dev_mode` global in seeds (SQUILLA_DEV_MODE=true) → overwrite-on-reseed for fast iteration.",
 		},
 		{
 			"goal":  "Add a settings page to a theme",
@@ -247,19 +400,19 @@ func guideRecipes(topic string) []map[string]any {
 				"5. Storage: theme:<slug>:header:logo in site_settings (auto-encrypted for\n   secret-shaped keys).",
 				"6. Admin UI: a \"Theme Settings\" sidebar section appears with one entry per\n   declared page.",
 			},
-			"notes": "Field shapes follow the standard field-types reference (text/number/toggle/image/select/repeater/...). Type mismatches after a saved value never auto-mutate the DB — render falls back to the field's declared default and the admin form surfaces a 'previous value' hint. Tengo callers need the `theme_settings:read` capability (themes bypass; extensions list it in extension.json). Bad pages are soft-failed at activation (logged & skipped). Run core.theme.checklist({slug}) to verify schema files parse before activating.",
+			"notes": "Field shapes = standard field types (text/number/toggle/image/select/repeater/...). Saved-value type mismatches don't mutate the DB — render falls back to declared default; admin shows 'previous value' hint. Tengo callers need theme_settings:read (themes bypass; extensions list in extension.json). Bad pages soft-fail at activation (logged & skipped). Run core.theme.checklist({slug}) to validate before activating.",
 		},
 		{
 			"goal":  "Deploy a theme that lives outside the primary repo",
 			"topic": "themes",
 			"steps": []string{"core.theme.standards", "core.theme.deploy", "core.render.node_preview"},
-			"notes": "Build the theme directory locally, zip it (theme.json at root or one level deep), base64-encode the bytes, call core.theme.deploy({body_base64, activate:true}). The archive is unpacked into data/themes/<slug>/ (persistent volume — survives container restarts) via an atomic dir swap, the row is upserted, and — when activate=true — the theme is activated immediately. Image-bundled themes in themes/ are read-only; deploying a same-slug theme overrides the bundled copy on the next scan (data wins on collision). 50 MB cap. Slug must match [A-Za-z0-9_-]+. Re-deploying the same slug refreshes the existing row and overwrites files in place.",
+			"notes": "Zip (theme.json at root or one level deep), base64-encode, core.theme.deploy({body_base64, activate:true}). Archive lands in data/themes/<slug>/ (persistent volume) via atomic dir swap. Same-slug overrides bundled copy (data wins). 50 MB cap (use core.theme.deploy_init/_finalize for bigger). Slug ∈ [A-Za-z0-9_-]+. Re-deploy refreshes the row in place.",
 		},
 		{
 			"goal":  "Deploy an extension from a local build (no docker cp, no git push)",
 			"topic": "extensions",
 			"steps": []string{"core.extension.standards", "core.extension.deploy", "core.extension.get"},
-			"notes": "Zip the extension directory (extension.json + admin-ui/dist + scripts + bin/<plugin> if any), base64-encode, call core.extension.deploy({body_base64, activate:true}). The archive lands in data/extensions/<slug>/ (persistent volume); image-bundled extensions in extensions/ stay untouched. Plugin binaries declared in manifest.plugins[].binary are chmod'd to 0755 automatically. Pre-build them for the host OS/arch — Squilla does not cross-compile. activate=true runs HotActivate (migrations, plugin spawn, script load, block load) without a server restart. 50 MB cap.",
+			"notes": "Zip extension dir (extension.json + admin-ui/dist + scripts + bin/<plugin> if any), base64-encode, core.extension.deploy({body_base64, activate:true}). Lands in data/extensions/<slug>/ (persistent). Plugin binaries auto-chmod 0755. Pre-build for host OS/arch — no cross-compile. activate:true runs HotActivate (migrations, plugin spawn, scripts, blocks) without restart. 50 MB cap (use core.extension.deploy_init/_finalize for bigger).",
 		},
 		{
 			"goal":  "Author and publish a documentation page (squilla theme)",
@@ -289,6 +442,36 @@ func guideRecipes(topic string) []map[string]any {
 			"topic": "editing",
 			"steps": []string{"core.layout.list", "core.node.create / core.node.update with layout_slug:'<slug>'"},
 			"notes": "If layout_slug is omitted, the node uses the active theme's default layout. Node-type-level defaults are NOT applied at write time; setting layout_slug explicitly is the only reliable way to opt into a non-default layout (e.g. 'docs').",
+		},
+		{
+			"goal":  "Bulk-patch a column across many nodes (normalization sweep)",
+			"topic": "editing",
+			"steps": []string{
+				"core.node.query({node_type:'documentation', limit:200}) — sanity-check what's missing",
+				"core.node.update_many({filter:{node_type:'documentation'}, set:{layout_slug:'docs'}}) — only safe top-level columns are accepted: status, layout_slug, language_code",
+				"core.node.query — confirm the sweep landed",
+			},
+			"notes": "Use update_many ONLY for top-level column normalization. Patches to fields_data / blocks_data / seo_settings still need per-node core.node.update so per-node merge logic runs.",
+		},
+		{
+			"goal":  "Browse and restore a node revision",
+			"topic": "editing",
+			"steps": []string{
+				"core.node.revisions(id) — newest-first list (≤100 entries) of {revision_id, version_number, status, language_code, layout_slug, created_at, created_by}",
+				"core.node.get(id) — capture the current state's revision_id you'd want to come back to",
+				"core.node.revision_restore({id, revision_id}) — applies the snapshot; returns the restored node",
+			},
+			"notes": "Restore is itself reversible — it snapshots the pre-restore state as a fresh revision before applying the chosen one. Migration 0041 widened revisions from blocks+SEO only to a full snapshot (title/slug/status/language/layout/excerpt/featured_image/fields_data/taxonomies). Pre-0041 rows lack the new columns and restore through a partial-restore code path.",
+		},
+		{
+			"goal":  "Upload a large media file (>5 MB) without base64 overhead",
+			"topic": "media",
+			"steps": []string{
+				"core.media.upload_init({filename, mime_type}) → {upload_url, upload_token, expires_at, max_bytes}",
+				"PUT <upload_url> with the raw bytes — NO Authorization header (the token in the URL is the auth)",
+				"core.media.upload_finalize({upload_token, sha256?}) — returns the same shape as core.media.upload",
+			},
+			"notes": "Token TTL ~15 min, single-use, bound to the issuing user. Bytes stream straight to data/pending/<token>.bin while computing SHA-256. Default cap 50 MB (env: SQUILLA_MEDIA_MAX_MB). Same flow exists for themes (core.theme.deploy_init / .deploy_finalize, default 200 MB) and extensions (core.extension.deploy_init / .deploy_finalize, default 200 MB).",
 		},
 	}
 	if topic == "" {
@@ -382,27 +565,43 @@ func guideGotchas() []map[string]any {
 		},
 		{
 			"topic":   "settings_per_language",
-			"summary": "site_settings rows carry a language_code. Reads scope to the caller's locale (X-Admin-Language for admin, request locale for public render) and FALL BACK to the default-language row when no per-locale value exists. The legacy `''` shared sentinel is gone — every row has a real language code (migration 0040 backfilled). Theme settings inherit the same model; there is no `translatable` flag on the schema, every field is implicitly per-locale.",
+			"summary": "site_settings rows have a language_code. Reads scope to caller's locale (X-Admin-Language admin / request locale public) with default-language fallback. Legacy `''` shared sentinel removed (migration 0040 backfilled). Theme settings same model; no `translatable` flag — every field is implicitly per-locale.",
 		},
 		{
 			"topic":   "terms_per_language",
-			"summary": "taxonomy_terms rows are per-language. Slug uniqueness is (node_type, taxonomy, slug, language_code). To create a translation of an existing term: POST /admin/api/terms/<id>/translations with {language_code:'<code>'} — source row gets a fresh translation_group_id UUID if it didn't have one, clone joins the same group. Routes /terms/:id/translations are registered before the generic /terms/:nodeType/:taxonomy because they share a 3-segment shape and Fiber matches by registration order.",
+			"summary": "taxonomy_terms are per-language. Uniqueness: (node_type, taxonomy, slug, language_code). Translate via POST /admin/api/terms/<id>/translations {language_code:'<code>'} — source gets fresh translation_group_id UUID, clone joins same group. Route /terms/:id/translations registered before /terms/:nodeType/:taxonomy (Fiber matches by registration order).",
 		},
 		{
 			"topic":   "themes_persistent_data_dir",
-			"summary": "Themes and extensions live in two parallel dirs: image-bundled (themes/, extensions/, read-only) + operator-installed (data/themes/, data/extensions/, persistent volume). Both scanned at boot; data wins on slug collision. Writes (theme.deploy, extension.deploy, git install, zip upload) all target data/. Delete refuses to rmdir under the bundled root so a same-slug bundled theme stays available as fallback. docker-compose mounts ./data:/app/data; coolify-compose mounts the squilla-data named volume. Without this volume, theme.deploy unpacks into the container's writable layer and gets wiped on restart.",
+			"summary": "Two parallel dirs: image-bundled (themes/, extensions/, read-only) + operator-installed (data/themes/, data/extensions/, persistent volume). Both scanned at boot; data/ wins on slug collision. All writes (theme.deploy, extension.deploy, git install, zip) target data/. Delete refuses rmdir under bundled root. docker-compose: ./data:/app/data; coolify: squilla-data named volume. Missing volume → theme.deploy gets wiped on container restart.",
 		},
 		{
 			"topic":   "theme_activate_pre_flight",
-			"summary": "core.theme.activate stat()s theme.json on disk before destroying the previous theme's registration. If the manifest is missing (e.g. files wiped from a non-persistent layer), Activate returns an error and the previous theme stays intact — preventing the 'reactivate to fix it' flow from wiping all blocks/layouts/templates with nothing to replace them.",
+			"summary": "core.theme.activate stat()s theme.json before deregistering the previous theme. Missing manifest → returns error and the previous theme stays intact, preventing 'reactivate to fix it' from wiping all blocks/layouts/templates with nothing to replace them.",
 		},
 		{
 			"topic":   "lost_admin_password",
-			"summary": "Recover via CLI: `docker exec -it <app> ./squilla reset-password <email> <new-password>`. Hashes via the same auth.HashPassword used at signup, writes directly to users.password_hash. Idempotent. Works without SMTP. Setting ADMIN_PASSWORD env var only takes effect during first-boot seed (when no admin user exists yet); it does NOT reset an existing user's password.",
+			"summary": "Recover via CLI: `docker exec -it <app> ./squilla reset-password <email> <new-password>`. Hashes via auth.HashPassword, writes to users.password_hash. Idempotent. Works without SMTP. ADMIN_PASSWORD env only seeds the first-boot user — does NOT reset an existing user.",
 		},
 		{
 			"topic":   "git_install_https_only",
 			"summary": "core.theme.git_install (and InstallFromGit) only accepts https:// URLs. SSH-style git@github.com:owner/repo.git is rejected upfront with a clear message — the kernel SSH key would be overprivileged for cloning arbitrary themes. For private repos use a https URL + a personal access token in the token field.",
+		},
+		{
+			"topic":   "kernel_extensions_boundary",
+			"summary": "Commit 7e49268 moved features out of core: email dispatcher → extensions/email-manager; /robots.txt + OG/Twitter head_meta → extensions/seo-extension; media_files + optimisation pipeline → extensions/media-manager. CoreAPI surface (SendEmail, UploadMedia, ...) unchanged — calls route to the active plugin that declares the matching `provides` tag (`email.provider`, `media-provider`). 'no provider for X' = activate the right extension. Hot-swap S3/R2/Cloudinary by activating a higher-priority plugin with provides:['media-provider'].",
+		},
+		{
+			"topic":   "presigned_uploads",
+			"summary": "Binaries >5 MB: core.<kind>.upload_init → PUT raw bytes to /api/uploads/<token> (no Authorization header — token IS the auth) → core.<kind>.upload_finalize. <kind> ∈ {media, theme, extension}. Tokens 64 chars, single-use, ~15 min TTL, user+kind bound. Caps via SQUILLA_{MEDIA,THEME,EXTENSION}_MAX_MB (50/200/200). Legacy base64 tools still work for tiny payloads.",
+		},
+		{
+			"topic":   "node_revisions_full_snapshot",
+			"summary": "Migration 0041 widened content_node_revisions from blocks+SEO only to full snapshots (title, slug, status, language_code, layout_slug, excerpt, featured_image, fields_snapshot, taxonomies_snapshot, version_number). core.node.revision_restore is itself reversible (snapshots pre-restore state). Pre-0041 rows go through a partial-restore path. Daily sweep keeps 50 newest per node.",
+		},
+		{
+			"topic":   "settings_registry_translatable",
+			"summary": "Kernel settings live in internal/settings/builtin.go grouped: general/seo/advanced/languages/security. Each field has a Translatable flag — non-translatable reads default-language row directly; translatable uses per-locale composite PK (key, language_code) with default-language fallback. Extensions add groups via Registry.RegisterGroup. core.settings.* hides this; raw site_settings rows show the composite PK.",
 		},
 	}
 }
@@ -414,6 +613,10 @@ func guideConventions() []string {
 		"restart_required is currently always false — theme and extension activate/deactivate are hot. Activation spawns/kills only the plugin subprocess, not the app. Brand-new directories dropped into themes/ or extensions/ on disk are picked up automatically by the fs watcher (no restart, no manual rescan); core.theme.rescan / core.extension.rescan exist as explicit triggers for CI/ops.",
 		"Prefer typed tools (core.node.query, core.data.query) over core.data.exec (gated raw SQL).",
 		"Reference media/layouts by slug when authoring theme-portable content; IDs rotate when themes are reactivated.",
+		"For binaries above ~5 MB use the presigned upload pair (core.<kind>.upload_init + .upload_finalize, kind ∈ {media, theme, extension}). The PUT route at /api/uploads/<token> is unauthenticated — the 64-char token IS the auth, single-use, ~15 min TTL.",
+		"Bulk-patch nodes via core.node.update_many ONLY for safe top-level columns (status, layout_slug, language_code). For fields_data / blocks_data / seo_settings use per-node core.node.update so per-node merge logic runs.",
+		"Revisions are full snapshots since migration 0041 — core.node.revision_restore recreates every editable field, and the pre-restore state is captured as a fresh revision so restore is itself reversible.",
+		"Kernel/extensions boundary (commit 7e49268): email dispatcher lives in email-manager, /robots.txt + head_meta in seo-extension, media_files in media-manager. Calls to core.email.send / core.media.* fail with 'no provider' if the corresponding `provides` claimant is inactive — activate the relevant extension or ship a replacement.",
 	}
 }
 
@@ -448,7 +651,23 @@ func guideTopics() []string {
 	return out
 }
 
-func themeStandards() map[string]any {
+// themeStandards returns the theme rulebook. Compact mode (verbose=false) drops
+// the embedded template-source examples and the long seeding_patterns prose —
+// keeps philosophy, structure, rules, capabilities, lifecycle, field types, and
+// reserved layout slugs. Verbose returns everything.
+func themeStandards(verbose bool) map[string]any {
+	out := themeStandardsCore()
+	if verbose {
+		out["examples"] = themeStandardsExamples()
+		out["seeding_patterns"] = themeStandardsSeedingPatterns()
+		return out
+	}
+	out["examples_pointer"] = "Pass verbose:true for embedded source of theme.json / block.json / view.html / theme.tengo. The same files live in themes/squilla/ as a working reference."
+	out["seeding_pointer"] = "Pass verbose:true for the seeding_patterns map (registration order, idempotency, menus, well-known, assets, forms, hot-reload, autoregistration, layout seeding, terms module, schema field keys)."
+	return out
+}
+
+func themeStandardsCore() map[string]any {
 	return map[string]any{
 		"philosophy": "A theme is a self-bootstrapping marketing site: drop a folder under themes/, restart the app, and a complete demo site appears — pages, layouts, blocks, taxonomies, settings, menus, forms, and seeded content. The theme must render correctly from a cold boot with nothing but its own files — no manual DB edits, no magic.",
 		"structure": map[string]any{
@@ -507,8 +726,44 @@ func themeStandards() map[string]any {
 			{"id": "13", "title": "Drop {{.app.head_meta}} into every layout's <head>.", "description": "The kernel composes canonical/og:*/twitter:*/robots/hreflang once per render. Layouts must surface it — without {{.app.head_meta}}, social previews and search engines see only your hand-written <title>/<meta name=description>. Do NOT hand-roll og:* tags; they will duplicate the kernel's output."},
 			{"id": "14", "title": "Reserve layout slug \"404\" for missing pages.", "description": "Register `{ \"slug\": \"404\", \"file\": \"404.html\" }` (or legacy alias \"error\") in theme.json. Public renderer auto-uses it for 404 responses. Synthesized 404 content lands in {{.node.blocks_html}}. Falls back to the default layout when absent."},
 		},
-		"examples": map[string]string{
-			"theme.json": `{
+		"field_types": []map[string]any{
+			{"type": "text", "intent": "Single-line input", "shape": `"..."`},
+			{"type": "textarea", "intent": "Multi-line input", "shape": `"..."`},
+			{"type": "richtext", "intent": "WYSIWYG / HTML", "shape": `"<p>...</p>"`},
+			{"type": "number", "intent": "Numeric", "shape": `42`},
+			{"type": "toggle", "intent": "Boolean (switch)", "shape": `true | false`},
+			{"type": "checkbox", "intent": "Boolean (checkbox)", "shape": `true | false`},
+			{"type": "select", "intent": "Dropdown — flat string options", "shape": `"red"  // schema: "options": ["red","yellow","green"]`},
+			{"type": "radio", "intent": "Radio group", "shape": `"left"`},
+			{"type": "color", "intent": "Color picker", "shape": `"#FF0000"`},
+			{"type": "link", "intent": "CTAs/Buttons", "shape": `{"text": "Explore", "url": "/trips", "target": "_self"}`},
+			{"type": "image", "intent": "Single image (media-picker)", "shape": `{"url": "theme-asset:<key>", "alt": "..."}`},
+			{"type": "gallery", "intent": "Multi-image picker", "shape": `[{"url": "theme-asset:<key>", "alt": "..."}, ...]`},
+			{"type": "term", "intent": "Taxonomy term picker (set taxonomy + term_node_type in schema)", "shape": `{"slug": "foodie", "name": "Foodie"}`},
+			{"type": "node", "intent": "Node picker (set node_types in schema to restrict)", "shape": `{"slug": "hanoi-trip", "title": "Hanoi Street Food"}  // engine resolves id at render time`},
+			{"type": "form_selector", "intent": "Pick a form from forms-extension", "shape": `"<form-slug>"`},
+			{"type": "repeater", "intent": "Nested array of sub_fields", "shape": `[{...}, {...}]  // schema: "sub_fields": [...]`},
+		},
+		"portable_refs": []string{
+			"Always reference pages/nodes by slug.",
+			"Reference blocks by their registered slug (e.g., hv-hero).",
+			"Reference assets via theme-asset:<key> prefix.",
+		},
+		"verification_checklist": []string{
+			"All assets import into the media library.",
+			"All seeded nodes render (200 status).",
+			"Admin edit forms show all fields (no [object Object]).",
+			"Templates render identically to seeded pages.",
+		},
+		"authoritative_resource": "squilla://guidelines/themes",
+	}
+}
+
+// themeStandardsExamples returns the embedded source examples for theme files.
+// Heavy (~2 k tokens) — only included when verbose=true.
+func themeStandardsExamples() map[string]string {
+	return map[string]string{
+		"theme.json": `{
   "name":        "My Theme",
   "version":     "0.1.0",
   "description": "Minimal scaffold",
@@ -524,7 +779,7 @@ func themeStandards() map[string]any {
   "templates": [ { "slug": "homepage", "file": "homepage.json" } ],
   "assets":    [ { "key": "hero", "src": "images/hero.webp", "alt": "Hero photo" } ]
 }`,
-			"block.json": `{
+		"block.json": `{
   "slug": "intro",
   "name": "Intro",
   "description": "Centered headline + body + optional image.",
@@ -540,7 +795,7 @@ func themeStandards() map[string]any {
     "image":   { "url": "theme-asset:hero", "alt": "Hero photo" }
   }
 }`,
-			"view.html": `{{- $img := "" -}}{{- $alt := "" -}}{{- with .image -}}
+		"view.html": `{{- $img := "" -}}{{- $alt := "" -}}{{- with .image -}}
   {{- with .url -}}{{- $img = . -}}{{- end -}}
   {{- with .alt -}}{{- $alt = . -}}{{- end -}}
 {{- end -}}
@@ -549,7 +804,7 @@ func themeStandards() map[string]any {
   {{ with .body }}<p>{{ . }}</p>{{ end }}
   {{ if $img }}<img src="{{ $img }}" alt="{{ $alt }}">{{ end }}
 </section>`,
-			"theme.tengo": `nodes    := import("core/nodes")
+		"theme.tengo": `nodes    := import("core/nodes")
 menus    := import("core/menus")
 settings := import("core/settings")
 
@@ -584,73 +839,66 @@ menus.upsert({
     name: "Primary Navigation",
     items: [ { label: "Home", page: "home" } ]
 })`,
-		},
-		"field_types": []map[string]any{
-			{"type": "text", "intent": "Single-line input", "shape": `"..."`},
-			{"type": "textarea", "intent": "Multi-line input", "shape": `"..."`},
-			{"type": "richtext", "intent": "WYSIWYG / HTML", "shape": `"<p>...</p>"`},
-			{"type": "number", "intent": "Numeric", "shape": `42`},
-			{"type": "toggle", "intent": "Boolean (switch)", "shape": `true | false`},
-			{"type": "checkbox", "intent": "Boolean (checkbox)", "shape": `true | false`},
-			{"type": "select", "intent": "Dropdown — flat string options", "shape": `"red"  // schema: "options": ["red","yellow","green"]`},
-			{"type": "radio", "intent": "Radio group", "shape": `"left"`},
-			{"type": "color", "intent": "Color picker", "shape": `"#FF0000"`},
-			{"type": "link", "intent": "CTAs/Buttons", "shape": `{"text": "Explore", "url": "/trips", "target": "_self"}`},
-			{"type": "image", "intent": "Single image (media-picker)", "shape": `{"url": "theme-asset:<key>", "alt": "..."}`},
-			{"type": "gallery", "intent": "Multi-image picker", "shape": `[{"url": "theme-asset:<key>", "alt": "..."}, ...]`},
-			{"type": "term", "intent": "Taxonomy term picker (set taxonomy + term_node_type in schema)", "shape": `{"slug": "foodie", "name": "Foodie"}`},
-			{"type": "node", "intent": "Node picker (set node_types in schema to restrict)", "shape": `{"slug": "hanoi-trip", "title": "Hanoi Street Food"}  // engine resolves id at render time`},
-			{"type": "form_selector", "intent": "Pick a form from forms-extension", "shape": `"<form-slug>"`},
-			{"type": "repeater", "intent": "Nested array of sub_fields", "shape": `[{...}, {...}]  // schema: "sub_fields": [...]`},
-		},
-		"seeding_patterns": map[string]string{
-			"registration":      "Always register taxonomies BEFORE node types that use them.",
-			"idempotency":       "Use existence checks (e.g. nodes.query({node_type, slug, limit:1}) and branch on .total == 0) to avoid duplicate data on script re-runs. theme.tengo runs again on every restart while the theme is active.",
-			"menus":             "Use core/menus → menus.upsert({slug, name, items:[{label, page:'<slug>'}]}). The page:<slug> form resolves to NodeID at upsert so slug renames don't break menus.",
-			"wellknown":         "Use core/wellknown to register /.well-known/* handlers (e.g. apple-app-site-association). Unregistered paths return instant 404 via WellKnownRegistry, mounted before the public catch-all.",
-			"assets_module":     "Use core/assets to read files from the calling theme/extension's own root: assets.read('forms/trip-order.html') / assets.exists('data/regions.json'). Returns a string, or an error value (wrap with is_error) if missing or path escapes root. Ideal for shipping form layouts, JSON fixtures, or default content as plain files instead of inlining multi-line strings in theme.tengo. Path is relative to the theme/extension dir; absolute paths and ../ traversal are rejected.",
-			"forms_seeding":     "Theme-bundled forms: emit core/events 'forms:upsert' with {slug, name, fields, layout, settings, force?}. Idempotent on slug — without force, an existing same-slug form is left alone (admin edits stick); with force:true, theme overwrites on every reload. For theme-styled forms, ship the layout as themes/<theme>/forms/<slug>.html using forms-ext template syntax ({{.field_id.label}}, {{range .options}}…) and theme CSS classes; load it with core/assets.read and pass as the layout field. Form HTML is server-rendered via {{event \"forms:render\" (dict \"form_id\" \"<slug>\" \"hidden\" (dict ...))}} from a layout/block — hidden injects <input type=hidden> before </form> for per-page context (trip_slug, price). Public submit endpoint is /forms/submit/<slug>; the AJAX runtime is /extensions/<slug>/blocks/vibe-form/script.js.",
-			"assets_hot_reload": "Theme assets are served via an atomic-pointer resolver that swaps on theme.activated. Runtime theme switches serve the new theme's assets instantly with no restart.",
-			"autoregistration":  "Themes in themes/ are autoregistered at startup (mirroring the extension scan). No DB seeding is required to surface a new theme.",
-			"layout_seeding":    "The core default layout is seeded with source='seed' (migration 0036). Themes are free to install their own base.html / blank.html without colliding.",
-			"terms_module":      "Seed actual taxonomy terms (e.g. the 'Foodie' / 'Adventure' rows under trip_tag) via core/terms: terms.create({node_type, taxonomy, slug, name, description?, parent_id?, fields_data?}). Also exposes terms.list(node_type, taxonomy) / .get(id) / .update(id, updates) / .delete(id). The taxonomy DEFINITION is registered with core/taxonomies.register; the actual term ROWS go through core/terms.",
-			"schema_field_keys": "Field-schema key naming differs by surface: in Tengo (core/nodetypes.register, core/taxonomies.register) the field key is `name`; in block.json `field_schema` it is `key`. Both go through the same field types. Don't mix — Tengo schemas with `key` (or block.json with `name`) silently produce empty schemas.",
-		},
-		"portable_refs": []string{
-			"Always reference pages/nodes by slug.",
-			"Reference blocks by their registered slug (e.g., hv-hero).",
-			"Reference assets via theme-asset:<key> prefix.",
-		},
-		"verification_checklist": []string{
-			"All assets import into the media library.",
-			"All seeded nodes render (200 status).",
-			"Admin edit forms show all fields (no [object Object]).",
-			"Templates render identically to seeded pages.",
-		},
-		"authoritative_resource": "squilla://guidelines/themes",
+	}
+}
+
+// themeStandardsSeedingPatterns returns the seeding-pattern playbook. Only
+// included when verbose=true; the prose runs ~1.5 k tokens.
+func themeStandardsSeedingPatterns() map[string]string {
+	return map[string]string{
+		"registration":      "Always register taxonomies BEFORE node types that use them.",
+		"idempotency":       "Use existence checks (e.g. nodes.query({node_type, slug, limit:1}) and branch on .total == 0) to avoid duplicate data on script re-runs. theme.tengo runs again on every restart while the theme is active.",
+		"menus":             "Use core/menus → menus.upsert({slug, name, items:[{label, page:'<slug>'}]}). The page:<slug> form resolves to NodeID at upsert so slug renames don't break menus.",
+		"wellknown":         "Use core/wellknown to register /.well-known/* handlers (e.g. apple-app-site-association). Unregistered paths return instant 404 via WellKnownRegistry, mounted before the public catch-all.",
+		"assets_module":     "Use core/assets to read files from the calling theme/extension's own root: assets.read('forms/trip-order.html') / assets.exists('data/regions.json'). Returns a string, or an error value (wrap with is_error) if missing or path escapes root. Path is relative to the theme/extension dir; absolute paths and ../ traversal are rejected.",
+		"forms_seeding":     "Theme-bundled forms: emit core/events 'forms:upsert' with {slug, name, fields, layout, settings, force?}. Idempotent on slug — without force, an existing same-slug form is left alone (admin edits stick); with force:true, theme overwrites on every reload. Form HTML is server-rendered via {{event \"forms:render\" (dict \"form_id\" \"<slug>\" \"hidden\" (dict ...))}}. Public submit endpoint is /forms/submit/<slug>.",
+		"assets_hot_reload": "Theme assets are served via an atomic-pointer resolver that swaps on theme.activated. Runtime theme switches serve the new theme's assets instantly with no restart.",
+		"autoregistration":  "Themes in themes/ are autoregistered at startup. No DB seeding is required to surface a new theme.",
+		"layout_seeding":    "The core default layout is seeded with source='seed' (migration 0036). Themes are free to install their own base.html / blank.html without colliding.",
+		"terms_module":      "Seed taxonomy term ROWS via core/terms (terms.create / list / get / update / delete). Taxonomy DEFINITIONS go through core/taxonomies.register.",
+		"schema_field_keys": "Field-schema key differs by surface: Tengo nodetypes.register / taxonomies.register use `name`; block.json field_schema uses `key`. Don't mix — wrong-key schemas silently produce empty admin inputs.",
 	}
 }
 
 // extensionStandards returns the structured rule set every extension developer
-// (human or AI) should follow. Mirrors the depth of themeStandards but covers
-// the gRPC + admin-UI + manifest surface. Kept in lockstep with
-// extensions/README.md.
-func extensionStandards() map[string]any {
+// (human or AI) should follow. Compact mode (verbose=false) keeps the
+// structured rulebook (manifest, capabilities, lifecycle, rules); verbose adds
+// event_modes detail, sdui_reactivity, hot_deploy recipes.
+func extensionStandards(verbose bool) map[string]any {
+	out := extensionStandardsCore()
+	if verbose {
+		out["event_modes"] = extensionStandardsEventModes()
+		out["sdui_reactivity"] = extensionStandardsSDUIReactivity()
+		out["hot_deploy"] = extensionStandardsHotDeploy()
+		return out
+	}
+	out["verbose_pointer"] = "Pass verbose:true for event_modes (fire-and-forget vs event-with-result detail), sdui_reactivity (SSE → TanStack invalidation), and hot_deploy recipes (admin_ui docker cp, plugin binary restart)."
+	return out
+}
+
+func extensionStandardsCore() map[string]any {
 	return map[string]any{
 		"philosophy": "Extensions own their full stack: manifest, gRPC plugin, admin-UI micro-frontend, SQL migrations, blocks, public routes. Core is a kernel — if disabling/removing the extension would leave dead code in core, that code belongs in the extension.",
 		"manifest": map[string]any{
 			"required": []string{"name", "slug", "version"},
-			"optional": []string{"author", "description", "priority", "provides", "capabilities", "plugins", "admin_ui", "settings_schema", "blocks", "templates", "layouts", "partials", "public_routes", "assets"},
+			"optional": []string{"author", "description", "priority", "provides", "capabilities", "plugins", "admin_ui", "settings_schema", "blocks", "templates", "layouts", "partials", "public_routes", "assets", "data_owned_tables"},
 			"notes": []string{
 				"slug MUST match the directory name (kebab-case).",
 				"capabilities are enforced on every CoreAPI call. Declare exactly what's needed.",
 				"public_routes are mounted on the public Fiber app without auth — proxied to HandleHTTPRequest with user_id=0.",
+				"data_owned_tables[] declares which tables this extension may read/write through core.data.* — required for any extension that owns its own SQL tables (forms-extension declares forms/form_submissions/form_webhook_logs; email-manager declares email_*; media-manager declares media_files/media_image_sizes).",
+				"`provides` tags are consumed by the kernel: `media-provider` makes the plugin the active backend for core.media.* (UploadMedia / GetMedia / QueryMedia / DeleteMedia); `email.provider` makes it the active backend for SendEmail dispatch. Highest-priority active plugin wins. Hot-swappable — operators can replace the bundled media-manager with an S3/R2/Cloudinary extension by activating it at higher priority.",
 			},
+		},
+		"reserved_provider_tags": map[string]string{
+			"media-provider": "Plugin handles core.media.* on behalf of the kernel. The bundled media-manager extension is the default. To hot-swap: ship a plugin that subscribes to the relevant CoreAPI calls AND declares provides:['media-provider'] at higher priority than 50.",
+			"email.provider": "Plugin receives core.email.send dispatch from the email-manager dispatcher. smtp-provider and resend-provider both claim this tag; only the highest-priority active one is used.",
 		},
 		"capabilities": []string{
 			"nodes:read", "nodes:write", "nodes:delete",
 			"nodetypes:read", "nodetypes:write",
 			"settings:read", "settings:write",
+			"theme_settings:read", "theme_settings:write",
 			"events:emit", "events:subscribe",
 			"email:send",
 			"menus:read", "menus:write", "menus:delete",
@@ -660,8 +908,9 @@ func extensionStandards() map[string]any {
 			"users:read",
 			"http:fetch",
 			"log:write",
-			"data:read", "data:write", "data:delete",
-			"files:write", "files:delete",
+			"data:read", "data:write", "data:delete", "data:exec",
+			"files:read", "files:write", "files:delete",
+			"taxonomies:read", "taxonomies:write", "taxonomies:delete",
 		},
 		"admin_ui": map[string]any{
 			"entry":          "Path to the built ES module, e.g. admin-ui/dist/index.js. The extension loader auto-injects a sibling <link rel='stylesheet'> for dist/index.css when present — DO NOT declare CSS in the manifest.",
@@ -718,12 +967,6 @@ func extensionStandards() map[string]any {
 			"user.registered":       "A new user signs up. Payload: user_id, email, name.",
 			"user.deleted":          "A user is removed. Payload: user_id, email.",
 		},
-		"event_modes": map[string]string{
-			"fire_and_forget":   "Subscribe via GetSubscriptions(); HandleEvent processes the payload and returns {Handled: true}. No one waits for the response. Use for analytics, notifications, side effects.",
-			"event_with_result": "Templates can call {{ event \"my-ext:render\" (dict ...) }} and use whatever your plugin returns. Plugin returns {Handled: true, Result: bytes} where Result is HTML; the kernel concatenates Result from every subscriber in priority order and injects the combined string into the template. Reference: forms-extension's forms:render event.",
-			"priority":          "Lower number = earlier dispatch. For event-with-result, all Result bytes are concatenated in priority order. For fire-and-forget, priority controls dispatch order but kernel doesn't aggregate.",
-			"opt_out":           "Return {Handled: false} to let the next plugin in the priority chain handle the event. Return {Handled: true, Result: nil} to claim the event but contribute nothing.",
-		},
 		"http_routing": map[string]string{
 			"admin_proxy":       "Auto-mounted at /admin/api/ext/<slug>/* for every active extension. Auth required (kernel session middleware). Anonymous = 401. Plugin sees req.Path with the wildcard tail (leading /) and req.UserId of the logged-in user (or 0 if anonymous).",
 			"public_proxy":      "Mounted at the EXACT path declared in public_routes[]. NO auth. NO session. NOT under /api/... — the path you declare is the path users hit. /forms/submit/contact, /media/cache/medium/...jpg, etc. req.UserId is always 0.",
@@ -750,6 +993,9 @@ func extensionStandards() map[string]any {
 			{"id": "10", "title": "All filter / sort / view / pagination state lives in URL params.", "description": "Refresh preserves it. Default values omit the param. Use replace:true for keystrokes; use resetPage:true when changing filters."},
 			{"id": "11", "title": "Production code under 300 lines per file (500 hard limit).", "description": "Test files are exempt. Split early — forms/cmd/plugin/ is the model: handlers_<resource>.go, render.go, validation.go, etc."},
 			{"id": "12", "title": "Don't reach for a slot pattern when an event-with-result will do.", "description": "Slots couple admin UIs at build time; events couple at runtime. Pick the looser coupling."},
+			{"id": "13", "title": "Use provider tags for kernel-routed capabilities.", "description": "If your extension implements media or email backend behaviour, declare `provides:[\"media-provider\"]` or `provides:[\"email.provider\"]`. The plugin manager indexes plugins by tag; the kernel routes core.media.* / SendEmail to the highest-priority active claimant. Hot-swappable — never wire kernel calls to a hard-coded extension slug."},
+			{"id": "14", "title": "Migration ownership transfer when extracting a kernel feature.", "description": "If you're moving a feature out of the kernel (the historical case for email-manager, media-manager, seo-extension): (1) add the table to data_owned_tables; (2) copy the CREATE TABLE + ALTERs into your migrations/, rewriting as idempotent (IF NOT EXISTS, DO $$ END $$ blocks); (3) delete the kernel migration file (the runner skips entries already in schema_migrations); (4) move seeds in idempotent form (ON CONFLICT DO NOTHING); (5) drop kernel models / services / coreImpl fields. The CoreAPI surface stays — its impl now routes through events / provider tags. Verify by deactivating the extension and confirming the kernel still boots."},
+			{"id": "15", "title": "Per-extension settings register with the schema-driven settings registry.", "description": "Use settings_schema in extension.json — the kernel's settings registry consumes it, applies the same secret-key heuristic for at-rest encryption, and renders the form via SDUI. Translatable fields use the per-locale composite-PK lookup with default-language fallback automatically. No per-extension settings UI required."},
 		},
 		"testing": map[string]string{
 			"pattern":     "Use a FakeHost test double that implements coreapi.CoreAPI with in-memory maps. Inject it instead of a real gRPC client. Reference: extensions/forms/cmd/plugin/fakehost_test.go.",
@@ -757,21 +1003,13 @@ func extensionStandards() map[string]any {
 			"example":     "p := &MyPlugin{host: &FakeHost{...}}; resp, _ := p.handleSubmit(ctx, &pb.PluginHTTPRequest{...}); assert on resp.",
 			"build_flags": "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/<slug> ./cmd/plugin/ — required for the Alpine runtime image.",
 		},
-		"hot_deploy": map[string]string{
-			"admin_ui":      "After `npm run build`, copy dist into the running container: `docker cp dist/. squilla-app-1:/app/extensions/<slug>/admin-ui/dist/`. The Go binary serves these as static files — no container restart needed. Hard-refresh (Cmd+Shift+R) to bypass cached index.html.",
-			"plugin_binary": "After `go build`, `docker cp bin/<slug> squilla-app-1:/app/extensions/<slug>/bin/<slug>` then `docker compose restart app` (required to bounce the plugin process).",
-		},
-		"sdui_reactivity": []string{
-			"Typed SSE events route to specific TanStack query keys via a central qk factory (qk.boot, qk.layout, qk.list, qk.entity, qk.settings).",
-			"useAuth subscribes through an sse-bus so sidebar user-info refreshes on user.updated without page reload.",
-			"CONFIRM action uses shadcn AlertDialog; CORE_API writes toast success/error with per-action overrides.",
-		},
 		"existing_extensions": map[string]string{
-			"media-manager":     "gRPC + React + Tengo. Reference for list-page primitives, drawer, upload modal, URL state, image optimizer settings.",
-			"email-manager":     "gRPC + React. Owns 'email-settings' slot that providers inject into.",
+			"media-manager":     "gRPC + React + Tengo. Declares provides:['media-provider'] — kernel core.media.* routes through this plugin. Reference for list-page primitives, drawer, upload modal, URL state, image optimizer settings, presigned-upload integration.",
+			"email-manager":     "gRPC + React. OWNS the email dispatcher (subscribes to *, matches admin-defined rules, renders templates, retains logs). Owns email_* tables (migrated out of core in commit 7e49268). Owns 'email-settings' slot that providers inject into.",
+			"seo-extension":     "gRPC. Owns /robots.txt (with modern AI-crawler controls), site-wide SEO defaults, OG/Twitter head_meta. Was part of internal/cms/ until commit 7e49268.",
 			"sitemap-generator": "gRPC + Tengo. Yoast-style sitemaps; rebuild on node.published / node.deleted.",
-			"smtp-provider":     "gRPC. Subscribes to email.send; injects settings into email-manager.",
-			"resend-provider":   "Tengo-only. Demonstrates no-binary extension via core/http.",
+			"smtp-provider":     "gRPC. Declares provides:['email.provider']. Subscribes to email.send; injects settings into email-manager.",
+			"resend-provider":   "gRPC. Declares provides:['email.provider']. Resend API delivery; injects settings into email-manager.",
 			"forms":             "gRPC + React + Tengo + content block. vibe-form block, form_selector field type, /forms/submit/* public route.",
 			"hello-extension":   "Tengo-only minimal demo. Use as starting template.",
 			"content-blocks":    "Pure declarative bundle of 40 blocks + 10 templates. No binary.",
@@ -783,8 +1021,39 @@ func extensionStandards() map[string]any {
 			"List pages match the canonical pattern: tabs replace dropdowns, URL state, ListPageShell primitives.",
 			"Lifecycle subscriptions clean up on extension.deactivated when needed.",
 			"Public routes are listed in public_routes — admin routes are auto-mounted at /admin/api/ext/<slug>/*.",
+			"data_owned_tables[] declares every SQL table the extension reads or writes via core.data.* (forms-extension declares forms / form_submissions / form_webhook_logs; media-manager declares media_files / media_image_sizes; email-manager declares email_*).",
+			"If the extension serves a kernel-routed capability (media or email backend), `provides:[\"media-provider\"]` or `provides:[\"email.provider\"]` is declared and migrated tests verify hot-swap behaviour.",
+			"Settings groups are registered via the kernel's settings registry (settings_schema in extension.json) so per-language storage and at-rest encryption Just Work.",
 		},
 		"authoritative_resource": "squilla://guidelines/extensions",
+	}
+}
+
+// extensionStandardsEventModes — long-form event semantics. Verbose only.
+func extensionStandardsEventModes() map[string]string {
+	return map[string]string{
+		"fire_and_forget":   "Subscribe via GetSubscriptions(); HandleEvent processes the payload and returns {Handled: true}. No one waits for the response. Use for analytics, notifications, side effects.",
+		"event_with_result": "Templates can call {{ event \"my-ext:render\" (dict ...) }} and use whatever your plugin returns. Plugin returns {Handled: true, Result: bytes} where Result is HTML; the kernel concatenates Result from every subscriber in priority order and injects the combined string into the template. Reference: forms-extension's forms:render event.",
+		"priority":          "Lower number = earlier dispatch. For event-with-result, all Result bytes are concatenated in priority order. For fire-and-forget, priority controls dispatch order but kernel doesn't aggregate.",
+		"opt_out":           "Return {Handled: false} to let the next plugin in the priority chain handle the event. Return {Handled: true, Result: nil} to claim the event but contribute nothing.",
+	}
+}
+
+// extensionStandardsSDUIReactivity — SSE → TanStack invalidation. Verbose only.
+func extensionStandardsSDUIReactivity() []string {
+	return []string{
+		"Typed SSE events route to specific TanStack query keys via a central qk factory (qk.boot, qk.layout, qk.list, qk.entity, qk.settings).",
+		"useAuth subscribes through an sse-bus so sidebar user-info refreshes on user.updated without page reload.",
+		"CONFIRM action uses shadcn AlertDialog; CORE_API writes toast success/error with per-action overrides.",
+	}
+}
+
+// extensionStandardsHotDeploy — admin_ui docker cp + plugin restart recipes.
+// Verbose only.
+func extensionStandardsHotDeploy() map[string]string {
+	return map[string]string{
+		"admin_ui":      "After `npm run build`, copy dist into the running container: `docker cp dist/. squilla-app-1:/app/extensions/<slug>/admin-ui/dist/`. The Go binary serves these as static files — no container restart needed. Hard-refresh (Cmd+Shift+R) to bypass cached index.html.",
+		"plugin_binary": "After `go build`, `docker cp bin/<slug> squilla-app-1:/app/extensions/<slug>/bin/<slug>` then `docker compose restart app` (required to bounce the plugin process).",
 	}
 }
 

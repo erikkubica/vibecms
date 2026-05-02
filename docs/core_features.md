@@ -343,17 +343,29 @@ A "wrapper" template applied to all emails. Body is injected as `.email_body` (m
 Language fallback: language-specific → universal NULL.
 
 ### 6.4 Email dispatcher & provider plugins
-**Status:** ✅ working
+**Status:** ✅ working — ⚠️ **moved entirely out of the kernel in commit `7e49268`**.
 
-Flow:
-1. `eventBus.SubscribeAll(emailDispatcher.HandleEvent)` in `cmd/squilla/main.go`.
+The dispatcher, rule service, template service, log service, and layout
+service that previously lived in `internal/email/` were deleted along with
+the corresponding GORM models in `internal/models/email_*.go`. The entire
+flow now lives in `extensions/email-manager/cmd/plugin/dispatcher.go`. The
+extension subscribes to `*` (all events) at activation time and matches
+admin-defined rules. The kernel `CoreAPI.SendEmail` is now a thin shim that
+publishes a `core.email.send` event the active `email.provider` plugin
+consumes — the path the email-manager dispatcher uses for outbound dispatch.
+
+Flow (post-`7e49268`):
+1. `email-manager` plugin's `Init` calls `host.SubscribeAll(p.HandleEvent)`.
 2. On any event, `HandleEvent` finds matching rules (filtered by action + optional node_type).
 3. For each rule, resolves recipients with their preferred language.
 4. Renders subject + body, optionally wrapped in a layout.
-5. Calls `sendFunc(SendRequest)` to dispatch synchronously.
-6. `sendFunc` is wired to call the active provider plugin via gRPC `HandleEvent("email.send", payload)`.
+5. Emits `core.email.send` for the active `email.provider` plugin (smtp/resend) to consume.
+6. The provider plugin returns a `SendResult` synchronously (via `PublishRequest`); the dispatcher writes the row to `email_logs`.
 
-The hard-rule violation (in-core SMTP/Resend providers) was resolved in commit `eb0c1eb` — `internal/email/smtp.go`, `resend.go`, `provider.go` were removed; both providers now ship only via `extensions/smtp-provider` and `extensions/resend-provider`. `LogService.Resend` re-routes through the same plugin path.
+Capabilities required by the dispatcher manifest: `events:subscribe`,
+`events:emit`, `data:read`, `data:write`, `data:delete`, `users:read`,
+`settings:read`, `log:write`. The migration ownership transfer pattern is
+documented in `docs/extension_api.md` §10.
 
 ### 6.5 Email logs (`email_logs` table)
 **Status:** ✅ working

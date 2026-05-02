@@ -95,9 +95,10 @@ Core code that violates this rule is a bug. The recent kernel refactors (commit 
 | `scripting/` | Tengo VM lifecycle: load/unload theme + extension scripts, mount HTTP routes, dispatch events/filters with capability propagation. |
 | `mcp/` | MCP server at `/mcp` with bearer-token auth, per-token rate limiter, scope×class ACL, audit log, 18 tool domains. |
 | `sdui/` | Server-Driven UI: boot manifest, layout-tree generators per page (~16+), SSE broadcaster bridging the event bus to admin clients. |
-| `models/` | 27 GORM models. See `database-schema.md`. |
-| `db/` | PostgreSQL connection, embedded migrations (38 files: `0001_initial_schema.sql` … `0037_password_reset_tokens.sql`), idempotent seed-on-empty. |
-| `email/` | Dispatcher, rules, templates, layouts, logs. Provider implementations live in `extensions/smtp-provider` and `extensions/resend-provider`. |
+| `models/` | GORM models for kernel-owned tables only (content nodes, languages, sessions, layouts, menus, taxonomies, …). Email/media/redirect models migrated out to their extensions in commit `7e49268`. See `database-schema.md`. |
+| `db/` | PostgreSQL connection, embedded migrations (43 files: `0001_initial_schema.sql` … `0043_languages_world_seed.sql`), idempotent seed-on-empty. |
+| `settings/` | Schema-driven settings registry. `builtin.go` declares the kernel-owned schema (general / SEO / advanced / languages / security groups), each field has a `Translatable` flag, `store.go` is the per-language read/write layer, `handler.go` is the admin API. Extensions register their own settings groups via `Registry.RegisterGroup`. |
+| `uploads/` | Presigned upload state machine for large MCP binaries. `token.go` mints 64-char tokens, `store.go` is the `pending_uploads` row layer, `handler.go` is the unauthenticated `/api/uploads/<token>` PUT route, `cleanup.go` is the 5-minute expiry sweep. |
 | `rbac/` | Role admin handler, per-node-type access checks (`NodeAccess.CanRead/CanWrite`). |
 | `secrets/` | AES-256-GCM at-rest encryption for sensitive settings (commit `7e29de1`). Master key from `SQUILLA_SECRET_KEY` env. |
 | `sanitize/` | bluemonday-based XSS sanitization for richtext fields, applied at render time (commit `55653e5`). |
@@ -108,18 +109,19 @@ Core code that violates this rule is a bug. The recent kernel refactors (commit 
 
 ### 3.2 Extensions (`extensions/`)
 
-Eight bundled extensions ship in-tree as the reference implementation:
+Nine bundled extensions ship in-tree as the reference implementation:
 
 | Slug | Type | Purpose |
 |---|---|---|
 | `content-blocks` | Static (no plugin) | 40 prebuilt blocks + 10 page templates |
-| `email-manager` | gRPC plugin + admin UI | Email templates, rules, logs, layouts |
+| `email-manager` | gRPC plugin + admin UI | Owns the dispatcher, templates, rules, logs, layouts. Subscribes to `*` and matches admin-defined rules. Tables migrated out of core in commit `7e49268`. |
 | `forms` (v2) | gRPC plugin + admin UI + `vibe-form` block + public route | Form builder with CAPTCHA, conditional logic, webhooks, GDPR |
 | `hello-extension` | Static | Demo / contract test |
-| `media-manager` | gRPC plugin + admin UI | Media library, image optimization, WebP, thumbnail cache |
-| `resend-provider` | gRPC plugin + admin UI slot | Resend API email delivery |
+| `media-manager` | gRPC plugin + admin UI | Media library, image optimization, WebP, thumbnail cache. Owns `media_files` and declares `provides:["media-provider"]` so kernel `core.media.*` calls route through it; operators can hot-swap with an S3/R2/Cloudinary provider by activating it with higher priority. |
+| `resend-provider` | gRPC plugin + admin UI slot | Resend API email delivery (`provides:["email.provider"]`) |
+| `seo-extension` | gRPC plugin | Owns `/robots.txt`, site-wide SEO defaults, AI-crawler policy, OG/Twitter `head_meta`. Was part of `internal/cms/` until commit `7e49268`. |
 | `sitemap-generator` | gRPC plugin | Yoast-style XML sitemaps, rebuilds on content change |
-| `smtp-provider` | gRPC plugin + admin UI slot | SMTP email delivery |
+| `smtp-provider` | gRPC plugin + admin UI slot | SMTP email delivery (`provides:["email.provider"]`) |
 
 ### 3.3 Admin SPA (`admin-ui/`)
 
@@ -162,13 +164,21 @@ Node Types         RegisterNodeType, GetNodeType, ListNodeTypes,
 Taxonomies         RegisterTaxonomy, GetTaxonomy, ListTaxonomies,
                    UpdateTaxonomy, DeleteTaxonomy
 Taxonomy Terms     ListTerms, GetTerm, CreateTerm, UpdateTerm, DeleteTerm
-Settings           GetSetting, SetSetting, GetSettings
-Events             Emit, Subscribe (returns UnsubscribeFunc)
-Email              SendEmail
+Settings           GetSetting, SetSetting, GetSettings (per-language with
+                   default-language fallback; schema-driven registry in
+                   `internal/settings/`)
+Events             Emit, Subscribe (returns UnsubscribeFunc), PublishRequest
+                   (sync request/reply with error propagation)
+Email              SendEmail (kernel-side stub: routes through event bus →
+                   active `email.provider` plugin; `email-manager` extension
+                   matches rules, renders templates, retains logs)
 Menus              GetMenu, GetMenus, CreateMenu, UpdateMenu, UpsertMenu, DeleteMenu
 Routes             RegisterRoute, RemoveRoute
 Filters            RegisterFilter (returns UnsubscribeFunc), ApplyFilters
-Media              UploadMedia, GetMedia, QueryMedia, DeleteMedia
+Media              UploadMedia, GetMedia, QueryMedia, DeleteMedia (kernel-side
+                   stub: routes through plugin manager → active
+                   `media-provider` plugin; bundled `media-manager` is the
+                   default but operators can hot-swap S3/R2/Cloudinary)
 Users (read-only)  GetUser, QueryUsers
 HTTP (outbound)    Fetch
 Log                Log
@@ -424,7 +434,8 @@ This section gives a topology-level view; see [`security.md`](./security.md) for
 7.  Create SDUI engine + broadcaster (broadcaster subscribes to bus)
 8.  Build Fiber app (50 MB body limit, request-id middleware, strict admin CORS, permissive /mcp CORS)
 9.  Construct services: sessions (hourly cleanup), content, node-types, languages,
-    blocks, layouts, templates, menus, themes, email (daily log retention)
+    blocks, layouts, templates, menus, themes (no in-kernel email service —
+    `email-manager` extension owns the dispatcher and log retention)
 10. Build asset registries; load block assets from DB
 11. Construct theme loader (don't load yet)
 12. Build CoreAPI (coreImpl)
@@ -435,13 +446,19 @@ This section gives a topology-level view; see [`security.md`](./security.md) for
 17. Register all admin routes (under /admin/api with AuthRequired)
 18. Construct MCP server, mount at /mcp
 19. Start gRPC plugin manager → for each active extension: start plugins,
-    publish extension.activated
-20. Wire email send func to active provider plugin
-21. Activate theme (LoadTheme + LoadThemeScripts + PurgeInactiveThemes)
+    publish extension.activated. The plugin manager indexes plugins by their
+    `provides` tags so `core.media.*` and `SendEmail` can resolve to the
+    active `media-provider` / `email.provider` without name coupling.
+20. Activate theme (LoadTheme + LoadThemeScripts + PurgeInactiveThemes)
+21. Mount `/api/uploads/<token>` raw http handler (token-based, bypasses Fiber
+    auth — see §5.3 Presigned uploads); start the pending-uploads cleanup
+    ticker.
 22. Mount static asset routes (/admin/assets, /admin/shims, /theme/assets,
     /extensions/<slug>/blocks)
 23. Mount public-extension proxy
-24. Mount script HTTP routes + .well-known + public catch-all (LAST)
+24. Mount script HTTP routes + .well-known + public catch-all (LAST). 404 paths
+    fall through to whichever theme defines a layout with the reserved slug
+    `404`; absent that, a minimal hardcoded fallback. See `themes/README.md`.
 25. Start Listen in goroutine
 26. Wait for SIGINT/SIGTERM → cancel bg context → app.ShutdownWithTimeout(30s)
     → pluginManager.StopAll()

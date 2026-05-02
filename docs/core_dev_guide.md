@@ -13,9 +13,13 @@ From `CLAUDE.md`:
 
 When designing a feature, ask: *"Could this be turned off without breaking the kernel?"* If yes → extension. If no → core. **The default is extension.**
 
-Resolved violations (commit `eb0c1eb`):
-- ✅ `internal/email/smtp.go`, `resend.go`, `provider.go` removed; provider implementations now live exclusively in `extensions/smtp-provider`, `extensions/resend-provider`.
-- ✅ `internal/cms/media_handler.go` and other dead admin handler code purged (~800 LOC).
+Resolved violations:
+- ✅ (commit `eb0c1eb`) `internal/email/smtp.go`, `resend.go`, `provider.go` removed; provider implementations now live exclusively in `extensions/smtp-provider`, `extensions/resend-provider`.
+- ✅ (commit `eb0c1eb`) `internal/cms/media_handler.go` and other dead admin handler code purged (~800 LOC).
+- ✅ (commit `7e49268`) **The entire `internal/email/` package was deleted.** The dispatcher, rule service, template service, log service, and layout service all moved to `extensions/email-manager/cmd/plugin/dispatcher.go`. Email tables (`email_*`, `system_actions`) are now owned by `email-manager/migrations/002_email_tables.sql`. The kernel `CoreAPI.SendEmail` is a thin shim that publishes a `core.email.send` event the active `email.provider` plugin consumes via `PublishRequest`.
+- ✅ (commit `7e49268`) `internal/cms/head_meta.go`, `robots_handler.go`, and `robots_handler_test.go` removed; replaced by `extensions/seo-extension/cmd/plugin/head_meta.go` + `main.go`. The seo-extension owns `/robots.txt`, OG/Twitter meta, and AI-crawler policy.
+- ✅ (commit `7e49268`) `internal/cms/media_svc.go` and `models/media_file.go` removed. Kernel `core.media.*` calls now route through whichever plugin declares `provides:["media-provider"]`. The plugin manager (`internal/cms/plugin_manager.go`) indexes plugins by their `provides` tags so operators can hot-swap an S3/R2/Cloudinary extension without code changes.
+- ✅ (commit `7e49268`) `models/redirect.go` and `models/email_*.go` removed since the kernel no longer owns those tables.
 
 Open violations:
 - `internal/rendering/template_renderer.go::image_url`, `image_srcset` — assume the media-manager extension's URL scheme. Should move into media-manager via a registered template func or an event-driven URL resolver. Tracked.

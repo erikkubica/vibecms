@@ -94,7 +94,10 @@ func (s *Server) registerResources() {
 		),
 		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 			// Return both structured JSON and raw Markdown
-			jsonContent, err := json.Marshal(themeStandards())
+			// Resources are pull-on-demand reference material — return the full
+			// reference dump (verbose=true). The compact mode only matters for
+			// the cold-start core.guide / core.theme.standards tool calls.
+			jsonContent, err := json.Marshal(themeStandards(true))
 			if err != nil {
 				return nil, err
 			}
@@ -131,7 +134,7 @@ func (s *Server) registerResources() {
 			mcp.WithResourceDescription("Official Squilla extension development guidelines (manifest, capabilities, gRPC plugin lifecycle, admin-UI micro-frontend, list-page primitives, lifecycle events)."),
 		),
 		func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-			jsonContent, err := json.Marshal(extensionStandards())
+			jsonContent, err := json.Marshal(extensionStandards(true))
 			if err != nil {
 				return nil, err
 			}

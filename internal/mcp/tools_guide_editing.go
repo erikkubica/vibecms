@@ -85,11 +85,17 @@ func editingPlaybook() map[string]any {
 			"error": "Legacy alias for 404. Backward-compat only — squilla theme uses this slug.",
 		},
 		"open_gaps_known_to_kernel": []string{
-			"No core.node.update_many — patch nodes one at a time when normalizing missing layout_slug across a node-type.",
-			"node-type-level default layouts are not auto-applied; layout_slug must be set explicitly on each node.",
+			"node-type-level default layouts are not auto-applied; layout_slug must be set explicitly on each node. Use core.node.update_many({filter:{node_type:'documentation', missing:'layout_slug'}, set:{layout_slug:'docs'}}) for sweeps — only safe top-level columns (status, layout_slug, language_code) are accepted; field/block/seo patches still need per-node core.node.update.",
 			"PNG compression level is not configurable in admin (image optimizer settings expose JPEG / WebP only).",
-			"Per-language admin switcher is in flux — verify reads/writes scope correctly when authoring across locales.",
 			"Form builder is schema + custom HTML (no visual builder); see forms-extension docs.",
+		},
+		"recently_resolved": []string{
+			"core.node.update_many is now wired (commit 946490a) — see open_gaps note above.",
+			"core.node.revisions / core.node.revision_restore expose full-snapshot history (migration 0041 widened content_node_revisions to capture title, slug, status, language, layout, excerpt, featured_image, fields, taxonomies, version_number).",
+			"layout_slug is exposed on core.node.create / core.node.update payloads — set it directly on the node, no separate /admin/api/nodes/<id>/layout call.",
+			"Presigned uploads for large binaries: core.media.upload_init / .upload_finalize (and theme/extension counterparts) bypass the JSON-RPC envelope by issuing a one-shot URL the client PUTs to.",
+			"Per-language admin switcher landed (commit 8a28fa1 global LanguageSelect, commit 7374541 per-locale settings/terms with default-language fallback).",
+			"Kernel/extensions boundary refactor (commit 7e49268): email dispatcher, robots.txt + head_meta, and media_files all moved out of core into email-manager / seo-extension / media-manager. Kernel CoreAPI surface (SendEmail, UploadMedia, GetMedia, ...) is unchanged — calls now route through provider plugins via the plugin manager's `provides` tag index.",
 		},
 	}
 }

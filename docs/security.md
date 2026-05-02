@@ -67,6 +67,7 @@ Coolify's `coolify-compose.yml` populates all of these via `SERVICE_*` magic var
 - Tokens single-use (`used_at` set on consumption to detect replay).
 - Hourly cleanup of expired/used tokens.
 - File: `internal/auth/password_reset.go`.
+- **Graceful degradation:** when no `email.provider` plugin is active, the email-based reset flow is unavailable. The handler short-circuits with a clear error rather than panicking. For recovery, operators can use the `squilla reset-password <email> <new-password>` CLI subcommand which writes directly to the DB without going through the dispatcher (commit `c723983`).
 
 ### 3.5 Self-Promotion Block
 - `UserHandler.Update` strips `role_id` from payloads when `target_user_id == current_user.id` (commit `76f6124`).
@@ -233,6 +234,62 @@ Two policies are mounted in parallel (commit `ace0066`):
 
 ### Audit Log
 Every tool call writes `(token_id, tool, args_hash, status, error_code, duration_ms)` to `mcp_audit_log`. Raw args are not stored (only SHA-256 hash) so PII does not leak. Daily retention sweep keeps the table bounded.
+
+### Presigned Upload Tokens (`/api/uploads/<token>`)
+
+For binaries above ~5 MB, MCP tools use a three-step presigned-upload flow
+(`core.<kind>.upload_init` → `PUT /api/uploads/<token>` →
+`core.<kind>.upload_finalize`). The PUT route is mounted as a **raw
+`http.Handler` outside Fiber middleware** — there is no session, no bearer
+header, and no capability check at the HTTP edge. The token in the URL is
+the entire access-control story.
+
+| Property | Value |
+|---|---|
+| Token entropy | 64 hex chars (32 random bytes via `crypto/rand`) |
+| TTL | ~15 minutes (`expires_at`) |
+| Single-use | Token row goes from `pending` → `uploaded` → `finalized` atomically |
+| Bound to user | `pending_uploads.user_id` is set at `_init`; `_finalize` runs in the issuing user's auth context, so capability checks at finalize time still apply |
+| Bound to kind | `media`, `theme`, or `extension` only — finalize for the wrong kind is rejected |
+| Size cap | Per-kind, env-tunable (`SQUILLA_MEDIA_MAX_MB`, `SQUILLA_THEME_MAX_MB`, `SQUILLA_EXTENSION_MAX_MB`) |
+| Cleanup | Background ticker deletes expired rows + temp files every 5 minutes |
+| Streamed | Body written straight to `data/pending/<token>.bin` while computing SHA-256 — no full-buffer-in-memory |
+| Error codes | 404 unknown, 410 expired, 409 already-uploaded / in-progress, 413 too large |
+
+**Why it's safe without Fiber auth:** the threat is unauthenticated parties
+discovering a valid token. With 256 bits of entropy and a 15-minute window
+the search space is far beyond brute-force reach. A successful upload still
+needs the issuing user's auth context to call `_finalize`; the bytes on
+disk without finalize are inert (the cleanup ticker reaps them).
+
+Tables: `pending_uploads` (migration `0042_pending_uploads.sql`). Code:
+`internal/uploads/`.
+
+### Schema-driven settings & Capability propagation through providers
+
+Two architectural changes from commit `7e49268` worth flagging here:
+
+- **Settings registry** (`internal/settings/`): every kernel-owned setting
+  is declared in `builtin.go` with an explicit `Translatable` flag and a
+  group (general / SEO / advanced / languages / security). The registry
+  drives both the admin UI and the per-language storage rules in `store.go`
+  — non-translatable fields read/write the default-language row directly,
+  translatable fields use the per-locale composite-PK lookup with
+  default-language fallback. Extensions register their own groups via
+  `Registry.RegisterGroup`, and the same secret-key heuristic from
+  `internal/secrets/` applies to extension-owned keys without extra wiring.
+
+- **Provider tags through the plugin manager**: kernel `core.media.*` and
+  `SendEmail` no longer call concrete in-kernel services. Plugins declare a
+  `provides` array in `extension.json` (`media-provider`, `email.provider`,
+  …); the plugin manager indexes them and routes the call to the highest-
+  priority active plugin. Capability checks still happen at the gRPC edge
+  inside the plugin (the host calls `coreAPI.UploadMedia` with the
+  caller's CallerInfo, the guard in `internal/coreapi/capability.go`
+  evaluates against the plugin's manifest capabilities, then the call
+  proceeds). Hot-swapping providers works because the routing is dynamic
+  and the call surface (`MediaProvider` / `EmailProvider` interfaces in
+  `internal/coreapi/`) is fixed.
 
 ---
 

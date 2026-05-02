@@ -184,7 +184,18 @@ The manifest is the contract. Every binary, route, capability, block, custom fie
 
   // Loading
   "priority":    50,                       // Lower = earlier. Default 50.
-  "provides":    ["media"],                // Free-form feature tags. Other extensions can check `manifest.Provides`.
+  "provides":    ["media-provider"],       // Capability tags the kernel + other extensions
+                                           // can resolve at runtime. Reserved tags:
+                                           //   • "media-provider" — the plugin manager
+                                           //     routes core.media.* (UploadMedia, GetMedia,
+                                           //     QueryMedia, DeleteMedia) to whichever active
+                                           //     plugin claims this. Highest-priority active
+                                           //     wins; hot-swappable (commit `7e49268`).
+                                           //   • "email.provider" — the email-manager
+                                           //     dispatcher emits core.email.send and the
+                                           //     active provider plugin handles it.
+                                           // Plus any free-form tag you want — other
+                                           // extensions can read manifest.Provides.
 
   // Capabilities — see §5. Every CoreAPI call is guarded; declare the minimum.
   "capabilities": [
@@ -921,7 +932,39 @@ Filters are WordPress-style transformation chains. Use them when you want extens
 | `GetMedia(ctx, id)` / `QueryMedia(ctx, MediaQuery)` | `media:read` |
 | `DeleteMedia(ctx, id)` | `media:delete` |
 
-Media calls go through the media-manager extension's plugin. If `media-manager` is deactivated, these calls error.
+Media calls go through whichever active plugin declares
+`provides:["media-provider"]` — the bundled `media-manager` is the default
+implementation, but operators can hot-swap an S3/R2/Cloudinary provider by
+activating it with a higher priority. If no media-provider is active
+(or the bundled extension is deactivated and no replacement is up), these
+calls return a clean "no provider" error rather than panicking.
+
+#### Large media uploads — presigned flow
+
+`UploadMedia` over gRPC is fine for small files but inefficient for
+multi-megabyte assets (the bytes round-trip through the gRPC envelope).
+For MCP clients and admin upload paths, the kernel exposes a three-step
+presigned-upload flow exposed by the bundled provider:
+
+```
+core.media.upload_init { filename?, mime_type? }
+  → { upload_url, upload_token, expires_at, max_bytes }
+
+PUT <upload_url>          (raw binary body, no Authorization header)
+  ← { size, sha256 }
+
+core.media.upload_finalize { upload_token, sha256? }
+  → MediaFile (same shape as core.media.upload)
+```
+
+The PUT route (`/api/uploads/<token>`) is unauthenticated — the unguessable
+64-char token in the URL is the entire access-control story (single-use,
+~15 min TTL, bound to the issuing user). Bytes stream straight to
+`data/pending/<token>.bin` while computing SHA-256. See
+`docs/extension_api.md` §9 for the full client contract and
+`docs/security.md` §12 for the threat model. Caps are env-tunable via
+`SQUILLA_MEDIA_MAX_MB`. The same shape applies to theme/extension deploys
+(`core.theme.deploy_init/finalize`, `core.extension.deploy_init/finalize`).
 
 ### Users
 
@@ -1002,6 +1045,36 @@ Every migration **must** be safe to re-run. Use `CREATE TABLE IF NOT EXISTS`, `C
 - **Foreign keys.** Reference other extension tables explicitly: `form_id INTEGER NOT NULL REFERENCES forms(id) ON DELETE CASCADE`. Cascade is usually the right choice — orphan submissions are worse than missing ones.
 - **JSONB for flexibility, columns for query.** Store flexible payloads (`fields_data`, `notifications`, `settings`) as JSONB. Promote anything you need to filter/index on (e.g. `status`) to its own column.
 - **No down migrations.** The migration runner is forward-only. Comment the inverse SQL inline if you want documentation, but you can't actually roll back through the CMS.
+
+### Migration ownership transfer (extracting a feature from the kernel)
+
+When an extension takes over a table the kernel previously owned — the
+historical case for `email-manager` (email_*, system_actions),
+`media-manager` (media_files, media_image_sizes), and `seo-extension` —
+the transfer must be lossless on existing installs and clean on fresh
+ones. Pattern (one-time per extracted table):
+
+1. Add the table to `data_owned_tables` in `extension.json`. Without it,
+   the per-table data ACL denies the extension's own queries.
+2. Copy the `CREATE TABLE` (and any subsequent `ALTER`s) from
+   `internal/db/migrations/NNNN_*.sql` into your extension's
+   `migrations/NNN_*.sql`. Rewrite as idempotent (`IF NOT EXISTS`,
+   `DO $$ … END $$` blocks for column adds).
+3. **Delete the kernel migration file.** The runner skips entries already
+   in `schema_migrations`, so existing installs are unaffected. Fresh
+   installs simply won't run that migration there — your extension
+   creates the table on activation.
+4. Move any seed calls from `internal/db/seed*.go` into the extension and
+   make them idempotent (`INSERT ... WHERE NOT EXISTS`,
+   `ON CONFLICT DO NOTHING`).
+5. Drop the kernel-side models, services, and `coreImpl` fields. The
+   `CoreAPI` surface (e.g. `SendEmail`, `UploadMedia`) stays — its
+   implementation now routes through the event bus / provider tag.
+6. Verify: deactivate the extension and confirm the kernel still boots,
+   public pages still render, and the relevant `CoreAPI` method returns
+   a clean "no provider" error instead of panicking.
+
+See `docs/extension_api.md` §10 for the canonical reference.
 
 ### Example: forms initial migration
 

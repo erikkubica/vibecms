@@ -66,8 +66,17 @@ func (c *coreImpl) RegisterNodeType(ctx context.Context, input NodeTypeInput) (*
 		if input.Taxonomies != nil {
 			updates["taxonomies"] = nt.Taxonomies
 		}
-		updates["field_schema"] = nt.Fields
-		updates["url_prefixes"] = nt.URLPrefixes
+		// Theme seeds re-run on every activation; only overwrite the
+		// JSONB schema/prefix columns when the seed actually declared a
+		// value. Without this guard, a register() call that omits
+		// url_prefixes wipes operator-set prefixes back to null on every
+		// reactivation — symptom: the "blog vs post" prefix bug.
+		if input.Fields != nil {
+			updates["field_schema"] = nt.Fields
+		}
+		if input.URLPrefixes != nil {
+			updates["url_prefixes"] = nt.URLPrefixes
+		}
 		if input.SupportsBlocks != nil {
 			updates["supports_blocks"] = *input.SupportsBlocks
 		}

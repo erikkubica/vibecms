@@ -151,6 +151,13 @@ func (s *LayoutBlockService) Update(id int, updates map[string]interface{}) (*mo
 		return nil, err
 	}
 
+	// Wire uses "fields", DB column is "field_schema" — rename before
+	// GORM's Updates(map) treats the key as a column name.
+	if val, ok := updates["fields"]; ok {
+		delete(updates, "fields")
+		updates["field_schema"] = val
+	}
+
 	// Convert JSONB fields
 	if fs, ok := updates["field_schema"]; ok && fs != nil {
 		b, err := json.Marshal(fs)

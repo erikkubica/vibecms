@@ -123,6 +123,15 @@ func (s *NodeTypeService) Update(id int, updates map[string]interface{}) (*model
 		}
 	}
 
+	// The wire vocabulary uses "fields"; the DB column is "field_schema".
+	// GORM's Updates(map) treats keys as column names verbatim, so rename
+	// before handing it off — otherwise we'd issue UPDATE ... SET fields=...
+	// against a column that doesn't exist and roll back the whole row.
+	if val, ok := updates["fields"]; ok {
+		delete(updates, "fields")
+		updates["field_schema"] = val
+	}
+
 	// Convert JSONB fields from parsed JSON (map/slice) to models.JSONB
 	for _, key := range []string{"field_schema", "url_prefixes", "taxonomies"} {
 		if val, ok := updates[key]; ok && val != nil {
@@ -146,8 +155,33 @@ func (s *NodeTypeService) Update(id int, updates map[string]interface{}) (*model
 	if err != nil {
 		return nil, err
 	}
+
+	// full_url is materialized on each content_node at save time, so a
+	// url_prefixes (or slug) change here would otherwise leave existing
+	// nodes pointing at the old prefix until each was individually
+	// re-saved. Mirrors LanguageService.rebuildAllURLsForLanguage.
+	_, prefixesChanged := updates["url_prefixes"]
+	_, slugChanged := updates["slug"]
+	if prefixesChanged || slugChanged {
+		s.rebuildAllURLsForNodeType(updated.Slug)
+	}
+
 	s.emit("node_type.updated", updated.ID, updated.Slug)
 	return updated, nil
+}
+
+// rebuildAllURLsForNodeType recomputes full_url for every content node of
+// the given type using the canonical buildFullURL logic. Called whenever
+// a url_prefixes or slug change would invalidate the materialized URLs.
+func (s *NodeTypeService) rebuildAllURLsForNodeType(nodeTypeSlug string) {
+	var nodes []models.ContentNode
+	s.db.Where("node_type = ? AND deleted_at IS NULL", nodeTypeSlug).Find(&nodes)
+	for _, node := range nodes {
+		newURL := buildFullURL(&node, s.db)
+		if newURL != node.FullURL {
+			s.db.Model(&node).Update("full_url", newURL)
+		}
+	}
 }
 
 // Delete removes a node type by ID. Built-in types ("page" and "post") cannot be deleted.

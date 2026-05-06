@@ -133,7 +133,11 @@ func (h *TaxonomyHandler) Update(c *fiber.Ctx) error {
 		}
 		nodeTypes = "{" + strings.Join(parts, ",") + "}"
 	}
-	if v, ok := updates["field_schema"]; ok && v != nil {
+	// Canonical vocabulary uses "fields"; accept both for safety.
+	if v, ok := updates["fields"]; ok && v != nil {
+		b, _ := json.Marshal(v)
+		fieldSchema = string(b)
+	} else if v, ok := updates["field_schema"]; ok && v != nil {
 		b, _ := json.Marshal(v)
 		fieldSchema = string(b)
 	}

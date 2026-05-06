@@ -79,7 +79,7 @@ func NewPublicHandler(
 
 	if eventBus != nil {
 		eventBus.SubscribeAll(func(event string, payload events.Payload) {
-			if strings.HasPrefix(event, "theme.") || strings.HasPrefix(event, "setting.") || strings.HasPrefix(event, "block_type.") || strings.HasPrefix(event, "language.") || strings.HasPrefix(event, "layout") {
+			if strings.HasPrefix(event, "theme.") || strings.HasPrefix(event, "setting.") || strings.HasPrefix(event, "block_type.") || strings.HasPrefix(event, "language.") || strings.HasPrefix(event, "layout") || strings.HasPrefix(event, "node_type.") {
 				h.ClearCache()
 			}
 		})

@@ -98,8 +98,8 @@ func (s *BlockTypeService) Create(bt *models.BlockType) error {
 
 	if s.eventBus != nil {
 		go s.eventBus.Publish("block_type.created", events.Payload{
-			"block_type_id":   bt.ID,
-			"block_type_slug": bt.Slug,
+			"block_type_id":    bt.ID,
+			"block_type_slug":  bt.Slug,
 			"block_type_label": bt.Label,
 		})
 	}
@@ -121,6 +121,13 @@ func (s *BlockTypeService) Update(id int, updates map[string]interface{}) (*mode
 		if count > 0 {
 			return nil, fmt.Errorf("slug conflict: block type with slug %q already exists", newSlug)
 		}
+	}
+
+	// Wire uses "fields", DB column is "field_schema" — GORM's Updates(map)
+	// would otherwise try to write to a non-existent "fields" column.
+	if val, ok := updates["fields"]; ok {
+		delete(updates, "fields")
+		updates["field_schema"] = val
 	}
 
 	// Convert JSONB fields from parsed JSON (map/slice) to models.JSONB

@@ -167,6 +167,7 @@ export default function FieldSchemaEditor({
     const sf: NodeTypeField = {
       name: newFieldKey,
       key: newFieldKey,
+      title: newFieldLabel,
       label: newFieldLabel,
       type: newFieldType,
       required: newFieldRequired || undefined,

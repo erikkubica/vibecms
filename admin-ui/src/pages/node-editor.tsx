@@ -1644,7 +1644,7 @@ export default function NodeEditorPage({ nodeTypeProp }: NodeEditorProps) {
             <SectionHeader title="Featured Image" />
             <CardContent className="space-y-2">
               <CustomFieldInput
-                field={{ name: "featured_image", key: "featured_image", label: "Featured Image", type: "image" }}
+                field={{ name: "featured_image", key: "featured_image", title: "Featured Image", label: "Featured Image", type: "image" }}
                 value={featuredImage}
                 onChange={(val) => setFeaturedImage(val as Record<string, unknown>)}
               />

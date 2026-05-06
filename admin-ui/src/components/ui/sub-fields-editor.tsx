@@ -276,6 +276,7 @@ export default function SubFieldsEditor({ value, onChange, label }: SubFieldsEdi
     const sf: NodeTypeField = {
       name: newFieldKey,
       key: newFieldKey,
+      title: newFieldLabel,
       label: newFieldLabel,
       type: newFieldType,
       required: newFieldRequired || undefined,

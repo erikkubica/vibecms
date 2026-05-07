@@ -88,12 +88,12 @@ Core code that violates this rule is a bug. The recent kernel refactors (commit 
 
 | Package | Responsibility |
 |---|---|
-| `coreapi/` | The single API surface every extension consumes. ~80 methods across 17 domains. Wrapped by `NewCapabilityGuard` for plugin/script callers. Three backends: `coreImpl` (direct), `grpc_server.go` (plugins), `tengo_adapter.go` (scripts). |
+| `coreapi/` | The single API surface every extension consumes. 56 methods across 16 domains in `internal/coreapi/api.go` (the kernel uses additional internal helpers, hence older "~80" notes elsewhere). Wrapped by `NewCapabilityGuard` for plugin/script callers. Three backends: `coreImpl` (direct), `grpc_server.go` (plugins), `tengo_adapter.go` (scripts). |
 | `cms/` | Content services: nodes, node types, taxonomies, terms, layouts, partials, templates, block types, languages, themes, extensions, public site rendering. |
 | `auth/` | Sessions, login, registration, password reset, RBAC middleware, account lockout, rate limiting, JSON-only CSRF guard. |
-| `events/` | Pub-sub event bus (`Publish`, `PublishSync`, `PublishCollect`, `SubscribeAll`). Supports `Unsubscribe` (added in commit `9f9239c`). |
-| `scripting/` | Tengo VM lifecycle: load/unload theme + extension scripts, mount HTTP routes, dispatch events/filters with capability propagation. |
-| `mcp/` | MCP server at `/mcp` with bearer-token auth, per-token rate limiter, scope×class ACL, audit log, 18 tool domains. |
+| `events/` | Pub-sub event bus (`Publish`, `PublishSync`, `PublishRequest`, `PublishCollect`, `SubscribeAll`, `Subscribe`, `SubscribeResult`, `SubscribeErr`). Supports `Unsubscribe` (added in commit `9f9239c`). `PublishRequest` is the request/reply variant with error propagation used by `email.send` and other request-style events. |
+| `scripting/` | Tengo VM lifecycle: load/unload theme + extension scripts, mount HTTP routes, dispatch events/filters with capability propagation. Per-invocation limits: `SetMaxAllocs(50000)` + 10 s context timeout (`internal/scripting/engine.go`). |
+| `mcp/` | MCP server at `/mcp` with bearer-token auth, per-token rate limiter (default 600 RPM / 60 burst, override via `SQUILLA_MCP_RPM` / `SQUILLA_MCP_BURST`), scope×class ACL, audit log in `mcp_audit_log`, 21 tool domains and ~94 tools at the time of writing. |
 | `sdui/` | Server-Driven UI: boot manifest, layout-tree generators per page (~16+), SSE broadcaster bridging the event bus to admin clients. |
 | `models/` | GORM models for kernel-owned tables only (content nodes, languages, sessions, layouts, menus, taxonomies, …). Email/media/redirect models migrated out to their extensions in commit `7e49268`. See `database-schema.md`. |
 | `db/` | PostgreSQL connection, embedded migrations (43 files: `0001_initial_schema.sql` … `0043_languages_world_seed.sql`), idempotent seed-on-empty. |
@@ -223,11 +223,11 @@ Capabilities are declared in `extension.json` as an array of `<domain>:<verb>` s
 
 ```
 nodes:read, nodes:write, nodes:delete
-nodetypes:read, nodetypes:write, nodetypes:delete
+nodetypes:read, nodetypes:write
 menus:read, menus:write, menus:delete
 media:read, media:write, media:delete
-data:read, data:write, data:delete, data:exec
-files:read, files:write, files:delete
+data:read, data:write, data:delete
+files:write, files:delete
 settings:read, settings:write
 events:emit, events:subscribe
 filters:register, filters:apply
@@ -235,14 +235,23 @@ http:fetch
 log:write
 email:send
 users:read
-routes:register, routes:remove
+routes:register
+admin_access            # separate gate, used by extension admin proxy routes
 ```
+
+That's **27 enforcement capabilities + `admin_access`** as of `internal/coreapi/capability.go`. Notes:
+
+- There is no `nodetypes:delete` — `DeleteNodeType` is gated by `nodetypes:write`.
+- There is no `data:exec` capability. `DataExec` is **internal-only** (not exposed through the gRPC client interface, so extensions cannot call it). The MCP `core.data.exec` tool is a separate path, env-gated by `SQUILLA_MCP_ALLOW_RAW_SQL=true` (matched case-insensitively via `strings.EqualFold` in `internal/mcp/server.go`).
+- There is no `files:read` or `routes:remove`.
+- Each capability is enforced strictly; **there is no fallback** from `data:delete` to `data:write` or any similar shortcut.
+- The data-store calls add a second check on top of capabilities: the table must appear in the extension manifest's `data_owned_tables`, and the kernel-private deny list (`users`, `sessions`, `password_reset_tokens`, `roles`, `role_capabilities`, `audit_log`, `schema_migrations`, `site_settings`, `mcp_tokens`, `mcp_audit_log`, `mcp_token_audit`, `languages`) is rejected unconditionally for non-internal callers.
 
 ---
 
 ## 5. MCP Server (AI Interface)
 
-Mounted at `/mcp` with permissive CORS (no cookies — bearer-token auth only). Provides ~50 tools across 18 domains so an AI agent can drive the entire CMS without filesystem access or HTML scraping.
+Mounted at `/mcp` with permissive CORS (no cookies — bearer-token auth only). Provides ~94 tools across 21 domains so an AI agent can drive the entire CMS without filesystem access or HTML scraping. Token scopes (`read` | `content` | `full`) gate which tools are visible to a given token; scope enforcement happens in MCP dispatch and is independent of the per-method CoreAPI capability guard (which doesn't apply to MCP because MCP runs every call as an internal caller).
 
 | Domain | File | Sample tools |
 |---|---|---|
